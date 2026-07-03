@@ -1,9 +1,11 @@
-window.addEventListener('load', function() {
+if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
     const loading = document.getElementById('loadingScreen');
-    setTimeout(function() {
-        loading.style.opacity = '0';
+    if (loading) {
         setTimeout(function() {
-            loading.style.display = 'none';
-        }, 800);
-    }, 600);
-});
+            loading.style.opacity = '0';
+            setTimeout(function() {
+                loading.style.display = 'none';
+            }, 1000);
+        }, 1800);
+    }
+}

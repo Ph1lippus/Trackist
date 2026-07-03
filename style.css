@@ -4,8 +4,7 @@
     --color-mint: #68ffae;
     --color-green: #307351;
     --color-platinum: #e7e8ec;
-    --font-title: 'Black Ops One', cursive;
-    --font-display: 'Cherry Cream Soda', cursive;
+    --font-display: 'Black Ops One', cursive;
 }
 
 * {
@@ -31,10 +30,20 @@ body {
 }
 
 .navbar-brand {
-    font-weight: 700;
-    font-size: 1.5rem;
+    font-family: var(--font-display);
+    font-weight: 400;
+    font-size: 1.8rem;
     color: var(--color-orange) !important;
-    letter-spacing: 1px;
+    letter-spacing: 2px;
+}
+
+.hero__title {
+    font-family: var(--font-display);
+    font-size: 4rem;
+    font-weight: 400;
+    color: var(--color-orange);
+    margin-bottom: 0.5rem;
+    letter-spacing: 3px;
 }
 
 .navbar-nav .nav-link {
@@ -57,14 +66,6 @@ body {
     align-items: center;
     justify-content: center;
     padding: 4rem 1rem;
-}
-
-.hero__title {
-    font-size: 3.5rem;
-    font-weight: 800;
-    color: var(--color-orange);
-    margin-bottom: 0.5rem;
-    letter-spacing: -0.02em;
 }
 
 .hero__subtitle {
@@ -127,7 +128,6 @@ body {
     }
 }
 
-/* ========== AUTH CARDS ========== */
 .auth-card {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
