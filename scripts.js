@@ -1,4 +1,4 @@
-if (window.location.pathname === '/' || window.location.pathname === '/index.html') {
+document.addEventListener('DOMContentLoaded', function() {
     const loading = document.getElementById('loadingScreen');
     if (loading) {
         setTimeout(function() {
@@ -8,4 +8,4 @@ if (window.location.pathname === '/' || window.location.pathname === '/index.htm
             }, 600);
         }, 800);
     }
-}
+});
