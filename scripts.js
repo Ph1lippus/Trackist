@@ -5,7 +5,7 @@ if (window.location.pathname === '/' || window.location.pathname === '/index.htm
             loading.style.opacity = '0';
             setTimeout(function() {
                 loading.style.display = 'none';
-            }, 1000);
-        }, 1800);
+            }, 600);
+        }, 800);
     }
 }
