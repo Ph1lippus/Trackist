@@ -1,0 +1,160 @@
+/* ========== VARIABLES ========== */
+:root {
+    --color-black: #050505;
+    --color-orange: #ffad05;
+    --color-mint: #68ffae;
+    --color-green: #307351;
+    --color-platinum: #e7e8ec;
+
+    --font-primary: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --font-heading: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 1rem;
+    --spacing-md: 2rem;
+    --spacing-lg: 4rem;
+    --spacing-xl: 6rem;
+}
+
+/* ========== RESET ========== */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background-color: var(--color-black);
+    color: var(--color-platinum);
+    font-family: var(--font-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+/* ========== CONTAINER ========== */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--spacing-md);
+}
+
+/* ========== HEADER / NAV ========== */
+.header {
+    padding: var(--spacing-sm) 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.nav__brand {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-orange);
+    letter-spacing: 1px;
+}
+
+/* ========== MAIN / HERO ========== */
+.main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.hero {
+    text-align: center;
+    padding: var(--spacing-lg) 0;
+}
+
+.hero__title {
+    font-family: var(--font-heading);
+    font-size: 3.5rem;
+    font-weight: 800;
+    color: var(--color-orange);
+    margin-bottom: var(--spacing-sm);
+    letter-spacing: -0.02em;
+}
+
+.hero__subtitle {
+    font-size: 1.25rem;
+    color: var(--color-platinum);
+    opacity: 0.7;
+    margin-bottom: var(--spacing-md);
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* ========== BUTTONS ========== */
+.button {
+    display: inline-block;
+    padding: 0.8rem 2.5rem;
+    border: 2px solid var(--color-orange);
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: transparent;
+    color: var(--color-orange);
+}
+
+.button:hover {
+    background: var(--color-orange);
+    color: var(--color-black);
+}
+
+.button--primary {
+    background: var(--color-orange);
+    color: var(--color-black);
+}
+
+.button--primary:hover {
+    background: transparent;
+    color: var(--color-orange);
+}
+
+/* ========== FOOTER ========== */
+.footer {
+    padding: var(--spacing-md) 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    text-align: center;
+}
+
+.footer__text {
+    font-size: 0.875rem;
+    color: var(--color-platinum);
+    opacity: 0.4;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+    .hero__title {
+        font-size: 2.5rem;
+    }
+
+    .hero__subtitle {
+        font-size: 1rem;
+    }
+
+    .container {
+        padding: 0 var(--spacing-sm);
+    }
+}
