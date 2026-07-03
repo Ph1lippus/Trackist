@@ -4,6 +4,8 @@
     --color-mint: #68ffae;
     --color-green: #307351;
     --color-platinum: #e7e8ec;
+    --font-title: 'Black Ops One', cursive;
+    --font-display: 'Cherry Cream Soda', cursive;
 }
 
 * {
@@ -123,4 +125,55 @@ body {
     .hero__subtitle {
         font-size: 1rem;
     }
+}
+
+/* ========== AUTH CARDS ========== */
+.auth-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 2rem;
+    max-width: 400px;
+    width: 100%;
+}
+
+.auth-card .form-control {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    color: var(--color-platinum);
+}
+
+.auth-card .form-control:focus {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: var(--color-orange);
+    box-shadow: 0 0 0 3px rgba(255, 173, 5, 0.15);
+}
+
+.auth-card .form-label {
+    color: var(--color-platinum);
+    opacity: 0.7;
+}
+
+.auth-card .auth-title {
+    color: var(--color-orange);
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.auth-card .auth-link {
+    color: var(--color-orange);
+    text-decoration: none;
+}
+
+.auth-card .auth-link:hover {
+    text-decoration: underline;
+}
+
+.auth-card .auth-text {
+    color: var(--color-platinum);
+    opacity: 0.6;
+    font-size: 0.9rem;
+    text-align: center;
+    margin-top: 1rem;
 }
