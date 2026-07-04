@@ -8,4 +8,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 600);
         }, 800);
     }
+
+    const backBtn = document.getElementById('backToTop');
+    if (backBtn) {
+        backBtn.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+    }
+
+    
 });
+
+

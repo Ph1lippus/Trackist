@@ -60,6 +60,123 @@ body {
     color: var(--color-orange) !important;
 }
 
+/* ========== FOOTER ========== */
+.footer {
+    background-color: rgba(5, 5, 5, 0.95);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 2.5rem 0 1.5rem 0;
+    margin-top: auto;
+}
+
+.footer__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.footer__brand {
+    font-family: 'Black Ops One', cursive;
+    font-size: 1.5rem;
+    color: var(--color-orange);
+    letter-spacing: 2px;
+}
+
+.footer__back-btn {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: var(--color-platinum);
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    font-size: 1.1rem;
+}
+
+.footer__back-btn:hover {
+    background: var(--color-orange);
+    border-color: var(--color-orange);
+    color: var(--color-black);
+    transform: translateY(-3px);
+}
+
+/* Footer Links */
+.footer__links {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 2rem;
+    padding: 2rem 0 1.5rem 0;
+}
+
+.footer__links-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.footer__links-title {
+    font-weight: 700;
+    color: var(--color-platinum);
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    margin-bottom: 0.2rem;
+}
+
+.footer__links-group a {
+    color: var(--color-platinum);
+    opacity: 0.5;
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.footer__links-group a:hover {
+    opacity: 1;
+    color: var(--color-orange);
+}
+
+/* Footer Bottom */
+.footer__bottom {
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    text-align: center;
+}
+
+.footer__copyright {
+    font-size: 0.8rem;
+    color: var(--color-platinum);
+    opacity: 0.3;
+    margin: 0;
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 768px) {
+    .footer__links {
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+    }
+
+    .footer__brand {
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .footer__links {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .footer__top {
+        flex-direction: row;
+    }
+}
+
 .main {
     flex: 1;
     display: flex;

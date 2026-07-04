@@ -25,8 +25,8 @@
             <div class="collapse navbar-collapse" id="mainNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item"><a class="nav-link active" href="/">Home</a></li>
-                    <li class="nav-item"><a class="nav-link" href="login/">Login</a></li>
-                    <li class="nav-item"><a class="nav-link" href="register/">Register</a></li>
+                    <li class="nav-item"><a class="nav-link" href="Login/">Login</a></li>
+                    <li class="nav-item"><a class="nav-link" href="Register/">Register</a></li>
                 </ul>
             </div>
         </div>
@@ -38,16 +38,48 @@
             <div class="container text-center">
                 <h1 class="hero__title">Track what you watch</h1>
                 <p class="hero__subtitle">Movies. TV shows. Anime. All in one place.</p>
-                <a href="register/" class="btn btn-primary btn-lg">Get Started</a>
+                <a href="Register/" class="btn btn-primary btn-lg">Get Started</a>
             </div>
         </section>
     </main>
 
     <footer class="footer">
-        <div class="container text-center">
-            <p class="footer__text">&copy; 2026 Trackist. Open source. Built with ❤️</p>
+    <div class="container">
+        <!-- Top row: Brand + Back to Top -->
+        <div class="footer__top">
+            <span class="footer__brand">Trackist</span>
+            <button id="backToTop" class="footer__back-btn" aria-label="Back to top">
+                <i class="fas fa-chevron-up"></i>
+            </button>
         </div>
-    </footer>
+
+        <!-- Middle row: Links -->
+        <div class="footer__links">
+            <div class="footer__links-group">
+                <span class="footer__links-title">Quick Links</span>
+                <a href="/">Home</a>
+                <a href="/login">Login</a>
+                <a href="/register">Register</a>
+            </div>
+            <div class="footer__links-group">
+                <span class="footer__links-title">About</span>
+                <a href="#">About Us</a>
+                <a href="#">Contact</a>
+                <a href="#">FAQ</a>
+            </div>
+            <div class="footer__links-group">
+                <span class="footer__links-title">Legal</span>
+                <a href="#">Privacy Policy</a>
+                <a href="#">Terms of Service</a>
+            </div>
+        </div>
+
+        <!-- Bottom row: Copyright -->
+        <div class="footer__bottom">
+            <p class="footer__copyright">&copy; 2026 Trackist. Open source. Built with ❤️</p>
+        </div>
+    </div>
+</footer>
 
 
 
