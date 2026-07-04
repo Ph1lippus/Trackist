@@ -1,7 +1,7 @@
 const supabaseUrl = 'https://iqlzdmjamsvxinqbrnix.supabase.co';
 const supabaseKey = 'sb_publishable_unnBNQ4MtAtOWxq7_bJU9w_mbeJwIKE';
 
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
 const loading = document.getElementById('loadingScreen');
 if (loading) {
