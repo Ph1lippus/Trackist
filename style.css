@@ -78,6 +78,19 @@ body {
     margin-right: auto;
 }
 
+.btn:focus,
+.btn:focus-visible,
+.form-control:focus,
+.form-check-input:focus {
+    box-shadow: 0 0 0 3px rgba(255, 173, 5, 0.4) !important;
+    border-color: var(--color-orange) !important;
+}
+
+.btn:focus,
+.btn:focus-visible {
+    outline: none;
+}
+
 .btn-primary {
     background-color: var(--color-orange);
     border-color: var(--color-orange);
