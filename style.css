@@ -5,6 +5,7 @@
     --color-green: #307351;
     --color-platinum: #e7e8ec;
     --font-display: 'Black Ops One', cursive;
+    --font-title: 'Black Ops One', cursive;
 }
 
 * {
@@ -60,12 +61,27 @@ body {
     color: var(--color-orange) !important;
 }
 
-/* ========== FOOTER ========== */
+.hero-divider {
+    max-width: 600px;
+    margin: 2.5rem auto 3rem auto;
+    border: 0;
+    height: 2px;
+    background: linear-gradient(to right, transparent, var(--color-orange), transparent);
+    opacity: 0.3;
+}
+
 .footer {
-    background-color: rgba(5, 5, 5, 0.95);
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-    padding: 2.5rem 0 1.5rem 0;
+    background-color: var(--color-orange);
+    border-top: none;
+    padding: 3rem 0 2rem 0;
     margin-top: auto;
+}
+
+.footer__brand {
+    font-family: var(--font-title);
+    font-size: 1.5rem;
+    color: var(--color-black);
+    letter-spacing: 2px;
 }
 
 .footer__top {
@@ -73,20 +89,13 @@ body {
     align-items: center;
     justify-content: space-between;
     padding-bottom: 1.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.footer__brand {
-    font-family: 'Black Ops One', cursive;
-    font-size: 1.5rem;
-    color: var(--color-orange);
-    letter-spacing: 2px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .footer__back-btn {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    color: var(--color-platinum);
+    background: rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    color: var(--color-black);
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -99,13 +108,12 @@ body {
 }
 
 .footer__back-btn:hover {
-    background: var(--color-orange);
-    border-color: var(--color-orange);
-    color: var(--color-black);
+    background: var(--color-black);
+    border-color: var(--color-black);
+    color: var(--color-orange);
     transform: translateY(-3px);
 }
 
-/* Footer Links */
 .footer__links {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -117,19 +125,20 @@ body {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+    align-items: flex-start;
 }
 
 .footer__links-title {
     font-weight: 700;
-    color: var(--color-platinum);
+    color: var(--color-black);
     font-size: 0.9rem;
     letter-spacing: 1px;
     margin-bottom: 0.2rem;
 }
 
 .footer__links-group a {
-    color: var(--color-platinum);
-    opacity: 0.5;
+    color: var(--color-black);
+    opacity: 0.7;
     text-decoration: none;
     font-size: 0.85rem;
     transition: all 0.2s ease;
@@ -137,24 +146,64 @@ body {
 
 .footer__links-group a:hover {
     opacity: 1;
-    color: var(--color-orange);
+    color: var(--color-black);
+    text-decoration: underline;
 }
 
-/* Footer Bottom */
 .footer__bottom {
     padding-top: 1.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
     text-align: center;
 }
 
 .footer__copyright {
-    font-size: 0.8rem;
-    color: var(--color-platinum);
-    opacity: 0.3;
+    font-size: 0.95rem;
+    color: var(--color-black);
+    opacity: 0.7;
     margin: 0;
+    font-weight: 500;
+    letter-spacing: 0.5px;
 }
 
-/* ========== RESPONSIVE ========== */
+.footer__copyright a {
+    color: var(--color-black);
+    opacity: 0.8;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.footer__copyright a:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+.footer__social {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+    justify-content: flex-start;
+}
+
+.footer__social a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.1);
+    color: var(--color-black);
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.footer__social a:hover {
+    background: var(--color-black);
+    color: var(--color-orange);
+    transform: translateY(-3px);
+}
+
 @media (max-width: 768px) {
     .footer__links {
         grid-template-columns: 1fr 1fr;
