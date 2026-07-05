@@ -34,7 +34,7 @@ const App: React.FC = () => {
         <BrowserRouter>
             <div className="d-flex flex-column min-vh-100">
                 <Navbar />
-                <main className="flex-grow-1">
+                <main className="flex-grow-1 d-flex align-items-center justify-content-center">
                     <Routes>
                         <Route path="/" element={<Home />} />
                         <Route path="/login" element={

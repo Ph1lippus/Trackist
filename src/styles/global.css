@@ -75,11 +75,11 @@ html, body {
 
 .main {
     flex: 1;
-    min-height: calc(100vh - 80px); 
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 2rem 1rem;
+    width: 100%;
 }
 
 .navbar {
@@ -132,17 +132,104 @@ html, body {
     animation: growLine 1.2s ease-out forwards;
 }
 
+.navbar-brand-row {
+    background-color: transparent;
+    padding: 0.6rem 0 0.2rem 0;
+    border-bottom: none;
+}
+
+.navbar-brand-row .navbar-brand {
+    font-family: var(--font-display);
+    font-weight: 300;            /* lighter weight */
+    font-size: 1.6rem;           /* slightly smaller */
+    color: var(--color-orange);
+    letter-spacing: 4px;
+}
+
+/* Row 2: Navigation links (transparent) */
+.navbar-nav-row {
+    background: transparent !important;
+    backdrop-filter: none;
+    padding: 0 0 0.4rem 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.navbar-nav-row .nav {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.navbar-nav-row .nav-link {
+    font-family: 'Cinzel', serif;   /* or any elegant font */
+    font-weight: 400;
+    font-size: 0.95rem;
+    letter-spacing: 1px;
+    color: var(--color-platinum);
+    opacity: 0.6;
+    padding: 0.3rem 0.2rem;
+    background: transparent !important;
+    border: none;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    position: relative;
+}
+
+.navbar-nav-row .nav-link:hover {
+    opacity: 1;
+    color: var(--color-platinum);
+}
+
+.navbar-nav-row .nav-link.active {
+    opacity: 1;
+    color: var(--color-orange);
+    border-bottom: 2px solid var(--color-orange);
+}
+
+/* For logout button (looks like a link) */
+.navbar-nav-row .nav-link.logout-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.3rem 0.2rem;
+}
+
+.navbar-nav-row .nav-link.logout-btn:hover {
+    opacity: 1;
+    color: var(--color-orange);
+}
+
+/* ===== PAGE TRANSITIONS ===== */
+.page-transition {
+    width: 100%;
+    animation: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    0% {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 @keyframes growLine {
     0% {
         transform: scaleX(0);
         opacity: 0;
     }
     60% {
-        opacity: 0.5;
+        opacity: 0.6;
     }
     100% {
         transform: scaleX(1);
-        opacity: 0.3;
+        opacity: 0.4;
     }
 }
 
@@ -350,14 +437,6 @@ html, body {
     .footer__top {
         flex-direction: row;
     }
-}
-
-.main {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4rem 1rem;
 }
 
 .hero__subtitle {
