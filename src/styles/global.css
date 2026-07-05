@@ -8,6 +8,12 @@
     --font-title: 'Black Ops One', cursive;
 }
 
+#root {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -15,12 +21,17 @@
 }
 
 body {
-    background-color: var(--color-black);
+    background-color: var(--color-black)!important;
     color: var(--color-platinum);
     font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
 }
 
 .navbar {
@@ -332,19 +343,6 @@ body {
     background-color: var(--color-orange);
     border-color: var(--color-orange);
     color: var(--color-black);
-}
-
-.footer {
-    padding: 1.5rem 0;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-    text-align: center;
-}
-
-.footer__text {
-    font-size: 0.875rem;
-    color: var(--color-platinum);
-    opacity: 0.4;
-    margin: 0;
 }
 
 @media (max-width: 768px) {
