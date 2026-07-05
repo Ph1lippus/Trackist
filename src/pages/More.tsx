@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom'
 const options = [
     { title: 'Profile', blurb: 'Update your nickname and preferences.' },
     { title: 'Lists', blurb: 'Create custom collections for your favorites.' },
-    { title: 'Settings', blurb: 'Tune the app to your viewing habits.' }
+    { title: 'Settings', blurb: 'Tune the app to your viewing habits.', route: '/settings' },
+    { title: 'Credits', blurb: 'See the services and tools behind Trackist.', route: '/credits' }
 ]
 
 const More: React.FC = () => {
@@ -18,7 +19,6 @@ const More: React.FC = () => {
                     </div>
                     <div className="dashboard-card-grid">
                         {options.map((item) => {
-                            const isSettings = item.title === 'Settings'
                             const cardContent = (
                                 <article className="dashboard-card" key={item.title}>
                                     <div className="dashboard-card__body">
@@ -28,8 +28,8 @@ const More: React.FC = () => {
                                 </article>
                             )
 
-                            return isSettings ? (
-                                <Link to="/settings" key={item.title} className="text-decoration-none">
+                            return item.route ? (
+                                <Link to={item.route} key={item.title} className="text-decoration-none">
                                     {cardContent}
                                 </Link>
                             ) : (

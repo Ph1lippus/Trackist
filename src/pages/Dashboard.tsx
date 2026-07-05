@@ -1,5 +1,4 @@
 import React from 'react'
-import { Link, useLocation } from 'react-router-dom'
 
 const currentlyWatching = [
     { title: 'Attack on Titan', meta: 'Season 4 • 2 episodes left' },
@@ -14,9 +13,6 @@ const discoverGroups = [
 ]
 
 const Dashboard: React.FC = () => {
-    const location = useLocation()
-    const isActive = (path: string) => location.pathname === path
-
     return (
         <section className="dashboard-page">
             <div className="dashboard-shell">
@@ -61,24 +57,6 @@ const Dashboard: React.FC = () => {
                 </div>
             </div>
 
-            <nav className="bottom-nav" aria-label="Bottom navigation">
-                <Link className={`bottom-nav__item ${isActive('/') ? 'bottom-nav__item--active' : ''}`} to="/">
-                    <i className="fa-solid fa-house"></i>
-                    <small>Home</small>
-                </Link>
-                <Link className={`bottom-nav__item ${isActive('/discover') ? 'bottom-nav__item--active' : ''}`} to="/discover">
-                    <i className="fa-solid fa-compass"></i>
-                    <small>Discover</small>
-                </Link>
-                <Link className={`bottom-nav__item ${isActive('/watchlist') ? 'bottom-nav__item--active' : ''}`} to="/watchlist">
-                    <i className="fa-solid fa-play"></i>
-                    <small>Watch</small>
-                </Link>
-                <Link className={`bottom-nav__item ${isActive('/more') ? 'bottom-nav__item--active' : ''}`} to="/more">
-                    <i className="fa-solid fa-bars"></i>
-                    <small>More</small>
-                </Link>
-            </nav>
         </section>
     )
 }

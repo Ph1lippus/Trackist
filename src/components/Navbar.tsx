@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
+import { signOutUser } from '../services/profileService'
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate()
@@ -17,8 +18,8 @@ const Navbar: React.FC = () => {
     }, [])
 
     const handleLogout = async () => {
-        await supabase.auth.signOut()
-        navigate('/')
+        await signOutUser()
+        navigate('/login')
     }
 
     const nickname = user?.user_metadata?.username || user?.user_metadata?.nickname || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Viewer'
@@ -40,8 +41,8 @@ const Navbar: React.FC = () => {
                         </>
                     ) : (
                         <>
-                            <NavLink className="navbar-action-link" to="/Login">Login</NavLink>
-                            <NavLink className="navbar-action-link" to="/Register">Register</NavLink>
+                            <NavLink className="navbar-action-link" to="/login">Login</NavLink>
+                            <NavLink className="navbar-action-link" to="/register">Register</NavLink>
                         </>
                     )}
                 </div>

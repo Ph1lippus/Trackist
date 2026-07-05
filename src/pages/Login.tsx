@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { supabase } from '../services/supabaseClient'
+import { requestPasswordReset, signInWithEmail } from '../services/profileService'
 
 const Login: React.FC = () => {
     const navigate = useNavigate()
@@ -8,46 +8,18 @@ const Login: React.FC = () => {
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
     const [error, setError] = useState('')
+    const [message, setMessage] = useState('')
     const [loading, setLoading] = useState(false)
+    const [resetLoading, setResetLoading] = useState(false)
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setError('')
+        setMessage('')
         setLoading(true)
 
-        const loginIdentifier = identifier.trim()
-
-        const { data: { users }, error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
-
-        if (!error && users) {
-            const matchedUser = users.find((user) => {
-                const metaUsername = user.user_metadata?.username?.toString().toLowerCase()
-                const metaEmail = user.email?.toLowerCase()
-                return metaUsername === loginIdentifier.toLowerCase() || metaEmail === loginIdentifier.toLowerCase()
-            })
-
-            if (matchedUser?.email) {
-                const { error: signInError } = await supabase.auth.signInWithPassword({
-                    email: matchedUser.email,
-                    password
-                })
-
-                setLoading(false)
-
-                if (signInError) {
-                    setError(signInError.message)
-                    return
-                }
-
-                navigate('/')
-                return
-            }
-        }
-
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: loginIdentifier,
-            password
-        })
+        const loginIdentifier = identifier.trim().toLowerCase()
+        const { data, error: signInError } = await signInWithEmail(loginIdentifier, password)
 
         setLoading(false)
 
@@ -55,7 +27,34 @@ const Login: React.FC = () => {
             setError(signInError.message)
             return
         }
-        navigate('/')
+
+        if (data?.session) {
+            navigate('/')
+        }
+    }
+
+    const handlePasswordRecovery = async () => {
+        const email = identifier.trim().toLowerCase()
+
+        if (!email) {
+            setError('Please enter your email address first')
+            return
+        }
+
+        setResetLoading(true)
+        setError('')
+        setMessage('')
+
+        const { error } = await requestPasswordReset(email)
+
+        setResetLoading(false)
+
+        if (error) {
+            setError(error.message)
+            return
+        }
+
+        setMessage(`If the account exists, a password reset link has been sent to ${email}.`)
     }
 
     return (
@@ -67,12 +66,12 @@ const Login: React.FC = () => {
                             <h2 className="auth-title">Welcome Back</h2>
                             <form onSubmit={handleSubmit} noValidate >
                                 <div className="mb-3">
-                                    <label htmlFor="identifier" className="form-label">Email or Username</label>
+                                    <label htmlFor="identifier" className="form-label">Email</label>
                                     <input
-                                        type="text"
+                                        type="email"
                                         className="form-control"
                                         id="identifier"
-                                        placeholder="Enter your email or username"
+                                        placeholder="Enter your email"
                                         value={identifier}
                                         onChange={(e) => setIdentifier(e.target.value)}
                                         required
@@ -101,10 +100,19 @@ const Login: React.FC = () => {
                                     </div>
                                 </div>
                                 {error && <div className="alert alert-danger">{error}</div>}
+                                {message && <div className="alert alert-info">{message}</div>}
                                 <button type="submit" className="btn btn-primary w-100" disabled={loading}>
                                     {loading ? 'Logging in...' : 'Login'}
                                 </button>
                             </form>
+                            <button
+                                type="button"
+                                className="btn btn-link p-0 mt-3"
+                                onClick={handlePasswordRecovery}
+                                disabled={resetLoading}
+                            >
+                                {resetLoading ? 'Sending reset link...' : 'Forgot password?'}
+                            </button>
                             <p className="auth-text mt-3">
                                 Don't have an account? <Link to="/register" className="auth-link">Register</Link>
                             </p>
