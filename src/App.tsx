@@ -34,13 +34,13 @@ const App: React.FC = () => {
         <BrowserRouter>
             <div className="d-flex flex-column min-vh-100">
                 <Navbar />
-                <main className="flex-grow-1 d-flex align-items-center justify-content-center">
+                <main className="page-main flex-grow-1 d-flex align-items-center justify-content-center">
                     <Routes>
                         <Route path="/" element={<Home />} />
-                        <Route path="/login" element={
+                        <Route path="/Login" element={
                             user ? <Navigate to="/" replace /> : <Login />
                         } />
-                        <Route path="/register" element={
+                        <Route path="/Register" element={
                             user ? <Navigate to="/" replace /> : <Register />
                         } />
                     </Routes>

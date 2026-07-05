@@ -6,6 +6,7 @@
     --color-platinum: #e7e8ec;
     --font-display: 'Black Ops One', cursive;
     --font-title: 'Black Ops One', cursive;
+    --navbar-height: 6rem;
 }
 
 * {
@@ -73,13 +74,42 @@ html, body {
     min-height: 100vh;
 }
 
+.page-main {
+    min-height: calc(100vh - var(--navbar-height));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 2rem 1rem 3rem;
+}
+
 .main {
     flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 2rem 1rem;
+    flex-direction: column;
+    padding: 1rem 1rem 2.5rem;
     width: 100%;
+    min-height: 0;
+    text-align: center;
+}
+
+.main .container,
+.main .row {
+    width: 100%;
+}
+
+.main .row {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.main .col-md-6,
+.main .col-lg-5 {
+    display: flex;
+    justify-content: center;
 }
 
 .navbar {
@@ -138,20 +168,27 @@ html, body {
     border-bottom: none;
 }
 
-.navbar-brand-row .navbar-brand {
-    font-family: var(--font-display);
-    font-weight: 300;            /* lighter weight */
-    font-size: 1.6rem;           /* slightly smaller */
-    color: var(--color-orange);
-    letter-spacing: 4px;
+.navbar-brand-row .container,
+.navbar-nav-row .container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
-/* Row 2: Navigation links (transparent) */
+.navbar-brand-row .navbar-brand {
+    font-family: var(--font-display);
+    font-weight: 300;            
+    font-size: 1.6rem;           
+    color: var(--color-orange);
+    letter-spacing: 4px;
+    margin: 0;
+}
+
 .navbar-nav-row {
     background: transparent !important;
     backdrop-filter: none;
     padding: 0 0 0.4rem 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    border-bottom: none;
 }
 
 .navbar-nav-row .nav {
@@ -163,7 +200,7 @@ html, body {
 }
 
 .navbar-nav-row .nav-link {
-    font-family: 'Cinzel', serif;   /* or any elegant font */
+    font-family: 'Cinzel', serif;   
     font-weight: 400;
     font-size: 0.95rem;
     letter-spacing: 1px;
@@ -189,7 +226,6 @@ html, body {
     border-bottom: 2px solid var(--color-orange);
 }
 
-/* For logout button (looks like a link) */
 .navbar-nav-row .nav-link.logout-btn {
     background: none;
     border: none;
@@ -374,6 +410,9 @@ html, body {
     border-radius: 16px;
     padding: 2rem;
     width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    text-align: center;
 }
 
 .auth-title {
@@ -447,6 +486,7 @@ html, body {
     max-width: 600px;
     margin-left: auto;
     margin-right: auto;
+    text-align: center;
 }
 
 .btn:focus,

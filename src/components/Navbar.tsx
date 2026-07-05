@@ -32,9 +32,6 @@ const Navbar: React.FC = () => {
             <nav className="navbar navbar-nav-row">
                 <div className="container">
                     <ul className="nav nav-pills">
-                        <li className="nav-item">
-                            <NavLink className="nav-link" to="/">Home</NavLink>
-                        </li>
                         {user ? (
                             <>
                                 <li className="nav-item">
@@ -51,10 +48,10 @@ const Navbar: React.FC = () => {
                         ) : (
                             <>
                                 <li className="nav-item">
-                                    <NavLink className="nav-link" to="/login">Login</NavLink>
+                                    <NavLink className="nav-link" to="/Login">Login</NavLink>
                                 </li>
                                 <li className="nav-item">
-                                    <NavLink className="nav-link" to="/register">Register</NavLink>
+                                    <NavLink className="nav-link" to="/Register">Register</NavLink>
                                 </li>
                             </>
                         )}
