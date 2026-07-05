@@ -1,0 +1,36 @@
+export interface TMDBResult {
+    id: number
+    title?: string
+    name?: string
+    media_type?: 'movie' | 'tv' | 'person'
+    poster_path?: string | null
+    overview?: string
+    release_date?: string
+    first_air_date?: string
+    vote_average?: number
+}
+
+export interface WatchlistItem {
+    id: string
+    user_id: string
+    media_type: 'movie' | 'tv' | 'anime'
+    tmdb_id?: number
+    anilist_id?: number
+    title: string
+    poster_path?: string
+    overview?: string
+    release_date?: string
+    vote_average?: number
+    total_seasons?: number
+    total_episodes?: number
+    current_season?: number
+    current_episode?: number
+    status: 'planning' | 'watching' | 'completed' | 'dropped'
+    rating?: number
+    notes?: string
+    added_at: string
+    updated_at: string
+    started_watching_at?: string
+    completed_at?: string
+    last_watched_at?: string
+}
