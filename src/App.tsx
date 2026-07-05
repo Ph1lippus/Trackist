@@ -7,6 +7,10 @@ import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Dashboard from './pages/Dashboard'
+import Discover from './pages/Discover'
+import Watchlist from './pages/Watchlist'
+import More from './pages/More'
+import Settings from './pages/Settings'
 
 const PageLoader: React.FC<{ show: boolean; stage: 'enter' | 'exit' | 'hidden' }> = ({ show, stage }) => {
     if (!show) return null
@@ -75,6 +79,10 @@ const AppContent: React.FC = () => {
                 {!showPageContent ? null : (
                     <Routes>
                         <Route path="/" element={user ? <Dashboard /> : <Home />} />
+                        <Route path="/discover" element={user ? <Discover /> : <Navigate to="/Login" replace />} />
+                        <Route path="/watchlist" element={user ? <Watchlist /> : <Navigate to="/Login" replace />} />
+                        <Route path="/more" element={user ? <More /> : <Navigate to="/Login" replace />} />
+                        <Route path="/settings" element={user ? <Settings /> : <Navigate to="/Login" replace />} />
                         <Route path="/Login" element={
                             user ? <Navigate to="/" replace /> : <Login />
                         } />

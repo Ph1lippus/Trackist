@@ -385,10 +385,19 @@ html, body {
     text-decoration: none;
     color: rgba(255,255,255,0.7);
     font-size: 0.8rem;
+    padding: 0.35rem 0.2rem;
+    border-radius: 999px;
+    transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.bottom-nav__item:hover {
+    color: var(--color-orange);
+    background: rgba(133, 138, 227, 0.12);
 }
 
 .bottom-nav__item--active {
     color: var(--color-orange);
+    background: rgba(133, 138, 227, 0.16);
 }
 
 .page-loader--initial {

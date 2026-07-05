@@ -21,7 +21,7 @@ const Navbar: React.FC = () => {
         navigate('/')
     }
 
-    const nickname = user?.user_metadata?.nickname || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Viewer'
+    const nickname = user?.user_metadata?.username || user?.user_metadata?.nickname || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Viewer'
 
     return (
         <nav className="navbar navbar-brand-row">
