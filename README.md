@@ -4,13 +4,13 @@ Track your movies, TV shows, and anime — all in one place.
 
 ## Features
 
-- 🔐 User authentication
-- 🎬 Search movies, TV shows, and anime
-- 📋 Personal watchlist
-- 📊 Statistics and insights
-- 🌍 9 languages supported
-- 📱 PWA (Progressive Web App)
-- 🔗 Stremio addon integration
+- User authentication
+- Search movies, TV shows, and anime
+- Personal watchlist
+- Statistics and insights
+- 8 languages supported
+- PWA (Progressive Web App)
+- Stremio addon integration
 
 ## Tech Stack
 
@@ -29,7 +29,7 @@ MIT
 
 ## Author
 
-[Ph1lippus] -> (https://github.com/ph1lippus)
+Ph1lippus -> https://github.com/ph1lippus
 
 ---
 
