@@ -116,3 +116,34 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWat
                                                     <img src={imageUrl(c.profile_path) || ''} alt={c.name} />
                                                 )}
                                                 <span>{c.name}</span>
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {!isInWatchlist && (
+                                <div className="modal-actions">
+                                    <button className="modal-btn modal-btn--plan" onClick={() => handleAdd('planning')} disabled={adding}>
+                                        {adding ? 'Adding...' : 'Plan to Watch'}
+                                    </button>
+                                    <button className="modal-btn modal-btn--watch" onClick={() => handleAdd('watching')} disabled={adding}>
+                                        Watching
+                                    </button>
+                                    <button className="modal-btn modal-btn--done" onClick={() => handleAdd('completed')} disabled={adding}>
+                                        Watched
+                                    </button>
+                                </div>
+                            )}
+                            {isInWatchlist && (
+                                <div className="modal-in-watchlist">✓ Already in your watchlist</div>
+                            )}
+                        </div>
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
+export default DetailModal

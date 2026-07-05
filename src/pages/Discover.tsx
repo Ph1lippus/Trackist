@@ -4,6 +4,7 @@ import { searchMulti, searchPerson, getPopularMovies, getTrendingMovies, getTopR
 import { searchAnime, getPopularAnime, getAnilistImageUrl } from '../services/anilistService'
 import type { TMDBResult, AnilistResult } from '../types'
 import DetailModal from '../components/DetailModal'
+import AddModal from '../components/AddModal'
 
 type ResultItem = TMDBResult | {
     id: number
@@ -18,15 +19,18 @@ type ResultItem = TMDBResult | {
     status: string
 }
 
+const ITEMS_PER_PAGE = 20
+
 const Discover: React.FC = () => {
     const [query, setQuery] = useState('')
     const [results, setResults] = useState<ResultItem[]>([])
     const [loading, setLoading] = useState(true)
-    const [adding, setAdding] = useState<number | null>(null)
     const [mediaType, setMediaType] = useState<'all' | 'movie' | 'tv' | 'anime'>('all')
     const [sortBy, setSortBy] = useState<'popular' | 'trending' | 'top_rated'>('popular')
-    const [showAll, setShowAll] = useState(false)
+    const [expandedSection, setExpandedSection] = useState<'movies' | 'tv' | 'anime' | null>(null)
+    const [page, setPage] = useState(1)
     const [detailItem, setDetailItem] = useState<ResultItem | null>(null)
+    const [addItem, setAddItem] = useState<ResultItem | null>(null)
     const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set())
     const [addStatus, setAddStatus] = useState<{ id: number; status: string } | null>(null)
 
@@ -78,7 +82,8 @@ const Discover: React.FC = () => {
 
     const loadPopular = async () => {
         setLoading(true)
-        setShowAll(false)
+        setExpandedSection(null)
+        setPage(1)
         try {
             if (mediaType === 'anime') {
                 const animeResults = await getPopularAnime()
@@ -117,7 +122,8 @@ const Discover: React.FC = () => {
         e.preventDefault()
         if (!query.trim()) return
         setLoading(true)
-        setShowAll(false)
+        setExpandedSection(null)
+        setPage(1)
 
         try {
             if (mediaType === 'anime') {
@@ -138,8 +144,7 @@ const Discover: React.FC = () => {
         setLoading(false)
     }
 
-    const addToWatchlist = async (item: ResultItem, status: string = 'planning') => {
-        setAdding(item.id)
+    const addToWatchlist = async (item: ResultItem, status: string) => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return alert('Please log in')
 
@@ -158,7 +163,6 @@ const Discover: React.FC = () => {
             status
         })
 
-        setAdding(null)
         if (error) alert('Error: ' + error.message)
         else {
             setWatchlistIds(prev => new Set(prev).add(item.id))
@@ -197,50 +201,93 @@ const Discover: React.FC = () => {
                     {item.vote_average && (
                         <div className="discover-card__rating">{item.vote_average.toFixed(1)}</div>
                     )}
+                    {!isInWatchlist && !addState && (
+                        <button className="discover-card__add-icon" onClick={(e) => { e.stopPropagation(); setAddItem(item); }} title="Add to watchlist">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="16" height="16">
+                                <path d="M12 5v14M5 12h14" />
+                            </svg>
+                        </button>
+                    )}
+                    {isInWatchlist && (
+                        <div className="discover-card__check-icon" title="In watchlist">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#68ffae" strokeWidth="2.5" width="16" height="16">
+                                <path d="M20 6L9 17l-5-5" />
+                            </svg>
+                        </div>
+                    )}
                 </div>
                 <div className="discover-card__body">
                     <h3 onClick={() => setDetailItem(item)}>{item.title || item.name}</h3>
                     <span className="discover-card__type">{getDisplayType(item)}</span>
-                    {isInWatchlist ? (
-                        <span className="discover-card__in-list">✓ In Watchlist</span>
-                    ) : addState ? (
-                        <span className="discover-card__in-list">✓ Added as {addState}</span>
-                    ) : (
-                        <div className="discover-card__add-options">
-                            <button className="discover-card__add-btn" onClick={() => addToWatchlist(item, 'planning')} disabled={adding === item.id}>
-                                {adding === item.id ? '...' : 'Plan to Watch'}
-                            </button>
-                            <button className="discover-card__add-btn discover-card__add-btn--watch" onClick={() => addToWatchlist(item, 'watching')} disabled={adding === item.id}>
-                                Watching
-                            </button>
-                            <button className="discover-card__add-btn discover-card__add-btn--done" onClick={() => addToWatchlist(item, 'completed')} disabled={adding === item.id}>
-                                Watched
-                            </button>
-                        </div>
-                    )}
                 </div>
             </article>
         )
     }
 
-    const renderSection = (title: string, items: ResultItem[]) => {
-        if (items.length === 0) return null
-        const display = showAll ? items : items.slice(0, 6)
+    const getExpandedItems = () => {
+        if (expandedSection === 'movies') return movies
+        if (expandedSection === 'tv') return tvShows
+        if (expandedSection === 'anime') return animeList
+        return []
+    }
+
+    const expandedItems = getExpandedItems()
+    const totalPages = Math.ceil(expandedItems.length / ITEMS_PER_PAGE)
+    const paginatedItems = expandedItems.slice(0, page * ITEMS_PER_PAGE)
+
+    const handleBackToOverview = () => {
+        setExpandedSection(null)
+        setPage(1)
+    }
+
+    const getSectionTitle = () => {
+        const sortLabel = sortBy === 'popular' ? 'Popular' : sortBy === 'trending' ? 'Trending' : 'Top Rated'
+        if (expandedSection === 'movies') return `${sortLabel} Movies`
+        if (expandedSection === 'tv') return `${sortLabel} TV Shows`
+        if (expandedSection === 'anime') return 'Popular Anime'
+        return ''
+    }
+
+    // Expanded view
+    if (expandedSection) {
         return (
-            <div className="discover-section">
-                <div className="discover-section__head">
-                    <h2>{title}</h2>
-                    {!showAll && items.length > 6 && (
-                        <button className="dashboard-link-btn" onClick={() => setShowAll(true)}>See All ({items.length})</button>
+            <div className="discover-page">
+                <div className="discover-container">
+                    <div className="discover-section__head" style={{ marginBottom: '1rem' }}>
+                        <button className="dashboard-link-btn" onClick={handleBackToOverview}>← Back</button>
+                        <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>{getSectionTitle()}</h2>
+                        <span>{expandedItems.length} items</span>
+                    </div>
+
+                    <div className="discover-grid">
+                        {paginatedItems.map(renderCard)}
+                    </div>
+
+                    {paginatedItems.length < expandedItems.length && (
+                        <div style={{ textAlign: 'center', padding: '1rem' }}>
+                            <button className="discover-tab active" onClick={() => setPage(p => p + 1)}>
+                                Load More ({expandedItems.length - paginatedItems.length} remaining)
+                            </button>
+                        </div>
                     )}
-                </div>
-                <div className="discover-grid">
-                    {display.map(renderCard)}
+
+                    {detailItem && (
+                        <DetailModal
+                            item={detailItem}
+                            onClose={() => setDetailItem(null)}
+                            onAdd={addToWatchlist}
+                            isInWatchlist={watchlistIds.has(detailItem.id)}
+                        />
+                    )}
+                    {addItem && (
+                        <AddModal item={addItem} onClose={() => setAddItem(null)} onAdd={addToWatchlist} />
+                    )}
                 </div>
             </div>
         )
     }
 
+    // Overview / main view
     return (
         <div className="discover-page">
             <div className="discover-container">
@@ -291,9 +338,39 @@ const Discover: React.FC = () => {
                     </div>
                 ) : mediaType === 'all' ? (
                     <>
-                        {renderSection(`${sortBy === 'popular' ? 'Popular' : sortBy === 'trending' ? 'Trending' : 'Top Rated'} Movies`, movies)}
-                        {renderSection(`${sortBy === 'popular' ? 'Popular' : sortBy === 'trending' ? 'Trending' : 'Top Rated'} TV Shows`, tvShows)}
-                        {renderSection('Popular Anime', animeList)}
+                        {movies.length > 0 && (
+                            <div className="discover-section">
+                                <div className="discover-section__head">
+                                    <h2>{sortBy === 'popular' ? 'Popular' : sortBy === 'trending' ? 'Trending' : 'Top Rated'} Movies</h2>
+                                    <button className="dashboard-link-btn" onClick={() => setExpandedSection('movies')}>See All ({movies.length})</button>
+                                </div>
+                                <div className="discover-grid">
+                                    {movies.slice(0, 6).map(renderCard)}
+                                </div>
+                            </div>
+                        )}
+                        {tvShows.length > 0 && (
+                            <div className="discover-section">
+                                <div className="discover-section__head">
+                                    <h2>{sortBy === 'popular' ? 'Popular' : sortBy === 'trending' ? 'Trending' : 'Top Rated'} TV Shows</h2>
+                                    <button className="dashboard-link-btn" onClick={() => setExpandedSection('tv')}>See All ({tvShows.length})</button>
+                                </div>
+                                <div className="discover-grid">
+                                    {tvShows.slice(0, 6).map(renderCard)}
+                                </div>
+                            </div>
+                        )}
+                        {animeList.length > 0 && (
+                            <div className="discover-section">
+                                <div className="discover-section__head">
+                                    <h2>Popular Anime</h2>
+                                    <button className="dashboard-link-btn" onClick={() => setExpandedSection('anime')}>See All ({animeList.length})</button>
+                                </div>
+                                <div className="discover-grid">
+                                    {animeList.slice(0, 6).map(renderCard)}
+                                </div>
+                            </div>
+                        )}
                         {movies.length === 0 && tvShows.length === 0 && animeList.length === 0 && (
                             <div className="discover-empty"><p>Nothing to show</p></div>
                         )}
@@ -319,6 +396,9 @@ const Discover: React.FC = () => {
                     onAdd={addToWatchlist}
                     isInWatchlist={watchlistIds.has(detailItem.id)}
                 />
+            )}
+            {addItem && (
+                <AddModal item={addItem} onClose={() => setAddItem(null)} onAdd={addToWatchlist} />
             )}
         </div>
     )

@@ -297,6 +297,50 @@ html, body {
     gap: 1.4rem;
 }
 
+/* ===== DASHBOARD LINK BUTTON ===== */
+.dashboard-link-btn {
+    background: none;
+    border: none;
+    color: var(--color-orange);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.dashboard-link-btn:hover {
+    background: rgba(133,138,227,0.1);
+}
+
+.dashboard-card__art {
+    position: relative;
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(133,138,227,0.3), rgba(255,255,255,0.05));
+}
+
+.dashboard-card__art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.dashboard-card__no-poster {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255,255,255,0.03);
+    color: rgba(255,255,255,0.3);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 1rem;
+}
+
 /* ===== DISCOVER PAGE REDESIGN ===== */
 
 .discover-page {
@@ -509,6 +553,47 @@ html, body {
     color: #ffd700;
 }
 
+.discover-card__add-icon {
+    position: absolute;
+    bottom: 0.5rem;
+    right: 0.5rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(133,138,227,0.4);
+    background: rgba(5,5,5,0.8);
+    backdrop-filter: blur(4px);
+    color: var(--color-orange);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    padding: 0;
+}
+
+.discover-card__add-icon:hover {
+    background: var(--color-orange);
+    color: var(--color-black);
+    border-color: var(--color-orange);
+    transform: scale(1.1);
+}
+
+.discover-card__check-icon {
+    position: absolute;
+    bottom: 0.5rem;
+    right: 0.5rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(104,255,174,0.4);
+    background: rgba(5,5,5,0.8);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .discover-card__body {
     padding: 0.7rem 0.75rem 0.8rem;
     display: flex;
@@ -587,8 +672,418 @@ html, body {
     font-size: 0.9rem;
 }
 
+/* ===== ADD MODAL ===== */
+.add-modal {
+    background: rgba(15,15,20,0.98);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 1.5rem;
+    max-width: 360px;
+    width: 90%;
+    position: relative;
+}
+
+.add-modal__preview {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.add-modal__preview img {
+    width: 60px;
+    height: 90px;
+    object-fit: cover;
+    border-radius: 8px;
+}
+
+.add-modal__preview h3 {
+    font-size: 1rem;
+    margin-bottom: 0.2rem;
+}
+
+.add-modal__question {
+    text-align: center;
+    color: rgba(255,255,255,0.7);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.add-modal__actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.add-modal__btn {
+    flex: 1;
+    padding: 0.7rem 0.5rem;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.05);
+    color: var(--color-platinum);
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.add-modal__btn--no:hover {
+    border-color: var(--color-orange);
+    background: rgba(133,138,227,0.1);
+    color: var(--color-orange);
+}
+
+.add-modal__btn--yes:hover {
+    border-color: #68ffae;
+    background: rgba(104,255,174,0.1);
+    color: #68ffae;
+}
+
+.add-modal__btn:disabled {
+    opacity: 0.5;
+}
+
+/* ===== DETAIL MODAL ===== */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 3000;
+    background: rgba(0,0,0,0.8);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.modal-content {
+    background: rgba(15,15,20,0.98);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 20px;
+    max-width: 800px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    padding: 1.5rem;
+}
+
+.modal-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(0,0,0,0.5);
+    color: var(--color-platinum);
+    font-size: 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: background 0.2s;
+}
+
+.modal-close:hover {
+    background: rgba(255,255,255,0.1);
+}
+
+.modal-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 1.5rem;
+}
+
+.modal-poster img {
+    width: 100%;
+    border-radius: 12px;
+    display: block;
+}
+
+.modal-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.modal-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 0.85rem;
+    color: rgba(255,255,255,0.6);
+    margin-bottom: 0.75rem;
+}
+
+.modal-rating {
+    color: #ffd700;
+    font-weight: 700;
+}
+
+.modal-genres {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 1rem;
+}
+
+.modal-genre-tag {
+    padding: 0.25rem 0.6rem;
+    background: rgba(133,138,227,0.1);
+    border: 1px solid rgba(133,138,227,0.2);
+    border-radius: 6px;
+    font-size: 0.75rem;
+    color: var(--color-orange);
+}
+
+.modal-overview {
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 1rem;
+}
+
+.modal-cast h4 {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    color: rgba(255,255,255,0.5);
+}
+
+.modal-cast-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.modal-cast-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.3rem 0.6rem;
+    background: rgba(255,255,255,0.04);
+    border-radius: 8px;
+    font-size: 0.8rem;
+}
+
+.modal-cast-item img {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.modal-btn {
+    flex: 1;
+    min-width: 100px;
+    padding: 0.7rem 0.5rem;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.05);
+    color: var(--color-platinum);
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-btn--plan:hover {
+    border-color: var(--color-orange);
+    background: rgba(133,138,227,0.1);
+    color: var(--color-orange);
+}
+
+.modal-btn--watch:hover {
+    border-color: #68ffae;
+    background: rgba(104,255,174,0.1);
+    color: #68ffae;
+}
+
+.modal-btn--done:hover {
+    border-color: #ffd700;
+    background: rgba(255,215,0,0.1);
+    color: #ffd700;
+}
+
+.modal-btn:disabled {
+    opacity: 0.5;
+}
+
+.modal-in-watchlist {
+    margin-top: 1rem;
+    text-align: center;
+    color: #68ffae;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+/* ===== WATCHLIST ===== */
+.watchlist-tabs {
+    display: flex;
+    gap: 0.25rem;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 10px;
+    padding: 0.25rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.watchlist-tab {
+    padding: 0.4rem 0.75rem;
+    border: none;
+    background: transparent;
+    color: rgba(255,255,255,0.5);
+    font-size: 0.8rem;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.watchlist-tab:hover {
+    color: var(--color-platinum);
+    background: rgba(255,255,255,0.05);
+}
+
+.watchlist-tab.active {
+    color: #fff;
+    background: var(--color-orange);
+}
+
+.watchlist-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.watchlist-card {
+    display: flex;
+    gap: 1rem;
+    background: rgba(5,5,5,0.4);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    overflow: hidden;
+    padding: 0.75rem;
+}
+
+.watchlist-card__poster {
+    width: 80px;
+    min-height: 120px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(133,138,227,0.3), rgba(255,255,255,0.05));
+}
+
+.watchlist-card__poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.watchlist-card__info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    min-width: 0;
+}
+
+.watchlist-card__info h3 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.watchlist-card__type {
+    font-size: 0.7rem;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+}
+
+.watchlist-card__overview {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.5);
+    line-height: 1.4;
+}
+
+.watchlist-card__status {
+    display: flex;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    margin-top: 0.3rem;
+}
+
+.watchlist-status-btn {
+    padding: 0.3rem 0.6rem;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.5);
+    font-size: 0.7rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.watchlist-status-btn:hover:not(:disabled) {
+    border-color: var(--color-orange);
+    color: var(--color-orange);
+}
+
+.watchlist-status-btn.active {
+    background: var(--color-orange);
+    border-color: var(--color-orange);
+    color: var(--color-black);
+}
+
+.watchlist-status-btn:disabled {
+    opacity: 0.5;
+}
+
+.watchlist-remove-btn {
+    margin-top: 0.3rem;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid rgba(255,80,80,0.2);
+    background: rgba(255,80,80,0.05);
+    color: rgba(255,80,80,0.7);
+    font-size: 0.7rem;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    align-self: flex-start;
+}
+
+.watchlist-remove-btn:hover {
+    background: rgba(255,80,80,0.15);
+    border-color: rgba(255,80,80,0.4);
+    color: #ff5050;
+}
+
 /* Responsive */
 @media (max-width: 600px) {
+    .modal-layout {
+        grid-template-columns: 1fr;
+    }
+    .modal-poster {
+        max-width: 200px;
+        margin: 0 auto;
+    }
     .discover-controls {
         flex-direction: column;
         align-items: stretch;
