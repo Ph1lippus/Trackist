@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import type { User } from '@supabase/supabase-js'
 import { supabase } from '../services/supabaseClient'
-import { signOutUser } from '../services/profileService'
+import { signOutUser } from '../services/profileService'    
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate()
-    const [user, setUser] = useState<any>(null)
+    const [user, setUser] = useState<User | null>(null)
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -25,14 +26,14 @@ const Navbar: React.FC = () => {
     const nickname = user?.user_metadata?.username || user?.user_metadata?.nickname || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Viewer'
 
     return (
-        <nav className="navbar navbar-brand-row">
+        <nav className="navbar-brand-row" aria-label="Main navigation">
             <div className="container navbar-inner">
                 <NavLink className="navbar-brand" to="/">TRACKIST</NavLink>
 
                 <div className="navbar-actions">
                     {user ? (
                         <>
-                            <span className="navbar-user">
+                            <span className="navbar-user" title={nickname}>
                                 {nickname}
                             </span>
                             <button className="navbar-action-link" onClick={handleLogout}>

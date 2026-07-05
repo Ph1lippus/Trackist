@@ -4,7 +4,6 @@ import { requestPasswordReset, updateUserEmail } from '../services/profileServic
 
 const Settings: React.FC = () => {
     const [username, setUsername] = useState('')
-    const [fullName, setFullName] = useState('')
     const [email, setEmail] = useState('')
     const [loading, setLoading] = useState(false)
     const [message, setMessage] = useState('')
@@ -16,7 +15,6 @@ const Settings: React.FC = () => {
             const { data: { user } } = await supabase.auth.getUser()
             if (user?.user_metadata) {
                 setUsername(user.user_metadata.username || '')
-                setFullName(user.user_metadata.full_name || '')
             }
             if (user?.email) {
                 setEmail(user.email)
@@ -33,8 +31,7 @@ const Settings: React.FC = () => {
 
         const { data: { user }, error } = await supabase.auth.updateUser({
             data: {
-                username,
-                full_name: fullName
+                username
             }
         })
 
@@ -105,16 +102,6 @@ const Settings: React.FC = () => {
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 placeholder="Enter username"
-                            />
-                        </div>
-
-                        <div className="mb-3">
-                            <label className="form-label">Full name</label>
-                            <input
-                                className="form-control"
-                                value={fullName}
-                                onChange={(e) => setFullName(e.target.value)}
-                                placeholder="Enter your full name"
                             />
                         </div>
 

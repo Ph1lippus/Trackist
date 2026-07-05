@@ -1,5 +1,6 @@
 import React from 'react'
 import tmdbLogo from '../assets/TMDBLOGO.svg'
+import supaBaseLogo from '../assets/supabase-logo-icon.png'
 
 const credits = [
     {
@@ -11,7 +12,7 @@ const credits = [
     {
         title: 'Supabase',
         text: 'Database & Auth by Supabase',
-        logo: 'https://supabase.com/favicon.ico',
+        logo:  supaBaseLogo,
         link: 'https://supabase.com/'
     },
     {

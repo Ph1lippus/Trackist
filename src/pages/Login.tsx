@@ -1,16 +1,15 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { requestPasswordReset, signInWithEmail } from '../services/profileService'
+import { signInWithEmail } from '../services/profileService'
 
 const Login: React.FC = () => {
     const navigate = useNavigate()
-    const [identifier, setIdentifier] = useState('')
+    const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
     const [error, setError] = useState('')
     const [message, setMessage] = useState('')
     const [loading, setLoading] = useState(false)
-    const [resetLoading, setResetLoading] = useState(false)
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -18,8 +17,7 @@ const Login: React.FC = () => {
         setMessage('')
         setLoading(true)
 
-        const loginIdentifier = identifier.trim().toLowerCase()
-        const { data, error: signInError } = await signInWithEmail(loginIdentifier, password)
+        const { data, error: signInError } = await signInWithEmail(email.trim().toLowerCase(), password)
 
         setLoading(false)
 
@@ -33,30 +31,6 @@ const Login: React.FC = () => {
         }
     }
 
-    const handlePasswordRecovery = async () => {
-        const email = identifier.trim().toLowerCase()
-
-        if (!email) {
-            setError('Please enter your email address first')
-            return
-        }
-
-        setResetLoading(true)
-        setError('')
-        setMessage('')
-
-        const { error } = await requestPasswordReset(email)
-
-        setResetLoading(false)
-
-        if (error) {
-            setError(error.message)
-            return
-        }
-
-        setMessage(`If the account exists, a password reset link has been sent to ${email}.`)
-    }
-
     return (
         <main className="main">
             <div className="container">
@@ -64,16 +38,16 @@ const Login: React.FC = () => {
                     <div className="col-md-6 col-lg-5">
                         <div className="auth-card">
                             <h2 className="auth-title">Welcome Back</h2>
-                            <form onSubmit={handleSubmit} noValidate >
+                            <form onSubmit={handleSubmit} noValidate>
                                 <div className="mb-3">
-                                    <label htmlFor="identifier" className="form-label">Email</label>
+                                    <label htmlFor="email" className="form-label">Email</label>
                                     <input
                                         type="email"
                                         className="form-control"
-                                        id="identifier"
+                                        id="email"
                                         placeholder="Enter your email"
-                                        value={identifier}
-                                        onChange={(e) => setIdentifier(e.target.value)}
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
                                         required
                                     />
                                 </div>
@@ -105,14 +79,9 @@ const Login: React.FC = () => {
                                     {loading ? 'Logging in...' : 'Login'}
                                 </button>
                             </form>
-                            <button
-                                type="button"
-                                className="btn btn-link p-0 mt-3"
-                                onClick={handlePasswordRecovery}
-                                disabled={resetLoading}
-                            >
-                                {resetLoading ? 'Sending reset link...' : 'Forgot password?'}
-                            </button>
+                            <div className="auth-extra-links">
+                                <Link to="/forgot-password" className="auth-link">Forgot password?</Link>
+                            </div>
                             <p className="auth-text mt-3">
                                 Don't have an account? <Link to="/register" className="auth-link">Register</Link>
                             </p>
