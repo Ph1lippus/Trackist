@@ -46,8 +46,8 @@ const Dashboard: React.FC = () => {
     return (
         <section className="dashboard-page">
             <div className="dashboard-shell">
-                <div className="dashboard-section">
-                    <div className="dashboard-section__head">
+                <div className="discover-section">
+                    <div className="discover-section__head">
                         <h2>Continue Watching</h2>
                         <span>{watching.length} items</span>
                     </div>
@@ -56,19 +56,22 @@ const Dashboard: React.FC = () => {
                             Nothing in progress. Start exploring!
                         </p>
                     ) : (
-                        <div className="dashboard-card-grid">
+                        <div className="discover-grid">
                             {watching.map((item) => (
-                                <article className="dashboard-card" key={item.id}>
-                                    <div className="dashboard-card__art">
+                                <article className="discover-card" key={item.id}>
+                                    <div className="discover-card__poster">
                                         {getPoster(item.poster_path) ? (
                                             <img src={getPoster(item.poster_path)} alt={item.title} />
                                         ) : (
-                                            <div className="dashboard-card__no-poster">{item.title}</div>
+                                            <div className="discover-card__no-poster"><span>{item.title}</span></div>
                                         )}
+                                        <div className="discover-card__rating" style={{ background: 'rgba(133,138,227,0.2)', color: 'var(--color-orange)' }}>
+                                            {item.status}
+                                        </div>
                                     </div>
-                                    <div className="dashboard-card__body">
+                                    <div className="discover-card__body">
                                         <h3>{item.title}</h3>
-                                        <p>{item.media_type} · {item.status}</p>
+                                        <span className="discover-card__type">{item.media_type}</span>
                                     </div>
                                 </article>
                             ))}
@@ -76,24 +79,27 @@ const Dashboard: React.FC = () => {
                     )}
                 </div>
 
-                <div className="dashboard-section">
-                    <div className="dashboard-section__head">
+                <div className="discover-section">
+                    <div className="discover-section__head">
                         <h2>Popular Movies</h2>
                         <button className="dashboard-link-btn" onClick={() => navigate('/discover')}>See More</button>
                     </div>
-                    <div className="dashboard-card-grid">
+                    <div className="discover-grid">
                         {popular.map((item) => (
-                            <article className="dashboard-card" key={`pop-${item.id}`}>
-                                <div className="dashboard-card__art">
+                            <article className="discover-card" key={`pop-${item.id}`}>
+                                <div className="discover-card__poster">
                                     {getPoster(item.poster_path) ? (
                                         <img src={getPoster(item.poster_path)} alt={item.title || item.name || ''} />
                                     ) : (
-                                        <div className="dashboard-card__no-poster">{item.title || item.name}</div>
+                                        <div className="discover-card__no-poster"><span>{item.title || item.name}</span></div>
+                                    )}
+                                    {item.vote_average && (
+                                        <div className="discover-card__rating">{item.vote_average.toFixed(1)}</div>
                                     )}
                                 </div>
-                                <div className="dashboard-card__body">
+                                <div className="discover-card__body">
                                     <h3>{item.title || item.name}</h3>
-                                    <p>{item.media_type === 'movie' ? 'Movie' : 'Movie'} · {item.vote_average?.toFixed(1)}</p>
+                                    <span className="discover-card__type">Movie</span>
                                 </div>
                             </article>
                         ))}

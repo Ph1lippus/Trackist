@@ -35,6 +35,27 @@ export interface WatchlistItem {
     last_watched_at?: string
 }
 
+export interface WatchlistEpisode {
+    id: string
+    watchlist_id: string
+    season_number: number
+    episode_number: number
+    tmdb_episode_id?: number
+    anilist_episode_id?: number
+    title?: string
+    still_path?: string
+    overview?: string
+    vote_average?: number
+    air_date?: string
+    runtime?: number
+    watched: boolean
+    watched_at?: string
+    user_rating?: number
+    notes?: string
+    created_at: string
+    updated_at: string
+}
+
 export interface AnilistResult {
     id: number
     title: {

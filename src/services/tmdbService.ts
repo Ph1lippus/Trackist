@@ -54,7 +54,12 @@ export const getMovieDetails = async (id: number) => {
 }
 
 export const getTVDetails = async (id: number) => {
-    const res = await fetch(`${BASE_URL}/tv/${id}?api_key=${API_KEY}&append_to_response=credits,videos`)
+    const res = await fetch(`${BASE_URL}/tv/${id}?api_key=${API_KEY}&append_to_response=credits,videos,aggregate_credits`)
+    return res.json()
+}
+
+export const getTVSeasonDetails = async (tvId: number, seasonNumber: number) => {
+    const res = await fetch(`${BASE_URL}/tv/${tvId}/season/${seasonNumber}?api_key=${API_KEY}`)
     return res.json()
 }
 

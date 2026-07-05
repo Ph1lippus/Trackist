@@ -926,6 +926,86 @@ html, body {
     font-size: 0.9rem;
 }
 
+/* ===== EPISODES ===== */
+.modal-episodes {
+    margin-top: 1rem;
+}
+
+.modal-episodes h4 {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+    color: rgba(255,255,255,0.5);
+}
+
+.modal-season-tabs {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+}
+
+.modal-season-tab {
+    padding: 0.3rem 0.6rem;
+    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.5);
+    font-size: 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.modal-season-tab:hover {
+    border-color: var(--color-orange);
+    color: var(--color-orange);
+}
+
+.modal-season-tab.active {
+    background: var(--color-orange);
+    border-color: var(--color-orange);
+    color: var(--color-black);
+}
+
+.modal-episode-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.modal-episode-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.5rem;
+    background: rgba(255,255,255,0.03);
+    border-radius: 6px;
+    font-size: 0.8rem;
+}
+
+.modal-episode-num {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(133,138,227,0.15);
+    border-radius: 6px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--color-orange);
+    flex-shrink: 0;
+}
+
+.modal-episode-info {
+    color: rgba(255,255,255,0.7);
+}
+
+.modal-episode-info strong {
+    color: var(--color-platinum);
+}
+
 /* ===== WATCHLIST ===== */
 .watchlist-tabs {
     display: flex;

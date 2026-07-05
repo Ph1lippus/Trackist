@@ -232,7 +232,6 @@ const Discover: React.FC = () => {
     }
 
     const expandedItems = getExpandedItems()
-    const totalPages = Math.ceil(expandedItems.length / ITEMS_PER_PAGE)
     const paginatedItems = expandedItems.slice(0, page * ITEMS_PER_PAGE)
 
     const handleBackToOverview = () => {
