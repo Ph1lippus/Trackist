@@ -6,7 +6,7 @@
     --color-platinum: #e7e8ec;
     --font-display: 'Black Ops One', cursive;
     --font-title: 'Black Ops One', cursive;
-    --navbar-height: 6rem;
+    --navbar-height: 1rem;
 }
 
 * {
@@ -80,7 +80,7 @@ html, body {
     align-items: center;
     justify-content: center;
     width: 100%;
-    padding: 2rem 1rem 3rem;
+    padding: 2rem 1rem 4rem;
 }
 
 .main {
@@ -164,15 +164,31 @@ html, body {
 
 .navbar-brand-row {
     background-color: transparent;
-    padding: 0.6rem 0 0.2rem 0;
+    padding: 1rem 0 0.9rem 0;
     border-bottom: none;
+    position: relative;
 }
 
-.navbar-brand-row .container,
-.navbar-nav-row .container {
+.navbar-brand-row::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: min(92%, 760px);
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.18), transparent);
+}
+
+.navbar-brand-row .container {
     display: flex;
     justify-content: center;
     align-items: center;
+    position: relative;
+}
+
+.navbar-inner {
+    position: relative;
 }
 
 .navbar-brand-row .navbar-brand {
@@ -182,74 +198,77 @@ html, body {
     color: var(--color-orange);
     letter-spacing: 4px;
     margin: 0;
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
-.navbar-nav-row {
-    background: transparent !important;
-    backdrop-filter: none;
-    padding: 0 0 0.4rem 0;
-    border-bottom: none;
-}
-
-.navbar-nav-row .nav {
+.navbar-actions {
+    margin-left: auto;
     display: flex;
-    gap: 2rem;
-    justify-content: center;
     align-items: center;
-    flex-wrap: wrap;
+    gap: 1.1rem;
 }
 
-.navbar-nav-row .nav-link {
-    font-size: 1rem;
-    letter-spacing: 1px;
+.navbar-user {
     color: var(--color-platinum);
-    opacity: 0.6;
-    padding: 0.3rem 0.2rem;
-    background: transparent !important;
-    border: none;
-    border-bottom: 2px solid transparent;
-    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.navbar-action-link {
+    color: rgba(255, 255, 255, 0.8);
     text-decoration: none;
-    position: relative;
-}
-
-.navbar-nav-row .nav-link:hover {
-    opacity: 1;
-    color: var(--color-platinum);
-}
-
-.navbar-nav-row .nav-link.active {
-    opacity: 1;
-    color: var(--color-orange);
-    border-bottom: 2px solid var(--color-orange);
-}
-
-.navbar-nav-row .nav-link.logout-btn {
-    background: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    background: transparent;
     border: none;
+    padding: 0;
     cursor: pointer;
-    padding: 0.3rem 0.2rem;
+    transition: color 0.2s ease, opacity 0.2s ease;
 }
 
-.navbar-nav-row .nav-link.logout-btn:hover {
-    opacity: 1;
+.navbar-action-link:hover {
     color: var(--color-orange);
+    opacity: 1;
 }
 
-/* ===== PAGE TRANSITIONS ===== */
+.navbar-action-link.active {
+    color: var(--color-orange);
+    opacity: 1;
+}
+
 .page-transition {
     width: 100%;
-    animation: fadeIn 0.3s ease-out forwards;
+    will-change: opacity, transform;
+}
+
+.page-transition.enter {
+    animation: fadeIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.page-transition.exit {
+    animation: fadeOut 0.3s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 
 @keyframes fadeIn {
     0% {
         opacity: 0;
-        transform: translateY(8px);
+        transform: translateY(10px);
     }
     100% {
         opacity: 1;
         transform: translateY(0);
+    }
+}
+
+@keyframes fadeOut {
+    0% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(8px);
     }
 }
 
@@ -490,14 +509,17 @@ html, body {
 .btn:focus,
 .btn:focus-visible,
 .form-control:focus,
-.form-check-input:focus {
-    box-shadow: 0 0 0 3px rgba(255, 173, 5, 0.4) !important;
-    border-color: var(--color-orange) !important;
-}
-
-.btn:focus,
-.btn:focus-visible {
-    outline: none;
+.form-check-input:focus,
+.nav-link:focus,
+.nav-link:focus-visible,
+.navbar-action-link:focus,
+.navbar-action-link:focus-visible,
+button:focus,
+button:focus-visible {
+    box-shadow: none !important;
+    outline: none !important;
+    border-color: inherit !important;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .btn-primary {
@@ -508,12 +530,22 @@ html, body {
     padding: 0.8rem 2.5rem;
     border-radius: 50px;
     transition: all 0.3s ease;
+    margin-top: 1.1rem;
+}
+
+.btn-primary:hover,
+.btn-primary:focus,
+.btn-primary:focus-visible,
+.btn-primary:active,
+.btn-primary.active {
+    background-color: var(--color-orange) !important;
+    border-color: var(--color-orange) !important;
+    color: var(--color-black) !important;
+    box-shadow: none !important;
 }
 
 .btn-primary:hover {
-    background-color: transparent;
-    border-color: var(--color-orange);
-    color: var(--color-orange);
+    opacity: 0.95;
 }
 
 .btn-outline-primary {
@@ -546,10 +578,19 @@ html, body {
     width: 100%;
 }
 
+.auth-card form {
+    text-align: left;
+}
+
 .auth-card .form-control {
     background: rgba(255, 255, 255, 0.05);
     border-color: rgba(255, 255, 255, 0.1);
-    color: var(--color-platinum);
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 400;
+}
+
+.auth-card .form-control::placeholder {
+    color: rgba(255, 255, 255, 0.45);
 }
 
 .auth-card .form-control:focus {

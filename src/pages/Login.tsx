@@ -25,8 +25,6 @@ const Login: React.FC = () => {
             setError(error.message)
             return
         }
-
-        // Success – redirect to dashboard or home
         navigate('/')
     }
 

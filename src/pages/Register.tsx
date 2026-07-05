@@ -42,7 +42,6 @@ const Register: React.FC = () => {
             return
         }
 
-        // Success – redirect to login or show confirmation
         navigate('/login')
     }
 
@@ -84,7 +83,7 @@ const Register: React.FC = () => {
                                         type="password"
                                         className="form-control"
                                         id="password"
-                                        placeholder="Min. 6 characters"
+                                        placeholder="Min. 8 characters"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         required

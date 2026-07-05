@@ -22,43 +22,29 @@ const Navbar: React.FC = () => {
     }
 
     return (
-        <>
-            <nav className="navbar navbar-brand-row">
-                <div className="container">
-                    <NavLink className="navbar-brand" to="/">TRACKIST</NavLink>
-                </div>
-            </nav>
+        <nav className="navbar navbar-brand-row">
+            <div className="container navbar-inner">
+                <NavLink className="navbar-brand" to="/">TRACKIST</NavLink>
 
-            <nav className="navbar navbar-nav-row">
-                <div className="container">
-                    <ul className="nav nav-pills">
-                        {user ? (
-                            <>
-                                <li className="nav-item">
-                                    <span className="nav-link" style={{ opacity: 0.7, cursor: 'default' }}>
-                                        {user.email}
-                                    </span>
-                                </li>
-                                <li className="nav-item">
-                                    <button className="nav-link" onClick={handleLogout} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                                        Logout
-                                    </button>
-                                </li>
-                            </>
-                        ) : (
-                            <>
-                                <li className="nav-item">
-                                    <NavLink className="nav-link" to="/Login">Login</NavLink>
-                                </li>
-                                <li className="nav-item">
-                                    <NavLink className="nav-link" to="/Register">Register</NavLink>
-                                </li>
-                            </>
-                        )}
-                    </ul>
+                <div className="navbar-actions">
+                    {user ? (
+                        <>
+                            <span className="navbar-user" style={{ opacity: 0.7 }}>
+                                {user.email}
+                            </span>
+                            <button className="navbar-action-link" onClick={handleLogout}>
+                                Logout
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <NavLink className="navbar-action-link" to="/Login">Login</NavLink>
+                            <NavLink className="navbar-action-link" to="/Register">Register</NavLink>
+                        </>
+                    )}
                 </div>
-            </nav>
-        </>
+            </div>
+        </nav>
     )
 }
 
