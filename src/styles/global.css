@@ -200,9 +200,7 @@ html, body {
 }
 
 .navbar-nav-row .nav-link {
-    font-family: 'Cinzel', serif;   
-    font-weight: 400;
-    font-size: 0.95rem;
+    font-size: 1rem;
     letter-spacing: 1px;
     color: var(--color-platinum);
     opacity: 0.6;
