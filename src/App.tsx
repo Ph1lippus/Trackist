@@ -6,33 +6,26 @@ import Footer from './components/Footer'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import Dashboard from './pages/Dashboard'
 
-const PageTransition: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const location = useLocation()
-    const [phase, setPhase] = useState<'enter' | 'exit'>('enter')
-    const [displayKey, setDisplayKey] = useState(location.pathname)
-
-    useEffect(() => {
-        setPhase('exit')
-
-        const timeout = window.setTimeout(() => {
-            setDisplayKey(location.pathname)
-            setPhase('enter')
-        }, 260)
-
-        return () => window.clearTimeout(timeout)
-    }, [location.pathname])
+const PageLoader: React.FC<{ show: boolean; stage: 'enter' | 'exit' | 'hidden' }> = ({ show, stage }) => {
+    if (!show) return null
 
     return (
-        <div key={displayKey} className={`page-transition ${phase}`}>
-            {children}
+        <div className={`page-loader page-loader--${stage}`} aria-live="polite">
+            <div className="page-loader__content">
+                <div className="page-loader__logo">TRACKIST</div>
+            </div>
         </div>
     )
 }
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
+    const location = useLocation()
     const [user, setUser] = useState<any>(null)
     const [loading, setLoading] = useState(true)
+    const [loaderStage, setLoaderStage] = useState<'enter' | 'exit' | 'hidden'>('hidden')
+    const [showPageContent, setShowPageContent] = useState(true)
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -47,29 +40,60 @@ const App: React.FC = () => {
         return () => subscription.unsubscribe()
     }, [])
 
+    useEffect(() => {
+        if (loading) return
+
+        setShowPageContent(false)
+        setLoaderStage('enter')
+
+        const showTimer = window.setTimeout(() => {
+            setShowPageContent(true)
+            setLoaderStage('exit')
+        }, 700)
+        const hideTimer = window.setTimeout(() => setLoaderStage('hidden'), 900)
+
+        return () => {
+            window.clearTimeout(showTimer)
+            window.clearTimeout(hideTimer)
+        }
+    }, [location.pathname, loading])
+
     if (loading) {
-        return <div>Loading...</div>
+        return (
+            <div className="page-loader page-loader--enter" aria-live="polite">
+                <div className="page-loader__content">
+                    <div className="page-loader__logo">TRACKIST</div>
+                </div>
+            </div>
+        )
     }
 
     return (
+        <div className="d-flex flex-column min-vh-100">
+            <Navbar />
+            <main className="page-main flex-grow-1 d-flex align-items-center justify-content-center">
+                {!showPageContent ? null : (
+                    <Routes>
+                        <Route path="/" element={user ? <Dashboard /> : <Home />} />
+                        <Route path="/Login" element={
+                            user ? <Navigate to="/" replace /> : <Login />
+                        } />
+                        <Route path="/Register" element={
+                            user ? <Navigate to="/" replace /> : <Register />
+                        } />
+                    </Routes>
+                )}
+            </main>
+            <Footer />
+            <PageLoader show={loaderStage !== 'hidden'} stage={loaderStage} />
+        </div>
+    )
+}
+
+const App: React.FC = () => {
+    return (
         <BrowserRouter>
-            <div className="d-flex flex-column min-vh-100">
-                <Navbar />
-                <main className="page-main flex-grow-1 d-flex align-items-center justify-content-center">
-                    <PageTransition>
-                        <Routes>
-                            <Route path="/" element={<Home />} />
-                            <Route path="/Login" element={
-                                user ? <Navigate to="/" replace /> : <Login />
-                            } />
-                            <Route path="/Register" element={
-                                user ? <Navigate to="/" replace /> : <Register />
-                            } />
-                        </Routes>
-                    </PageTransition>
-                </main>
-                <Footer />
-            </div>
+            <AppContent />
         </BrowserRouter>
     )
 }

@@ -21,6 +21,8 @@ const Navbar: React.FC = () => {
         navigate('/')
     }
 
+    const nickname = user?.user_metadata?.nickname || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Viewer'
+
     return (
         <nav className="navbar navbar-brand-row">
             <div className="container navbar-inner">
@@ -29,8 +31,8 @@ const Navbar: React.FC = () => {
                 <div className="navbar-actions">
                     {user ? (
                         <>
-                            <span className="navbar-user" style={{ opacity: 0.7 }}>
-                                {user.email}
+                            <span className="navbar-user">
+                                {nickname}
                             </span>
                             <button className="navbar-action-link" onClick={handleLogout}>
                                 Logout

@@ -8,6 +8,8 @@ const Register: React.FC = () => {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
+    const [showPassword, setShowPassword] = useState(false)
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
 
@@ -79,28 +81,48 @@ const Register: React.FC = () => {
                                 </div>
                                 <div className="mb-3">
                                     <label htmlFor="password" className="form-label">Password</label>
-                                    <input
-                                        type="password"
-                                        className="form-control"
-                                        id="password"
-                                        placeholder="Min. 8 characters"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        required
-                                        minLength={6}
-                                    />
+                                    <div className="password-input-wrap">
+                                        <input
+                                            type={showPassword ? 'text' : 'password'}
+                                            className="form-control"
+                                            id="password"
+                                            placeholder="Min. 8 characters"
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            required
+                                            minLength={6}
+                                        />
+                                        <button
+                                            type="button"
+                                            className="password-toggle"
+                                            onClick={() => setShowPassword((prev) => !prev)}
+                                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                                        >
+                                            <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div className="mb-3">
                                     <label htmlFor="confirmPassword" className="form-label">Confirm Password</label>
-                                    <input
-                                        type="password"
-                                        className="form-control"
-                                        id="confirmPassword"
-                                        placeholder="Confirm your password"
-                                        value={confirmPassword}
-                                        onChange={(e) => setConfirmPassword(e.target.value)}
-                                        required
-                                    />
+                                    <div className="password-input-wrap">
+                                        <input
+                                            type={showConfirmPassword ? 'text' : 'password'}
+                                            className="form-control"
+                                            id="confirmPassword"
+                                            placeholder="Confirm your password"
+                                            value={confirmPassword}
+                                            onChange={(e) => setConfirmPassword(e.target.value)}
+                                            required
+                                        />
+                                        <button
+                                            type="button"
+                                            className="password-toggle"
+                                            onClick={() => setShowConfirmPassword((prev) => !prev)}
+                                            aria-label={showConfirmPassword ? 'Hide confirmation password' : 'Show confirmation password'}
+                                        >
+                                            <i className={`fa-solid ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+                                        </button>
+                                    </div>
                                 </div>
                                 {error && <div className="alert alert-danger">{error}</div>}
                                 <button type="submit" className="btn btn-primary w-100" disabled={loading}>
