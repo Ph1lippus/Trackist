@@ -27,13 +27,40 @@ const Register: React.FC = () => {
             return
         }
 
+        const cleanedUsername = username.trim()
+        const cleanedEmail = email.trim().toLowerCase()
+
+        if (!cleanedUsername || !cleanedEmail) {
+            setError('Please enter a username and email address')
+            return
+        }
+
         setLoading(true)
 
+        const { data: { users }, error: lookupError } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
+
+        if (!lookupError && users) {
+            const usernameTaken = users.some((user) => user.user_metadata?.username?.toString().toLowerCase() === cleanedUsername.toLowerCase())
+            const emailTaken = users.some((user) => user.email?.toLowerCase() === cleanedEmail)
+
+            if (usernameTaken) {
+                setLoading(false)
+                setError('That username is already taken')
+                return
+            }
+
+            if (emailTaken) {
+                setLoading(false)
+                setError('That email is already registered')
+                return
+            }
+        }
+
         const { error } = await supabase.auth.signUp({
-            email,
+            email: cleanedEmail,
             password,
             options: {
-                data: { username }
+                data: { username: cleanedUsername }
             }
         })
 

@@ -17,15 +17,42 @@ const Login: React.FC = () => {
 
         const loginIdentifier = identifier.trim()
 
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data: { users }, error } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 })
+
+        if (!error && users) {
+            const matchedUser = users.find((user) => {
+                const metaUsername = user.user_metadata?.username?.toString().toLowerCase()
+                const metaEmail = user.email?.toLowerCase()
+                return metaUsername === loginIdentifier.toLowerCase() || metaEmail === loginIdentifier.toLowerCase()
+            })
+
+            if (matchedUser?.email) {
+                const { error: signInError } = await supabase.auth.signInWithPassword({
+                    email: matchedUser.email,
+                    password
+                })
+
+                setLoading(false)
+
+                if (signInError) {
+                    setError(signInError.message)
+                    return
+                }
+
+                navigate('/')
+                return
+            }
+        }
+
+        const { error: signInError } = await supabase.auth.signInWithPassword({
             email: loginIdentifier,
             password
         })
 
         setLoading(false)
 
-        if (error) {
-            setError(error.message)
+        if (signInError) {
+            setError(signInError.message)
             return
         }
         navigate('/')
