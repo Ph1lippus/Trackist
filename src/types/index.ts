@@ -34,3 +34,21 @@ export interface WatchlistItem {
     completed_at?: string
     last_watched_at?: string
 }
+
+export interface AnilistResult {
+    id: number
+    title: {
+        romaji: string
+        english: string | null
+        native: string | null
+    }
+    coverImage?: {
+        large?: string
+    }
+    description?: string
+    episodes: number | null
+    status: string
+    startDate?: { year: number | null }
+    averageScore: number | null
+    genres: string[]
+}

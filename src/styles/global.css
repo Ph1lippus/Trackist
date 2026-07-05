@@ -296,6 +296,13 @@ html, body {
 .dashboard-search-wrap {
     display: flex;
     justify-content: center;
+    width: 100%;
+}
+
+.dashboard-search-form {
+    width: 100%;
+    display: flex;
+    justify-content: center;
 }
 
 .dashboard-search {
@@ -342,7 +349,7 @@ html, body {
 .dashboard-card-grid {
     display: grid;
     gap: 0.9rem;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 }
 
 .dashboard-card {
@@ -350,10 +357,17 @@ html, body {
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: 18px;
     overflow: hidden;
+    max-width: 100%;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.dashboard-card:hover {
+    transform: translateY(-2px);
+    border-color: rgba(133,138,227,0.3);
 }
 
 .dashboard-card__art {
-    height: 110px;
+    height: 260px;
     background: linear-gradient(135deg, rgba(133,138,227,0.8), rgba(255,255,255,0.12));
 }
 
@@ -362,14 +376,18 @@ html, body {
 }
 
 .dashboard-card__body h3 {
-    font-size: 1rem;
+    font-size: 0.95rem;
     margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .dashboard-card__body p {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: rgba(255,255,255,0.65);
     margin: 0;
+    line-height: 1.4;
 }
 
 .dashboard-pill-row {
