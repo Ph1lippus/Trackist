@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
 import { supabase } from './services/supabaseClient'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
@@ -94,6 +95,7 @@ const App: React.FC = () => {
     return (
         <BrowserRouter>
             <AppContent />
+            <Analytics />
         </BrowserRouter>
     )
 }
