@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 import { supabase } from './services/supabaseClient'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
@@ -102,6 +103,7 @@ const App: React.FC = () => {
     return (
         <BrowserRouter>
             <AppContent />
+            <SpeedInsights />
         </BrowserRouter>
     )
 }
