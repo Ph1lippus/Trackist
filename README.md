@@ -21,7 +21,7 @@ Track your movies, TV shows, and anime — all in one place.
 
 ## Live App
 
-[https://ph1lippus.github.io/Trackist/](https://ph1lippus.github.io/Trackist/)
+[https://track1st.vercel.app//](https://track1st.vercel.app/)
 
 ## License
 
