@@ -43,7 +43,7 @@ const Footer: React.FC = () => {
                             <a href="https://github.com/Ph1lippus" target="_blank" aria-label="GitHub">
                                 <i className="fab fa-github"></i>
                             </a>
-                            <a href="https://linkedin.com/in/your-profile" target="_blank" aria-label="LinkedIn">
+                            <a href="https://www.linkedin.com/in/filipe-santos-7b2b70355/" target="_blank" aria-label="LinkedIn">
                                 <i className="fab fa-linkedin-in"></i>
                             </a>
                             <a href="https://buymeacoffee.com/ph1lippus" target="_blank" aria-label="Buy Me a Coffee">
