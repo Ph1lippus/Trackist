@@ -11,23 +11,50 @@ export const searchMulti = async (query: string): Promise<{ results: TMDBResult[
     return res.json()
 }
 
+export const searchPerson = async (query: string): Promise<{ results: TMDBResult[] }> => {
+    const res = await fetch(
+        `${BASE_URL}/search/person?api_key=${API_KEY}&query=${encodeURIComponent(query)}`
+    )
+    return res.json()
+}
+
 export const getPopularMovies = async (): Promise<{ results: TMDBResult[] }> => {
     const res = await fetch(`${BASE_URL}/movie/popular?api_key=${API_KEY}`)
     return res.json()
 }
 
-export const getPopularTV = async () => {
+export const getTrendingMovies = async (): Promise<{ results: TMDBResult[] }> => {
+    const res = await fetch(`${BASE_URL}/trending/movie/week?api_key=${API_KEY}`)
+    return res.json()
+}
+
+export const getTopRatedMovies = async (): Promise<{ results: TMDBResult[] }> => {
+    const res = await fetch(`${BASE_URL}/movie/top_rated?api_key=${API_KEY}`)
+    return res.json()
+}
+
+export const getPopularTV = async (): Promise<{ results: TMDBResult[] }> => {
     const res = await fetch(`${BASE_URL}/tv/popular?api_key=${API_KEY}`)
     return res.json()
 }
 
+export const getTrendingTV = async (): Promise<{ results: TMDBResult[] }> => {
+    const res = await fetch(`${BASE_URL}/trending/tv/week?api_key=${API_KEY}`)
+    return res.json()
+}
+
+export const getTopRatedTV = async (): Promise<{ results: TMDBResult[] }> => {
+    const res = await fetch(`${BASE_URL}/tv/top_rated?api_key=${API_KEY}`)
+    return res.json()
+}
+
 export const getMovieDetails = async (id: number) => {
-    const res = await fetch(`${BASE_URL}/movie/${id}?api_key=${API_KEY}`)
+    const res = await fetch(`${BASE_URL}/movie/${id}?api_key=${API_KEY}&append_to_response=credits,videos`)
     return res.json()
 }
 
 export const getTVDetails = async (id: number) => {
-    const res = await fetch(`${BASE_URL}/tv/${id}?api_key=${API_KEY}`)
+    const res = await fetch(`${BASE_URL}/tv/${id}?api_key=${API_KEY}&append_to_response=credits,videos`)
     return res.json()
 }
 

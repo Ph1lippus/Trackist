@@ -108,11 +108,13 @@ const AppContent: React.FC = () => {
 
     const authPage = ['/login', '/register'].includes(location.pathname)
     const showBottomNav = Boolean(user) && !authPage
+    const mediaPages = ['/discover', '/watchlist', '/']
+    const hideFooter = Boolean(user) && mediaPages.includes(location.pathname)
 
     return (
         <div className="d-flex flex-column min-vh-100">
             <Navbar />
-            <main className="page-main flex-grow-1 d-flex align-items-center justify-content-center">
+            <main className={`page-main flex-grow-1 ${hideFooter ? 'page-main--no-footer' : ''}`}>
                 {!showPageContent ? null : (
                     <Routes>
                         <Route path="/" element={user ? <Dashboard /> : <Home />} />
@@ -129,7 +131,7 @@ const AppContent: React.FC = () => {
                 )}
             </main>
             {showBottomNav ? <BottomNav /> : null}
-            <Footer />
+            {!hideFooter && <Footer />}
             <PageLoader show={loaderStage !== 'hidden'} stage={loaderStage} />
         </div>
     )
