@@ -1250,7 +1250,7 @@ html, body {
     letter-spacing: 0.3em;
     color: var(--color-orange);
     text-shadow: 0 0 18px rgba(133, 138, 227, 0.25);
-    animation: loaderPulse 0.9s ease-in-out infinite alternate;
+    animation: loaderPulse 1.2s ease-in-out infinite alternate;
 }
 
 @keyframes loaderFadeIn {
@@ -1263,7 +1263,7 @@ html, body {
 }
 
 .page-loader--exit {
-    animation: loaderFadeOut 0.25s ease-in forwards;
+    animation: loaderFadeOut 0.2s ease-in-out forwards;
 }
 
 .page-loader--hidden {
@@ -1346,6 +1346,68 @@ html, body {
 
 .credit-card__link:hover {
     text-decoration: underline;
+}
+
+/* ===== MORE PAGE ===== */
+.more-page {
+    width: 100%;
+    min-height: 100%;
+    padding: 1.5rem 1rem 7rem;
+}
+
+.more-container {
+    max-width: 980px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.more-grid {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.more-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 16px;
+    padding: 1.5rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.more-card:hover {
+    border-color: rgba(133, 138, 227, 0.25);
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.more-card h3 {
+    color: var(--color-platinum);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.more-card p {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.85rem;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.more-card--disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.more-card--disabled:hover {
+    border-color: rgba(255, 255, 255, 0.06);
+    background: rgba(255, 255, 255, 0.03);
 }
 
 @keyframes growLine {

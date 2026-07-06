@@ -1,13 +1,16 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
-import type { WatchlistItem } from '../types'
+import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
+import type { WatchlistItem, WatchlistEpisode } from '../types'
 
 const Watchlist: React.FC = () => {
     const [items, setItems] = useState<WatchlistItem[]>([])
+    const [episodes, setEpisodes] = useState<Record<string, WatchlistEpisode[]>>({})
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState<'all' | 'planning' | 'watching' | 'completed' | 'dropped'>('all')
     const [updating, setUpdating] = useState<string | null>(null)
+    const [togglingEpisode, setTogglingEpisode] = useState<string | null>(null)
 
     useEffect(() => {
         const fetchWatchlist = async () => {
@@ -29,6 +32,40 @@ const Watchlist: React.FC = () => {
         fetchWatchlist()
     }, [])
 
+    const fetchEpisodes = async (watchlistId: string, mediaType: string, tmdbId?: number) => {
+        if (episodes[watchlistId]) return 
+        if (mediaType === 'tv' && tmdbId) {
+            try {
+                const details = await getTVDetails(tmdbId)
+                const allEpisodes: WatchlistEpisode[] = []
+                
+                for (const season of (details.seasons || []).filter((s: any) => s.season_number > 0)) {
+                    const seasonData = await getTVSeasonDetails(tmdbId, season.season_number)
+                    for (const ep of (seasonData.episodes || [])) {
+                        allEpisodes.push({
+                            id: `${watchlistId}-${season.season_number}-${ep.episode_number}`,
+                            watchlist_id: watchlistId,
+                            season_number: season.season_number,
+                            episode_number: ep.episode_number,
+                            title: ep.name,
+                            still_path: ep.still_path,
+                            overview: ep.overview,
+                            vote_average: ep.vote_average,
+                            air_date: ep.air_date,
+                            runtime: ep.runtime,
+                            watched: false,
+                            created_at: new Date().toISOString(),
+                            updated_at: new Date().toISOString()
+                        })
+                    }
+                }
+                setEpisodes(prev => ({ ...prev, [watchlistId]: allEpisodes }))
+            } catch (err) {
+                console.error('Failed to fetch episodes:', err)
+            }
+        }
+    }
+
     const updateStatus = async (id: string, status: string) => {
         setUpdating(id)
         const { error } = await supabase.from('watchlist').update({ status, updated_at: new Date().toISOString() }).eq('id', id)
@@ -41,7 +78,43 @@ const Watchlist: React.FC = () => {
     const removeItem = async (id: string) => {
         if (!confirm('Remove from watchlist?')) return
         const { error } = await supabase.from('watchlist').delete().eq('id', id)
-        if (!error) setItems(items.filter(item => item.id !== id))
+        if (!error) {
+            setItems(items.filter(item => item.id !== id))
+            setEpisodes(prev => {
+                const newEpisodes = { ...prev }
+                delete newEpisodes[id]
+                return newEpisodes
+            })
+        }
+    }
+
+    const toggleEpisodeWatched = async (watchlistId: string, episode: WatchlistEpisode) => {
+        setTogglingEpisode(episode.id)
+        const { error } = await supabase.from('watchlist_episodes').upsert({
+            watchlist_id: watchlistId,
+            season_number: episode.season_number,
+            episode_number: episode.episode_number,
+            title: episode.title,
+            still_path: episode.still_path,
+            overview: episode.overview,
+            vote_average: episode.vote_average,
+            air_date: episode.air_date,
+            runtime: episode.runtime,
+            watched: !episode.watched,
+            watched_at: !episode.watched ? new Date().toISOString() : null
+        }, {
+            onConflict: 'watchlist_id,season_number,episode_number'
+        })
+
+        if (!error) {
+            setEpisodes(prev => ({
+                ...prev,
+                [watchlistId]: (prev[watchlistId] || []).map(ep => 
+                    ep.id === episode.id ? { ...ep, watched: !ep.watched } : ep
+                )
+            }))
+        }
+        setTogglingEpisode(null)
     }
 
     const filtered = filter === 'all' ? items : items.filter(item => item.status === filter)

@@ -17,7 +17,7 @@ const BottomNav: React.FC = () => {
             </Link>
             <Link className={`bottom-nav__item ${isActive('/watchlist') ? 'bottom-nav__item--active' : ''}`} to="/watchlist">
                 <i className="fa-solid fa-play"></i>
-                <small>Watch</small>
+                <small>Watchlist</small>
             </Link>
             <Link className={`bottom-nav__item ${isActive('/more') ? 'bottom-nav__item--active' : ''}`} to="/more">
                 <i className="fa-solid fa-bars"></i>

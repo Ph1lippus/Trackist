@@ -68,4 +68,9 @@ export const getTVSeasons = async (id: number, seasonNumber: number) => {
     return res.json()
 }
 
-export const imageUrl = (path: string | null) => path ? `${IMAGE_BASE}${path}` : null
+export const imageUrl = (path: string | null) => {
+    if (!path) return null
+    // If it's already a full URL (e.g., from AniList), return as-is
+    if (path.startsWith('http://') || path.startsWith('https://')) return path
+    return `${IMAGE_BASE}${path}`
+}

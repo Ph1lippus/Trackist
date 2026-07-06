@@ -87,8 +87,8 @@ const AppContent: React.FC = () => {
         const showTimer = window.setTimeout(() => {
             setShowPageContent(true)
             setLoaderStage('exit')
-        }, 700)
-        const hideTimer = window.setTimeout(() => setLoaderStage('hidden'), 900)
+        }, 200)
+        const hideTimer = window.setTimeout(() => setLoaderStage('hidden'), 300)
 
         return () => {
             window.clearTimeout(showTimer)
