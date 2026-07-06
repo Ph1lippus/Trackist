@@ -33,6 +33,11 @@ export interface WatchlistItem {
     started_watching_at?: string
     completed_at?: string
     last_watched_at?: string
+    next_episode_to_watch?: {
+        season_number: number
+        episode_number: number
+    }
+    has_new_episodes?: boolean
 }
 
 export interface WatchlistEpisode {
@@ -72,4 +77,9 @@ export interface AnilistResult {
     startDate?: { year: number | null }
     averageScore: number | null
     genres: string[]
+    media_type?: 'anime'
+    poster_path?: string | null
+    overview?: string
+    vote_average?: number
+    release_date?: string | null
 }

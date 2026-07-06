@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { getMovieDetails, getTVDetails, getTVSeasonDetails, imageUrl } from '../services/tmdbService'
 import { getAnilistImageUrl } from '../services/anilistService'
+import type { TMDBResult, AnilistResult } from '../types'
 
-type ResultItem = any
+type ResultItem = TMDBResult | AnilistResult
 
 interface DetailModalProps {
     item: ResultItem
@@ -11,31 +12,43 @@ interface DetailModalProps {
     isInWatchlist: boolean
 }
 
+interface Season {
+    season_number: number
+    episode_count?: number
+}
+
+interface Episode {
+    id: string
+    episode_number: number
+    name?: string
+    runtime?: number
+    vote_average?: number
+}
+
 const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWatchlist }) => {
-    const [details, setDetails] = useState<any>(null)
+    const [details, setDetails] = useState<TMDBResult | AnilistResult | null>(null)
     const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
     const [selectedSeason, setSelectedSeason] = useState(1)
-    const [seasonEpisodes, setSeasonEpisodes] = useState<any[]>([])
+    const [seasonEpisodes, setSeasonEpisodes] = useState<Episode[]>([])
 
     useEffect(() => {
         const fetchDetails = async () => {
             setLoading(true)
             try {
-                if (item.media_type === 'anime') {
+                if ('media_type' in item && item.media_type === 'anime') {
+                    const animeItem = item as AnilistResult
                     setDetails({
-                        overview: item.overview,
-                        vote_average: item.vote_average,
-                        release_date: item.release_date,
-                        episodes: item.episodes,
-                        status: item.status,
-                        genres: item.genres || [],
-                        seasons: item.episodes ? [{ season_number: 1, episode_count: item.episodes }] : []
-                    })
-                } else if (item.media_type === 'movie') {
+                        ...animeItem,
+                        overview: animeItem.description?.replace(/<[^>]*>/g, '') || '',
+                        vote_average: animeItem.averageScore ? animeItem.averageScore / 10 : null,
+                        release_date: animeItem.startDate?.year ? `${animeItem.startDate.year}` : null,
+                        genres: animeItem.genres || []
+                    } as TMDBResult | AnilistResult)
+                } else if ('media_type' in item && item.media_type === 'movie') {
                     const data = await getMovieDetails(item.id)
                     setDetails(data)
-                } else if (item.media_type === 'tv') {
+                } else if ('media_type' in item && item.media_type === 'tv') {
                     const data = await getTVDetails(item.id)
                     setDetails(data)
                     if (data.seasons?.[0]) {
@@ -54,11 +67,11 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWat
     }, [item])
 
     useEffect(() => {
-        if (!details || item.media_type !== 'tv') return
+        if (!details || !('media_type' in item) || item.media_type !== 'tv') return
         const fetchEpisodes = async () => {
             try {
                 const data = await getTVSeasonDetails(item.id, selectedSeason)
-                setSeasonEpisodes(data.episodes || [])
+                setSeasonEpisodes((data.episodes || []) as Episode[])
             } catch {
                 setSeasonEpisodes([])
             }
@@ -72,7 +85,8 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWat
         setAdding(false)
     }
 
-    const posterUrl = item.media_type === 'anime'
+    const isAnime = 'media_type' in item && item.media_type === 'anime'
+    const posterUrl = isAnime
         ? getAnilistImageUrl(item.poster_path ?? null)
         : imageUrl(item.poster_path ?? null)
 
@@ -88,7 +102,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWat
     const mediaStatus = details?.status || item.status
     const seasons = details?.seasons || []
 
-    const isTV = item.media_type === 'tv' || item.media_type === 'anime'
+    const isTV = 'media_type' in item && (item.media_type === 'tv' || item.media_type === 'anime')
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -151,7 +165,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWat
                                 <div className="modal-episodes">
                                     <h4>Episodes</h4>
                                     <div className="modal-season-tabs">
-                                        {seasons.filter((s: any) => s.season_number > 0).map((s: any) => (
+                                        {seasons.filter((s: Season) => s.season_number > 0).map((s: Season) => (
                                             <button
                                                 key={s.season_number}
                                                 className={`modal-season-tab ${selectedSeason === s.season_number ? 'active' : ''}`}
@@ -161,9 +175,9 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWat
                                             </button>
                                         ))}
                                     </div>
-                                    {item.media_type === 'tv' && seasonEpisodes.length > 0 && (
+                                    {'media_type' in item && item.media_type === 'tv' && seasonEpisodes.length > 0 && (
                                         <div className="modal-episode-list">
-                                            {seasonEpisodes.map((ep: any) => (
+                                            {seasonEpisodes.map((ep: Episode) => (
                                                 <div key={ep.id} className="modal-episode-item">
                                                     <div className="modal-episode-num">{ep.episode_number}</div>
                                                     <div className="modal-episode-info">
@@ -175,7 +189,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWat
                                             ))}
                                         </div>
                                     )}
-                                    {item.media_type === 'anime' && (
+                                    {isAnime && (
                                         <div className="modal-episode-list">
                                             {Array.from({ length: Math.min(totalEpisodes || 0, 24) }, (_, i) => i + 1).map(ep => (
                                                 <div key={ep} className="modal-episode-item">
@@ -203,9 +217,11 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWat
                                     <button className="modal-btn modal-btn--watch" onClick={() => handleAdd('watching')} disabled={adding}>
                                         Watching
                                     </button>
-                                    <button className="modal-btn modal-btn--done" onClick={() => handleAdd('completed')} disabled={adding}>
-                                        Watched
-                                    </button>
+                                    {'media_type' in item && item.media_type === 'movie' && (
+                                        <button className="modal-btn modal-btn--done" onClick={() => handleAdd('completed')} disabled={adding}>
+                                            Watched
+                                        </button>
+                                    )}
                                 </div>
                             )}
                             {isInWatchlist && (
