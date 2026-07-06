@@ -6,18 +6,7 @@ import type { TMDBResult, AnilistResult } from '../types'
 import DetailModal from '../components/DetailModal'
 import AddModal from '../components/AddModal'
 
-type ResultItem = TMDBResult | {
-    id: number
-    title: string
-    name: string
-    poster_path: string | null
-    overview: string
-    media_type: 'anime'
-    vote_average: number | null
-    release_date: string | null
-    episodes: number | null
-    status: string
-}
+type ResultItem = TMDBResult | AnilistResult
 
 const ITEMS_PER_PAGE = 20
 
@@ -55,18 +44,28 @@ const Discover: React.FC = () => {
         fetchWatchlist()
     }, [])
 
-    const formatAnimeItem = (item: AnilistResult): ResultItem => ({
-        id: item.id,
-        title: item.title.english || item.title.romaji,
-        name: item.title.romaji,
-        poster_path: getAnilistImageUrl(item.coverImage?.large ?? null),
-        overview: (item.description || '').replace(/<[^>]*>/g, ''),
-        media_type: 'anime' as const,
-        vote_average: item.averageScore ? item.averageScore / 10 : null,
-        release_date: item.startDate?.year ? `${item.startDate.year}` : null,
-        episodes: item.episodes,
-        status: item.status
-    })
+    const formatAnimeItem = (item: AnilistResult): ResultItem => {
+        let englishTitle = ''
+        let romajiTitle = ''
+        if (typeof item.title === 'object' && item.title !== null) {
+            englishTitle = item.title.english || item.title.romaji || ''
+            romajiTitle = item.title.romaji || ''
+        }
+        return {
+            id: item.id,
+            title: englishTitle,
+            name: romajiTitle,
+            poster_path: getAnilistImageUrl(item.coverImage?.large ?? null),
+            overview: (item.description || '').replace(/<[^>]*>/g, ''),
+            media_type: 'anime' as const,
+            vote_average: item.averageScore ? item.averageScore / 10 : undefined,
+            release_date: item.startDate?.year ? `${item.startDate.year}` : null,
+            episodes: item.episodes ?? null,
+            status: item.status,
+            averageScore: item.averageScore,
+            genres: item.genres
+        }
+    }
 
     const getMovieFn = () => {
         if (sortBy === 'trending') return getTrendingMovies()
@@ -150,12 +149,13 @@ const Discover: React.FC = () => {
 
         const isAnime = item.media_type === 'anime'
         const mediaTypeValue = isAnime ? 'anime' : (item.media_type === 'movie' ? 'movie' : 'tv')
+        const itemTitle = item.title || ('name' in item ? item.name : undefined)
 
         const { error } = await supabase.from('watchlist').insert({
             user_id: user.id,
             media_type: mediaTypeValue,
             ...isAnime ? { anilist_id: item.id } : { tmdb_id: item.id },
-            title: item.title || item.name,
+            title: itemTitle,
             poster_path: item.poster_path,
             overview: item.overview,
             release_date: item.release_date,
@@ -183,19 +183,29 @@ const Discover: React.FC = () => {
         return imageUrl(item.poster_path ?? null)
     }
 
+    const getItemTitle = (item: ResultItem): string => {
+        if (item.media_type === 'anime' && item.title && typeof item.title === 'object') {
+            const animeTitle = item.title as { english: string | null; romaji: string }
+            return animeTitle.english || animeTitle.romaji || 'Untitled'
+        }
+        const tmdbItem = item as TMDBResult
+        return tmdbItem.title || tmdbItem.name || 'Untitled'
+    }
+
     const renderCard = (item: ResultItem) => {
         const imgUrl = getImageUrl(item)
         const isInWatchlist = watchlistIds.has(item.id)
         const addState = addStatus?.id === item.id ? addStatus.status : null
+        const displayTitle = getItemTitle(item)
 
         return (
             <article className="discover-card" key={`${item.media_type}-${item.id}`}>
                 <div className="discover-card__poster" onClick={() => setDetailItem(item)}>
                     {imgUrl ? (
-                        <img src={imgUrl} alt={item.title || item.name || ''} />
+                        <img src={imgUrl} alt={displayTitle} />
                     ) : (
                         <div className="discover-card__no-poster">
-                            <span>{item.title || item.name || 'Untitled'}</span>
+                            <span>{displayTitle}</span>
                         </div>
                     )}
                     {item.vote_average && (
@@ -217,7 +227,7 @@ const Discover: React.FC = () => {
                     )}
                 </div>
                 <div className="discover-card__body">
-                    <h3 onClick={() => setDetailItem(item)}>{item.title || item.name}</h3>
+                    <h3 onClick={() => setDetailItem(item)}>{displayTitle}</h3>
                     <span className="discover-card__type">{getDisplayType(item)}</span>
                 </div>
             </article>

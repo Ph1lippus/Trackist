@@ -3,12 +3,10 @@ import { getMovieDetails, getTVDetails, getTVSeasonDetails, imageUrl } from '../
 import { getAnilistImageUrl } from '../services/anilistService'
 import type { TMDBResult, AnilistResult } from '../types'
 
-type ResultItem = TMDBResult | AnilistResult
-
 interface DetailModalProps {
-    item: ResultItem
+    item: TMDBResult | AnilistResult
     onClose: () => void
-    onAdd: (item: ResultItem, status: string) => void
+    onAdd: (item: TMDBResult | AnilistResult, status: string) => void
     isInWatchlist: boolean
 }
 
@@ -90,14 +88,23 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWat
         ? getAnilistImageUrl(item.poster_path ?? null)
         : imageUrl(item.poster_path ?? null)
 
-    const title = item.title || item.name || 'Untitled'
-    const year = item.release_date?.slice(0, 4) || item.first_air_date?.slice(0, 4) || item.release_date || ''
+    function getItemTitle(item: TMDBResult | AnilistResult, isAnime: boolean): string {
+        if (isAnime && item.title && typeof item.title === 'object') {
+            const animeTitle = item.title as { english: string | null; romaji: string }
+            return animeTitle.english || animeTitle.romaji || 'Untitled'
+        }
+        const tmdbItem = item as TMDBResult
+        return tmdbItem.title || tmdbItem.name || 'Untitled'
+    }
+    const title: string = getItemTitle(item, isAnime)
+    const tmdbItem = item as TMDBResult
+    const year = item.release_date?.slice(0, 4) || ('first_air_date' in item ? tmdbItem.first_air_date?.slice(0, 4) : undefined) || item.release_date || ''
     const rating = details?.vote_average?.toFixed(1) || item.vote_average?.toFixed(1)
     const overview = details?.overview || item.overview || 'No description available.'
     const genres = details?.genres || []
     const cast = details?.credits?.cast?.slice(0, 10) || details?.aggregate_credits?.cast?.slice(0, 10) || []
     const runtime = details?.runtime
-    const totalEpisodes = details?.episodes || item.episodes || details?.number_of_episodes
+    const totalEpisodes = details?.episodes || item.episodes || details?.number_of_episodes || 0
     const totalSeasons = details?.seasons?.length || details?.number_of_seasons || 0
     const mediaStatus = details?.status || item.status
     const seasons = details?.seasons || []
@@ -136,8 +143,8 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWat
 
                             {genres.length > 0 && (
                                 <div className="modal-genres">
-                                    {genres.map((g: any) => (
-                                        <span key={g.id || g} className="modal-genre-tag">{g.name || g}</span>
+                                    {genres.map((g: { id: number; name: string } | string) => (
+                                        <span key={typeof g === 'object' ? g.id : g} className="modal-genre-tag">{typeof g === 'object' ? g.name : g}</span>
                                     ))}
                                 </div>
                             )}
@@ -148,7 +155,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWat
                                 <div className="modal-cast">
                                     <h4>Cast</h4>
                                     <div className="modal-cast-list">
-                                        {cast.map((c: any) => (
+                                        {cast.map((c: { id: number; name: string; profile_path?: string }) => (
                                             <span key={c.id || c.name} className="modal-cast-item">
                                                 {c.profile_path && (
                                                     <img src={imageUrl(c.profile_path) || ''} alt={c.name} />
