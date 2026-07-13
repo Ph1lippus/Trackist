@@ -102,7 +102,7 @@ html, body {
     flex-direction: column;
     padding: 1rem 1rem 2.5rem;
     width: 100%;
-    min-height: 0;
+    min-height: calc(100vh - var(--navbar-height));
     text-align: center;
 }
 
