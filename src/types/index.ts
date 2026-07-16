@@ -2,7 +2,7 @@ export interface TMDBResult {
     id: number
     title?: string
     name?: string
-    media_type?: 'movie' | 'tv' | 'person'
+    media_type?: 'movie' | 'tv' | 'person' | 'anime'
     poster_path?: string | null
     overview?: string
     release_date?: string
@@ -74,36 +74,3 @@ export interface WatchlistEpisode {
     updated_at: string
 }
 
-export interface AnilistResult {
-    id: number
-    title: string | {
-        romaji: string
-        english: string | null
-        native: string | null
-    }
-    coverImage?: {
-        large?: string
-    }
-    description?: string
-    episodes: number | null
-    status: string
-    startDate?: { year: number | null }
-    averageScore: number | null
-    genres: string[]
-    media_type?: 'anime'
-    poster_path?: string | null
-    overview?: string
-    vote_average?: number
-    release_date?: string | null
-    credits?: {
-        cast?: Array<{ id: number; name: string; profile_path?: string }>
-    }
-    aggregate_credits?: {
-        cast?: Array<{ id: number; name: string; profile_path?: string }>
-    }
-    runtime?: number
-    number_of_episodes?: number
-    seasons?: Array<{ season_number: number; episode_count?: number }>
-    number_of_seasons?: number
-    name?: string
-}

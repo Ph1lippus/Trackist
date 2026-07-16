@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { getMovieDetails, getTVDetails, getTVSeasonDetails, imageUrl } from '../services/tmdbService'
-import { getAnilistImageUrl } from '../services/anilistService'
-import type { TMDBResult, AnilistResult } from '../types'
+import type { TMDBResult } from '../types'
 
 interface DetailModalProps {
-    item: TMDBResult | AnilistResult
+    item: TMDBResult
     onClose: () => void
-    onAdd: (item: TMDBResult | AnilistResult, status: string) => void
+    onAdd: (item: TMDBResult, status: string) => void
     isInWatchlist: boolean
 }
 
@@ -24,7 +23,7 @@ interface Episode {
 }
 
 const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWatchlist }) => {
-    const [details, setDetails] = useState<TMDBResult | AnilistResult | null>(null)
+    const [details, setDetails] = useState<TMDBResult | null>(null)
     const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
     const [selectedSeason, setSelectedSeason] = useState(1)
@@ -34,16 +33,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWat
         const fetchDetails = async () => {
             setLoading(true)
             try {
-                if ('media_type' in item && item.media_type === 'anime') {
-                    const animeItem = item as AnilistResult
-                    setDetails({
-                        ...animeItem,
-                        overview: animeItem.description?.replace(/<[^>]*>/g, '') || '',
-                        vote_average: animeItem.averageScore ? animeItem.averageScore / 10 : null,
-                        release_date: animeItem.startDate?.year ? `${animeItem.startDate.year}` : null,
-                        genres: animeItem.genres || []
-                    } as TMDBResult | AnilistResult)
-                } else if ('media_type' in item && item.media_type === 'movie') {
+                if ('media_type' in item && item.media_type === 'movie') {
                     const data = await getMovieDetails(item.id)
                     setDetails(data)
                 } else if ('media_type' in item && item.media_type === 'tv') {
@@ -83,20 +73,12 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWat
         setAdding(false)
     }
 
-    const isAnime = 'media_type' in item && item.media_type === 'anime'
-    const posterUrl = isAnime
-        ? getAnilistImageUrl(item.poster_path ?? null)
-        : imageUrl(item.poster_path ?? null)
+    const posterUrl = imageUrl(item.poster_path ?? null)
 
-    function getItemTitle(item: TMDBResult | AnilistResult, isAnime: boolean): string {
-        if (isAnime && item.title && typeof item.title === 'object') {
-            const animeTitle = item.title as { english: string | null; romaji: string }
-            return animeTitle.english || animeTitle.romaji || 'Untitled'
-        }
-        const tmdbItem = item as TMDBResult
-        return tmdbItem.title || tmdbItem.name || 'Untitled'
+    function getItemTitle(item: TMDBResult): string {
+        return item.title || item.name || 'Untitled'
     }
-    const title: string = getItemTitle(item, isAnime)
+    const title: string = getItemTitle(item)
     const tmdbItem = item as TMDBResult
     const year = item.release_date?.slice(0, 4) || ('first_air_date' in item ? tmdbItem.first_air_date?.slice(0, 4) : undefined) || item.release_date || ''
     const rating = details?.vote_average?.toFixed(1) || item.vote_average?.toFixed(1)
@@ -109,7 +91,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWat
     const mediaStatus = details?.status || item.status
     const seasons = details?.seasons || []
 
-    const isTV = 'media_type' in item && (item.media_type === 'tv' || item.media_type === 'anime')
+    const isTV = 'media_type' in item && item.media_type === 'tv'
 
     return (
         <div className="modal-overlay" onClick={onClose}>
@@ -167,7 +149,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWat
                                 </div>
                             )}
 
-                            {/* Episodes for TV/Anime */}
+                            {/* Episodes for TV */}
                             {isTV && seasons.length > 0 && (
                                 <div className="modal-episodes">
                                     <h4>Episodes</h4>
@@ -182,7 +164,7 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWat
                                             </button>
                                         ))}
                                     </div>
-                                    {'media_type' in item && item.media_type === 'tv' && seasonEpisodes.length > 0 && (
+                                    {seasonEpisodes.length > 0 && (
                                         <div className="modal-episode-list">
                                             {seasonEpisodes.map((ep: Episode) => (
                                                 <div key={ep.id} className="modal-episode-item">
@@ -194,23 +176,6 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWat
                                                     </div>
                                                 </div>
                                             ))}
-                                        </div>
-                                    )}
-                                    {isAnime && (
-                                        <div className="modal-episode-list">
-                                            {Array.from({ length: Math.min(totalEpisodes || 0, 24) }, (_, i) => i + 1).map(ep => (
-                                                <div key={ep} className="modal-episode-item">
-                                                    <div className="modal-episode-num">{ep}</div>
-                                                    <div className="modal-episode-info">
-                                                        <strong>Episode {ep}</strong>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                            {(totalEpisodes || 0) > 24 && (
-                                                <p style={{ textAlign: 'center', opacity: 0.5, padding: '0.5rem', fontSize: '0.8rem' }}>
-                                                    + {totalEpisodes - 24} more episodes
-                                                </p>
-                                            )}
                                         </div>
                                     )}
                                 </div>

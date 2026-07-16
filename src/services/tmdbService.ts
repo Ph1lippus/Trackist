@@ -18,33 +18,33 @@ export const searchPerson = async (query: string): Promise<{ results: TMDBResult
     return res.json()
 }
 
-export const getPopularMovies = async (): Promise<{ results: TMDBResult[] }> => {
-    const res = await fetch(`${BASE_URL}/movie/popular?api_key=${API_KEY}`)
+export const getPopularMovies = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
+    const res = await fetch(`${BASE_URL}/movie/popular?api_key=${API_KEY}&page=${page}`)
     return res.json()
 }
 
-export const getTrendingMovies = async (): Promise<{ results: TMDBResult[] }> => {
-    const res = await fetch(`${BASE_URL}/trending/movie/week?api_key=${API_KEY}`)
+export const getTrendingMovies = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
+    const res = await fetch(`${BASE_URL}/trending/movie/week?api_key=${API_KEY}&page=${page}`)
     return res.json()
 }
 
-export const getTopRatedMovies = async (): Promise<{ results: TMDBResult[] }> => {
-    const res = await fetch(`${BASE_URL}/movie/top_rated?api_key=${API_KEY}`)
+export const getTopRatedMovies = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
+    const res = await fetch(`${BASE_URL}/movie/top_rated?api_key=${API_KEY}&page=${page}`)
     return res.json()
 }
 
-export const getPopularTV = async (): Promise<{ results: TMDBResult[] }> => {
-    const res = await fetch(`${BASE_URL}/tv/popular?api_key=${API_KEY}`)
+export const getPopularTV = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
+    const res = await fetch(`${BASE_URL}/tv/popular?api_key=${API_KEY}&page=${page}`)
     return res.json()
 }
 
-export const getTrendingTV = async (): Promise<{ results: TMDBResult[] }> => {
-    const res = await fetch(`${BASE_URL}/trending/tv/week?api_key=${API_KEY}`)
+export const getTrendingTV = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
+    const res = await fetch(`${BASE_URL}/trending/tv/week?api_key=${API_KEY}&page=${page}`)
     return res.json()
 }
 
-export const getTopRatedTV = async (): Promise<{ results: TMDBResult[] }> => {
-    const res = await fetch(`${BASE_URL}/tv/top_rated?api_key=${API_KEY}`)
+export const getTopRatedTV = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
+    const res = await fetch(`${BASE_URL}/tv/top_rated?api_key=${API_KEY}&page=${page}`)
     return res.json()
 }
 
@@ -70,7 +70,5 @@ export const getTVSeasons = async (id: number, seasonNumber: number) => {
 
 export const imageUrl = (path: string | null) => {
     if (!path) return null
-    // If it's already a full URL (e.g., from AniList), return as-is
-    if (path.startsWith('http://') || path.startsWith('https://')) return path
     return `${IMAGE_BASE}${path}`
 }

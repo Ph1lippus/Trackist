@@ -1,42 +1,39 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../services/supabaseClient'
-import { searchMulti, searchPerson, getPopularMovies, getTrendingMovies, getTopRatedMovies, getPopularTV, getTrendingTV, getTopRatedTV, imageUrl } from '../services/tmdbService'
-import { searchAnime, getPopularAnime, getAnilistImageUrl } from '../services/anilistService'
-import type { TMDBResult, AnilistResult } from '../types'
+import { searchMulti, searchPerson, getPopularMovies, getTrendingMovies, getTopRatedMovies, getPopularTV, getTrendingTV, getTopRatedTV } from '../services/tmdbService'
+import type { TMDBResult } from '../types'
+import MediaCard from '../components/MediaCard'
 import DetailModal from '../components/DetailModal'
 import AddModal from '../components/AddModal'
 
-type ResultItem = TMDBResult | AnilistResult
-
-const ITEMS_PER_PAGE = 20
+type ResultItem = TMDBResult
 
 const Discover: React.FC = () => {
-    const [query, setQuery] = useState('')
+    const [query, setQuery] = useState('')  
     const [results, setResults] = useState<ResultItem[]>([])
     const [loading, setLoading] = useState(true)
-    const [mediaType, setMediaType] = useState<'all' | 'movie' | 'tv' | 'anime'>('all')
+    const [loadingMore, setLoadingMore] = useState(false)
+    const [mediaType, setMediaType] = useState<'all' | 'movie' | 'tv'>('all')
     const [sortBy, setSortBy] = useState<'popular' | 'trending' | 'top_rated'>('popular')
-    const [expandedSection, setExpandedSection] = useState<'movies' | 'tv' | 'anime' | null>(null)
     const [page, setPage] = useState(1)
+    const [hasMore, setHasMore] = useState(true)
     const [detailItem, setDetailItem] = useState<ResultItem | null>(null)
     const [addItem, setAddItem] = useState<ResultItem | null>(null)
     const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set())
     const [addStatus, setAddStatus] = useState<{ id: number; status: string } | null>(null)
 
-    const [movies, setMovies] = useState<ResultItem[]>([])
-    const [tvShows, setTvShows] = useState<ResultItem[]>([])
-    const [animeList, setAnimeList] = useState<ResultItem[]>([])
+    const sentinelRef = useRef<HTMLDivElement>(null)
+    const fetchingRef = useRef(false)
 
     useEffect(() => {
         const fetchWatchlist = async () => {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) return
-            const { data } = await supabase.from('watchlist').select('tmdb_id, anilist_id').eq('user_id', user.id)
+            const { data } = await supabase.from('watchlist').select('tmdb_id').eq('user_id', user.id)
             if (data) {
                 const ids = new Set<number>()
-                data.forEach((w: any) => {
+                data.forEach((w: { tmdb_id?: number }) => {
                     if (w.tmdb_id) ids.add(w.tmdb_id)
-                    if (w.anilist_id) ids.add(w.anilist_id)
                 })
                 setWatchlistIds(ids)
             }
@@ -44,117 +41,109 @@ const Discover: React.FC = () => {
         fetchWatchlist()
     }, [])
 
-    const formatAnimeItem = (item: AnilistResult): ResultItem => {
-        let englishTitle = ''
-        let romajiTitle = ''
-        if (typeof item.title === 'object' && item.title !== null) {
-            englishTitle = item.title.english || item.title.romaji || ''
-            romajiTitle = item.title.romaji || ''
+    const fetchData = async (pageNum: number) => {
+        if (fetchingRef.current) return
+        fetchingRef.current = true
+
+        if (pageNum === 1) {
+            setLoading(true)
+        } else {
+            setLoadingMore(true)
         }
-        return {
-            id: item.id,
-            title: englishTitle,
-            name: romajiTitle,
-            poster_path: getAnilistImageUrl(item.coverImage?.large ?? null),
-            overview: (item.description || '').replace(/<[^>]*>/g, ''),
-            media_type: 'anime' as const,
-            vote_average: item.averageScore ? item.averageScore / 10 : undefined,
-            release_date: item.startDate?.year ? `${item.startDate.year}` : null,
-            episodes: item.episodes ?? null,
-            status: item.status,
-            averageScore: item.averageScore,
-            genres: item.genres
-        }
-    }
-
-    const getMovieFn = () => {
-        if (sortBy === 'trending') return getTrendingMovies()
-        if (sortBy === 'top_rated') return getTopRatedMovies()
-        return getPopularMovies()
-    }
-
-    const getTVFn = () => {
-        if (sortBy === 'trending') return getTrendingTV()
-        if (sortBy === 'top_rated') return getTopRatedTV()
-        return getPopularTV()
-    }
-
-    const loadPopular = async () => {
-        setLoading(true)
-        setExpandedSection(null)
-        setPage(1)
-        try {
-            if (mediaType === 'anime') {
-                const animeResults = await getPopularAnime()
-                setResults(animeResults.map(formatAnimeItem))
-                setMovies([]); setTvShows([]); setAnimeList([])
-            } else if (mediaType === 'movie') {
-                const data = await getMovieFn()
-                setResults(data.results || [])
-                setMovies([]); setTvShows([]); setAnimeList([])
-            } else if (mediaType === 'tv') {
-                const data = await getTVFn()
-                setResults(data.results || [])
-                setMovies([]); setTvShows([]); setAnimeList([])
-            } else {
-                const [moviesData, tvData, animeData] = await Promise.all([
-                    getMovieFn(),
-                    getTVFn(),
-                    getPopularAnime()
-                ])
-                setMovies(moviesData.results || [])
-                setTvShows(tvData.results || [])
-                setAnimeList(animeData.map(formatAnimeItem))
-                setResults([])
-            }
-        } catch (err) {
-            console.error('Failed to load:', err)
-        }
-        setLoading(false)
-    }
-
-    useEffect(() => {
-        loadPopular()
-    }, [mediaType, sortBy])
-
-    const handleSearch = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!query.trim()) return
-        setLoading(true)
-        setExpandedSection(null)
-        setPage(1)
 
         try {
-            if (mediaType === 'anime') {
-                const animeResults = await searchAnime(query)
-                setResults(animeResults.map(formatAnimeItem))
-            } else {
+            let newResults: ResultItem[] = []
+            let totalPages = 1
+
+            if (query.trim()) {
                 const [multiData, personData] = await Promise.all([
                     searchMulti(query),
                     searchPerson(query)
                 ])
-                const combined = [...(multiData.results || []), ...(personData.results || [])]
-                setResults(combined)
+                let combined = [...(multiData.results || []), ...(personData.results || [])]
+                combined = combined.map(r => ({
+                    ...r,
+                    media_type: r.media_type || (r.title ? 'movie' as const : 'tv' as const)
+                }))
+                if (mediaType === 'movie') {
+                    combined = combined.filter(r => r.media_type === 'movie')
+                } else if (mediaType === 'tv') {
+                    combined = combined.filter(r => r.media_type === 'tv')
+                }
+                newResults = combined
+                totalPages = 1
+            } else if (mediaType === 'movie') {
+                const data = sortBy === 'trending' ? await getTrendingMovies(pageNum) : sortBy === 'top_rated' ? await getTopRatedMovies(pageNum) : await getPopularMovies(pageNum)
+                newResults = ((data as { results: TMDBResult[] }).results || []).map(r => ({ ...r, media_type: 'movie' as const }))
+                totalPages = (data as { total_pages?: number }).total_pages || 1
+            } else if (mediaType === 'tv') {
+                const data = sortBy === 'trending' ? await getTrendingTV(pageNum) : sortBy === 'top_rated' ? await getTopRatedTV(pageNum) : await getPopularTV(pageNum)
+                newResults = ((data as { results: TMDBResult[] }).results || []).map(r => ({ ...r, media_type: 'tv' as const }))
+                totalPages = (data as { total_pages?: number }).total_pages || 1
+            } else {
+                const [moviesData, tvData] = await Promise.all([
+                    getPopularMovies(pageNum),
+                    getPopularTV(pageNum)
+                ])
+                const movies = ((moviesData as { results: TMDBResult[] }).results || []).map(r => ({ ...r, media_type: 'movie' as const }))
+                const tv = ((tvData as { results: TMDBResult[] }).results || []).map(r => ({ ...r, media_type: 'tv' as const }))
+                const combined = [...movies, ...tv]
+                for (let i = combined.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [combined[i], combined[j]] = [combined[j], combined[i]]
+                }
+                newResults = combined
+                totalPages = 10
             }
-            setMovies([]); setTvShows([]); setAnimeList([])
+
+            setResults(prev => pageNum === 1 ? newResults : [...prev, ...newResults])
+            setPage(pageNum)
+            setHasMore(pageNum < totalPages)
         } catch (err) {
-            console.error('Search failed:', err)
+            console.error('Failed to load:', err)
         }
         setLoading(false)
+        setLoadingMore(false)
+        fetchingRef.current = false
+    }
+
+    useEffect(() => {
+        setPage(1)
+        setHasMore(true)
+        fetchData(1)
+    }, [mediaType, sortBy, query])
+
+    useEffect(() => {
+        const sentinel = sentinelRef.current
+        if (!sentinel) return
+
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting && hasMore && !fetchingRef.current && !loadingMore) {
+                fetchData(page + 1)
+            }
+        }, { rootMargin: '400px' })
+
+        observer.observe(sentinel)
+        return () => observer.disconnect()
+    }, [hasMore, loadingMore, page, fetchData])
+
+    const handleSearch = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!query.trim()) return
+        fetchData(1)
     }
 
     const addToWatchlist = async (item: ResultItem, status: string) => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return alert('Please log in')
 
-        const isAnime = item.media_type === 'anime'
-        const mediaTypeValue = isAnime ? 'anime' : (item.media_type === 'movie' ? 'movie' : 'tv')
-        const itemTitle = item.title || ('name' in item ? item.name : undefined)
+        const mediaTypeValue = item.media_type === 'movie' ? 'movie' : 'tv'
+        const itemTitle = item.title || item.name || ''
 
         const { error } = await supabase.from('watchlist').insert({
             user_id: user.id,
             media_type: mediaTypeValue,
-            ...isAnime ? { anilist_id: item.id } : { tmdb_id: item.id },
+            tmdb_id: item.id,
             title: itemTitle,
             poster_path: item.poster_path,
             overview: item.overview,
@@ -171,132 +160,24 @@ const Discover: React.FC = () => {
         }
     }
 
-    const getDisplayType = (item: ResultItem) => {
-        if (item.media_type === 'anime') return 'Anime'
-        if (item.media_type === 'movie') return 'Movie'
-        if (item.media_type === 'person') return 'Person'
-        return 'TV Show'
+    const getSectionTitle = (): string => {
+        if (query.trim()) return `Results for "${query}"`
+        const source = mediaType === 'all'
+            ? 'Popular Movies & TV Shows'
+            : sortBy === 'popular'
+                ? 'Popular'
+                : sortBy === 'trending'
+                    ? 'Trending'
+                    : 'Top Rated'
+        return mediaType === 'movie' ? `${source} Movies` : mediaType === 'tv' ? `${source} TV Shows` : source
     }
 
-    const getImageUrl = (item: ResultItem) => {
-        if (item.media_type === 'anime') return item.poster_path || null
-        return imageUrl(item.poster_path ?? null)
+    const getSourceLabel = (): string => {
+        if (sortBy === 'trending') return 'TMDB Trending'
+        if (sortBy === 'top_rated') return 'TMDB Top Rated'
+        return 'TMDB Popular'
     }
 
-    const getItemTitle = (item: ResultItem): string => {
-        if (item.media_type === 'anime' && item.title && typeof item.title === 'object') {
-            const animeTitle = item.title as { english: string | null; romaji: string }
-            return animeTitle.english || animeTitle.romaji || 'Untitled'
-        }
-        const tmdbItem = item as TMDBResult
-        return tmdbItem.title || tmdbItem.name || 'Untitled'
-    }
-
-    const renderCard = (item: ResultItem) => {
-        const imgUrl = getImageUrl(item)
-        const isInWatchlist = watchlistIds.has(item.id)
-        const addState = addStatus?.id === item.id ? addStatus.status : null
-        const displayTitle = getItemTitle(item)
-
-        return (
-            <article className="discover-card" key={`${item.media_type}-${item.id}`}>
-                <div className="discover-card__poster" onClick={() => setDetailItem(item)}>
-                    {imgUrl ? (
-                        <img src={imgUrl} alt={displayTitle} />
-                    ) : (
-                        <div className="discover-card__no-poster">
-                            <span>{displayTitle}</span>
-                        </div>
-                    )}
-                    {item.vote_average && (
-                        <div className="discover-card__rating">{item.vote_average.toFixed(1)}</div>
-                    )}
-                    {!isInWatchlist && !addState && (
-                        <button className="discover-card__add-icon" onClick={(e) => { e.stopPropagation(); setAddItem(item); }} title="Add to watchlist">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="16" height="16">
-                                <path d="M12 5v14M5 12h14" />
-                            </svg>
-                        </button>
-                    )}
-                    {isInWatchlist && (
-                        <div className="discover-card__check-icon" title="In watchlist">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="#68ffae" strokeWidth="2.5" width="16" height="16">
-                                <path d="M20 6L9 17l-5-5" />
-                            </svg>
-                        </div>
-                    )}
-                </div>
-                <div className="discover-card__body">
-                    <h3 onClick={() => setDetailItem(item)}>{displayTitle}</h3>
-                    <span className="discover-card__type">{getDisplayType(item)}</span>
-                </div>
-            </article>
-        )
-    }
-
-    const getExpandedItems = () => {
-        if (expandedSection === 'movies') return movies
-        if (expandedSection === 'tv') return tvShows
-        if (expandedSection === 'anime') return animeList
-        return []
-    }
-
-    const expandedItems = getExpandedItems()
-    const paginatedItems = expandedItems.slice(0, page * ITEMS_PER_PAGE)
-
-    const handleBackToOverview = () => {
-        setExpandedSection(null)
-        setPage(1)
-    }
-
-    const getSectionTitle = () => {
-        const sortLabel = sortBy === 'popular' ? 'Popular' : sortBy === 'trending' ? 'Trending' : 'Top Rated'
-        if (expandedSection === 'movies') return `${sortLabel} Movies`
-        if (expandedSection === 'tv') return `${sortLabel} TV Shows`
-        if (expandedSection === 'anime') return 'Popular Anime'
-        return ''
-    }
-
-    // Expanded view
-    if (expandedSection) {
-        return (
-            <div className="discover-page">
-                <div className="discover-container">
-                    <div className="discover-section__head" style={{ marginBottom: '1rem' }}>
-                        <button className="dashboard-link-btn" onClick={handleBackToOverview}>← Back</button>
-                        <h2 style={{ fontSize: '1.1rem', fontWeight: 700 }}>{getSectionTitle()}</h2>
-                        <span>{expandedItems.length} items</span>
-                    </div>
-
-                    <div className="discover-grid">
-                        {paginatedItems.map(renderCard)}
-                    </div>
-
-                    {paginatedItems.length < expandedItems.length && (
-                        <div style={{ textAlign: 'center', padding: '1rem' }}>
-                            <button className="discover-tab active" onClick={() => setPage(p => p + 1)}>
-                                Load More ({expandedItems.length - paginatedItems.length} remaining)
-                            </button>
-                        </div>
-                    )}
-
-                    {detailItem && (
-                        <DetailModal
-                            item={detailItem}
-                            onClose={() => setDetailItem(null)}
-                            onAdd={addToWatchlist}
-                            isInWatchlist={watchlistIds.has(detailItem.id)}
-                        />
-                    )}
-                    {addItem && (
-                        <AddModal item={addItem} onClose={() => setAddItem(null)} onAdd={addToWatchlist} />
-                    )}
-                </div>
-            </div>
-        )
-    }
-
-    // Overview / main view
     return (
         <div className="discover-page">
             <div className="discover-container">
@@ -309,7 +190,7 @@ const Discover: React.FC = () => {
                             </svg>
                             <input
                                 className="discover-search"
-                                placeholder="Search movies, TV shows, anime, actors..."
+                                placeholder="Search movies, TV shows..."
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                             />
@@ -319,10 +200,9 @@ const Discover: React.FC = () => {
 
                 <div className="discover-controls">
                     <div className="discover-tabs">
-                        <button className={`discover-tab ${mediaType === 'all' ? 'active' : ''}`} onClick={() => setMediaType('all')}>All</button>
-                        <button className={`discover-tab ${mediaType === 'movie' ? 'active' : ''}`} onClick={() => setMediaType('movie')}>Movies</button>
-                        <button className={`discover-tab ${mediaType === 'tv' ? 'active' : ''}`} onClick={() => setMediaType('tv')}>TV Shows</button>
-                        <button className={`discover-tab ${mediaType === 'anime' ? 'active' : ''}`} onClick={() => setMediaType('anime')}>Anime</button>
+                        <button className={`discover-tab ${mediaType === 'all' ? 'active' : ''}`} onClick={() => { setMediaType('all'); setQuery(''); }}>All</button>
+                        <button className={`discover-tab ${mediaType === 'movie' ? 'active' : ''}`} onClick={() => { setMediaType('movie'); setQuery(''); }}>Movies</button>
+                        <button className={`discover-tab ${mediaType === 'tv' ? 'active' : ''}`} onClick={() => { setMediaType('tv'); setQuery(''); }}>TV Shows</button>
                     </div>
                     <div className="discover-sorts">
                         <button className={`discover-sort-btn ${sortBy === 'popular' ? 'active' : ''}`} onClick={() => setSortBy('popular')}>Popular</button>
@@ -333,66 +213,41 @@ const Discover: React.FC = () => {
 
                 {loading ? (
                     <div className="discover-loading"><div className="discover-spinner" /><p>Loading...</p></div>
-                ) : query ? (
-                    <div className="discover-section">
-                        <div className="discover-section__head">
-                            <h2>Results for "{query}"</h2>
-                            <span>{results.length} found</span>
-                        </div>
-                        {results.length === 0 ? (
-                            <div className="discover-empty"><p>No results found</p></div>
-                        ) : (
-                            <div className="discover-grid">{results.map(renderCard)}</div>
-                        )}
-                    </div>
-                ) : mediaType === 'all' ? (
-                    <>
-                        {movies.length > 0 && (
-                            <div className="discover-section">
-                                <div className="discover-section__head">
-                                    <h2>{sortBy === 'popular' ? 'Popular' : sortBy === 'trending' ? 'Trending' : 'Top Rated'} Movies</h2>
-                                    <button className="dashboard-link-btn" onClick={() => setExpandedSection('movies')}>See All ({movies.length})</button>
-                                </div>
-                                <div className="discover-grid">
-                                    {movies.slice(0, 6).map(renderCard)}
-                                </div>
-                            </div>
-                        )}
-                        {tvShows.length > 0 && (
-                            <div className="discover-section">
-                                <div className="discover-section__head">
-                                    <h2>{sortBy === 'popular' ? 'Popular' : sortBy === 'trending' ? 'Trending' : 'Top Rated'} TV Shows</h2>
-                                    <button className="dashboard-link-btn" onClick={() => setExpandedSection('tv')}>See All ({tvShows.length})</button>
-                                </div>
-                                <div className="discover-grid">
-                                    {tvShows.slice(0, 6).map(renderCard)}
-                                </div>
-                            </div>
-                        )}
-                        {animeList.length > 0 && (
-                            <div className="discover-section">
-                                <div className="discover-section__head">
-                                    <h2>Popular Anime</h2>
-                                    <button className="dashboard-link-btn" onClick={() => setExpandedSection('anime')}>See All ({animeList.length})</button>
-                                </div>
-                                <div className="discover-grid">
-                                    {animeList.slice(0, 6).map(renderCard)}
-                                </div>
-                            </div>
-                        )}
-                        {movies.length === 0 && tvShows.length === 0 && animeList.length === 0 && (
-                            <div className="discover-empty"><p>Nothing to show</p></div>
-                        )}
-                    </>
+                ) : results.length === 0 ? (
+                    <div className="discover-empty"><p>{query ? 'No results found' : 'Nothing to show'}</p></div>
                 ) : (
                     <div className="discover-section">
                         <div className="discover-section__head">
-                            <h2>{sortBy === 'popular' ? 'Popular' : sortBy === 'trending' ? 'Trending' : 'Top Rated'} {mediaType === 'movie' ? 'Movies' : mediaType === 'tv' ? 'TV Shows' : 'Anime'}</h2>
+                            <div>
+                                <h2>{getSectionTitle()}</h2>
+                                {!query.trim() && (
+                                    <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
+                                        {getSourceLabel()}
+                                    </span>
+                                )}
+                            </div>
+                            <span>{results.length} items</span>
                         </div>
-                        {results.length === 0 ? (
-                            <div className="discover-empty"><p>Nothing to show</p></div>
-                        ) : (
-                            <div className="discover-grid">{results.map(renderCard)}</div>
+                        <div className="discover-grid">
+                            {results.map((item) => (
+                                <MediaCard
+                                    key={`${item.media_type}-${item.id}`}
+                                    item={item}
+                                    isInWatchlist={watchlistIds.has(item.id)}
+                                    onDetail={setDetailItem}
+                                    onAdd={setAddItem}
+                                    addStatus={addStatus}
+                                />
+                            ))}
+                        </div>
+                        <div ref={sentinelRef} style={{ height: '1px' }} />
+                        {loadingMore && (
+                            <div className="discover-loading"><div className="discover-spinner" /><p>Loading more...</p></div>
+                        )}
+                        {!hasMore && results.length > 0 && (
+                            <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: '0.85rem', padding: '1rem' }}>
+                                You've reached the end
+                            </p>
                         )}
                     </div>
                 )}

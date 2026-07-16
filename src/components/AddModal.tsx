@@ -1,11 +1,11 @@
 import React, { useState } from 'react'
 import { imageUrl } from '../services/tmdbService'
-import { getAnilistImageUrl } from '../services/anilistService'
+import type { TMDBResult } from '../types'
 
 interface AddModalProps {
-    item: any
+    item: TMDBResult
     onClose: () => void
-    onAdd: (item: any, status: string) => void
+    onAdd: (item: TMDBResult, status: string) => void
 }
 
 const AddModal: React.FC<AddModalProps> = ({ item, onClose, onAdd }) => {
@@ -18,10 +18,7 @@ const AddModal: React.FC<AddModalProps> = ({ item, onClose, onAdd }) => {
         onClose()
     }
 
-    const posterUrl = item.media_type === 'anime'
-        ? getAnilistImageUrl(item.poster_path ?? null)
-        : imageUrl(item.poster_path ?? null)
-
+    const posterUrl = imageUrl(item.poster_path ?? null)
     const title = item.title || item.name || 'Untitled'
 
     return (
