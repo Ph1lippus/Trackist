@@ -183,15 +183,12 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWat
 
                             {!isInWatchlist && (
                                 <div className="modal-actions">
-                                    <button className="modal-btn modal-btn--plan" onClick={() => handleAdd('planning')} disabled={adding}>
-                                        {adding ? 'Adding...' : 'Plan to Watch'}
-                                    </button>
                                     <button className="modal-btn modal-btn--watch" onClick={() => handleAdd('watching')} disabled={adding}>
-                                        Watching
+                                        {adding ? 'Adding...' : 'Add to Watchlist'}
                                     </button>
                                     {'media_type' in item && item.media_type === 'movie' && (
                                         <button className="modal-btn modal-btn--done" onClick={() => handleAdd('completed')} disabled={adding}>
-                                            Watched
+                                            Already Watched
                                         </button>
                                     )}
                                 </div>

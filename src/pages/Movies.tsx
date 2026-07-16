@@ -6,7 +6,6 @@ import type { WatchlistItem } from '../types'
 const Movies: React.FC = () => {
     const [items, setItems] = useState<WatchlistItem[]>([])
     const [loading, setLoading] = useState(true)
-    const [filter, setFilter] = useState<'all' | 'planning' | 'watching' | 'completed' | 'dropped'>('all')
     const [updating, setUpdating] = useState<string | null>(null)
 
     useEffect(() => {
@@ -53,15 +52,8 @@ const Movies: React.FC = () => {
         }
     }
 
-    const filtered = filter === 'all' ? items : items.filter(item => item.status === filter)
-
-    const statusCounts = {
-        all: items.length,
-        planning: items.filter(i => i.status === 'planning').length,
-        watching: items.filter(i => i.status === 'watching').length,
-        completed: items.filter(i => i.status === 'completed').length,
-        dropped: items.filter(i => i.status === 'dropped').length
-    }
+    const watchlistItems = items.filter(item => item.status === 'watching')
+    const watchedItems = items.filter(item => item.status !== 'watching')
 
     if (loading) return (
         <section className="dashboard-page">
@@ -79,66 +71,86 @@ const Movies: React.FC = () => {
                     <span>{items.length} total</span>
                 </div>
 
-                <div className="watchlist-tabs">
-                    <button className={`watchlist-tab ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>All ({statusCounts.all})</button>
-                    <button className={`watchlist-tab ${filter === 'planning' ? 'active' : ''}`} onClick={() => setFilter('planning')}>Planning ({statusCounts.planning})</button>
-                    <button className={`watchlist-tab ${filter === 'watching' ? 'active' : ''}`} onClick={() => setFilter('watching')}>Watching ({statusCounts.watching})</button>
-                    <button className={`watchlist-tab ${filter === 'completed' ? 'active' : ''}`} onClick={() => setFilter('completed')}>Completed ({statusCounts.completed})</button>
-                    <button className={`watchlist-tab ${filter === 'dropped' ? 'active' : ''}`} onClick={() => setFilter('dropped')}>Dropped ({statusCounts.dropped})</button>
-                </div>
 
-                {filtered.length === 0 ? (
-                    <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>
-                        {items.length === 0 ? 'No movies in your watchlist. Discover some!' : 'No movies with this status.'}
-                    </p>
-                ) : (
-                    <div className="watchlist-grid">
-                        {filtered.map((item) => {
-                            const poster = item.poster_path ? imageUrl(item.poster_path) : null
-                            return (
-                                <div className="watchlist-card" key={item.id}>
-                                    <div className="watchlist-card__poster">
-                                        {poster ? (
-                                            <img src={poster} alt={item.title} />
-                                        ) : (
-                                            <div className="discover-card__no-poster"><span>{item.title}</span></div>
-                                        )}
-                                    </div>
-                                    <div className="watchlist-card__info">
-                                        <h3>{item.title}</h3>
-                                        <span className="watchlist-card__type">Movie</span>
-                                        {item.overview && <p className="watchlist-card__overview">{item.overview.slice(0, 100)}...</p>}
-                                        {item.vote_average && (
-                                            <span style={{ fontSize: '0.8rem', color: '#ffad38' }}>★ {item.vote_average.toFixed(1)}</span>
-                                        )}
-                                        <div className="watchlist-card__status">
-                                            <button
-                                                className={`watchlist-status-btn ${item.status === 'planning' ? 'active' : ''}`}
-                                                onClick={() => updateStatus(item.id, 'planning')}
-                                                disabled={updating === item.id}
-                                            >Plan</button>
-                                            <button
-                                                className={`watchlist-status-btn ${item.status === 'watching' ? 'active' : ''}`}
-                                                onClick={() => updateStatus(item.id, 'watching')}
-                                                disabled={updating === item.id}
-                                            >Watch</button>
-                                            <button
-                                                className={`watchlist-status-btn ${item.status === 'completed' ? 'active' : ''}`}
-                                                onClick={() => updateStatus(item.id, 'completed')}
-                                                disabled={updating === item.id}
-                                            >Done</button>
-                                            <button
-                                                className={`watchlist-status-btn ${item.status === 'dropped' ? 'active' : ''}`}
-                                                onClick={() => updateStatus(item.id, 'dropped')}
-                                                disabled={updating === item.id}
-                                            >Drop</button>
+                {watchlistItems.length > 0 && (
+                    <div className="watchlist-section">
+                        <h3 className="watchlist-section__title">Watchlist</h3>
+                        <div className="watchlist-grid">
+                            {watchlistItems.map((item) => {
+                                const poster = item.poster_path ? imageUrl(item.poster_path) : null
+                                return (
+                                    <div className="watchlist-card" key={item.id}>
+                                        <div className="watchlist-card__poster">
+                                            {poster ? (
+                                                <img src={poster} alt={item.title} />
+                                            ) : (
+                                                <div className="discover-card__no-poster"><span>{item.title}</span></div>
+                                            )}
                                         </div>
-                                        <button className="watchlist-remove-btn" onClick={() => removeItem(item.id)}>Remove</button>
+                                        <div className="watchlist-card__info">
+                                            <h3>{item.title}</h3>
+                                            <span className="watchlist-card__type">Movie</span>
+                                            {item.overview && <p className="watchlist-card__overview">{item.overview.slice(0, 100)}...</p>}
+                                            {item.vote_average && (
+                                                <span style={{ fontSize: '0.8rem', color: '#ffad38' }}>★ {item.vote_average.toFixed(1)}</span>
+                                            )}
+                                            <div className="watchlist-card__status">
+                                                <button
+                                                    className={`watchlist-status-btn ${item.status === 'watching' ? 'active' : ''}`}
+                                                    onClick={() => updateStatus(item.id, 'watching')}
+                                                    disabled={updating === item.id}
+                                                >Watch</button>
+                                                <button
+                                                    className={`watchlist-status-btn ${item.status === 'completed' ? 'active' : ''}`}
+                                                    onClick={() => updateStatus(item.id, 'completed')}
+                                                    disabled={updating === item.id}
+                                                >Watched</button>
+                                            </div>
+                                            <button className="watchlist-remove-btn" onClick={() => removeItem(item.id)}>Remove</button>
+                                        </div>
                                     </div>
-                                </div>
-                            )
-                        })}
+                                )
+                            })}
+                        </div>
                     </div>
+                )}
+
+                {watchedItems.length > 0 && (
+                    <div className="watchlist-section">
+                        <h3 className="watchlist-section__title">Watched</h3>
+                        <div className="watchlist-grid">
+                            {watchedItems.map((item) => {
+                                const poster = item.poster_path ? imageUrl(item.poster_path) : null
+                                return (
+                                    <div className="watchlist-card" key={item.id}>
+                                        <div className="watchlist-card__poster">
+                                            {poster ? (
+                                                <img src={poster} alt={item.title} />
+                                            ) : (
+                                                <div className="discover-card__no-poster"><span>{item.title}</span></div>
+                                            )}
+                                        </div>
+                                        <div className="watchlist-card__info">
+                                            <h3>{item.title}</h3>
+                                            <span className="watchlist-card__type">Movie</span>
+                                            {item.overview && <p className="watchlist-card__overview">{item.overview.slice(0, 100)}...</p>}
+                                            {item.vote_average && (
+                                                <span style={{ fontSize: '0.8rem', color: '#ffad38' }}>★ {item.vote_average.toFixed(1)}</span>
+                                            )}
+                                            <button className="watchlist-remove-btn" onClick={() => removeItem(item.id)}>Remove</button>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                )}
+
+
+                {items.length === 0 && (
+                    <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>
+                        No movies in your watchlist. Discover some!
+                    </p>
                 )}
             </div>
         </div>

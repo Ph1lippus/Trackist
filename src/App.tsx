@@ -12,6 +12,7 @@ import Register from './pages/Register'
 import Discover from './pages/Discover'
 import Movies from './pages/Movies'
 import TVShows from './pages/TVShows'
+import Upcoming from './pages/Upcoming'
 import More from './pages/More'
 import Settings from './pages/Settings'
 import Credits from './pages/Credits'
@@ -86,6 +87,7 @@ const AppContent: React.FC = () => {
                     <Route path="/discover" element={user ? <Discover /> : <Navigate to="/login" replace />} />
                     <Route path="/movies" element={user ? <Movies /> : <Navigate to="/login" replace />} />
                     <Route path="/tvshows" element={user ? <TVShows /> : <Navigate to="/login" replace />} />
+                    <Route path="/upcoming" element={user ? <Upcoming /> : <Navigate to="/login" replace />} />
                     <Route path="/more" element={user ? <More /> : <Navigate to="/login" replace />} />
                     <Route path="/settings" element={user ? <Settings /> : <Navigate to="/login" replace />} />
                     <Route path="/credits" element={<Credits />} />

@@ -14,6 +14,30 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({ item, onClose, onUpda
     const [episodes, setEpisodes] = useState<WatchlistEpisode[]>([])
     const [loading, setLoading] = useState(true)
     const [selectedSeason, setSelectedSeason] = useState(item.current_season || 1)
+    
+    // Set initial season to the last watched episode's season
+    useEffect(() => {
+        const loadLastWatched = async () => {
+            if (!item.tmdb_id) return
+            try {
+                const { data: watchedEpisodes } = await supabase
+                    .from('watchlist_episodes')
+                    .select('*')
+                    .eq('watchlist_id', item.id)
+                    .eq('watched', true)
+                    .order('season_number', { ascending: false })
+                    .order('episode_number', { ascending: false })
+                    .limit(1)
+
+                if (watchedEpisodes && watchedEpisodes.length > 0) {
+                    setSelectedSeason(watchedEpisodes[0].season_number)
+                }
+            } catch (err) {
+                console.error('Failed to load last watched episode:', err)
+            }
+        }
+        loadLastWatched()
+    }, [item.id, item.tmdb_id])
     const [seasons, setSeasons] = useState<number[]>([])
     const [episodeModal, setEpisodeModal] = useState<{ watchlistId: string; episode: WatchlistEpisode } | null>(null)
     const [updatingStatus, setUpdatingStatus] = useState(false)
@@ -39,7 +63,7 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({ item, onClose, onUpda
 
                     const allEpisodes: WatchlistEpisode[] = []
                     for (const season of seasonList) {
-                        const sData = await getTVSeasonDetails(item.tmdb_id, season)
+                        const sData = await getTVSeasonDetails(item.tmdb_id!, season as number)
                         const sEpisodes = sData.episodes || []
                         for (const ep of sEpisodes) {
                             const watched = watchedEpisodes?.find(we =>
@@ -76,13 +100,25 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({ item, onClose, onUpda
         return episodes.filter(ep => ep.season_number === selectedSeason)
     }
 
+    const isEpisodeReleased = (episode: WatchlistEpisode): boolean => {
+        if (!episode.air_date) return true
+        const airDate = new Date(episode.air_date)
+        const today = new Date()
+        return airDate <= today
+    }
+
     const markEpisodeWatched = async (watchlistId: string, episode: WatchlistEpisode, markAll: boolean) => {
         if (markAll) {
             const itemEpisodes = episodes || []
-            // Mark all episodes BEFORE or UP TO the clicked one as watched
             const episodesToMark = itemEpisodes.filter(ep => {
-                if (ep.season_number < episode.season_number) return true
-                if (ep.season_number === episode.season_number && ep.episode_number <= episode.episode_number) return true
+                if (ep.season_number < episode.season_number) {
+                    if (!isEpisodeReleased(ep)) return false
+                    return true
+                }
+                if (ep.season_number === episode.season_number && ep.episode_number <= episode.episode_number) {
+                    if (!isEpisodeReleased(ep)) return false
+                    return true
+                }
                 return false
             })
 
@@ -107,14 +143,15 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({ item, onClose, onUpda
             await Promise.all(updates)
 
             setEpisodes(prev => prev.map((ep: WatchlistEpisode) => {
-                const shouldMark = ep.season_number < episode.season_number ||
+                const shouldMark = isEpisodeReleased(ep) && (
+                    ep.season_number < episode.season_number ||
                     (ep.season_number === episode.season_number && ep.episode_number <= episode.episode_number)
+                )
                 return shouldMark ? { ...ep, watched: true } : ep
             }))
 
-            // Check if all episodes are watched
-            const allWatched = episodes.every(ep => ep.watched)
-            if (allWatched && episodes.length > 0) {
+            const allReleasedWatched = episodes.every(ep => !isEpisodeReleased(ep) || ep.watched)
+            if (allReleasedWatched && episodes.length > 0) {
                 await supabase.from('watchlist').update({
                     status: 'completed',
                     completed_at: new Date().toISOString(),
@@ -123,6 +160,12 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({ item, onClose, onUpda
                 onUpdate()
             }
         } else {
+            if (!isEpisodeReleased(episode)) {
+                alert('Cannot mark unreleased episodes as watched!')
+                setEpisodeModal(null)
+                return
+            }
+
             await supabase.from('watchlist_episodes').upsert({
                 watchlist_id: watchlistId,
                 season_number: episode.season_number,
@@ -143,7 +186,6 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({ item, onClose, onUpda
                 ep.id === episode.id ? { ...ep, watched: true } : ep
             ))
 
-            // Check if all episodes are watched
             const updatedEpisodes = episodes.map(ep =>
                 ep.id === episode.id ? { ...ep, watched: true } : ep
             )
@@ -162,50 +204,40 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({ item, onClose, onUpda
     }
 
     const handleEpisodeClick = (episode: WatchlistEpisode) => {
-        if (!episode.watched) {
+        if (!episode.watched && isEpisodeReleased(episode)) {
             setEpisodeModal({ watchlistId: item.id, episode })
-        } else {
-            toggleEpisodeUnwatch(episode)
         }
     }
 
-    const toggleEpisodeUnwatch = async (episode: WatchlistEpisode) => {
-        await supabase.from('watchlist_episodes').upsert({
-            watchlist_id: item.id,
-            season_number: episode.season_number,
-            episode_number: episode.episode_number,
-            title: episode.title,
-            still_path: episode.still_path,
-            overview: episode.overview,
-            vote_average: episode.vote_average,
-            air_date: episode.air_date,
-            runtime: episode.runtime,
-            watched: false,
-            watched_at: null
-        }, {
-            onConflict: 'watchlist_id,season_number,episode_number'
-        })
-
-        setEpisodes(prev => prev.map(ep =>
-            ep.id === episode.id ? { ...ep, watched: false } : ep
-        ))
-
-        if (item.status === 'completed') {
-            await supabase.from('watchlist').update({
-                status: 'watching',
-                updated_at: new Date().toISOString()
-            }).eq('id', item.id)
-            onUpdate()
+    // Auto-advance to next season when all episodes in current season are watched
+    useEffect(() => {
+        const checkSeasonComplete = async () => {
+            if (seasons.length === 0 || episodes.length === 0) return
+            
+            const currentSeasonEpisodes = episodes.filter(ep => ep.season_number === selectedSeason)
+            const allWatched = currentSeasonEpisodes.length > 0 && currentSeasonEpisodes.every(ep => ep.watched)
+            
+            if (allWatched && selectedSeason < Math.max(...seasons)) {
+                const nextSeason = selectedSeason + 1
+                setSelectedSeason(nextSeason)
+                
+                // Update current_season in database
+                await supabase.from('watchlist').update({
+                    current_season: nextSeason,
+                    updated_at: new Date().toISOString()
+                }).eq('id', item.id)
+                
+                onUpdate()
+            }
         }
-    }
+        checkSeasonComplete()
+    }, [episodes, selectedSeason, seasons, item.id, onUpdate])
 
     const updateStatus = async (status: string) => {
         setUpdatingStatus(true)
         const updateData: Record<string, string> = { status, updated_at: new Date().toISOString() }
-        if (status === 'completed') {
-            updateData.completed_at = new Date().toISOString()
-        }
         await supabase.from('watchlist').update(updateData).eq('id', item.id)
+        
         setUpdatingStatus(false)
         onUpdate()
     }
@@ -269,20 +301,10 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({ item, onClose, onUpda
 
                         <div className="media-detail-actions">
                             <button
-                                className={`watchlist-status-btn ${item.status === 'planning' ? 'active' : ''}`}
-                                onClick={() => updateStatus('planning')}
-                                disabled={updatingStatus}
-                            >Plan</button>
-                            <button
                                 className={`watchlist-status-btn ${item.status === 'watching' ? 'active' : ''}`}
                                 onClick={() => updateStatus('watching')}
                                 disabled={updatingStatus}
-                            >Watch</button>
-                            <button
-                                className={`watchlist-status-btn ${item.status === 'completed' ? 'active' : ''}`}
-                                onClick={() => updateStatus('completed')}
-                                disabled={updatingStatus}
-                            >Done</button>
+                            >Watching</button>
                             <button
                                 className={`watchlist-status-btn ${item.status === 'dropped' ? 'active' : ''}`}
                                 onClick={() => updateStatus('dropped')}
@@ -321,36 +343,40 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({ item, onClose, onUpda
                             ) : filteredEpisodes.length === 0 ? (
                                 <p style={{ textAlign: 'center', opacity: 0.6, padding: '2rem' }}>No episodes available</p>
                             ) : (
-                                filteredEpisodes.map(ep => (
-                                    <div
-                                        key={ep.id}
-                                        className={`media-detail-episode-card ${ep.watched ? 'watched' : ''}`}
-                                        onClick={() => handleEpisodeClick(ep)}
-                                    >
-                                        {ep.still_path && (
-                                            <div className="media-detail-episode-still">
-                                                <img src={imageUrl(ep.still_path) || ''} alt={ep.title || `Episode ${ep.episode_number}`} />
-                                            </div>
-                                        )}
-                                        <div className="media-detail-episode-info">
-                                            <div className="media-detail-episode-number">
-                                                <div className={`media-detail-episode-check ${ep.watched ? 'checked' : ''}`}>
-                                                    {ep.watched && <span>✓</span>}
+                                filteredEpisodes.map(ep => {
+                                    const released = isEpisodeReleased(ep)
+                                    return (
+                                        <div
+                                            key={ep.id}
+                                            className={`media-detail-episode-card ${ep.watched ? 'watched' : ''} ${!released ? 'unreleased' : ''}`}
+                                            onClick={() => released ? handleEpisodeClick(ep) : undefined}
+                                            style={!released ? { cursor: 'not-allowed', opacity: 0.6 } : {}}
+                                        >
+                                            {ep.still_path && (
+                                                <div className="media-detail-episode-still">
+                                                    <img src={imageUrl(ep.still_path) || ''} alt={ep.title || `Episode ${ep.episode_number}`} />
                                                 </div>
-                                                <span>Episode {ep.episode_number}</span>
-                                            </div>
-                                            <div className="media-detail-episode-details">
-                                                <strong>{ep.title || `Episode ${ep.episode_number}`}</strong>
-                                                {ep.overview && <p>{ep.overview.slice(0, 120)}...</p>}
-                                                <div className="media-detail-episode-meta">
-                                                    {ep.air_date && <span>{ep.air_date}</span>}
-                                                    {ep.runtime && <span>{ep.runtime} min</span>}
-                                                    {ep.vote_average && <span>★ {ep.vote_average.toFixed(1)}</span>}
+                                            )}
+                                            <div className="media-detail-episode-info">
+                                                <div className="media-detail-episode-number">
+                                                    <div className={`media-detail-episode-check ${ep.watched ? 'checked' : ''}`}>
+                                                        {ep.watched && <span>✓</span>}
+                                                    </div>
+                                                    <span>Episode {ep.episode_number}</span>
+                                                </div>
+                                                <div className="media-detail-episode-details">
+                                                    <strong>{ep.title || `Episode ${ep.episode_number}`}</strong>
+                                                    {ep.overview && <p>{ep.overview.slice(0, 120)}...</p>}
+                                                    <div className="media-detail-episode-meta">
+                                                        {ep.air_date && <span>{ep.air_date}</span>}
+                                                        {ep.runtime && <span>{ep.runtime} min</span>}
+                                                        {released && ep.vote_average && <span>★ {ep.vote_average.toFixed(1)}</span>}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                ))
+                                    )
+                                })
                             )}
                         </div>
                     </div>

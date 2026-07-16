@@ -7,7 +7,6 @@ import MediaDetailView from '../components/MediaDetailView'
 const TVShows: React.FC = () => {
     const [items, setItems] = useState<WatchlistItem[]>([])
     const [loading, setLoading] = useState(true)
-    const [filter, setFilter] = useState<'all' | 'planning' | 'watching' | 'completed' | 'dropped'>('all')
     const [selectedItem, setSelectedItem] = useState<WatchlistItem | null>(null)
 
     useEffect(() => {
@@ -45,15 +44,9 @@ const TVShows: React.FC = () => {
         if (data) setItems(data)
     }
 
-    const filtered = filter === 'all' ? items : items.filter(item => item.status === filter)
-
-    const statusCounts = {
-        all: items.length,
-        planning: items.filter(i => i.status === 'planning').length,
-        watching: items.filter(i => i.status === 'watching').length,
-        completed: items.filter(i => i.status === 'completed').length,
-        dropped: items.filter(i => i.status === 'dropped').length
-    }
+    const watchingItems = items.filter(item => item.status === 'watching')
+    const watchlistItems = items.filter(item => item.status !== 'watching' && item.status !== 'dropped')
+    const droppedItems = items.filter(item => item.status === 'dropped')
 
     if (loading) return (
         <section className="dashboard-page">
@@ -71,49 +64,121 @@ const TVShows: React.FC = () => {
                     <span>{items.length} total</span>
                 </div>
 
-                <div className="watchlist-tabs">
-                    <button className={`watchlist-tab ${filter === 'all' ? 'active' : ''}`} onClick={() => setFilter('all')}>All ({statusCounts.all})</button>
-                    <button className={`watchlist-tab ${filter === 'planning' ? 'active' : ''}`} onClick={() => setFilter('planning')}>Planning ({statusCounts.planning})</button>
-                    <button className={`watchlist-tab ${filter === 'watching' ? 'active' : ''}`} onClick={() => setFilter('watching')}>Watching ({statusCounts.watching})</button>
-                    <button className={`watchlist-tab ${filter === 'completed' ? 'active' : ''}`} onClick={() => setFilter('completed')}>Completed ({statusCounts.completed})</button>
-                    <button className={`watchlist-tab ${filter === 'dropped' ? 'active' : ''}`} onClick={() => setFilter('dropped')}>Dropped ({statusCounts.dropped})</button>
-                </div>
-
-                {filtered.length === 0 ? (
-                    <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>
-                        {items.length === 0 ? 'No TV shows or anime in your watchlist. Discover some!' : 'No items with this status.'}
-                    </p>
-                ) : (
-                    <div className="discover-grid">
-                        {filtered.map((item) => (
-                            <article
-                                className="media-card"
-                                key={item.id}
-                                onClick={() => setSelectedItem(item)}
-                            >
-                                <div className="media-card__poster">
-                                    {item.poster_path ? (
-                                        <img
-                                            src={item.media_type === 'anime' ? item.poster_path : imageUrl(item.poster_path) || ''}
-                                            alt={item.title}
-                                            loading="lazy"
-                                        />
-                                    ) : (
-                                        <div className="media-card__no-poster">
-                                            <span>{item.title}</span>
-                                        </div>
-                                    )}
-                                    <div className="media-card__rating" style={{ background: 'rgba(0,0,0,0.75)', color: 'var(--color-orange)', fontSize: '0.6rem' }}>
-                                        {item.status}
+                {watchingItems.length > 0 && (
+                    <div className="watchlist-section">
+                        <h3 className="watchlist-section__title">Currently Watching</h3>
+                        <div className="discover-grid">
+                            {watchingItems.map((item) => (
+                                <article
+                                    className="media-card"
+                                    key={item.id}
+                                    onClick={() => setSelectedItem(item)}
+                                >
+                                    <div className="media-card__poster">
+                                        {item.poster_path ? (
+                                            <img
+                                                src={item.media_type === 'anime' ? item.poster_path : imageUrl(item.poster_path) || ''}
+                                                alt={item.title}
+                                                loading="lazy"
+                                            />
+                                        ) : (
+                                            <div className="media-card__no-poster">
+                                                <span>{item.title}</span>
+                                            </div>
+                                        )}
+                                        {item.vote_average && new Date(item.release_date || '9999-12-31') <= new Date() && (
+                                            <div className="media-card__rating" style={{ background: 'rgba(0,0,0,0.75)', color: '#ffad38', fontSize: '0.7rem' }}>
+                                                ★ {item.vote_average.toFixed(1)}
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                                <div className="media-card__body">
-                                    <h3>{item.title}</h3>
-                            <span className="media-card__type">TV Show</span>
-                                </div>
-                            </article>
-                        ))}
+                                    <div className="media-card__body">
+                                        <h3>{item.title}</h3>
+                                        <span className="media-card__type">TV Show</span>
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
                     </div>
+                )}
+
+                {watchlistItems.length > 0 && (
+                    <div className="watchlist-section">
+                        <h3 className="watchlist-section__title">Watchlist</h3>
+                        <div className="discover-grid">
+                            {watchlistItems.map((item) => (
+                                <article
+                                    className="media-card"
+                                    key={item.id}
+                                    onClick={() => setSelectedItem(item)}
+                                >
+                                    <div className="media-card__poster">
+                                        {item.poster_path ? (
+                                            <img
+                                                src={item.media_type === 'anime' ? item.poster_path : imageUrl(item.poster_path) || ''}
+                                                alt={item.title}
+                                                loading="lazy"
+                                            />
+                                        ) : (
+                                            <div className="media-card__no-poster">
+                                                <span>{item.title}</span>
+                                            </div>
+                                        )}
+                                        <div className="media-card__rating" style={{ background: 'rgba(0,0,0,0.75)', color: '#888', fontSize: '0.6rem' }}>
+                                            {item.status}
+                                        </div>
+                                    </div>
+                                    <div className="media-card__body">
+                                        <h3>{item.title}</h3>
+                                        <span className="media-card__type">TV Show</span>
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+
+                {droppedItems.length > 0 && (
+                    <div className="watchlist-section">
+                        <h3 className="watchlist-section__title">Dropped</h3>
+                        <div className="discover-grid">
+                            {droppedItems.map((item) => (
+                                <article
+                                    className="media-card"
+                                    key={item.id}
+                                    onClick={() => setSelectedItem(item)}
+                                >
+                                    <div className="media-card__poster">
+                                        {item.poster_path ? (
+                                            <img
+                                                src={item.media_type === 'anime' ? item.poster_path : imageUrl(item.poster_path) || ''}
+                                                alt={item.title}
+                                                loading="lazy"
+                                            />
+                                        ) : (
+                                            <div className="media-card__no-poster">
+                                                <span>{item.title}</span>
+                                            </div>
+                                        )}
+                                        <div className="media-card__rating" style={{ background: 'rgba(0,0,0,0.75)', color: '#f44336', fontSize: '0.6rem' }}>
+                                            dropped
+                                        </div>
+                                    </div>
+                                    <div className="media-card__body">
+                                        <h3>{item.title}</h3>
+                                        <span className="media-card__type">TV Show</span>
+                                    </div>
+                                </article>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {items.length === 0 && (
+                    <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>
+                        No TV shows or anime in your watchlist. Discover some!
+                    </p>
                 )}
             </div>
 

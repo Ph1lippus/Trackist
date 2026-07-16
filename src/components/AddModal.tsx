@@ -38,13 +38,13 @@ const AddModal: React.FC<AddModalProps> = ({ item, onClose, onAdd }) => {
                         <span className="discover-card__type">{item.media_type}</span>
                     </div>
                 </div>
-                <p className="add-modal__question">Have you already seen this?</p>
+                <p className="add-modal__question">Add to watchlist?</p>
                 <div className="add-modal__actions">
-                    <button className="add-modal__btn add-modal__btn--no" onClick={() => handleAdd('planning')} disabled={adding}>
-                        {adding ? '...' : 'Not yet'}
+                    <button className="add-modal__btn add-modal__btn--no" onClick={() => handleAdd('watching')} disabled={adding}>
+                        {adding ? '...' : 'Add to Watchlist'}
                     </button>
                     <button className="add-modal__btn add-modal__btn--yes" onClick={() => handleAdd('completed')} disabled={adding}>
-                        {adding ? '...' : 'Yes, mark as watched'}
+                        {adding ? '...' : 'Already Watched'}
                     </button>
                 </div>
             </div>
