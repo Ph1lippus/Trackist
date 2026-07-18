@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { searchMulti, searchPerson, getPopularMovies, getTrendingMovies, getTopRatedMovies, getPopularTV, getTrendingTV, getTopRatedTV } from '../services/tmdbService'
-import type { TMDBResult } from '../types'
+import type { TMDBResult, WatchlistItem } from '../types'
 import MediaCard from '../components/MediaCard'
 import DetailModal from '../components/DetailModal'
 import AddModal from '../components/AddModal'
+import AddWithEpisodesModal from '../components/AddWithEpisodesModal'
 
 type ResultItem = TMDBResult
 
@@ -160,6 +161,11 @@ const Discover: React.FC = () => {
         }
     }
 
+    const handleAddWithEpisodes = (item: WatchlistItem) => {
+        setWatchlistIds(prev => new Set(prev).add(Number(item.tmdb_id)))
+        setAddItem(null)
+    }
+
     const getSectionTitle = (): string => {
         if (query.trim()) return `Results for "${query}"`
         const source = mediaType === 'all'
@@ -170,12 +176,6 @@ const Discover: React.FC = () => {
                     ? 'Trending'
                     : 'Top Rated'
         return mediaType === 'movie' ? `${source} Movies` : mediaType === 'tv' ? `${source} TV Shows` : source
-    }
-
-    const getSourceLabel = (): string => {
-        if (sortBy === 'trending') return 'TMDB Trending'
-        if (sortBy === 'top_rated') return 'TMDB Top Rated'
-        return 'TMDB Popular'
     }
 
     return (
@@ -216,18 +216,8 @@ const Discover: React.FC = () => {
                 ) : results.length === 0 ? (
                     <div className="discover-empty"><p>{query ? 'No results found' : 'Nothing to show'}</p></div>
                 ) : (
-                    <div className="discover-section">
-                        <div className="discover-section__head">
-                            <div>
-                                <h2>{getSectionTitle()}</h2>
-                                {!query.trim() && (
-                                    <span style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)' }}>
-                                        {getSourceLabel()}
-                                    </span>
-                                )}
-                            </div>
-                            <span>{results.length} items</span>
-                        </div>
+                    <div className="watchlist-section">
+                        <h3 className="watchlist-section__title">{getSectionTitle()}</h3>
                         <div className="discover-grid">
                             {results.map((item) => (
                                 <MediaCard
@@ -262,7 +252,15 @@ const Discover: React.FC = () => {
                 />
             )}
             {addItem && (
-                <AddModal item={addItem} onClose={() => setAddItem(null)} onAdd={addToWatchlist} />
+                addItem.media_type === 'tv' ? (
+                    <AddWithEpisodesModal
+                        item={addItem}
+                        onClose={() => setAddItem(null)}
+                        onAdd={handleAddWithEpisodes}
+                    />
+                ) : (
+                    <AddModal item={addItem} onClose={() => setAddItem(null)} onAdd={addToWatchlist} />
+                )
             )}
         </div>
     )

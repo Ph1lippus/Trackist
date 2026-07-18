@@ -2392,3 +2392,17 @@ button:focus-visible {
     border-bottom: 2px solid rgba(133,138,227,0.2);
 }
 
+
+/* ===== UPCOMING EPISODE BADGE ===== */
+.upcoming-episode-badge {
+    position: absolute;
+    bottom: 0.5rem;
+    left: 0.5rem;
+    background: rgba(0,0,0,0.75);
+    color: var(--color-orange);
+    font-size: 0.6rem;
+    font-weight: 700;
+    padding: 0.2rem 0.45rem;
+    border-radius: 6px;
+    backdrop-filter: blur(4px);
+}

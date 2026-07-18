@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../services/supabaseClient'
-import { imageUrl, getTVSeasonDetails } from '../services/tmdbService'
+import { imageUrl, getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
 import type { WatchlistItem, WatchlistEpisode } from '../types'
-import { useNavigate } from 'react-router-dom'
+import MediaDetailView from '../components/MediaDetailView'
 
 const Upcoming: React.FC = () => {
     const [upcomingEpisodes, setUpcomingEpisodes] = useState<{ item: WatchlistItem; episode: WatchlistEpisode; airDate: string }[]>([])
     const [loading, setLoading] = useState(true)
-    const navigate = useNavigate()
+    const [selectedItem, setSelectedItem] = useState<WatchlistItem | null>(null)
 
     useEffect(() => {
         const fetchUpcoming = async () => {
@@ -34,7 +34,8 @@ const Upcoming: React.FC = () => {
                     if (!item.tmdb_id) continue
                     
                     try {
-                        const details = await getTVSeasonDetails(item.tmdb_id, 1)
+                        // Get TV show details to get the seasons list
+                        const details = await getTVDetails(item.tmdb_id)
                         if (details.seasons) {
                             for (const season of details.seasons.filter((s: { season_number: number }) => s.season_number > 0)) {
                                 try {
@@ -119,8 +120,65 @@ const Upcoming: React.FC = () => {
         return new Date(a).getTime() - new Date(b).getTime()
     })
 
-    const handleEpisodeClick = () => {
-        navigate('/tvshows')
+    const refreshItems = async () => {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { data } = await supabase
+            .from('watchlist')
+            .select('*')
+            .eq('user_id', user.id)
+            .in('media_type', ['tv', 'anime'])
+            .order('updated_at', { ascending: false })
+        if (data) {
+            // Re-fetch upcoming episodes
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+            const episodes: { item: WatchlistItem; episode: WatchlistEpisode; airDate: string }[] = []
+            
+            for (const item of data) {
+                if (!item.tmdb_id) continue
+                try {
+                    const details = await getTVDetails(item.tmdb_id)
+                    if (details.seasons) {
+                        for (const season of details.seasons.filter((s: { season_number: number }) => s.season_number > 0)) {
+                            try {
+                                const seasonData = await getTVSeasonDetails(item.tmdb_id, season.season_number)
+                                if (seasonData.episodes) {
+                                    for (const ep of seasonData.episodes) {
+                                        if (ep.air_date && new Date(ep.air_date) >= today) {
+                                            episodes.push({
+                                                item,
+                                                episode: {
+                                                    id: `${item.id}-${season.season_number}-${ep.episode_number}`,
+                                                    watchlist_id: item.id,
+                                                    season_number: season.season_number,
+                                                    episode_number: ep.episode_number,
+                                                    title: ep.name,
+                                                    still_path: ep.still_path,
+                                                    overview: ep.overview,
+                                                    vote_average: ep.vote_average,
+                                                    air_date: ep.air_date,
+                                                    runtime: ep.runtime,
+                                                    watched: false,
+                                                    created_at: new Date().toISOString(),
+                                                    updated_at: new Date().toISOString()
+                                                },
+                                                airDate: ep.air_date
+                                            })
+                                        }
+                                    }
+                                }
+                            } catch (err) {
+                                console.error(`Failed to load season ${season.season_number}:`, err)
+                            }
+                        }
+                    }
+                } catch (err) {
+                    console.error(`Failed to load show ${item.title}:`, err)
+                }
+            }
+            setUpcomingEpisodes(episodes)
+        }
     }
 
     if (loading) return (
@@ -150,39 +208,31 @@ const Upcoming: React.FC = () => {
                         <div key={dateKey} className="upcoming-date-group">
                             <h3 className="upcoming-date-label">{dateKey}</h3>
                             <div className="discover-grid">
-                                    {groupedEpisodes[dateKey].map(({ item, episode }) => (
-                                        <article
-                                            className="media-card"
-                                            key={`${item.id}-${episode.season_number}-${episode.episode_number}`}
-                                            onClick={handleEpisodeClick}
-                                        >
+                                {groupedEpisodes[dateKey].map(({ item, episode }) => (
+                                    <article
+                                        className="media-card"
+                                        key={`${item.id}-${episode.season_number}-${episode.episode_number}`}
+                                        onClick={() => setSelectedItem(item)}
+                                    >
                                         <div className="media-card__poster">
-                                            {episode.still_path ? (
+                                            {item.poster_path ? (
                                                 <img
-                                                    src={imageUrl(episode.still_path) || ''}
-                                                    alt={episode.title || `Episode ${episode.episode_number}`}
+                                                    src={item.media_type === 'anime' ? item.poster_path : imageUrl(item.poster_path) || ''}
+                                                    alt={item.title}
                                                     loading="lazy"
                                                 />
                                             ) : (
                                                 <div className="media-card__no-poster">
-                                                    <span>No preview</span>
+                                                    <span>{item.title}</span>
                                                 </div>
                                             )}
-                                            <div className="media-card__rating" style={{ 
-                                                background: 'rgba(0,0,0,0.75)', 
-                                                color: 'var(--color-orange)', 
-                                                fontSize: '0.6rem',
-                                                top: 'auto',
-                                                bottom: '0.5rem',
-                                                left: '0.5rem',
-                                                right: 'auto'
-                                            }}>
+                                            <div className="upcoming-episode-badge">
                                                 S{episode.season_number}E{episode.episode_number}
                                             </div>
                                         </div>
                                         <div className="media-card__body">
                                             <h3>{episode.title || `Episode ${episode.episode_number}`}</h3>
-                                            <span className="media-card__type">{item.title}</span>
+                                            <span className="media-card__type">{item.media_type === 'anime' ? 'Anime' : 'TV Show'}</span>
                                         </div>
                                     </article>
                                 ))}
@@ -191,6 +241,14 @@ const Upcoming: React.FC = () => {
                     ))}
                 </div>
             </div>
+
+            {selectedItem && (
+                <MediaDetailView
+                    item={selectedItem}
+                    onClose={() => setSelectedItem(null)}
+                    onUpdate={refreshItems}
+                />
+            )}
         </div>
     )
 }
