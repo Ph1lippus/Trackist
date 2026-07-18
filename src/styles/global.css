@@ -1421,31 +1421,35 @@ html, body {
 }
 
 .footer {
-    background-color: var(--color-orange);
-    border-top: none;
-    padding: 3rem 0 2rem 0;
+    background: rgba(5, 5, 5, 0.95);
+    border-top: 1px solid var(--color-platinum);
+    padding: 2rem 1rem 1.5rem;
     margin-top: auto;
-}
-
-.footer__brand {
-    font-family: var(--font-title);
-    font-size: 1.5rem;
-    color: var(--color-black);
-    letter-spacing: 2px;
 }
 
 .footer__top {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-platinum);
 }
 
+.footer__brand {
+    font-family: var(--font-display);
+    font-size: 1.5rem!important;
+    color: var(--color-platinum);
+    letter-spacing: 2px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.footer__brand:hover { color: var(--color-black); }
+
 .footer__back-btn {
-    background: rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(0, 0, 0, 0.15);
-    color: var(--color-black);
+    background: rgba(231, 232, 236, 0.08);
+    color: var(--color-platinum);
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -1455,12 +1459,12 @@ html, body {
     justify-content: center;
     transition: all 0.3s ease;
     font-size: 1.1rem;
+    border: none;
 }
 
 .footer__back-btn:hover {
-    background: var(--color-black);
-    border-color: var(--color-black);
-    color: var(--color-orange);
+    background: var(--color-platinum);
+    color: var(--color-black);
     transform: translateY(-3px);
 }
 
@@ -1468,7 +1472,7 @@ html, body {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 2rem;
-    padding: 2rem 0 1.5rem 0;
+    padding: 1rem 0 1rem 0;
 }
 
 .footer__links-group {
@@ -1479,36 +1483,36 @@ html, body {
 }
 
 .footer__links-title {
-    font-weight: 700;
-    color: var(--color-black);
+    font-weight: 800;
+    color: var(--color-platinum);
     font-size: 0.9rem;
     letter-spacing: 1px;
     margin-bottom: 0.2rem;
 }
 
-.footer__links-group a {
-    color: var(--color-black);
-    opacity: 0.75;
+.footer a {
+    color: var(--color-platinum);
+    opacity: 0.85;
     text-decoration: none;
     font-size: 0.95rem;
     transition: all 0.2s ease;
     font-weight: 500;
+    cursor: pointer;
 }
 
-.footer__links-group a:hover {
-    opacity: 1;
-    text-decoration: none;
-}
+.footer a:hover { opacity: 1; color: var(--color-black); }
 
 .footer__bottom {
-    padding-top: 1.5rem;
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
-    text-align: center;
+    padding: 1rem 0;
+    border-top: 1px solid var(--color-platinum);
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .footer__copyright {
     font-size: 0.95rem;
-    color: var(--color-black);
+    color: var(--color-platinum);
     opacity: 0.7;
     margin: 0;
     font-weight: 500;
@@ -1516,16 +1520,14 @@ html, body {
 }
 
 .footer__copyright a {
-    color: var(--color-black);
+    color: var(--color-platinum);
     opacity: 0.8;
     text-decoration: none;
     font-weight: 600;
+    cursor: pointer;
 }
 
-.footer__copyright a:hover {
-    opacity: 1;
-    text-decoration: underline;
-}
+.footer__copyright a:hover { opacity: 1; text-decoration: underline; }
 
 .footer__social {
     display: flex;
@@ -1541,36 +1543,21 @@ html, body {
     width: 40px;
     height: 40px;
     border-radius: 50%;
-    background: rgba(0, 0, 0, 0.08);
-    color: var(--color-black);
+    background: rgba(231, 232, 236, 0.08);
+    color: var(--color-platinum);
     font-size: 1.2rem;
     transition: all 0.3s ease;
     text-decoration: none;
+    cursor: pointer;
 }
 
 .footer__social a:hover {
-    background: var(--color-black);
-    color: var(--color-orange);
+    background: var(--color-platinum);
+    color: var(--color-black);
     transform: translateY(-3px);
     text-decoration: none;
 }
 
-.secondary-navbar-scroll-top {
-    appearance: none;
-    border: 1px solid rgba(255,255,255,0.12);
-    background: rgba(255,255,255,0.06);
-    color: var(--color-platinum);
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 0.9rem;
-    margin-left: 0.5rem;
-}
 .secondary-navbar-scroll-top:hover {
     background: var(--color-orange);
     border-color: var(--color-orange);

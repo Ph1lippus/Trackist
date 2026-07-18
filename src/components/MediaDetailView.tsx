@@ -209,6 +209,46 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({ item, onClose, onUpda
         }
     }
 
+    const markAllCurrentEpisodesWatched = async () => {
+        const releasedEpisodes = episodes.filter(ep => isEpisodeReleased(ep) && !ep.watched)
+        if (releasedEpisodes.length === 0) return
+
+        const updates = releasedEpisodes.map(ep =>
+            supabase.from('watchlist_episodes').upsert({
+                watchlist_id: item.id,
+                season_number: ep.season_number,
+                episode_number: ep.episode_number,
+                title: ep.title,
+                still_path: ep.still_path,
+                overview: ep.overview,
+                vote_average: ep.vote_average,
+                air_date: ep.air_date,
+                runtime: ep.runtime,
+                watched: true,
+                watched_at: new Date().toISOString()
+            }, {
+                onConflict: 'watchlist_id,season_number,episode_number'
+            })
+        )
+
+        await Promise.all(updates)
+
+        setEpisodes(prev => prev.map((ep: WatchlistEpisode) =>
+            isEpisodeReleased(ep) ? { ...ep, watched: true } : ep
+        ))
+
+        // Check if all released episodes are now watched
+        const allReleasedWatched = episodes.every(ep => !isEpisodeReleased(ep) || ep.watched)
+        if (allReleasedWatched && episodes.length > 0) {
+            await supabase.from('watchlist').update({
+                status: 'completed',
+                completed_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+            }).eq('id', item.id)
+            onUpdate()
+        }
+    }
+
     // Auto-advance to next season when all episodes in current season are watched
     useEffect(() => {
         const checkSeasonComplete = async () => {
@@ -389,6 +429,7 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({ item, onClose, onUpda
                     onClose={() => setEpisodeModal(null)}
                     onMarkSingle={() => markEpisodeWatched(episodeModal.watchlistId, episodeModal.episode, false)}
                     onMarkAll={() => markEpisodeWatched(episodeModal.watchlistId, episodeModal.episode, true)}
+                    onMarkAllWatched={markAllCurrentEpisodesWatched}
                 />
             )}
         </div>

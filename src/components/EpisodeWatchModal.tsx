@@ -7,9 +7,10 @@ interface EpisodeWatchModalProps {
     onClose: () => void
     onMarkSingle: () => void
     onMarkAll: () => void
+    onMarkAllWatched?: () => void
 }
 
-const EpisodeWatchModal: React.FC<EpisodeWatchModalProps> = ({ episode, onClose, onMarkSingle, onMarkAll }) => {
+const EpisodeWatchModal: React.FC<EpisodeWatchModalProps> = ({ episode, onClose, onMarkSingle, onMarkAll, onMarkAllWatched }) => {
     const stillUrl = episode.still_path ? imageUrl(episode.still_path) : null
 
     return (
@@ -78,9 +79,16 @@ const EpisodeWatchModal: React.FC<EpisodeWatchModalProps> = ({ episode, onClose,
                         Just this one
                     </button>
                     <button className="add-modal__btn add-modal__btn--yes" onClick={onMarkAll}>
-                        All remaining
+                        All episodes until this one
                     </button>
                 </div>
+                {onMarkAllWatched && (
+                    <div style={{ marginTop: '0.5rem' }}>
+                        <button className="add-modal__btn add-modal__btn--yes" onClick={onMarkAllWatched} style={{ width: '100%' }}>
+                            Mark all current episodes as watched
+                        </button>
+                    </div>
+                )}
             </div>
         </div>
     )

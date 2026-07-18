@@ -13,7 +13,10 @@ interface MediaCardProps {
 }
 
 const MediaCard: React.FC<MediaCardProps> = ({ item, isInWatchlist, onDetail, onAdd, addStatus }) => {
-    const imgUrl = imageUrl(item.poster_path ?? null)
+    const isPerson = item.media_type === 'person'
+    const imgUrl = isPerson 
+        ? imageUrl(item.profile_path ?? null)
+        : imageUrl(item.poster_path ?? null)
 
     const getItemTitle = (): string => {
         const tmdbItem = item as TMDBResult
@@ -42,7 +45,7 @@ const MediaCard: React.FC<MediaCardProps> = ({ item, isInWatchlist, onDetail, on
                 {item.vote_average && (
                     <div className="media-card__rating">{item.vote_average.toFixed(1)}</div>
                 )}
-                {!isInWatchlist && !addStatus && (
+                {!isPerson && !isInWatchlist && !addStatus && (
                     <button
                         className="media-card__add-icon"
                         onClick={(e) => { e.stopPropagation(); onAdd(item); }}
@@ -53,7 +56,7 @@ const MediaCard: React.FC<MediaCardProps> = ({ item, isInWatchlist, onDetail, on
                         </svg>
                     </button>
                 )}
-                {isInWatchlist && (
+                {!isPerson && isInWatchlist && (
                     <div className="media-card__check-icon" title="In watchlist">
                         <svg viewBox="0 0 24 24" fill="none" stroke="#68ffae" strokeWidth="2.5" width="16" height="16">
                             <path d="M20 6L9 17l-5-5" />

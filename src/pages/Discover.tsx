@@ -7,6 +7,7 @@ import DetailModal from '../components/DetailModal'
 import AddModal from '../components/AddModal'
 import AddWithEpisodesModal from '../components/AddWithEpisodesModal'
 import DiscoverDetailView from '../components/DiscoverDetailView'
+import PersonDetailModal from '../components/PersonDetailModal'
 
 type ResultItem = TMDBResult
 
@@ -15,7 +16,7 @@ const Discover: React.FC = () => {
     const [results, setResults] = useState<ResultItem[]>([])
     const [loading, setLoading] = useState(true)
     const [loadingMore, setLoadingMore] = useState(false)
-    const [mediaType, setMediaType] = useState<'all' | 'movie' | 'tv'>('all')
+    const [mediaType, setMediaType] = useState<'all' | 'movie' | 'tv' | 'person'>('all')
     const [sortBy, setSortBy] = useState<'popular' | 'trending' | 'top_rated'>('popular')
     const [page, setPage] = useState(1)
     const [hasMore, setHasMore] = useState(true)
@@ -63,14 +64,19 @@ const Discover: React.FC = () => {
                     searchPerson(query)
                 ])
                 let combined = [...(multiData.results || []), ...(personData.results || [])]
-                combined = combined.map(r => ({
-                    ...r,
-                    media_type: r.media_type || (r.title ? 'movie' as const : 'tv' as const)
-                }))
+                combined = combined.map(r => {
+                    // Person results have profile_path but no title, and no media_type
+                    if (r.profile_path && !r.title && !r.media_type) {
+                        return { ...r, media_type: 'person' as const }
+                    }
+                    return { ...r, media_type: r.media_type || (r.title ? 'movie' as const : 'tv' as const) }
+                })
                 if (mediaType === 'movie') {
                     combined = combined.filter(r => r.media_type === 'movie')
                 } else if (mediaType === 'tv') {
                     combined = combined.filter(r => r.media_type === 'tv')
+                } else if (mediaType === 'person') {
+                    combined = combined.filter(r => r.media_type === 'person')
                 }
                 newResults = combined
                 totalPages = 1
@@ -82,6 +88,10 @@ const Discover: React.FC = () => {
                 const data = sortBy === 'trending' ? await getTrendingTV(pageNum) : sortBy === 'top_rated' ? await getTopRatedTV(pageNum) : await getPopularTV(pageNum)
                 newResults = ((data as { results: TMDBResult[] }).results || []).map(r => ({ ...r, media_type: 'tv' as const }))
                 totalPages = (data as { total_pages?: number }).total_pages || 1
+            } else if (mediaType === 'person') {
+                const data = await searchPerson('a')
+                newResults = (data.results || []).map(r => ({ ...r, media_type: 'person' as const }))
+                totalPages = 1
             } else {
                 const [moviesData, tvData] = await Promise.all([
                     getPopularMovies(pageNum),
@@ -180,6 +190,7 @@ const Discover: React.FC = () => {
                 : sortBy === 'trending'
                     ? 'Trending'
                     : 'Top Rated'
+        if (mediaType === 'person') return 'Popular People'
         return mediaType === 'movie' ? `${source} Movies` : mediaType === 'tv' ? `${source} TV Shows` : source
     }
 
@@ -195,7 +206,7 @@ const Discover: React.FC = () => {
                             </svg>
                             <input
                                 className="discover-search"
-                                placeholder="Search movies, TV shows..."
+                                placeholder="Search movies, TV shows, actors, directors..."
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                             />
@@ -208,6 +219,7 @@ const Discover: React.FC = () => {
                         <button className={`discover-tab ${mediaType === 'all' ? 'active' : ''}`} onClick={() => { setMediaType('all'); setQuery(''); }}>All</button>
                         <button className={`discover-tab ${mediaType === 'movie' ? 'active' : ''}`} onClick={() => { setMediaType('movie'); setQuery(''); }}>Movies</button>
                         <button className={`discover-tab ${mediaType === 'tv' ? 'active' : ''}`} onClick={() => { setMediaType('tv'); setQuery(''); }}>TV Shows</button>
+                        <button className={`discover-tab ${mediaType === 'person' ? 'active' : ''}`} onClick={() => { setMediaType('person'); setQuery(''); }}>People</button>
                     </div>
                     <div className="discover-sorts">
                         <button className={`discover-sort-btn ${sortBy === 'popular' ? 'active' : ''}`} onClick={() => setSortBy('popular')}>Popular</button>
@@ -255,6 +267,11 @@ const Discover: React.FC = () => {
                         onClose={() => setDetailItem(null)}
                         onAdd={handleDetailAdd}
                         isInWatchlist={watchlistIds.has(detailItem.id)}
+                    />
+                ) : detailItem.media_type === 'person' ? (
+                    <PersonDetailModal
+                        item={detailItem}
+                        onClose={() => setDetailItem(null)}
                     />
                 ) : (
                     <DetailModal

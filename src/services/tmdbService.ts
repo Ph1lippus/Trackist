@@ -18,6 +18,24 @@ export const searchPerson = async (query: string): Promise<{ results: TMDBResult
     return res.json()
 }
 
+export const getPersonDetails = async (id: number): Promise<{
+    id: number
+    name: string
+    profile_path?: string | null
+    biography?: string
+    birthday?: string
+    place_of_birth?: string
+    known_for_department?: string
+    popularity?: number
+    gender?: number
+    known_for?: TMDBResult[]
+}> => {
+    const res = await fetch(
+        `${BASE_URL}/person/${id}?api_key=${API_KEY}`
+    )
+    return res.json()
+}
+
 export const getPopularMovies = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
     const res = await fetch(`${BASE_URL}/movie/popular?api_key=${API_KEY}&page=${page}`)
     return res.json()

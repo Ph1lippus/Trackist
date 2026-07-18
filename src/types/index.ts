@@ -4,6 +4,7 @@ export interface TMDBResult {
     name?: string
     media_type?: 'movie' | 'tv' | 'person' | 'anime'
     poster_path?: string | null
+    profile_path?: string | null
     overview?: string
     release_date?: string
     first_air_date?: string
@@ -21,6 +22,13 @@ export interface TMDBResult {
     seasons?: Array<{ season_number: number; episode_count?: number }>
     number_of_seasons?: number
     status?: string
+    known_for?: TMDBResult[]
+    known_for_department?: string
+    biography?: string
+    birthday?: string
+    place_of_birth?: string
+    popularity?: number
+    gender?: number
 }
 
 export interface WatchlistItem {

@@ -75,7 +75,7 @@ const AppContent: React.FC = () => {
         )
     }
 
-    const mediaPages = ['/discover', '/movies', '/tvshows', '/']
+    const mediaPages = ['/discover', '/movies', '/tvshows', '/', '/upcoming']
     const hideFooter = Boolean(user) && mediaPages.includes(location.pathname)
 
     return (
