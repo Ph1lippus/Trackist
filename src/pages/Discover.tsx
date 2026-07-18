@@ -6,6 +6,7 @@ import MediaCard from '../components/MediaCard'
 import DetailModal from '../components/DetailModal'
 import AddModal from '../components/AddModal'
 import AddWithEpisodesModal from '../components/AddWithEpisodesModal'
+import DiscoverDetailView from '../components/DiscoverDetailView'
 
 type ResultItem = TMDBResult
 
@@ -166,6 +167,10 @@ const Discover: React.FC = () => {
         setAddItem(null)
     }
 
+    const handleDetailAdd = (item: WatchlistItem) => {
+        setWatchlistIds(prev => new Set(prev).add(Number(item.tmdb_id)))
+    }
+
     const getSectionTitle = (): string => {
         if (query.trim()) return `Results for "${query}"`
         const source = mediaType === 'all'
@@ -244,12 +249,21 @@ const Discover: React.FC = () => {
             </div>
 
             {detailItem && (
-                <DetailModal
-                    item={detailItem}
-                    onClose={() => setDetailItem(null)}
-                    onAdd={addToWatchlist}
-                    isInWatchlist={watchlistIds.has(detailItem.id)}
-                />
+                detailItem.media_type === 'tv' ? (
+                    <DiscoverDetailView
+                        item={detailItem}
+                        onClose={() => setDetailItem(null)}
+                        onAdd={handleDetailAdd}
+                        isInWatchlist={watchlistIds.has(detailItem.id)}
+                    />
+                ) : (
+                    <DetailModal
+                        item={detailItem}
+                        onClose={() => setDetailItem(null)}
+                        onAdd={addToWatchlist}
+                        isInWatchlist={watchlistIds.has(detailItem.id)}
+                    />
+                )
             )}
             {addItem && (
                 addItem.media_type === 'tv' ? (
