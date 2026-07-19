@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
-import { createProfile, checkDisplayNameExists } from '../services/profileService'
+import { checkDisplayNameExists } from '../services/profileService'
 
 const Register: React.FC = () => {
     const navigate = useNavigate()
@@ -23,8 +23,8 @@ const Register: React.FC = () => {
             return
         }
 
-        if (password.length < 6) {
-            setError('Password must be at least 6 characters')
+        if (password.length < 8) {
+            setError('Password must be at least 8 characters')
             return
         }
 
@@ -46,7 +46,7 @@ const Register: React.FC = () => {
             return
         }
 
-        const { data, error: signUpError } = await supabase.auth.signUp({
+        const { error: signUpError } = await supabase.auth.signUp({
             email: cleanedEmail,
             password,
             options: {
@@ -60,16 +60,7 @@ const Register: React.FC = () => {
             return
         }
 
-        // Create profile
-        if (data?.user) {
-            const { error: profileError } = await createProfile(data.user.id, cleanedUsername)
-            if (profileError) {
-                setError(profileError.message)
-                setLoading(false)
-                return
-            }
-        }
-
+        // Profile is automatically created via database trigger on_auth_user_created
         setLoading(false)
         navigate('/login')
     }
@@ -81,7 +72,7 @@ const Register: React.FC = () => {
                     <div className="col-md-6 col-lg-5">
                         <div className="auth-card">
                             <h2 className="auth-title">Create Account</h2>
-                            <form onSubmit={handleSubmit} noValidate >
+                            <form onSubmit={handleSubmit} noValidate>
                                 <div className="mb-3">
                                     <label htmlFor="username" className="form-label">Username</label>
                                     <input
@@ -117,7 +108,7 @@ const Register: React.FC = () => {
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
                                             required
-                                            minLength={6}
+                                            minLength={8}
                                         />
                                         <button
                                             type="button"

@@ -34,6 +34,7 @@ export const updateLastActive = async () => {
 
 // Profile functions
 export const checkDisplayNameExists = async (displayName: string) => {
+    // Check if username already exists in profiles table
     const { data } = await supabase
         .from('profiles')
         .select('id')
@@ -42,12 +43,11 @@ export const checkDisplayNameExists = async (displayName: string) => {
     return !!data
 }
 
-export const createProfile = async (userId: string, displayName: string) => {
-    // Save display name/username only in auth metadata, not in the profiles table
-    await supabase.auth.updateUser({
-        data: { display_name: displayName }
-    })
-    return supabase.from('profiles').insert({
+export const createProfile = async (userId: string) => {
+    // The display_name is stored in auth metadata and synced to profiles via database trigger (on_auth_user_created)
+    // Profile is automatically created by the trigger, but we keep this function for flexibility
+    // Using upsert to handle case where trigger already created the profile
+    return supabase.from('profiles').upsert({
         id: userId
     })
 }

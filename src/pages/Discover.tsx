@@ -24,7 +24,6 @@ const Discover: React.FC = () => {
     const [detailItem, setDetailItem] = useState<ResultItem | null>(null)
     const [addItem, setAddItem] = useState<ResultItem | null>(null)
     const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set())
-    const [addStatus, setAddStatus] = useState<{ id: number; status: string } | null>(null)
 
     const sentinelRef = useRef<HTMLDivElement>(null)
     const fetchingRef = useRef(false)
@@ -204,8 +203,6 @@ const Discover: React.FC = () => {
         if (error) alert('Error: ' + error.message)
         else {
             setWatchlistIds(prev => new Set(prev).add(item.id))
-            setAddStatus({ id: item.id, status })
-            setTimeout(() => setAddStatus(null), 2000)
         }
     }
 
@@ -293,7 +290,6 @@ const Discover: React.FC = () => {
                                         isInWatchlist={watchlistIds.has(item.id)}
                                         onDetail={setDetailItem}
                                         onAdd={setAddItem}
-                                        addStatus={addStatus}
                                     />
                                 ))}
                             </div>

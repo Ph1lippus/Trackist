@@ -43,6 +43,35 @@ CREATE TRIGGER update_profiles_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at();
 
+-- ============================================================
+-- AUTO-CREATE PROFILE ON USER SIGN-UP
+-- ============================================================
+
+-- Function to handle new user creation
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+    INSERT INTO profiles (id, display_name, created_at, updated_at)
+    VALUES (
+        NEW.id,
+        COALESCE(
+            NEW.raw_user_meta_data->>'username',
+            NEW.raw_user_meta_data->>'full_name',
+            NEW.raw_user_meta_data->>'name',
+            split_part(NEW.email, '@', 1)
+        ),
+        NEW.created_at,
+        NEW.created_at
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger on auth.users after insert
+CREATE TRIGGER on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW
+EXECUTE FUNCTION handle_new_user();
 
 CREATE TABLE public.watchlist (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

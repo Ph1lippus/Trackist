@@ -9,10 +9,9 @@ interface MediaCardProps {
     isInWatchlist: boolean
     onDetail: (item: ResultItem) => void
     onAdd: (item: ResultItem) => void
-    addStatus?: { id: number; status: string } | null
 }
 
-const MediaCard: React.FC<MediaCardProps> = ({ item, isInWatchlist, onDetail, onAdd, addStatus }) => {
+const MediaCard: React.FC<MediaCardProps> = ({ item, isInWatchlist, onDetail, onAdd }) => {
     const isPerson = item.media_type === 'person'
     const imgUrl = isPerson 
         ? imageUrl(item.profile_path ?? null)
@@ -45,7 +44,7 @@ const MediaCard: React.FC<MediaCardProps> = ({ item, isInWatchlist, onDetail, on
                 {item.vote_average && (
                     <div className="media-card__rating">{item.vote_average.toFixed(1)}</div>
                 )}
-                {!isPerson && !isInWatchlist && !addStatus && (
+                {!isPerson && !isInWatchlist && (
                     <button
                         className="media-card__add-icon"
                         onClick={(e) => { e.stopPropagation(); onAdd(item); }}
