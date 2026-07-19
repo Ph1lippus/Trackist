@@ -3,6 +3,7 @@ import { supabase } from '../services/supabaseClient'
 import { searchMulti, searchPerson, getPopularMovies, getTrendingMovies, getTopRatedMovies, getPopularTV, getTrendingTV, getTopRatedTV, getPersonMovies, getPersonTV, getPopularPeople } from '../services/tmdbService'
 import type { TMDBResult, WatchlistItem } from '../types'
 import MediaCard from '../components/MediaCard'
+import PersonCard from '../components/PersonCard'
 import DetailModal from '../components/DetailModal'
 import AddModal from '../components/AddModal'
 import AddWithEpisodesModal from '../components/AddWithEpisodesModal'
@@ -273,18 +274,30 @@ const Discover: React.FC = () => {
                 ) : (
                     <div className="watchlist-section">
                         <h3 className="watchlist-section__title">{getSectionTitle()}</h3>
-                        <div className="discover-grid">
-                            {results.map((item) => (
-                                <MediaCard
-                                    key={`${item.media_type}-${item.id}`}
-                                    item={item}
-                                    isInWatchlist={watchlistIds.has(item.id)}
-                                    onDetail={setDetailItem}
-                                    onAdd={setAddItem}
-                                    addStatus={addStatus}
-                                />
-                            ))}
-                        </div>
+                        {mediaType === 'person' ? (
+                            <div className="discover-people-list">
+                                {results.map((item) => (
+                                    <PersonCard
+                                        key={`${item.media_type}-${item.id}`}
+                                        item={item}
+                                        onDetail={setDetailItem}
+                                    />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="discover-grid">
+                                {results.map((item) => (
+                                    <MediaCard
+                                        key={`${item.media_type}-${item.id}`}
+                                        item={item}
+                                        isInWatchlist={watchlistIds.has(item.id)}
+                                        onDetail={setDetailItem}
+                                        onAdd={setAddItem}
+                                        addStatus={addStatus}
+                                    />
+                                ))}
+                            </div>
+                        )}
                         <div ref={sentinelRef} style={{ height: '1px' }} />
                         {loadingMore && (
                             <div className="discover-loading"><div className="discover-spinner" /><p>Loading more...</p></div>

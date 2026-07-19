@@ -1,11 +1,10 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
-import { createProfile, checkDisplayNameExists } from '../services/profileService'
+import { createProfile } from '../services/profileService'
 
 const Register: React.FC = () => {
     const navigate = useNavigate()
-    const [username, setUsername] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
@@ -28,29 +27,20 @@ const Register: React.FC = () => {
             return
         }
 
-        const cleanedUsername = username.trim()
         const cleanedEmail = email.trim().toLowerCase()
 
-        if (!cleanedUsername || !cleanedEmail) {
-            setError('Please enter a username and email address')
+        if (!cleanedEmail) {
+            setError('Please enter an email address')
             return
         }
 
         setLoading(true)
 
-        // Check if username already exists
-        const exists = await checkDisplayNameExists(cleanedUsername)
-        if (exists) {
-            setError('Username already taken')
-            setLoading(false)
-            return
-        }
-
         const { data, error: signUpError } = await supabase.auth.signUp({
             email: cleanedEmail,
             password,
             options: {
-                data: { username: cleanedUsername }
+                data: { username: cleanedEmail }
             }
         })
 
@@ -60,9 +50,9 @@ const Register: React.FC = () => {
             return
         }
 
-        // Create profile with display_name
+        // Create profile
         if (data?.user) {
-            const { error: profileError } = await createProfile(data.user.id, cleanedUsername)
+            const { error: profileError } = await createProfile(data.user.id, cleanedEmail)
             if (profileError) {
                 setError(profileError.message)
                 setLoading(false)
@@ -82,18 +72,6 @@ const Register: React.FC = () => {
                         <div className="auth-card">
                             <h2 className="auth-title">Create Account</h2>
                             <form onSubmit={handleSubmit} noValidate >
-                                <div className="mb-3">
-                                    <label htmlFor="username" className="form-label">Username</label>
-                                    <input
-                                        type="text"
-                                        className="form-control"
-                                        id="username"
-                                        placeholder="Choose a username"
-                                        value={username}
-                                        onChange={(e) => setUsername(e.target.value)}
-                                        required
-                                    />
-                                </div>
                                 <div className="mb-3">
                                     <label htmlFor="email" className="form-label">Email</label>
                                     <input
