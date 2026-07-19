@@ -43,13 +43,12 @@ export const checkDisplayNameExists = async (displayName: string) => {
 }
 
 export const createProfile = async (userId: string, displayName: string) => {
-    // Also update the auth metadata with the display name
+    // Save display name/username only in auth metadata, not in the profiles table
     await supabase.auth.updateUser({
         data: { display_name: displayName }
     })
     return supabase.from('profiles').insert({
-        id: userId,
-        display_name: displayName
+        id: userId
     })
 }
 
