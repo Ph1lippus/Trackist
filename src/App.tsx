@@ -17,6 +17,8 @@ import More from './pages/More'
 import Settings from './pages/Settings'
 import Credits from './pages/Credits'
 import ForgotPassword from './pages/ForgotPassword'
+import Profile from './pages/Profile'
+import Friends from './pages/Friends'
 
 const AppContent: React.FC = () => {
     const location = useLocation()
@@ -75,7 +77,7 @@ const AppContent: React.FC = () => {
         )
     }
 
-    const mediaPages = ['/discover', '/movies', '/tvshows', '/', '/upcoming']
+    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/Friends']
     const hideFooter = Boolean(user) && mediaPages.includes(location.pathname)
 
     return (
@@ -84,17 +86,20 @@ const AppContent: React.FC = () => {
             <main className={`page-main flex-grow-1 ${hideFooter ? 'page-main--no-footer' : ''}`}>
                 <Routes>
                     <Route path="/" element={user ? <Discover /> : <Home />} />
-                    <Route path="/discover" element={user ? <Discover /> : <Navigate to="/login" replace />} />
-                    <Route path="/movies" element={user ? <Movies /> : <Navigate to="/login" replace />} />
-                    <Route path="/tvshows" element={user ? <TVShows /> : <Navigate to="/login" replace />} />
-                    <Route path="/upcoming" element={user ? <Upcoming /> : <Navigate to="/login" replace />} />
-                    <Route path="/more" element={user ? <More /> : <Navigate to="/login" replace />} />
-                    <Route path="/settings" element={user ? <Settings /> : <Navigate to="/login" replace />} />
-                    <Route path="/credits" element={<Credits />} />
+                    <Route path="/Discover" element={user ? <Discover /> : <Navigate to="/login" replace />} />
+                    <Route path="/Movies" element={user ? <Movies /> : <Navigate to="/login" replace />} />
+                    <Route path="/Tvshows" element={user ? <TVShows /> : <Navigate to="/login" replace />} />
+                    <Route path="/Upcoming" element={user ? <Upcoming /> : <Navigate to="/login" replace />} />
+                    <Route path="/Friends" element={user ? <Friends /> : <Navigate to="/login" replace />} />
+                    <Route path="/More" element={user ? <More /> : <Navigate to="/login" replace />} />
+                    <Route path="/Settings" element={user ? <Settings /> : <Navigate to="/login" replace />} />
+                    <Route path="/Credits" element={<Credits />} />
                     <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
                     <Route path="/register" element={user ? <Navigate to="/" replace /> : <Register />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/Profile/:username" element={user ? <Profile /> : <Navigate to="/login" replace />} />
+                    <Route path="/Profile" element={user ? <Profile /> : <Navigate to="/login" replace />} />
                     <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />
-                    <Route path="/forgot-password" element={<ForgotPassword />} />  
                 </Routes>
             </main>
             <SecondaryNavbar />

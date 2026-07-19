@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
+import { createProfile, checkDisplayNameExists } from '../services/profileService'
 
 const Register: React.FC = () => {
     const navigate = useNavigate()
@@ -37,7 +38,15 @@ const Register: React.FC = () => {
 
         setLoading(true)
 
-        const { error } = await supabase.auth.signUp({
+        // Check if username already exists
+        const exists = await checkDisplayNameExists(cleanedUsername)
+        if (exists) {
+            setError('Username already taken')
+            setLoading(false)
+            return
+        }
+
+        const { data, error: signUpError } = await supabase.auth.signUp({
             email: cleanedEmail,
             password,
             options: {
@@ -45,13 +54,23 @@ const Register: React.FC = () => {
             }
         })
 
-        setLoading(false)
-
-        if (error) {
-            setError(error.message)
+        if (signUpError) {
+            setError(signUpError.message)
+            setLoading(false)
             return
         }
 
+        // Create profile with display_name
+        if (data?.user) {
+            const { error: profileError } = await createProfile(data.user.id, cleanedUsername)
+            if (profileError) {
+                setError(profileError.message)
+                setLoading(false)
+                return
+            }
+        }
+
+        setLoading(false)
         navigate('/login')
     }
 

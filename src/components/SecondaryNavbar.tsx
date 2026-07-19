@@ -24,16 +24,17 @@ const SecondaryNavbar: React.FC = () => {
     }, []);
 
     const navItems = [
-        { to: '/discover', label: 'Discover' },
-        { to: '/movies', label: 'Movies' },
-        { to: '/tvshows', label: 'TV Shows' },
-        { to: '/upcoming', label: 'Upcoming' },
-        { to: '/more', label: 'More' },
+        { to: '/Discover', label: 'Discover' },
+        { to: '/Movies', label: 'Movies' },
+        { to: '/Tvshows', label: 'TV Shows' },
+        { to: '/Upcoming', label: 'Upcoming' },
+        { to: '/Friends', label: 'Friends' },
+        { to: '/More', label: 'More' },
     ];
 
     // Map pathname to nav item - handle root route redirecting to discover
     const getActiveTabIndex = useCallback(() => {
-        const path = location.pathname === '/' ? '/discover' : location.pathname;
+        const path = location.pathname === '/' ? '/Discover' : location.pathname;
         const index = navItems.findIndex(item => item.to === path);
         return index === -1 ? 0 : index;
     }, [location.pathname]);

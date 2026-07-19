@@ -2,8 +2,9 @@ import React from 'react'
 import { Link } from 'react-router-dom'
 
 const options = [
-    { title: 'Settings', blurb: 'Tune the app to your viewing habits.', route: '/settings' },
-    { title: 'Credits', blurb: 'See the services and tools behind Trackist.', route: '/credits' }
+    { title: 'Settings', blurb: 'Tune the app to your viewing habits.', route: '/Settings' },
+    { title: 'Profile', blurb: 'View and edit your public profile.', route: '/Profile' },
+    { title: 'Credits', blurb: 'See the services and tools behind Trackist.', route: '/Credits' }
 ]
 
 const More: React.FC = () => {

@@ -1,16 +1,22 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-const Footer: React.FC = () => {
+interface FooterProps {
+    loggedIn?: boolean;
+}
+
+const Footer: React.FC<FooterProps> = ({ loggedIn = false }) => {
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
+    const footerPaddingClass = loggedIn ? 'footer--logged-in' : '';
+
     return (
-        <footer className="footer">
-            <div className="container">
+        <footer className={`footer ${footerPaddingClass}`}>
+            <div className="container footer-inner">
                 <div className="footer__top">
-                    <span className="footer__brand">Trackist</span>
+                    <Link to="/" className="footer__brand">Trackist</Link>
                     <button 
                         onClick={scrollToTop} 
                         className="footer__back-btn" 
@@ -33,10 +39,10 @@ const Footer: React.FC = () => {
                         <a href="#">About Trackist</a>
                         <a href="#">Contact</a>
                     </div>
-                    <div className="footer__links-group">
+<div className="footer__links-group">
                         <span className="footer__links-title">Legal</span>
-                        <a href="#">Privacy Policy</a>
-                        <a href="#">Terms of Service</a>
+                        <Link to="/privacy-policy">Privacy Policy</Link>
+                        <Link to="/terms-of-service">Terms of Service</Link>
                     </div>
                     <div className="footer__links-group">
                         <span className="footer__links-title">Connect</span>
