@@ -19,6 +19,7 @@ import Credits from './pages/Credits'
 import ForgotPassword from './pages/ForgotPassword'
 import Profile from './pages/Profile'
 import Friends from './pages/Friends'
+import EditProfile from './pages/EditProfile'
 
 const AppContent: React.FC = () => {
     const location = useLocation()
@@ -97,6 +98,7 @@ const AppContent: React.FC = () => {
                     <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
                     <Route path="/register" element={user ? <Navigate to="/" replace /> : <Register />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/EditProfile" element={user ? <EditProfile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile/:username" element={user ? <Profile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile" element={user ? <Profile /> : <Navigate to="/login" replace />} />
                     <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />

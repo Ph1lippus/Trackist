@@ -303,19 +303,24 @@ html, body {
 
 /* ===== DASHBOARD LINK BUTTON ===== */
 .dashboard-link-btn {
-    background: none;
+    background: var(--color-primary);
     border: none;
-    color: var(--color-primary);
+    color: var(--color-black);
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    padding: 0.25rem 0.5rem;
-    border-radius: 6px;
-    transition: background 0.2s;
+    padding: 0.5rem 1rem;
+    border-radius: 50px;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .dashboard-link-btn:hover {
-    background: rgba(133,138,227,0.1);
+    filter: brightness(0.9);
+    transform: translateY(-1px);
 }
 
 .dashboard-card__art {
@@ -1891,10 +1896,11 @@ button:focus-visible {
     border-color: var(--color-primary);
     color: var(--color-black);
     font-weight: 600;
-    padding: 0.8rem 2.5rem;
-    border-radius: 50px;
+    padding: 0.6rem 1.5rem;
+    border-radius: 30px;
     transition: all 0.3s ease;
-    margin-top: 1.1rem;
+    margin-top: 0.8rem;
+    font-size: 0.9rem;
 }
 
 .btn-primary:hover,
@@ -1938,7 +1944,7 @@ button:focus-visible {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 16px;
-    padding: 2rem;
+    padding: 1.5rem 1.25rem 1.25rem;
     max-width: 400px;
     width: 100%;
 }
@@ -2897,6 +2903,32 @@ button:focus-visible {
     display: grid;
     gap: 1rem;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+}
+
+.avatar-hover-wrapper {
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    transition: all 0.2s ease;
+}
+
+.avatar-hover-wrapper:hover {
+    border-color: var(--color-primary);
+    transform: scale(1.05);
+}
+
+.avatar-hover-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.avatar-hover-wrapper:hover .avatar-hover-overlay {
+    opacity: 1;
 }
 
 

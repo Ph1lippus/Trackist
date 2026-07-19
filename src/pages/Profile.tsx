@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
-import { getProfile, getProfileByUsername, getFollowers, getFollowing, followUser, unfollowUser, isFollowing, updateProfile } from '../services/profileService'
-import { validateDisplayName, validateAvatarUrl } from '../utils/validation'
+import { getProfile, getProfileByUsername, getFollowers, getFollowing, followUser, unfollowUser, isFollowing } from '../services/profileService'
 import type { User } from '@supabase/supabase-js'
 
 interface Profile {
@@ -44,12 +43,6 @@ const ProfilePage: React.FC = () => {
     const [loading, setLoading] = useState(true)
     const [watchlistItems, setWatchlistItems] = useState<WatchlistItem[]>([])
     const [userLists, setUserLists] = useState<List[]>([])
-    const [showEditModal, setShowEditModal] = useState(false)
-    const [editDisplayName, setEditDisplayName] = useState('')
-    const [editBio, setEditBio] = useState('')
-    const [editAvatarUrl, setEditAvatarUrl] = useState('')
-    const [editLoading, setEditLoading] = useState(false)
-    const [editError, setEditError] = useState('')
 
     useEffect(() => {
         const loadUser = async () => {
@@ -135,47 +128,7 @@ const ProfilePage: React.FC = () => {
         setFollowLoading(false)
     }
 
-    const handleEditProfile = async (e: React.FormEvent) => {
-        e.preventDefault()
-        if (!currentUser || !profile) return
-
-        // Validate display name
-        const displayNameError = validateDisplayName(editDisplayName)
-        if (displayNameError) {
-            setEditError(displayNameError)
-            return
-        }
-
-        // Validate avatar URL
-        const avatarUrlError = validateAvatarUrl(editAvatarUrl)
-        if (avatarUrlError) {
-            setEditError(avatarUrlError)
-            return
-        }
-
-        setEditLoading(true)
-        setEditError('')
-        const { error } = await updateProfile(currentUser.id, {
-            display_name: editDisplayName || undefined,
-            bio: editBio || undefined,
-            avatar_url: editAvatarUrl || undefined
-        })
-
-        if (!error) {
-            setProfile({ ...profile, display_name: editDisplayName || profile.display_name, bio: editBio || profile.bio, avatar_url: editAvatarUrl || profile.avatar_url })
-            setShowEditModal(false)
-        }
-        setEditLoading(false)
-    }
-
-    const openEditModal = () => {
-        if (profile) {
-            setEditDisplayName(profile.display_name || '')
-            setEditBio(profile.bio || '')
-            setEditAvatarUrl(profile.avatar_url || '')
-            setShowEditModal(true)
-        }
-    }
+    const isOwnProfile = currentUser?.id === profile?.id
 
     if (loading) {
         return (
@@ -202,21 +155,19 @@ const ProfilePage: React.FC = () => {
         )
     }
 
-    const isOwnProfile = currentUser?.id === profile.id
-
     return (
         <section className="dashboard-page">
             <div className="dashboard-shell">
                 <div className="discover-section">
                     <div className="profile-header" style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', marginBottom: '1.5rem', position: 'relative' }}>
                         {isOwnProfile && (
-                            <button
-                                onClick={openEditModal}
+                            <Link
+                                to="/EditProfile"
                                 className="dashboard-link-btn"
                                 style={{ position: 'absolute', top: 0, right: 0 }}
                             >
                                 Edit Profile
-                            </button>
+                            </Link>
                         )}
                         
                         <div className="profile-avatar" style={{ flexShrink: 0 }}>
@@ -359,85 +310,6 @@ const ProfilePage: React.FC = () => {
                     )}
                 </div>
             </div>
-
-            {showEditModal && (
-                <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
-                    <div className="edit-profile-modal" onClick={(e) => e.stopPropagation()}>
-                        <button 
-                            className="modal-close"
-                            onClick={() => setShowEditModal(false)}
-                        >
-                            &times;
-                        </button>
-                        <h2>Edit Profile</h2>
-                        <form onSubmit={handleEditProfile} className="edit-profile-form">
-                            <div className="edit-profile-avatar">
-                                {profile.avatar_url ? (
-                                    <img src={profile.avatar_url} alt={profile.display_name || 'User'} />
-                                ) : (
-                                    <div className="edit-profile-avatar-placeholder">
-                                        {(profile.display_name || 'U')[0].toUpperCase()}
-                                    </div>
-                                )}
-                            </div>
-                            
-                            <div className="mb-3">
-                                <label htmlFor="displayName" className="form-label">Display Name</label>
-                                <input
-                                    type="text"
-                                    id="displayName"
-                                    className="form-control"
-                                    value={editDisplayName}
-                                    onChange={(e) => setEditDisplayName(e.target.value)}
-                                    placeholder="Enter your display name"
-                                />
-                            </div>
-
-                            <div className="mb-3">
-                                <label htmlFor="avatarUrl" className="form-label">Avatar URL</label>
-                                <input
-                                    type="url"
-                                    id="avatarUrl"
-                                    className="form-control"
-                                    value={editAvatarUrl}
-                                    onChange={(e) => setEditAvatarUrl(e.target.value)}
-                                    placeholder="https://example.com/avatar.jpg"
-                                />
-                            </div>
-
-                            <div className="mb-3">
-                                <label htmlFor="bio" className="form-label">Bio</label>
-                                <textarea
-                                    id="bio"
-                                    className="form-control"
-                                    value={editBio}
-                                    onChange={(e) => setEditBio(e.target.value)}
-                                    placeholder="Tell us about yourself..."
-                                />
-                            </div>
-
-                            {editError && <div className="alert alert-danger" style={{ marginBottom: '1rem' }}>{editError}</div>}
-
-                            <div className="edit-profile-actions">
-                                <button 
-                                    type="button"
-                                    className="edit-profile-btn edit-profile-btn--secondary"
-                                    onClick={() => setShowEditModal(false)}
-                                >
-                                    Cancel
-                                </button>
-                                <button 
-                                    type="submit"
-                                    className="edit-profile-btn edit-profile-btn--primary"
-                                    disabled={editLoading}
-                                >
-                                    {editLoading ? 'Saving...' : 'Save Changes'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
         </section>
     )
 }
