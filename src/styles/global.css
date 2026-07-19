@@ -870,6 +870,13 @@ html, body {
     background: rgba(255,255,255,0.04);
     border-radius: 8px;
     font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.modal-cast-item:hover {
+    background: rgba(133,138,227,0.2);
+    transform: scale(1.05);
 }
 
 .modal-cast-item img {

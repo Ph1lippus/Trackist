@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import type { User } from '@supabase/supabase-js'
@@ -16,6 +16,7 @@ const FriendsPage: React.FC = () => {
     const [searchResults, setSearchResults] = useState<ProfileUser[]>([])
     const [followingStatus, setFollowingStatus] = useState<Record<string, boolean>>({})
     const [loading, setLoading] = useState(false)
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
     useEffect(() => {
         const loadUser = async () => {
@@ -25,9 +26,10 @@ const FriendsPage: React.FC = () => {
         loadUser()
     }, [])
 
-    const searchUsers = async (query: string) => {
+    const searchUsers = useCallback(async (query: string) => {
         if (!query.trim() || !currentUser) {
             setSearchResults([])
+            setLoading(false)
             return
         }
 
@@ -49,6 +51,17 @@ const FriendsPage: React.FC = () => {
             setFollowingStatus(statusMap)
         }
         setLoading(false)
+    }, [currentUser])
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value
+        setSearchQuery(value)
+        setLoading(true)
+        
+        if (debounceRef.current) clearTimeout(debounceRef.current)
+        debounceRef.current = setTimeout(() => {
+            searchUsers(value)
+        }, 300)
     }
 
     const handleFollow = async (userId: string) => {
@@ -79,13 +92,13 @@ const FriendsPage: React.FC = () => {
                     
                     <form onSubmit={handleSearch}>
                         <div className="friends-search-wrap">
-                            <input
-                                type="text"
-                                className="friends-search"
-                                placeholder="Search users by display name..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                            />
+                    <input
+                        type="text"
+                        className="friends-search"
+                        placeholder="Search users by display name..."
+                        value={searchQuery}
+                        onChange={handleSearchChange}
+                    />
                         </div>
                     </form>
                 </div>

@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../services/supabaseClient'
-import { searchMulti, searchPerson, getPopularMovies, getTrendingMovies, getTopRatedMovies, getPopularTV, getTrendingTV, getTopRatedTV } from '../services/tmdbService'
+import { searchMulti, searchPerson, getPopularMovies, getTrendingMovies, getTopRatedMovies, getPopularTV, getTrendingTV, getTopRatedTV, getPersonMovies, getPersonTV, getPopularPeople } from '../services/tmdbService'
 import type { TMDBResult, WatchlistItem } from '../types'
 import MediaCard from '../components/MediaCard'
 import DetailModal from '../components/DetailModal'
@@ -44,7 +44,7 @@ const Discover: React.FC = () => {
         fetchWatchlist()
     }, [])
 
-    const fetchData = async (pageNum: number) => {
+    const fetchData = useCallback(async (pageNum: number) => {
         if (fetchingRef.current) return
         fetchingRef.current = true
 
@@ -64,6 +64,15 @@ const Discover: React.FC = () => {
                     searchPerson(query)
                 ])
                 let combined = [...(multiData.results || []), ...(personData.results || [])]
+                
+                // Deduplicate by id to avoid actors/actresses appearing twice
+                const seen = new Set<number>()
+                combined = combined.filter(item => {
+                    if (seen.has(item.id)) return false
+                    seen.add(item.id)
+                    return true
+                })
+                
                 combined = combined.map(r => {
                     // Person results have profile_path but no title, and no media_type
                     if (r.profile_path && !r.title && !r.media_type) {
@@ -78,6 +87,27 @@ const Discover: React.FC = () => {
                 } else if (mediaType === 'person') {
                     combined = combined.filter(r => r.media_type === 'person')
                 }
+                // If searching for people, also fetch their filmography
+                if (query.trim() && combined.some(r => r.media_type === 'person')) {
+                    const personIds = combined.filter(r => r.media_type === 'person').map(r => r.id)
+                    const [personMovies, personTV] = await Promise.all([
+                        Promise.all(personIds.map(id => getPersonMovies(id))),
+                        Promise.all(personIds.map(id => getPersonTV(id)))
+                    ])
+                    const films = [
+                        ...personMovies.flatMap(d => (d.results || []).map(r => ({ ...r, media_type: 'movie' as const }))),
+                        ...personTV.flatMap(d => (d.results || []).map(r => ({ ...r, media_type: 'tv' as const })))
+                    ]
+                    // Deduplicate films by id
+                    const filmSeen = new Set<number>()
+                    const uniqueFilms = films.filter(f => {
+                        if (filmSeen.has(f.id)) return false
+                        filmSeen.add(f.id)
+                        return true
+                    })
+                    combined = [...combined, ...uniqueFilms]
+                }
+                
                 newResults = combined
                 totalPages = 1
             } else if (mediaType === 'movie') {
@@ -89,9 +119,9 @@ const Discover: React.FC = () => {
                 newResults = ((data as { results: TMDBResult[] }).results || []).map(r => ({ ...r, media_type: 'tv' as const }))
                 totalPages = (data as { total_pages?: number }).total_pages || 1
             } else if (mediaType === 'person') {
-                const data = await searchPerson('a')
+                const data = await getPopularPeople(pageNum)
                 newResults = (data.results || []).map(r => ({ ...r, media_type: 'person' as const }))
-                totalPages = 1
+                totalPages = (data as { total_pages?: number }).total_pages || 1
             } else {
                 const [moviesData, tvData] = await Promise.all([
                     getPopularMovies(pageNum),
@@ -100,12 +130,18 @@ const Discover: React.FC = () => {
                 const movies = ((moviesData as { results: TMDBResult[] }).results || []).map(r => ({ ...r, media_type: 'movie' as const }))
                 const tv = ((tvData as { results: TMDBResult[] }).results || []).map(r => ({ ...r, media_type: 'tv' as const }))
                 const combined = [...movies, ...tv]
-                for (let i = combined.length - 1; i > 0; i--) {
-                    const j = Math.floor(Math.random() * (i + 1));
-                    [combined[i], combined[j]] = [combined[j], combined[i]]
+                // Shuffle on first page only (page 1) so subsequent pages don't re-shuffle existing results
+                if (pageNum === 1) {
+                    for (let i = combined.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [combined[i], combined[j]] = [combined[j], combined[i]]
+                    }
                 }
                 newResults = combined
-                totalPages = 10
+                // Use actual page limit from both sources
+                const moviesTotal = (moviesData as { total_pages?: number }).total_pages || 1
+                const tvTotal = (tvData as { total_pages?: number }).total_pages || 1
+                totalPages = Math.max(moviesTotal, tvTotal)
             }
 
             setResults(prev => pageNum === 1 ? newResults : [...prev, ...newResults])
@@ -117,13 +153,13 @@ const Discover: React.FC = () => {
         setLoading(false)
         setLoadingMore(false)
         fetchingRef.current = false
-    }
-
-    useEffect(() => {
-        setPage(1)
-        setHasMore(true)
-        fetchData(1)
     }, [mediaType, sortBy, query])
+
+    const fetchTrigger = `${mediaType}-${sortBy}-${query}`
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching on dependency change
+        fetchData(1)
+    }, [fetchTrigger, fetchData])
 
     useEffect(() => {
         const sentinel = sentinelRef.current
@@ -137,7 +173,7 @@ const Discover: React.FC = () => {
 
         observer.observe(sentinel)
         return () => observer.disconnect()
-    }, [hasMore, loadingMore, page, fetchData])
+    }, [hasMore, loadingMore, page, fetchData, loading])
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -221,11 +257,13 @@ const Discover: React.FC = () => {
                         <button className={`discover-tab ${mediaType === 'tv' ? 'active' : ''}`} onClick={() => { setMediaType('tv'); setQuery(''); }}>TV Shows</button>
                         <button className={`discover-tab ${mediaType === 'person' ? 'active' : ''}`} onClick={() => { setMediaType('person'); setQuery(''); }}>People</button>
                     </div>
-                    <div className="discover-sorts">
-                        <button className={`discover-sort-btn ${sortBy === 'popular' ? 'active' : ''}`} onClick={() => setSortBy('popular')}>Popular</button>
-                        <button className={`discover-sort-btn ${sortBy === 'trending' ? 'active' : ''}`} onClick={() => setSortBy('trending')}>Trending</button>
-                        <button className={`discover-sort-btn ${sortBy === 'top_rated' ? 'active' : ''}`} onClick={() => setSortBy('top_rated')}>Top Rated</button>
-                    </div>
+                    {mediaType !== 'person' && (
+                        <div className="discover-sorts">
+                            <button className={`discover-sort-btn ${sortBy === 'popular' ? 'active' : ''}`} onClick={() => setSortBy('popular')}>Popular</button>
+                            <button className={`discover-sort-btn ${sortBy === 'trending' ? 'active' : ''}`} onClick={() => setSortBy('trending')}>Trending</button>
+                            <button className={`discover-sort-btn ${sortBy === 'top_rated' ? 'active' : ''}`} onClick={() => setSortBy('top_rated')}>Top Rated</button>
+                        </div>
+                    )}
                 </div>
 
                 {loading ? (
@@ -272,6 +310,7 @@ const Discover: React.FC = () => {
                     <PersonDetailModal
                         item={detailItem}
                         onClose={() => setDetailItem(null)}
+                        onMediaClick={(media) => setDetailItem(media)}
                     />
                 ) : (
                     <DetailModal
@@ -279,6 +318,7 @@ const Discover: React.FC = () => {
                         onClose={() => setDetailItem(null)}
                         onAdd={addToWatchlist}
                         isInWatchlist={watchlistIds.has(detailItem.id)}
+                        onPersonClick={(person) => setDetailItem(person)}
                     />
                 )
             )}

@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import { getPersonDetails, imageUrl } from '../services/tmdbService'
+import { getPersonDetails, getPersonMovies, getPersonTV, imageUrl } from '../services/tmdbService'
 import type { TMDBResult } from '../types'
 
 interface PersonDetailModalProps {
     item: TMDBResult
     onClose: () => void
+    onMediaClick?: (item: TMDBResult) => void
 }
 
 interface PersonDetails {
@@ -20,9 +21,16 @@ interface PersonDetails {
     known_for?: TMDBResult[]
 }
 
-const PersonDetailModal: React.FC<PersonDetailModalProps> = ({ item, onClose }) => {
+interface FilmographyItem extends TMDBResult {
+    media_type: 'movie' | 'tv'
+}
+
+const PersonDetailModal: React.FC<PersonDetailModalProps> = ({ item, onClose, onMediaClick }) => {
     const [details, setDetails] = useState<PersonDetails | null>(null)
     const [loading, setLoading] = useState(true)
+    const [movies, setMovies] = useState<FilmographyItem[]>([])
+    const [tvShows, setTVShows] = useState<FilmographyItem[]>([])
+    const [loadingCredits, setLoadingCredits] = useState(true)
 
     useEffect(() => {
         const fetchDetails = async () => {
@@ -44,6 +52,39 @@ const PersonDetailModal: React.FC<PersonDetailModalProps> = ({ item, onClose }) 
         fetchDetails()
     }, [item])
 
+    useEffect(() => {
+        const fetchCredits = async () => {
+            if (!item.id) return
+            setLoadingCredits(true)
+            try {
+                const [moviesData, tvData] = await Promise.all([
+                    getPersonMovies(item.id),
+                    getPersonTV(item.id)
+                ])
+                const sortedMovies = ((moviesData as { cast?: TMDBResult[] }).cast || [])
+                    .map((m: TMDBResult) => ({ ...m, media_type: 'movie' as const }))
+                    .sort((a, b) => {
+                        const dateA = (a as FilmographyItem).release_date || ''
+                        const dateB = (b as FilmographyItem).release_date || ''
+                        return dateB.localeCompare(dateA)
+                    })
+                const sortedTV = ((tvData as { cast?: TMDBResult[] }).cast || [])
+                    .map((t: TMDBResult) => ({ ...t, media_type: 'tv' as const }))
+                    .sort((a, b) => {
+                        const dateA = (a as FilmographyItem).first_air_date || ''
+                        const dateB = (b as FilmographyItem).first_air_date || ''
+                        return dateB.localeCompare(dateA)
+                    })
+                setMovies(sortedMovies)
+                setTVShows(sortedTV)
+            } catch (err) {
+                console.error('Failed to load credits:', err)
+            }
+            setLoadingCredits(false)
+        }
+        fetchCredits()
+    }, [item.id])
+
     const profileUrl = details?.profile_path ? imageUrl(details.profile_path) : null
     const title = details?.name || item.name || 'Unknown'
     const biography = details?.biography || 'No biography available.'
@@ -51,7 +92,6 @@ const PersonDetailModal: React.FC<PersonDetailModalProps> = ({ item, onClose }) 
     const placeOfBirth = details?.place_of_birth
     const knownForDepartment = details?.known_for_department
     const popularity = details?.popularity
-    const knownFor = details?.known_for || []
 
     const getGender = (gender?: number): string => {
         if (gender === 1) return 'Female'
@@ -96,27 +136,69 @@ const PersonDetailModal: React.FC<PersonDetailModalProps> = ({ item, onClose }) 
 
                             <p className="modal-overview">{biography}</p>
 
-                            {knownFor.length > 0 && (
-                                <div className="modal-cast" style={{ marginTop: '1rem' }}>
-                                    <h4>Known For</h4>
+                            <div style={{ marginTop: '1.5rem' }}>
+                                <h4 style={{ marginBottom: '0.75rem' }}>Movies</h4>
+                                {loadingCredits ? (
+                                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>Loading filmography...</p>
+                                ) : movies.length > 0 ? (
                                     <div className="modal-cast-list">
-                                        {knownFor.map((media: TMDBResult) => (
-                                            <span key={media.id} className="modal-cast-item" style={{ cursor: 'default' }}>
-                                                {media.poster_path && (
+                                        {movies.slice(0, 20).map((movie) => (
+                                            <span 
+                                                key={movie.id} 
+                                                className="modal-cast-item"
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    onMediaClick?.(movie)
+                                                }}
+                                            >
+                                                {movie.poster_path && (
                                                     <img 
-                                                        src={imageUrl(media.poster_path) || ''} 
-                                                        alt={media.title || media.name || 'Media'} 
-                                                        style={{ width: '40px', height: '60px' }}
+                                                        src={imageUrl(movie.poster_path) || ''} 
+                                                        alt={movie.title || movie.name || 'Movie'} 
                                                     />
                                                 )}
-                                                <span style={{ fontSize: '0.75rem' }}>
-                                                    {media.title || media.name || 'Untitled'}
+                                                <span>
+                                                    {movie.title || movie.name || 'Untitled'}
                                                 </span>
                                             </span>
                                         ))}
                                     </div>
-                                </div>
-                            )}
+                                ) : (
+                                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>No movies found</p>
+                                )}
+                            </div>
+
+                            <div style={{ marginTop: '1.5rem' }}>
+                                <h4 style={{ marginBottom: '0.75rem' }}>TV Shows</h4>
+                                {loadingCredits ? (
+                                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>Loading filmography...</p>
+                                ) : tvShows.length > 0 ? (
+                                    <div className="modal-cast-list">
+                                        {tvShows.slice(0, 20).map((show) => (
+                                            <span 
+                                                key={show.id} 
+                                                className="modal-cast-item"
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    onMediaClick?.(show)
+                                                }}
+                                            >
+                                                {show.poster_path && (
+                                                    <img 
+                                                        src={imageUrl(show.poster_path) || ''} 
+                                                        alt={show.title || show.name || 'TV Show'} 
+                                                    />
+                                                )}
+                                                <span>
+                                                    {show.title || show.name || 'Untitled'}
+                                                </span>
+                                            </span>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>No TV shows found</p>
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}

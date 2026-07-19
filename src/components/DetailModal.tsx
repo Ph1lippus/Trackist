@@ -7,6 +7,7 @@ interface DetailModalProps {
     onClose: () => void
     onAdd: (item: TMDBResult, status: string) => void
     isInWatchlist: boolean
+    onPersonClick?: (person: TMDBResult) => void
 }
 
 interface Season {
@@ -22,7 +23,7 @@ interface Episode {
     vote_average?: number
 }
 
-const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWatchlist }) => {
+const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWatchlist, onPersonClick }) => {
     const [details, setDetails] = useState<TMDBResult | null>(null)
     const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
@@ -138,7 +139,17 @@ const DetailModal: React.FC<DetailModalProps> = ({ item, onClose, onAdd, isInWat
                                     <h4>Cast</h4>
                                     <div className="modal-cast-list">
                                         {cast.map((c: { id: number; name: string; profile_path?: string }) => (
-                                            <span key={c.id || c.name} className="modal-cast-item">
+                                            <span 
+                                                key={c.id || c.name} 
+                                                className="modal-cast-item" 
+                                                style={{ cursor: 'pointer' }}
+                                                onClick={() => onPersonClick?.({ 
+                                                    id: c.id, 
+                                                    name: c.name, 
+                                                    profile_path: c.profile_path,
+                                                    media_type: 'person' as const
+                                                })}
+                                            >
                                                 {c.profile_path && (
                                                     <img src={imageUrl(c.profile_path) || ''} alt={c.name} />
                                                 )}

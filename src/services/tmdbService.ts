@@ -90,3 +90,18 @@ export const imageUrl = (path: string | null) => {
     if (!path) return null
     return `${IMAGE_BASE}${path}`
 }
+
+export const getPersonMovies = async (id: number): Promise<{ results: TMDBResult[] }> => {
+    const res = await fetch(`${BASE_URL}/person/${id}/movie_credits?api_key=${API_KEY}`)
+    return res.json()
+}
+
+export const getPersonTV = async (id: number): Promise<{ results: TMDBResult[] }> => {
+    const res = await fetch(`${BASE_URL}/person/${id}/tv_credits?api_key=${API_KEY}`)
+    return res.json()
+}
+
+export const getPopularPeople = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
+    const res = await fetch(`${BASE_URL}/person/popular?api_key=${API_KEY}&page=${page}`)
+    return res.json()
+}
