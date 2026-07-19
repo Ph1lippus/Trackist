@@ -12,34 +12,21 @@ interface PersonCardProps {
 const PersonCard: React.FC<PersonCardProps> = ({ item, onDetail }) => {
     const imgUrl = imageUrl(item.profile_path ?? null)
     const name = item.name || 'Unknown'
-    const department = item.known_for_department || ''
-    const popularity = item.popularity ? item.popularity.toFixed(1) : null
-    const knownFor = (item.known_for || []).slice(0, 3)
 
     return (
-        <article className="person-card" onClick={() => onDetail(item)}>
-            <div className="person-card__photo">
+        <article className="media-card" onClick={() => onDetail(item)}>
+            <div className="media-card__poster">
                 {imgUrl ? (
                     <img src={imgUrl} alt={name} loading="lazy" />
                 ) : (
-                    <div className="person-card__no-photo">
-                        <span>{name[0].toUpperCase()}</span>
+                    <div className="media-card__no-poster">
+                        <span>{name}</span>
                     </div>
                 )}
-                {popularity && (
-                    <div className="person-card__rating">★ {popularity}</div>
-                )}
             </div>
-            <div className="person-card__info">
-                <h3 className="person-card__name">{name}</h3>
-                {department && (
-                    <span className="person-card__department">{department}</span>
-                )}
-                {knownFor.length > 0 && (
-                    <p className="person-card__known">
-                        Known for: {knownFor.map(k => k.title || k.name || '').filter(Boolean).join(', ')}
-                    </p>
-                )}
+            <div className="media-card__body">
+                <h3 onClick={() => onDetail(item)}>{name}</h3>
+                <span className="media-card__type">Person</span>
             </div>
         </article>
     )

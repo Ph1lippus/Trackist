@@ -271,19 +271,15 @@ const Discover: React.FC = () => {
                 ) : (
                     <div className="watchlist-section">
                         <h3 className="watchlist-section__title">{getSectionTitle()}</h3>
-                        {mediaType === 'person' ? (
-                            <div className="discover-people-list">
-                                {results.map((item) => (
+                        <div className="discover-grid">
+                            {results.map((item) => (
+                                item.media_type === 'person' ? (
                                     <PersonCard
                                         key={`${item.media_type}-${item.id}`}
                                         item={item}
                                         onDetail={setDetailItem}
                                     />
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="discover-grid">
-                                {results.map((item) => (
+                                ) : (
                                     <MediaCard
                                         key={`${item.media_type}-${item.id}`}
                                         item={item}
@@ -291,9 +287,9 @@ const Discover: React.FC = () => {
                                         onDetail={setDetailItem}
                                         onAdd={setAddItem}
                                     />
-                                ))}
-                            </div>
-                        )}
+                                )
+                            ))}
+                        </div>
                         <div ref={sentinelRef} style={{ height: '1px' }} />
                         {loadingMore && (
                             <div className="discover-loading"><div className="discover-spinner" /><p>Loading more...</p></div>

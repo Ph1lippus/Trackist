@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { checkDisplayNameExists } from '../services/profileService'
+import { validateUsername, validateEmail, validatePassword } from '../utils/validation'
 
 const Register: React.FC = () => {
     const navigate = useNavigate()
@@ -18,51 +19,77 @@ const Register: React.FC = () => {
         e.preventDefault()
         setError('')
 
-        if (password !== confirmPassword) {
-            setError('Passwords do not match')
+        // Validate username
+        const usernameError = validateUsername(username)
+        if (usernameError) {
+            setError(usernameError)
             return
         }
 
-        if (password.length < 8) {
-            setError('Password must be at least 8 characters')
+        // Validate email
+        const emailError = validateEmail(email)
+        if (emailError) {
+            setError(emailError)
+            return
+        }
+
+        // Validate password
+        const passwordError = validatePassword(password)
+        if (passwordError) {
+            setError(passwordError)
+            return
+        }
+
+        if (password !== confirmPassword) {
+            setError('Passwords do not match')
             return
         }
 
         const cleanedUsername = username.trim()
         const cleanedEmail = email.trim().toLowerCase()
 
-        if (!cleanedUsername || !cleanedEmail) {
-            setError('Please enter a username and email address')
-            return
-        }
-
         setLoading(true)
 
         // Check if username already exists
-        const exists = await checkDisplayNameExists(cleanedUsername)
-        if (exists) {
-            setError('Username already taken')
-            setLoading(false)
-            return
-        }
-
-        const { error: signUpError } = await supabase.auth.signUp({
-            email: cleanedEmail,
-            password,
-            options: {
-                data: { username: cleanedUsername }
+        try {
+            const exists = await checkDisplayNameExists(cleanedUsername)
+            if (exists) {
+                setError('Username already taken')
+                setLoading(false)
+                return
             }
-        })
-
-        if (signUpError) {
-            setError(signUpError.message)
-            setLoading(false)
-            return
+        } catch {
+            // Continue with registration even if username check fails
         }
 
-        // Profile is automatically created via database trigger on_auth_user_created
-        setLoading(false)
-        navigate('/login')
+        try {
+            const { error: signUpError } = await supabase.auth.signUp({
+                email: cleanedEmail,
+                password,
+                options: {
+                    data: { username: cleanedUsername }
+                }
+            })
+
+            if (signUpError) {
+                let errorMessage = signUpError.message || 'Registration failed'
+                if (signUpError.message?.includes('No API key') || signUpError.message?.includes('Invalid path')) {
+                    errorMessage = 'Unable to connect to authentication service. Please try again later.'
+                }
+                setError(errorMessage)
+                setLoading(false)
+                return
+            }
+
+            setLoading(false)
+            navigate('/login')
+        } catch (err) {
+            console.error('Registration error:', err)
+            const errorObj = err as { message?: string; error?: string }
+            const errorMessage = errorObj?.message || errorObj?.error || 'Registration failed. Please try again.'
+            setError(errorMessage)
+            setLoading(false)
+        }
     }
 
     return (

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { getProfile, getProfileByUsername, getFollowers, getFollowing, followUser, unfollowUser, isFollowing, updateProfile } from '../services/profileService'
+import { validateDisplayName, validateAvatarUrl } from '../utils/validation'
 import type { User } from '@supabase/supabase-js'
 
 interface Profile {
@@ -48,6 +49,7 @@ const ProfilePage: React.FC = () => {
     const [editBio, setEditBio] = useState('')
     const [editAvatarUrl, setEditAvatarUrl] = useState('')
     const [editLoading, setEditLoading] = useState(false)
+    const [editError, setEditError] = useState('')
 
     useEffect(() => {
         const loadUser = async () => {
@@ -137,7 +139,22 @@ const ProfilePage: React.FC = () => {
         e.preventDefault()
         if (!currentUser || !profile) return
 
+        // Validate display name
+        const displayNameError = validateDisplayName(editDisplayName)
+        if (displayNameError) {
+            setEditError(displayNameError)
+            return
+        }
+
+        // Validate avatar URL
+        const avatarUrlError = validateAvatarUrl(editAvatarUrl)
+        if (avatarUrlError) {
+            setEditError(avatarUrlError)
+            return
+        }
+
         setEditLoading(true)
+        setEditError('')
         const { error } = await updateProfile(currentUser.id, {
             display_name: editDisplayName || undefined,
             bio: editBio || undefined,
@@ -398,6 +415,8 @@ const ProfilePage: React.FC = () => {
                                     placeholder="Tell us about yourself..."
                                 />
                             </div>
+
+                            {editError && <div className="alert alert-danger" style={{ marginBottom: '1rem' }}>{editError}</div>}
 
                             <div className="edit-profile-actions">
                                 <button 
