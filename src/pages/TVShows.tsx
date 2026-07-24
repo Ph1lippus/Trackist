@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
 import type { WatchlistItem } from '../types'
-import MediaDetailView from '../components/MediaDetailView'
+import MediaDetailView from '../components/media/MediaDetailView'
 
 const TVShows: React.FC = () => {
     const [items, setItems] = useState<WatchlistItem[]>([])
@@ -64,11 +64,6 @@ const TVShows: React.FC = () => {
     return (
         <div className="discover-page">
             <div className="discover-container">
-                <div className="discover-section__head">
-                    <h2>TV Shows</h2>
-                    <span>{items.length} total</span>
-                </div>
-
                 <div className="discover-search-wrap">
                     <form onSubmit={(e) => e.preventDefault()}>
                         <div className="discover-search-box">
@@ -206,6 +201,7 @@ const TVShows: React.FC = () => {
             {selectedItem && (
                 <MediaDetailView
                     item={selectedItem}
+                    mode="watchlist"
                     onClose={() => setSelectedItem(null)}
                     onUpdate={refreshItems}
                 />

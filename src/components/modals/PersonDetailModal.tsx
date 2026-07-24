@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import { getPersonDetails, getPersonMovies, getPersonTV, imageUrl } from '../services/tmdbService'
-import type { TMDBResult } from '../types'
+import { getPersonDetails, getPersonMovies, getPersonTV, imageUrl } from '../../services/tmdbService'
+import type { TMDBResult } from '../../types'
 
 interface PersonDetailModalProps {
     item: TMDBResult
@@ -16,7 +16,6 @@ interface PersonDetails {
     birthday?: string
     place_of_birth?: string
     known_for_department?: string
-    popularity?: number
     gender?: number
     known_for?: TMDBResult[]
 }
@@ -91,7 +90,6 @@ const PersonDetailModal: React.FC<PersonDetailModalProps> = ({ item, onClose, on
     const birthday = details?.birthday
     const placeOfBirth = details?.place_of_birth
     const knownForDepartment = details?.known_for_department
-    const popularity = details?.popularity
 
     const getGender = (gender?: number): string => {
         if (gender === 1) return 'Female'
@@ -116,16 +114,12 @@ const PersonDetailModal: React.FC<PersonDetailModalProps> = ({ item, onClose, on
                                     <span>{title}</span>
                                 </div>
                             )}
-                        </div>
-
-                        <div className="modal-info">
                             <h2 className="modal-title">{title}</h2>
                             
                             <div className="modal-meta">
                                 {knownForDepartment && <span>{knownForDepartment}</span>}
                                 {getGender(details?.gender) && <span>{getGender(details?.gender)}</span>}
                                 {birthday && <span>🎂 {birthday}</span>}
-                                {popularity && <span>⭐ {popularity.toFixed(1)}</span>}
                             </div>
 
                             {placeOfBirth && (
@@ -133,72 +127,75 @@ const PersonDetailModal: React.FC<PersonDetailModalProps> = ({ item, onClose, on
                                     📍 {placeOfBirth}
                                 </p>
                             )}
+                        </div>
 
+                        <div className="modal-info">
+                            
+                            <h4 style={{ marginBottom: '0.75rem' }}>Biography</h4>
                             <p className="modal-overview">{biography}</p>
-
-                            <div style={{ marginTop: '1.5rem' }}>
-                                <h4 style={{ marginBottom: '0.75rem' }}>Movies</h4>
-                                {loadingCredits ? (
-                                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>Loading filmography...</p>
-                                ) : movies.length > 0 ? (
-                                    <div className="modal-cast-list">
-                                        {movies.slice(0, 20).map((movie) => (
-                                            <span 
-                                                key={movie.id} 
-                                                className="modal-cast-item"
-                                                onClick={(e) => {
-                                                    e.stopPropagation()
-                                                    onMediaClick?.(movie)
-                                                }}
-                                            >
-                                                {movie.poster_path && (
-                                                    <img 
-                                                        src={imageUrl(movie.poster_path) || ''} 
-                                                        alt={movie.title || movie.name || 'Movie'} 
-                                                    />
-                                                )}
-                                                <span>
-                                                    {movie.title || movie.name || 'Untitled'}
+                            {(loadingCredits || movies.length > 0) && (
+                                <div style={{ marginTop: '1.5rem' }}>
+                                    <h5 style={{ marginBottom: '0.75rem' }}>Movies</h5>
+                                    {loadingCredits ? (
+                                        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>
+                                            Loading filmography...
+                                        </p>
+                                    ) : (
+                                        <div className="modal-cast-list">
+                                            {movies.slice(0, 20).map((movie) => (
+                                                <span
+                                                    key={movie.id}
+                                                    className="modal-cast-item"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        onMediaClick?.(movie)
+                                                    }}
+                                                >
+                                                    {movie.poster_path && (
+                                                        <img
+                                                            src={imageUrl(movie.poster_path) || ''}
+                                                            alt={movie.title || movie.name || 'Movie'}
+                                                        />
+                                                    )}
+                                                    <span>{movie.title || movie.name || 'Untitled'}</span>
                                                 </span>
-                                            </span>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>No movies found</p>
-                                )}
-                            </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
 
-                            <div style={{ marginTop: '1.5rem' }}>
-                                <h4 style={{ marginBottom: '0.75rem' }}>TV Shows</h4>
-                                {loadingCredits ? (
-                                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>Loading filmography...</p>
-                                ) : tvShows.length > 0 ? (
-                                    <div className="modal-cast-list">
-                                        {tvShows.slice(0, 20).map((show) => (
-                                            <span 
-                                                key={show.id} 
-                                                className="modal-cast-item"
-                                                onClick={(e) => {
-                                                    e.stopPropagation()
-                                                    onMediaClick?.(show)
-                                                }}
-                                            >
-                                                {show.poster_path && (
-                                                    <img 
-                                                        src={imageUrl(show.poster_path) || ''} 
-                                                        alt={show.title || show.name || 'TV Show'} 
-                                                    />
-                                                )}
-                                                <span>
-                                                    {show.title || show.name || 'Untitled'}
+                            {(loadingCredits || tvShows.length > 0) && (
+                                <div style={{ marginTop: '1.5rem' }}>
+                                    <h5 style={{ marginBottom: '0.75rem' }}>TV Shows</h5>
+                                    {loadingCredits ? (
+                                        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>
+                                            Loading filmography...
+                                        </p>
+                                    ) : (
+                                        <div className="modal-cast-list">
+                                            {tvShows.slice(0, 20).map((show) => (
+                                                <span
+                                                    key={show.id}
+                                                    className="modal-cast-item"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        onMediaClick?.(show)
+                                                    }}
+                                                >
+                                                    {show.poster_path && (
+                                                        <img
+                                                            src={imageUrl(show.poster_path) || ''}
+                                                            alt={show.title || show.name || 'TV Show'}
+                                                        />
+                                                    )}
+                                                    <span>{show.title || show.name || 'Untitled'}</span>
                                                 </span>
-                                            </span>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.85rem' }}>No TV shows found</p>
-                                )}
-                            </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

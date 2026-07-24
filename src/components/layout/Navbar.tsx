@@ -1,34 +1,11 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
-import type { User } from '@supabase/supabase-js'
-import { supabase } from '../services/supabaseClient'
-import { signOutUser, getProfile } from '../services/profileService'    
+import { useAuth } from '../../hooks/useAuth'
+import { signOutUser } from '../../services/profileService'
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate()
-    const [user, setUser] = useState<User | null>(null)
-    const [profile, setProfile] = useState<{ display_name: string | null } | null>(null)
-
-    const loadProfile = useCallback(async (userId: string) => {
-        const { data } = await getProfile(userId)
-        setProfile(data)
-    }, [])
-
-    useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setUser(session?.user || null)
-            if (session?.user) {
-                loadProfile(session.user.id)
-            }
-        })
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user || null)
-            if (session?.user) {
-                loadProfile(session.user.id)
-            }
-        })
-        return () => subscription.unsubscribe()
-    }, [loadProfile])
+    const { user, profile } = useAuth(true)
 
     const handleLogout = async () => {
         await signOutUser()

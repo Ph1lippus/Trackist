@@ -2,13 +2,10 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { searchMulti, searchPerson, getPopularMovies, getTrendingMovies, getTopRatedMovies, getPopularTV, getTrendingTV, getTopRatedTV, getPersonMovies, getPersonTV, getPopularPeople } from '../services/tmdbService'
 import type { TMDBResult, WatchlistItem } from '../types'
-import MediaCard from '../components/MediaCard'
-import PersonCard from '../components/PersonCard'
-import DetailModal from '../components/DetailModal'
-import AddModal from '../components/AddModal'
-import AddWithEpisodesModal from '../components/AddWithEpisodesModal'
-import DiscoverDetailView from '../components/DiscoverDetailView'
-import PersonDetailModal from '../components/PersonDetailModal'
+import MediaCard from '../components/media/MediaCard'
+import DetailModal from '../components/media/MediaDetailView'
+import AddModal from '../components/modals/AddModal'
+import PersonDetailModal from '../components/modals/PersonDetailModal'
 
 type ResultItem = TMDBResult
 
@@ -274,9 +271,10 @@ const Discover: React.FC = () => {
                         <div className="discover-grid">
                             {results.map((item) => (
                                 item.media_type === 'person' ? (
-                                    <PersonCard
+                                    <MediaCard
                                         key={`${item.media_type}-${item.id}`}
                                         item={item}
+                                        compact={true}
                                         onDetail={setDetailItem}
                                     />
                                 ) : (
@@ -304,14 +302,7 @@ const Discover: React.FC = () => {
             </div>
 
             {detailItem && (
-                detailItem.media_type === 'tv' ? (
-                    <DiscoverDetailView
-                        item={detailItem}
-                        onClose={() => setDetailItem(null)}
-                        onAdd={handleDetailAdd}
-                        isInWatchlist={watchlistIds.has(detailItem.id)}
-                    />
-                ) : detailItem.media_type === 'person' ? (
+                detailItem.media_type === 'person' ? (
                     <PersonDetailModal
                         item={detailItem}
                         onClose={() => setDetailItem(null)}
@@ -320,23 +311,21 @@ const Discover: React.FC = () => {
                 ) : (
                     <DetailModal
                         item={detailItem}
+                        mode="browse"
                         onClose={() => setDetailItem(null)}
                         onAdd={addToWatchlist}
-                        isInWatchlist={watchlistIds.has(detailItem.id)}
+                        onAddWatchlistItem={handleDetailAdd}
                         onPersonClick={(person) => setDetailItem(person)}
                     />
                 )
             )}
             {addItem && (
-                addItem.media_type === 'tv' ? (
-                    <AddWithEpisodesModal
-                        item={addItem}
-                        onClose={() => setAddItem(null)}
-                        onAdd={handleAddWithEpisodes}
-                    />
-                ) : (
-                    <AddModal item={addItem} onClose={() => setAddItem(null)} onAdd={addToWatchlist} />
-                )
+                <AddModal 
+                    item={addItem} 
+                    onClose={() => setAddItem(null)} 
+                    onAdd={addToWatchlist}
+                    onAddWatchlistItem={handleAddWithEpisodes}
+                />
             )}
         </div>
     )

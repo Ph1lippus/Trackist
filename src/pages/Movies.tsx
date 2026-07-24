@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../services/supabaseClient'
-import MediaCard from '../components/MediaCard'
-import DetailModal from '../components/DetailModal'
-import ConfirmModal from '../components/ConfirmModal'
+import MediaCard from '../components/media/MediaCard'
+import DetailModal from '../components/media/MediaDetailView'
+import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
 
 const Movies: React.FC = () => {
@@ -188,9 +188,9 @@ const Movies: React.FC = () => {
             {selectedMovie && (
                 <DetailModal
                     item={selectedMovie}
+                    mode="browse"
                     onClose={handleCloseModal}
                     onAdd={handleAddFromModal}
-                    isInWatchlist={true}
                 />
             )}
 

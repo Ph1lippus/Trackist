@@ -1,8 +1,8 @@
 import React from 'react'
-import type { WatchlistEpisode } from '../types'
-import { imageUrl } from '../services/tmdbService'
+import type { WatchlistEpisode } from '../../types'
+import { imageUrl } from '../../services/tmdbService'
 
-interface EpisodeWatchModalProps {
+interface EpisodeWatchModalProps {  
     episode: WatchlistEpisode
     onClose: () => void
     onMarkSingle: () => void

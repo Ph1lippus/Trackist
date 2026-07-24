@@ -1,19 +1,28 @@
 import React from 'react'
-import { imageUrl } from '../services/tmdbService'
-import type { TMDBResult } from '../types'
+import { imageUrl } from '../../services/tmdbService'
+import type { TMDBResult } from '../../types'
 
 type ResultItem = TMDBResult
 
 interface MediaCardProps {
     item: ResultItem
-    isInWatchlist: boolean
+    isInWatchlist?: boolean
+    compact?: boolean
     onDetail: (item: ResultItem) => void
-    onAdd: (item: ResultItem) => void
+    onAdd?: (item: ResultItem) => void
     onMarkWatched?: (item: ResultItem) => void
     onMarkUnwatched?: (item: ResultItem) => void
 }
 
-const MediaCard: React.FC<MediaCardProps> = ({ item, isInWatchlist, onDetail, onAdd, onMarkWatched, onMarkUnwatched }) => {
+const MediaCard: React.FC<MediaCardProps> = ({ 
+    item, 
+    isInWatchlist = false, 
+    compact = false, 
+    onDetail, 
+    onAdd, 
+    onMarkWatched, 
+    onMarkUnwatched 
+}) => {
     const isPerson = item.media_type === 'person'
     const imgUrl = isPerson 
         ? imageUrl(item.profile_path ?? null)
@@ -43,10 +52,10 @@ const MediaCard: React.FC<MediaCardProps> = ({ item, isInWatchlist, onDetail, on
                         <span>{displayTitle}</span>
                     </div>
                 )}
-                {item.vote_average && (
+                {!compact && item.vote_average && (
                     <div className="media-card__rating">{item.vote_average.toFixed(1)}</div>
                 )}
-                {!isPerson && !isInWatchlist && (
+                {!compact && !isPerson && !isInWatchlist && onAdd && (
                     <button
                         className="media-card__add-icon"
                         onClick={(e) => { e.stopPropagation(); onAdd(item); }}
@@ -57,7 +66,7 @@ const MediaCard: React.FC<MediaCardProps> = ({ item, isInWatchlist, onDetail, on
                         </svg>
                     </button>
                 )}
-                {!isPerson && isInWatchlist && onMarkWatched && (
+                {!compact && !isPerson && isInWatchlist && onMarkWatched && (
                     <button
                         className="media-card__check-icon"
                         onClick={(e) => {
@@ -72,7 +81,7 @@ const MediaCard: React.FC<MediaCardProps> = ({ item, isInWatchlist, onDetail, on
                         </svg>
                     </button>
                 )}
-                {!isPerson && isInWatchlist && onMarkUnwatched && (
+                {!compact && !isPerson && isInWatchlist && onMarkUnwatched && (
                     <button
                         className="media-card__unwatch-icon"
                         onClick={(e) => {
@@ -88,7 +97,7 @@ const MediaCard: React.FC<MediaCardProps> = ({ item, isInWatchlist, onDetail, on
                         </svg>
                     </button>
                 )}
-                {!isPerson && isInWatchlist && !onMarkWatched && !onMarkUnwatched && (
+                {!compact && !isPerson && isInWatchlist && !onMarkWatched && !onMarkUnwatched && (
                     <div className="media-card__check-icon" title="In watchlist">
                         <svg viewBox="0 0 24 24" fill="none" stroke="#68ffae" strokeWidth="2.5" width="16" height="16">
                             <path d="M20 6L9 17l-5-5" />

@@ -1,27 +1,13 @@
-import React, { useEffect, useRef, useCallback, useState } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { supabase } from '../services/supabaseClient';
-import type { User } from '@supabase/supabase-js';
+import { useAuth } from '../../hooks/useAuth';
 
 const SecondaryNavbar: React.FC = () => {
     const pillRef = useRef<HTMLSpanElement>(null);
     const tabsRef = useRef<HTMLDivElement>(null);
     const location = useLocation();
-    const [user, setUser] = useState<User | null>(null);
+    const { user } = useAuth();
     const isInitialRender = useRef(true);
-
-    // Check authentication status
-    useEffect(() => {
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setUser(session?.user || null);
-        });
-
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user || null);
-        });
-
-        return () => subscription.unsubscribe();
-    }, []);
 
     const navItems = [
         { to: '/Discover', label: 'Discover' },
