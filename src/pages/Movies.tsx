@@ -1,12 +1,20 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../services/supabaseClient'
-import { imageUrl } from '../services/tmdbService'
-import type { WatchlistItem } from '../types'
+import MediaCard from '../components/MediaCard'
+import DetailModal from '../components/DetailModal'
+import ConfirmModal from '../components/ConfirmModal'
+import type { WatchlistItem, TMDBResult } from '../types'
 
 const Movies: React.FC = () => {
     const [items, setItems] = useState<WatchlistItem[]>([])
     const [loading, setLoading] = useState(true)
-    const [updating, setUpdating] = useState<string | null>(null)
+    const [selectedMovie, setSelectedMovie] = useState<TMDBResult | null>(null)
+    const [confirmModal, setConfirmModal] = useState<{
+        isOpen: boolean
+        action: 'watch' | 'unwatch'
+        item: TMDBResult
+    } | null>(null)
+    const [searchQuery, setSearchQuery] = useState('')
 
     useEffect(() => {
         const fetchWatchlist = async () => {
@@ -32,7 +40,6 @@ const Movies: React.FC = () => {
     }, [])
 
     const updateStatus = async (id: string, status: string) => {
-        setUpdating(id)
         const updateData: Record<string, string> = { status, updated_at: new Date().toISOString() }
         if (status === 'completed') {
             updateData.completed_at = new Date().toISOString()
@@ -41,19 +48,53 @@ const Movies: React.FC = () => {
         if (!error) {
             setItems(items.map(item => item.id === id ? { ...item, status: status as WatchlistItem['status'] } : item))
         }
-        setUpdating(null)
     }
 
-    const removeItem = async (id: string) => {
-        if (!confirm('Remove from watchlist?')) return
-        const { error } = await supabase.from('watchlist').delete().eq('id', id)
-        if (!error) {
-            setItems(items.filter(item => item.id !== id))
+    const markAsWatched = async (tmdbItem: TMDBResult) => {
+        const watchlistItem = items.find(item => item.tmdb_id === tmdbItem.id)
+        if (watchlistItem) {
+            await updateStatus(watchlistItem.id, 'completed')
         }
     }
 
-    const watchlistItems = items.filter(item => item.status === 'watching')
-    const watchedItems = items.filter(item => item.status !== 'watching')
+    const markAsUnwatched = async (tmdbItem: TMDBResult) => {
+        const watchlistItem = items.find(item => item.tmdb_id === tmdbItem.id)
+        if (watchlistItem) {
+            await updateStatus(watchlistItem.id, 'watching')
+        }
+    }
+
+    const handleConfirmAction = async () => {
+        if (!confirmModal) return
+        
+        if (confirmModal.action === 'watch') {
+            await markAsWatched(confirmModal.item)
+        } else {
+            await markAsUnwatched(confirmModal.item)
+        }
+        
+        setConfirmModal(null)
+    }
+
+    const filteredItems = items.filter(item => 
+        item.title.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+
+    const watchlistItems = filteredItems.filter(item => item.status === 'watching')
+    const watchedItems = filteredItems.filter(item => item.status !== 'watching')
+
+    const handleCardClick = (item: TMDBResult) => {
+        setSelectedMovie(item)
+    }
+
+    const handleCloseModal = () => {
+        setSelectedMovie(null)
+    }
+
+    const handleAddFromModal = async (item: TMDBResult, status: string) => {
+        await updateStatus(item.id.toString(), status)
+        setSelectedMovie(null)
+    }
 
     if (loading) return (
         <section className="dashboard-page">
@@ -66,49 +107,44 @@ const Movies: React.FC = () => {
     return (
         <div className="discover-page">
             <div className="discover-container">
-                <div className="discover-section__head">
-                    <h2>Movies</h2>
-                    <span>{items.length} total</span>
+                <div className="discover-search-wrap">
+                    <form onSubmit={(e) => e.preventDefault()}>
+                        <div className="discover-search-box">
+                            <svg className="discover-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="M21 21l-4.35-4.35" />
+                            </svg>
+                            <input
+                                className="discover-search"
+                                placeholder="Search your movies..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                    </form>
                 </div>
-
 
                 {watchlistItems.length > 0 && (
                     <div className="watchlist-section">
-                        <h3 className="watchlist-section__title">Watchlist</h3>
-                        <div className="watchlist-grid">
+                        <h3 className="watchlist-section__title">To Watch</h3>
+                        <div className="discover-grid">
                             {watchlistItems.map((item) => {
-                                const poster = item.poster_path ? imageUrl(item.poster_path) : null
+                                const tmdbItem: TMDBResult = {
+                                    id: item.tmdb_id as number,
+                                    title: item.title,
+                                    poster_path: item.poster_path,
+                                    vote_average: item.vote_average,
+                                    media_type: 'movie'
+                                }
                                 return (
-                                    <div className="watchlist-card" key={item.id}>
-                                        <div className="watchlist-card__poster">
-                                            {poster ? (
-                                                <img src={poster} alt={item.title} />
-                                            ) : (
-                                                <div className="discover-card__no-poster"><span>{item.title}</span></div>
-                                            )}
-                                        </div>
-                                        <div className="watchlist-card__info">
-                                            <h3>{item.title}</h3>
-                                            <span className="watchlist-card__type">Movie</span>
-                                            {item.overview && <p className="watchlist-card__overview">{item.overview.slice(0, 100)}...</p>}
-                                            {item.vote_average && (
-                                                <span style={{ fontSize: '0.8rem', color: '#ffad38' }}>★ {item.vote_average.toFixed(1)}</span>
-                                            )}
-                                            <div className="watchlist-card__status">
-                                                <button
-                                                    className={`watchlist-status-btn ${item.status === 'watching' ? 'active' : ''}`}
-                                                    onClick={() => updateStatus(item.id, 'watching')}
-                                                    disabled={updating === item.id}
-                                                >Watch</button>
-                                                <button
-                                                    className={`watchlist-status-btn ${item.status === 'completed' ? 'active' : ''}`}
-                                                    onClick={() => updateStatus(item.id, 'completed')}
-                                                    disabled={updating === item.id}
-                                                >Watched</button>
-                                            </div>
-                                            <button className="watchlist-remove-btn" onClick={() => removeItem(item.id)}>Remove</button>
-                                        </div>
-                                    </div>
+                                    <MediaCard
+                                        key={item.id}
+                                        item={tmdbItem}
+                                        isInWatchlist={true}
+                                        onDetail={handleCardClick}
+                                        onAdd={() => {}}
+                                        onMarkWatched={(item) => setConfirmModal({ isOpen: true, action: 'watch', item })}
+                                    />
                                 )
                             })}
                         </div>
@@ -118,41 +154,62 @@ const Movies: React.FC = () => {
                 {watchedItems.length > 0 && (
                     <div className="watchlist-section">
                         <h3 className="watchlist-section__title">Watched</h3>
-                        <div className="watchlist-grid">
+                        <div className="discover-grid watchlist-grid--watched">
                             {watchedItems.map((item) => {
-                                const poster = item.poster_path ? imageUrl(item.poster_path) : null
+                                const tmdbItem: TMDBResult = {
+                                    id: item.tmdb_id as number,
+                                    title: item.title,
+                                    poster_path: item.poster_path,
+                                    vote_average: item.vote_average,
+                                    media_type: 'movie'
+                                }
                                 return (
-                                    <div className="watchlist-card" key={item.id}>
-                                        <div className="watchlist-card__poster">
-                                            {poster ? (
-                                                <img src={poster} alt={item.title} />
-                                            ) : (
-                                                <div className="discover-card__no-poster"><span>{item.title}</span></div>
-                                            )}
-                                        </div>
-                                        <div className="watchlist-card__info">
-                                            <h3>{item.title}</h3>
-                                            <span className="watchlist-card__type">Movie</span>
-                                            {item.overview && <p className="watchlist-card__overview">{item.overview.slice(0, 100)}...</p>}
-                                            {item.vote_average && (
-                                                <span style={{ fontSize: '0.8rem', color: '#ffad38' }}>★ {item.vote_average.toFixed(1)}</span>
-                                            )}
-                                            <button className="watchlist-remove-btn" onClick={() => removeItem(item.id)}>Remove</button>
-                                        </div>
-                                    </div>
+                                    <MediaCard
+                                        key={item.id}
+                                        item={tmdbItem}
+                                        isInWatchlist={true}
+                                        onDetail={handleCardClick}
+                                        onAdd={() => {}}
+                                        onMarkUnwatched={(item) => setConfirmModal({ isOpen: true, action: 'unwatch', item })}
+                                    />
                                 )
                             })}
                         </div>
                     </div>
                 )}
 
-
-                {items.length === 0 && (
+                {filteredItems.length === 0 && (
                     <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>
-                        No movies in your watchlist. Discover some!
+                        {searchQuery ? 'No movies match your search' : 'No movies in your watchlist. Discover some!'}
                     </p>
                 )}
             </div>
+
+            {selectedMovie && (
+                <DetailModal
+                    item={selectedMovie}
+                    onClose={handleCloseModal}
+                    onAdd={handleAddFromModal}
+                    isInWatchlist={true}
+                />
+            )}
+
+            {confirmModal && (
+                <ConfirmModal
+                    isOpen={confirmModal.isOpen}
+                    title={confirmModal.action === 'watch' ? 'Mark as Watched' : 'Move to Watchlist'}
+                    message={
+                        confirmModal.action === 'watch'
+                            ? `Are you sure you want to mark "${confirmModal.item.title || confirmModal.item.name}" as watched?`
+                            : `Are you sure you want to move "${confirmModal.item.title || confirmModal.item.name}" back to your watchlist?`
+                    }
+                    onConfirm={handleConfirmAction}
+                    onCancel={() => setConfirmModal(null)}
+                    confirmText="Confirm"
+                    cancelText="Cancel"
+                    confirmColor={confirmModal.action === 'watch' ? 'success' : 'danger'}
+                />
+            )}
         </div>
     )
 }

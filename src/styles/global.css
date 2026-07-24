@@ -2206,7 +2206,14 @@ button:focus-visible {
 .media-card__check-icon {
     background: rgba(104,255,174,0.15);
     border: 1px solid rgba(104,255,174,0.3);
-    cursor: default;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.media-card__check-icon:hover {
+    background: rgba(104,255,174,0.3);
+    transform: scale(1.1);
+    box-shadow: 0 0 12px rgba(104, 255, 174, 0.4);
 }
 
 .media-card__body {
@@ -2240,6 +2247,227 @@ button:focus-visible {
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.06em;
+}
+
+.media-card__actions {
+    display: flex;
+    gap: 0.4rem;
+    margin-top: 0.4rem;
+}
+
+.media-card__action-btn {
+    flex: 1;
+    padding: 0.4rem;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.05);
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.media-card__action-btn--watch {
+    color: #68ffae;
+    border-color: rgba(104,255,174,0.3);
+}
+
+.media-card__action-btn--watch:hover {
+    background: rgba(104,255,174,0.15);
+    border-color: #68ffae;
+    transform: translateY(-1px);
+    box-shadow: 0 0 8px rgba(104, 255, 174, 0.3);
+}
+
+.media-card__action-btn--unwatch {
+    color: #ff6b6b;
+    border-color: rgba(255,107,107,0.3);
+}
+
+.media-card__action-btn--unwatch:hover {
+    background: rgba(255,107,107,0.15);
+    border-color: #ff6b6b;
+    transform: translateY(-1px);
+    box-shadow: 0 0 8px rgba(255, 107, 107, 0.3);
+}
+
+.media-card__action-btn--add {
+    color: var(--color-primary);
+    border-color: rgba(133,138,227,0.3);
+}
+
+.media-card__action-btn--add:hover {
+    background: rgba(133,138,227,0.15);
+    border-color: var(--color-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 0 8px rgba(133, 138, 227, 0.3);
+}
+
+.media-card__action-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #68ffae;
+    opacity: 0.7;
+}
+
+.media-card__unwatch-icon {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: rgba(0,0,0,0.6);
+    border: none;
+    color: #ff6b6b;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    backdrop-filter: blur(4px);
+    transition: all 0.2s ease;
+}
+
+.media-card__unwatch-icon:hover {
+    background: rgba(255,107,107,0.3);
+    transform: scale(1.1);
+    box-shadow: 0 0 12px rgba(255, 107, 107, 0.4);
+}
+
+.media-card__confirm-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    border-radius: 12px;
+    padding: 1rem;
+}
+
+.media-card__confirm-dialog {
+    background: rgba(20,20,25,0.98);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    padding: 1.25rem;
+    max-width: 280px;
+    width: 100%;
+    text-align: center;
+}
+
+.media-card__confirm-dialog p {
+    color: var(--color-platinum);
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+}
+
+.media-card__confirm-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.media-card__confirm-btn {
+    flex: 1;
+    padding: 0.6rem 0.5rem;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.05);
+    color: var(--color-platinum);
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.media-card__confirm-btn--cancel:hover {
+    border-color: rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.1);
+}
+
+.media-card__confirm-btn--confirm {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.media-card__confirm-btn--confirm:hover {
+    background: var(--color-primary);
+    color: var(--color-black);
+}
+
+/* ===== CONFIRM MODAL ===== */
+.confirm-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 4000;
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.confirm-modal-content {
+    background: rgba(20,20,25,0.98);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 16px;
+    padding: 1.5rem;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+}
+
+.confirm-modal-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-platinum);
+    margin: 0 0 0.75rem 0;
+}
+
+.confirm-modal-message {
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.7);
+    margin: 0 0 1.25rem 0;
+    line-height: 1.5;
+}
+
+.confirm-modal-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.confirm-modal-btn {
+    flex: 1;
+    padding: 0.65rem 0.5rem;
+    border: 1px solid rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.05);
+    color: var(--color-platinum);
+    font-size: 0.85rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.confirm-modal-btn--cancel:hover {
+    border-color: rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.1);
+}
+
+.confirm-modal-btn--confirm {
+    border-color: rgba(133,138,227,0.3);
+    color: var(--color-primary);
+}
+
+.confirm-modal-btn--confirm:hover {
+    background: var(--color-primary);
+    color: var(--color-black);
+    border-color: var(--color-primary);
 }
 
 /* ===== Media Detail View (TV/Anime episode tracking modal) ===== */
@@ -2530,6 +2758,26 @@ button:focus-visible {
     margin: 0 0 1rem 0;
     padding-bottom: 0.5rem;
     border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.watchlist-grid--watched {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+
+.watchlist-grid--watched .media-card__poster {
+    aspect-ratio: 2 / 3;
+}
+
+.watchlist-grid--watched .media-card__body {
+    padding: 0.5rem 0.6rem 0.6rem;
+}
+
+.watchlist-grid--watched .media-card__body h3 {
+    font-size: 0.75rem;
+}
+
+.watchlist-grid--watched .media-card__type {
+    font-size: 0.65rem;
 }
 
 /* ===== UPCOMING PAGE ===== */

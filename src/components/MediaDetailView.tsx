@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { getTVDetails, getTVSeasonDetails, imageUrl } from '../services/tmdbService'
 import EpisodeWatchModal from './EpisodeWatchModal'
@@ -14,11 +14,15 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({ item, onClose, onUpda
     const [episodes, setEpisodes] = useState<WatchlistEpisode[]>([])
     const [loading, setLoading] = useState(true)
     const [selectedSeason, setSelectedSeason] = useState(item.current_season || 1)
+    const hasUserSelectedSeason = useRef(false)
+    const prevItemIdRef = useRef<string | null>(null)
     
-    // Set initial season to the last watched episode's season
+    // Set initial season to the last watched episode's season (only on initial mount)
     useEffect(() => {
         const loadLastWatched = async () => {
-            if (!item.tmdb_id) return
+            // Skip if: no tmdb_id, or we've already processed this item
+            if (!item.tmdb_id || prevItemIdRef.current === item.id) return
+            
             try {
                 const { data: watchedEpisodes } = await supabase
                     .from('watchlist_episodes')
@@ -29,11 +33,15 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({ item, onClose, onUpda
                     .order('episode_number', { ascending: false })
                     .limit(1)
 
-                if (watchedEpisodes && watchedEpisodes.length > 0) {
+                // Only set season if user hasn't manually selected one
+                if (watchedEpisodes && watchedEpisodes.length > 0 && !hasUserSelectedSeason.current) {
                     setSelectedSeason(watchedEpisodes[0].season_number)
                 }
             } catch (err) {
                 console.error('Failed to load last watched episode:', err)
+            } finally {
+                // Mark this item as processed so we don't run again for the same item
+                prevItemIdRef.current = item.id
             }
         }
         loadLastWatched()
@@ -94,7 +102,36 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({ item, onClose, onUpda
             setLoading(false)
         }
         loadEpisodes()
-    }, [item.id, item.tmdb_id, item.total_episodes, isAnime, selectedSeason])
+    }, [item.id, item.tmdb_id, item.total_episodes, isAnime])
+
+    const handleSeasonChange = (season: number) => {
+        hasUserSelectedSeason.current = true
+        setSelectedSeason(season)
+    }
+
+    // Auto-advance to next season when all episodes in current season are watched
+    useEffect(() => {
+        const checkSeasonComplete = async () => {
+            if (seasons.length === 0 || episodes.length === 0 || hasUserSelectedSeason.current) return
+            
+            const currentSeasonEpisodes = episodes.filter(ep => ep.season_number === selectedSeason)
+            const allWatched = currentSeasonEpisodes.length > 0 && currentSeasonEpisodes.every(ep => ep.watched)
+            
+            if (allWatched && selectedSeason < Math.max(...seasons)) {
+                const nextSeason = selectedSeason + 1
+                setSelectedSeason(nextSeason)
+                
+                // Update current_season in database
+                await supabase.from('watchlist').update({
+                    current_season: nextSeason,
+                    updated_at: new Date().toISOString()
+                }).eq('id', item.id)
+                
+                onUpdate()
+            }
+        }
+        checkSeasonComplete()
+    }, [episodes, selectedSeason, seasons, item.id, onUpdate])
 
     const getFilteredEpisodes = () => {
         return episodes.filter(ep => ep.season_number === selectedSeason)
@@ -252,7 +289,7 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({ item, onClose, onUpda
     // Auto-advance to next season when all episodes in current season are watched
     useEffect(() => {
         const checkSeasonComplete = async () => {
-            if (seasons.length === 0 || episodes.length === 0) return
+            if (seasons.length === 0 || episodes.length === 0 || hasUserSelectedSeason.current) return
             
             const currentSeasonEpisodes = episodes.filter(ep => ep.season_number === selectedSeason)
             const allWatched = currentSeasonEpisodes.length > 0 && currentSeasonEpisodes.every(ep => ep.watched)
@@ -368,7 +405,7 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({ item, onClose, onUpda
                                         <button
                                             key={sn}
                                             className={`media-detail-season-tab ${selectedSeason === sn ? 'active' : ''}`}
-                                            onClick={() => setSelectedSeason(sn)}
+                                            onClick={() => handleSeasonChange(sn)}
                                         >
                                             Season {sn}
                                         </button>

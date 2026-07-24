@@ -8,6 +8,7 @@ const TVShows: React.FC = () => {
     const [items, setItems] = useState<WatchlistItem[]>([])
     const [loading, setLoading] = useState(true)
     const [selectedItem, setSelectedItem] = useState<WatchlistItem | null>(null)
+    const [searchQuery, setSearchQuery] = useState('')
 
     useEffect(() => {
         const fetchWatchlist = async () => {
@@ -44,9 +45,13 @@ const TVShows: React.FC = () => {
         if (data) setItems(data)
     }
 
-    const watchingItems = items.filter(item => item.status === 'watching')
-    const watchlistItems = items.filter(item => item.status !== 'watching' && item.status !== 'dropped')
-    const droppedItems = items.filter(item => item.status === 'dropped')
+    const filteredItems = items.filter(item => 
+        item.title.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+
+    const watchingItems = filteredItems.filter(item => item.status === 'watching')
+    const watchlistItems = filteredItems.filter(item => item.status !== 'watching' && item.status !== 'dropped')
+    const droppedItems = filteredItems.filter(item => item.status === 'dropped')
 
     if (loading) return (
         <section className="dashboard-page">
@@ -62,6 +67,23 @@ const TVShows: React.FC = () => {
                 <div className="discover-section__head">
                     <h2>TV Shows</h2>
                     <span>{items.length} total</span>
+                </div>
+
+                <div className="discover-search-wrap">
+                    <form onSubmit={(e) => e.preventDefault()}>
+                        <div className="discover-search-box">
+                            <svg className="discover-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <circle cx="11" cy="11" r="8" />
+                                <path d="M21 21l-4.35-4.35" />
+                            </svg>
+                            <input
+                                className="discover-search"
+                                placeholder="Search your TV shows..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+                    </form>
                 </div>
 
                 {watchingItems.length > 0 && (
@@ -138,7 +160,6 @@ const TVShows: React.FC = () => {
                     </div>
                 )}
 
-
                 {droppedItems.length > 0 && (
                     <div className="watchlist-section">
                         <h3 className="watchlist-section__title">Dropped</h3>
@@ -175,9 +196,9 @@ const TVShows: React.FC = () => {
                     </div>
                 )}
 
-                {items.length === 0 && (
+                {filteredItems.length === 0 && (
                     <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>
-                        No TV shows or anime in your watchlist. Discover some!
+                        {searchQuery ? 'No TV shows match your search' : 'No TV shows or anime in your watchlist. Discover some!'}
                     </p>
                 )}
             </div>
