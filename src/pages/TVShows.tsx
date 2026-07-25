@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
 import type { WatchlistItem } from '../types'
-import MediaDetailView from '../components/media/MediaDetailView'
 
 const TVShows: React.FC = () => {
+    const navigate = useNavigate()
     const [items, setItems] = useState<WatchlistItem[]>([])
     const [loading, setLoading] = useState(true)
-    const [selectedItem, setSelectedItem] = useState<WatchlistItem | null>(null)
     const [searchQuery, setSearchQuery] = useState('')
 
     useEffect(() => {
@@ -32,18 +32,6 @@ const TVShows: React.FC = () => {
         }
         fetchWatchlist()
     }, [])
-
-    const refreshItems = async () => {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-        const { data } = await supabase
-            .from('watchlist')
-            .select('*')
-            .eq('user_id', user.id)
-            .in('media_type', ['tv', 'anime'])
-            .order('updated_at', { ascending: false })
-        if (data) setItems(data)
-    }
 
     const filteredItems = items.filter(item => 
         item.title.toLowerCase().includes(searchQuery.toLowerCase())
@@ -89,7 +77,7 @@ const TVShows: React.FC = () => {
                                 <article
                                     className="media-card"
                                     key={item.id}
-                                    onClick={() => setSelectedItem(item)}
+                                    onClick={() => navigate(`/tv/${item.tmdb_id}`)}
                                 >
                                     <div className="media-card__poster">
                                         {item.poster_path ? (
@@ -127,7 +115,7 @@ const TVShows: React.FC = () => {
                                 <article
                                     className="media-card"
                                     key={item.id}
-                                    onClick={() => setSelectedItem(item)}
+                                    onClick={() => navigate(`/tv/${item.tmdb_id}`)}
                                 >
                                     <div className="media-card__poster">
                                         {item.poster_path ? (
@@ -163,7 +151,7 @@ const TVShows: React.FC = () => {
                                 <article
                                     className="media-card"
                                     key={item.id}
-                                    onClick={() => setSelectedItem(item)}
+                                    onClick={() => navigate(`/tv/${item.tmdb_id}`)}
                                 >
                                     <div className="media-card__poster">
                                         {item.poster_path ? (
@@ -197,15 +185,6 @@ const TVShows: React.FC = () => {
                     </p>
                 )}
             </div>
-
-            {selectedItem && (
-                <MediaDetailView
-                    item={selectedItem}
-                    mode="watchlist"
-                    onClose={() => setSelectedItem(null)}
-                    onUpdate={refreshItems}
-                />
-            )}
         </div>
     )
 }

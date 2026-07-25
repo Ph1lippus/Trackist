@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../services/supabaseClient'
 import MediaCard from '../components/media/MediaCard'
-import DetailModal from '../components/media/MediaDetailView'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
 
 const Movies: React.FC = () => {
     const [items, setItems] = useState<WatchlistItem[]>([])
     const [loading, setLoading] = useState(true)
-    const [selectedMovie, setSelectedMovie] = useState<TMDBResult | null>(null)
     const [confirmModal, setConfirmModal] = useState<{
         isOpen: boolean
         action: 'watch' | 'unwatch'
@@ -83,19 +81,6 @@ const Movies: React.FC = () => {
     const watchlistItems = filteredItems.filter(item => item.status === 'watching')
     const watchedItems = filteredItems.filter(item => item.status !== 'watching')
 
-    const handleCardClick = (item: TMDBResult) => {
-        setSelectedMovie(item)
-    }
-
-    const handleCloseModal = () => {
-        setSelectedMovie(null)
-    }
-
-    const handleAddFromModal = async (item: TMDBResult, status: string) => {
-        await updateStatus(item.id.toString(), status)
-        setSelectedMovie(null)
-    }
-
     if (loading) return (
         <section className="dashboard-page">
             <div className="dashboard-shell">
@@ -141,7 +126,6 @@ const Movies: React.FC = () => {
                                         key={item.id}
                                         item={tmdbItem}
                                         isInWatchlist={true}
-                                        onDetail={handleCardClick}
                                         onAdd={() => {}}
                                         onMarkWatched={(item) => setConfirmModal({ isOpen: true, action: 'watch', item })}
                                     />
@@ -168,7 +152,6 @@ const Movies: React.FC = () => {
                                         key={item.id}
                                         item={tmdbItem}
                                         isInWatchlist={true}
-                                        onDetail={handleCardClick}
                                         onAdd={() => {}}
                                         onMarkUnwatched={(item) => setConfirmModal({ isOpen: true, action: 'unwatch', item })}
                                     />
@@ -184,15 +167,6 @@ const Movies: React.FC = () => {
                     </p>
                 )}
             </div>
-
-            {selectedMovie && (
-                <DetailModal
-                    item={selectedMovie}
-                    mode="browse"
-                    onClose={handleCloseModal}
-                    onAdd={handleAddFromModal}
-                />
-            )}
 
             {confirmModal && (
                 <ConfirmModal

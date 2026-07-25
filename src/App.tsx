@@ -20,11 +20,16 @@ import ForgotPassword from './pages/ForgotPassword'
 import Profile from './pages/Profile'
 import Friends from './pages/Friends'
 import EditProfile from './pages/EditProfile'
+import MovieDetail from './pages/MovieDetail'
+import TVShowDetail from './pages/TVShowDetail'
+import PersonDetail from './pages/PersonDetail'
 
 const AppContent: React.FC = () => {
     const location = useLocation()
     const [user, setUser] = useState<User | null>(null)
     const [loading, setLoading] = useState(true)
+
+    const isDetailPage = location.pathname.match(/^\/(movie|tv|person)\/\d+$/)
 
     useEffect(() => {
         let active = true
@@ -101,11 +106,14 @@ const AppContent: React.FC = () => {
                     <Route path="/EditProfile" element={user ? <EditProfile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile/:username" element={user ? <Profile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile" element={user ? <Profile /> : <Navigate to="/login" replace />} />
+                    <Route path="/movie/:id" element={<MovieDetail />} />
+                    <Route path="/tv/:id" element={<TVShowDetail />} />
+                    <Route path="/person/:id" element={<PersonDetail />} />
                     <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />
                 </Routes>
             </main>
             <SecondaryNavbar />
-            {!hideFooter && <Footer />}
+            {!hideFooter && !isDetailPage && <Footer />}
         </div>
     )
 }

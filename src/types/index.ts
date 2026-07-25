@@ -4,6 +4,7 @@ export interface TMDBResult {
     name?: string
     media_type?: 'movie' | 'tv' | 'person' | 'anime'
     poster_path?: string | null
+    backdrop_path?: string | null
     profile_path?: string | null
     overview?: string
     release_date?: string
@@ -11,7 +12,7 @@ export interface TMDBResult {
     vote_average?: number
     genres?: Array<{ id: number; name: string }>
     credits?: {
-        cast?: Array<{ id: number; name: string; profile_path?: string }>
+        cast?: Array<{ id: number; name: string; profile_path?: string; character?: string }>
     }
     aggregate_credits?: {
         cast?: Array<{ id: number; name: string; profile_path?: string }>
@@ -29,6 +30,21 @@ export interface TMDBResult {
     place_of_birth?: string
     popularity?: number
     gender?: number
+    images?: {
+        logos?: Array<{ file_path: string }>
+    }
+    release_dates?: {
+        results?: Array<{ iso_3166_1: string; release_dates: Array<{ certification: string }> }>
+    }
+    videos?: {
+        results?: Array<{ type: string; site: string; key: string }>
+    }
+    'watch/providers'?: {
+        results?: Array<{ iso_3166_1: string; flatrate?: Array<{ logo_path: string }>; buy?: Array<{ logo_path: string }>; rent?: Array<{ logo_path: string }> }>
+    }
+    content_ratings?: {
+        results?: Array<{ iso_3166_1: string; rating: string }>
+    }
 }
 
 export interface WatchlistItem {

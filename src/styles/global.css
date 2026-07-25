@@ -1275,6 +1275,674 @@ html, body {
     padding: 0.3rem 0.6rem;
 }
 
+/* ===== DETAIL PAGES ===== */
+.detail-page {
+    position: relative;
+    min-height: 100vh;
+    width: 100%;
+    padding-bottom: 7rem;
+}
+
+.detail-page__backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+}
+
+.detail-page__backdrop img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+}
+
+.detail-page__backdrop-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to bottom,
+        rgba(5, 5, 5, 0.4) 0%,
+        rgba(5, 5, 5, 0.6) 30%,
+        rgba(5, 5, 5, 0.75) 60%,
+        rgba(5, 5, 5, 0.85) 100%
+    );
+}
+
+.detail-page__content {
+    position: relative;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+
+.detail-page__back {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--color-platinum);
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    margin-bottom: 2rem;
+    display: inline-block;
+}
+
+.detail-page__back:hover {
+    background: rgba(133, 138, 227, 0.2);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.detail-page__header {
+    margin-bottom: 2.5rem;
+}
+
+.detail-page__logo-section {
+    margin-bottom: 1rem;
+    min-height: 80px;
+    display: flex;
+    align-items: center;
+}
+
+.detail-page__logo {
+    max-width: 400px;
+    max-height: 120px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+}
+
+.detail-page__title {
+    font-family: var(--font-display);
+    font-size: 3rem;
+    font-weight: 400;
+    color: var(--color-platinum);
+    margin: 0;
+    line-height: 1.2;
+    letter-spacing: 2px;
+}
+
+.detail-page__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.detail-page__year,
+.detail-page__rating,
+.detail-page__runtime,
+.detail-page__seasons,
+.detail-page__age-rating {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+}
+
+.detail-page__age-rating {
+    background: rgba(255, 255, 255, 0.15);
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.detail-page__rating {
+    color: #ffd700;
+}
+
+.detail-page__genres {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.detail-page__genre {
+    padding: 0.4rem 0.8rem;
+    background: rgba(133, 138, 227, 0.15);
+    border: 1px solid rgba(133, 138, 227, 0.3);
+    border-radius: 20px;
+    font-size: 0.85rem;
+    color: var(--color-primary);
+    font-weight: 500;
+}
+
+.detail-page__providers {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.detail-page__provider-logo {
+    height: 32px;
+    width: auto;
+    object-fit: contain;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 4px;
+}
+
+.detail-page__main {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.detail-page__main--tv {
+    display: grid;
+    grid-template-columns: 1fr 400px;
+    gap: 2rem;
+}
+
+.detail-page__left {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.detail-page__right {
+    position: sticky;
+    top: 6rem;
+    align-self: start;
+}
+
+.detail-page__section-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--color-platinum);
+    margin: 0 0 1rem 0;
+}
+
+.detail-page__overview {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.75);
+    margin: 0 0 1.5rem 0;
+}
+
+.detail-page__actions {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.detail-page__btn {
+    padding: 0.8rem 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-platinum);
+    font-size: 0.95rem;
+    font-weight: 600;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.detail-page__btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+}
+
+.detail-page__btn--watch:hover:not(:disabled) {
+    border-color: #68ffae;
+    background: rgba(104, 255, 174, 0.15);
+    color: #68ffae;
+}
+
+.detail-page__btn--watched:hover:not(:disabled) {
+    border-color: #ffd700;
+    background: rgba(255, 215, 0, 0.15);
+    color: #ffd700;
+}
+
+.detail-page__btn--trailer:hover:not(:disabled) {
+    border-color: #ff4757;
+    background: rgba(255, 71, 87, 0.15);
+    color: #ff4757;
+}
+
+.detail-page__btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.detail-page__trailer-container {
+    margin-top: 1.5rem;
+    width: 100%;
+    max-width: 800px;
+}
+
+.detail-page__trailer-iframe {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 12px;
+    border: none;
+}
+
+.detail-page__in-watchlist {
+    color: #68ffae;
+    font-weight: 600;
+    font-size: 1rem;
+    padding: 0.8rem 0;
+}
+
+.detail-page__cast-section {
+    margin-top: 1rem;
+}
+
+.detail-page__cast-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+}
+
+.detail-page__cast-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    height: 100%;
+    text-align: center;
+}
+
+.detail-page__cast-item:hover {
+    background: rgba(133, 138, 227, 0.15);
+    border-color: rgba(133, 138, 227, 0.3);
+    transform: translateY(-2px);
+}
+
+.detail-page__cast-photo {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.detail-page__cast-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.detail-page__cast-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-platinum);
+}
+
+.detail-page__cast-character {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Episodes Section */
+.detail-page__episodes-section {
+    background: rgba(15, 15, 20, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    padding: 1.5rem;
+    max-height: calc(100vh - 8rem);
+    overflow-y: auto;
+}
+
+.detail-page__episodes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+
+.detail-page__season-select {
+    padding: 0.5rem 1rem;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 8px;
+    color: var(--color-platinum);
+    font-size: 0.9rem;
+    cursor: pointer;
+    outline: none;
+}
+
+.detail-page__season-select:focus {
+    border-color: var(--color-primary);
+}
+
+.detail-page__episode-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.detail-page__episode-card {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.detail-page__episode-card:hover:not(.unreleased) {
+    background: rgba(133, 138, 227, 0.1);
+    border-color: rgba(133, 138, 227, 0.3);
+    transform: translateX(4px);
+}
+
+.detail-page__episode-card.watched {
+    opacity: 0.7;
+}
+
+.detail-page__episode-card.unreleased {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.detail-page__episode-still {
+    width: 120px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.detail-page__episode-still img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.detail-page__episode-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.detail-page__episode-number {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.detail-page__episode-check {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(104, 255, 174, 0.2);
+    border-radius: 4px;
+    color: #68ffae;
+    font-size: 0.75rem;
+}
+
+.detail-page__episode-check.checked {
+    background: #68ffae;
+    color: var(--color-black);
+}
+
+.detail-page__episode-details strong {
+    font-size: 0.95rem;
+    color: var(--color-platinum);
+    display: block;
+}
+
+.detail-page__episode-details p {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+    line-height: 1.4;
+}
+
+.detail-page__episode-meta {
+    display: flex;
+    gap: 0.75rem;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* Person Detail Page */
+.detail-page--person {
+    padding-bottom: 0;
+}
+
+.detail-page__person-hero {
+    position: relative;
+    min-height: 50vh;
+    padding-bottom: 2rem;
+}
+
+.detail-page__person-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+}
+
+.detail-page__person-backdrop img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    filter: blur(20px);
+    transform: scale(1.1);
+}
+
+.detail-page__person-header {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    padding-top: 2rem;
+}
+
+.detail-page__person-photo {
+    width: 200px;
+    flex-shrink: 0;
+    border-radius: 16px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.detail-page__person-photo img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.detail-page__person-no-photo {
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(133, 138, 227, 0.2);
+    color: var(--color-primary);
+    font-size: 3rem;
+    font-weight: 700;
+}
+
+.detail-page__person-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.detail-page__person-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.detail-page__person-location {
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0;
+}
+
+.detail-page__biography-section {
+    margin-bottom: 2rem;
+}
+
+.detail-page__filmography-section {
+    margin-bottom: 2rem;
+}
+
+.detail-page__filmography-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.detail-page__filmography-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.detail-page__filmography-item:hover {
+    background: rgba(133, 138, 227, 0.15);
+    border-color: rgba(133, 138, 227, 0.3);
+    transform: translateY(-2px);
+}
+
+.detail-page__filmography-poster {
+    width: 100%;
+    aspect-ratio: 2 / 3;
+    border-radius: 8px;
+    object-fit: cover;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.detail-page__filmography-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.detail-page__filmography-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--color-platinum);
+    line-height: 1.3;
+}
+
+.detail-page__filmography-year {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+/* Loading and error states */
+.detail-page-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 50vh;
+    gap: 1rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.detail-page-error {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 50vh;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1.1rem;
+}
+
+/* Responsive */
+@media (max-width: 992px) {
+    .detail-page__main--tv {
+        grid-template-columns: 1fr;
+    }
+
+    .detail-page__right {
+        position: static;
+    }
+
+    .detail-page__episodes-section {
+        max-height: 600px;
+    }
+}
+
+@media (max-width: 768px) {
+    .detail-page__title {
+        font-size: 2rem;
+    }
+
+    .detail-page__person-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .detail-page__person-photo {
+        width: 150px;
+    }
+
+    .detail-page__person-meta {
+        justify-content: center;
+    }
+
+    .detail-page__cast-list {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
+
+    .detail-page__filmography-list {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    }
+}
+
+@media (max-width: 480px) {
+    .detail-page__content {
+        padding: 1.5rem 1rem;
+    }
+
+    .detail-page__title {
+        font-size: 1.6rem;
+    }
+
+    .detail-page__episode-still {
+        width: 80px;
+    }
+
+    .detail-page__actions {
+        flex-direction: column;
+    }
+
+    .detail-page__btn {
+        width: 100%;
+    }
+}
+
 /* ===== CALENDAR ===== */
 .calendar-title {
     font-size: 1.2rem;

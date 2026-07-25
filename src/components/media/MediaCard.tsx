@@ -1,4 +1,5 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { imageUrl } from '../../services/tmdbService'
 import type { TMDBResult } from '../../types'
 
@@ -8,7 +9,6 @@ interface MediaCardProps {
     item: ResultItem
     isInWatchlist?: boolean
     compact?: boolean
-    onDetail: (item: ResultItem) => void
     onAdd?: (item: ResultItem) => void
     onMarkWatched?: (item: ResultItem) => void
     onMarkUnwatched?: (item: ResultItem) => void
@@ -18,15 +18,25 @@ const MediaCard: React.FC<MediaCardProps> = ({
     item, 
     isInWatchlist = false, 
     compact = false, 
-    onDetail, 
     onAdd, 
     onMarkWatched, 
     onMarkUnwatched 
 }) => {
+    const navigate = useNavigate()
     const isPerson = item.media_type === 'person'
     const imgUrl = isPerson 
         ? imageUrl(item.profile_path ?? null)
         : imageUrl(item.poster_path ?? null)
+
+    const handleClick = () => {
+        if (item.media_type === 'person') {
+            navigate(`/person/${item.id}`)
+        } else if (item.media_type === 'tv') {
+            navigate(`/tv/${item.id}`)
+        } else {
+            navigate(`/movie/${item.id}`)
+        }
+    }
 
     const getItemTitle = (): string => {
         const tmdbItem = item as TMDBResult
@@ -44,7 +54,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
 
     return (
         <article className="media-card" key={`${item.media_type}-${item.id}`}>
-            <div className="media-card__poster" onClick={() => onDetail(item)}>
+            <div className="media-card__poster" onClick={handleClick}>
                 {imgUrl ? (
                     <img src={imgUrl} alt={displayTitle} loading="lazy" />
                 ) : (
@@ -106,7 +116,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
                 )}
             </div>
             <div className="media-card__body">
-                <h3 onClick={() => onDetail(item)}>{displayTitle}</h3>
+                <h3 onClick={handleClick}>{displayTitle}</h3>
                 <span className="media-card__type">{getDisplayType()}</span>
             </div>
         </article>
