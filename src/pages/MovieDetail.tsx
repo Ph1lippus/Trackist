@@ -71,16 +71,37 @@ const MovieDetail: React.FC = () => {
     }
 
     const getLogoUrl = (): string | null => {
-        // Try TMDB logos first
-        if (details?.images?.logos?.[0]?.file_path) {
+    // Try TMDB logos first – filter for English only
+    if (details?.images?.logos) {
+        // 1. Find English logo
+        const englishLogo = details.images.logos.find(
+            (logo: any) => logo.iso_639_1 === 'en'
+        )
+        if (englishLogo) {
+            return imageUrlOriginal(englishLogo.file_path)
+        }
+
+        // 2. If no English logo, try logo with no language tag
+        const noLanguageLogo = details.images.logos.find(
+            (logo: any) => logo.iso_639_1 === null || logo.iso_639_1 === ''
+        )
+        if (noLanguageLogo) {
+            return imageUrlOriginal(noLanguageLogo.file_path)
+        }
+
+        // 3. Fallback to first logo available
+        if (details.images.logos.length > 0) {
             return imageUrlOriginal(details.images.logos[0].file_path)
         }
-        // Try Fanart logos
-        if (fanartImages?.hdmovielogo?.[0]?.url) {
-            return fanartImages.hdmovielogo[0].url
-        }
-        return null
     }
+
+    // Try Fanart logos as fallback (these are usually generic, language-neutral)
+    if (fanartImages?.hdmovielogo?.[0]?.url) {
+        return fanartImages.hdmovielogo[0].url
+    }
+
+    return null
+    }   
 
     const getProviders = () => {
         const watchProviders = details?.['watch/providers']
