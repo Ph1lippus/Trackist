@@ -19,7 +19,7 @@ const Upcoming: React.FC = () => {
     const [loading, setLoading] = useState(true)
     const [selectedItem, setSelectedItem] = useState<WatchlistItem | null>(null)
     const [currentMonth, setCurrentMonth] = useState(new Date())
-    const [dayActiveIndex, setDayActiveIndex] = useState<Record<string, number>>({})
+    const [showAllEpisodes, setShowAllEpisodes] = useState<{dateKey: string, items: UpcomingItem[]} | null>(null)
 
     useEffect(() => {
         const fetchUpcoming = async () => {
@@ -226,84 +226,64 @@ const Upcoming: React.FC = () => {
                             const dateKey = day.toISOString().split('T')[0]
                             const dayItems = groupedItems[dateKey] || []
                             const isToday = new Date().toDateString() === day.toDateString()
-                            
-                            // Group items by show (tmdb_id) to show one card per show
-                            const groupedByShow = dayItems.reduce((groups, upcoming) => {
-                                const showKey = upcoming.item.tmdb_id || upcoming.item.id
-                                if (!groups[showKey]) {
-                                    groups[showKey] = []
-                                }
-                                groups[showKey].push(upcoming)
-                                return groups
-                            }, {} as Record<string, UpcomingItem[]>)
 
-                            const showEntries = Object.values(groupedByShow)
-                            const activeIdx = dayActiveIndex[dateKey] || 0
-                            const activeShow = showEntries[activeIdx] || showEntries[0]
-
-                            const handlePrev = (e: React.MouseEvent) => {
-                                e.stopPropagation()
-                                if (showEntries.length <= 1) return
-                                setDayActiveIndex(prev => ({
-                                    ...prev,
-                                    [dateKey]: (prev[dateKey] || 0 - 1 + showEntries.length) % showEntries.length
-                                }))
-                            }
-
-                            const handleNext = (e: React.MouseEvent) => {
-                                e.stopPropagation()
-                                if (showEntries.length <= 1) return
-                                setDayActiveIndex(prev => ({
-                                    ...prev,
-                                    [dateKey]: ((prev[dateKey] || 0) + 1) % showEntries.length
-                                }))
-                            }
+                            // Show max 4 episodes, rest go into "+" button
+                            const maxVisible = 4
+                            const visibleItems = dayItems.slice(0, maxVisible)
+                            const hasMore = dayItems.length > maxVisible
 
                             return (
                                 <div 
                                     key={dateKey} 
                                     className={`calendar-day ${isToday ? 'calendar-day--today' : ''} ${dayItems.length > 0 ? 'calendar-day--has-episodes' : ''}`}
+                                    style={{ position: 'relative' }}
                                 >
-                                    <span className="calendar-day-number">{day.getDate()}</span>
-                                    {dayItems.length > 0 && activeShow && (
-                                        <div 
-                                            className="calendar-episode"
-                                            onClick={() => setSelectedItem(activeShow[0].item)}
-                                        >
-                                            <div className="calendar-episode-poster">
-                                                {activeShow[0].item.poster_path ? (
-                                                    <img 
-                                                        src={activeShow[0].item.media_type === 'anime' 
-                                                            ? activeShow[0].item.poster_path 
-                                                            : (imageUrl as (path: string) => string)(activeShow[0].item.poster_path)} 
-                                                        alt={activeShow[0].item.title} 
-                                                    />
-                                                ) : (
-                                                    <div className="calendar-episode-no-poster">
-                                                        <span>{activeShow[0].item.title}</span>
-                                                    </div>
-                                                )}
-                                                {showEntries.length > 1 && (
-                                                    <>
-                                                        <button 
-                                                            className="calendar-episode-nav calendar-episode-nav--prev"
-                                                            onClick={handlePrev}
-                                                            title="Previous show"
-                                                        >
-                                                            <i className="fas fa-chevron-left"></i>
-                                                        </button>
-                                                        <button 
-                                                            className="calendar-episode-nav calendar-episode-nav--next"
-                                                            onClick={handleNext}
-                                                            title="Next show"
-                                                        >
-                                                            <i className="fas fa-chevron-right"></i>
-                                                        </button>
-                                                    </>
-                                                )}
+                                    <span className="calendar-day-number" style={{ position: 'absolute', top: '0.2rem', left: '0.2rem' }}>{day.getDate()}</span>
+                                    <div style={{ display: 'flex', flexDirection: 'row', gap: '0', paddingTop: '1.2rem', position: 'relative', flexWrap: 'nowrap' }}>
+                                        {visibleItems.map((item, idx) => (
+                                            <div 
+                                                key={item.id}
+                                                className="calendar-episode"
+                                                onClick={() => setSelectedItem(item.item)}
+                                                style={{ 
+                                                    marginLeft: idx > 0 ? '-32px' : '0',
+                                                    position: 'relative',
+                                                    zIndex: idx
+                                                }}
+                                            >
+                                                <div className="calendar-episode-poster">
+                                                    {item.item.poster_path ? (
+                                                        <img 
+                                                            src={item.item.media_type === 'anime' 
+                                                                ? item.item.poster_path 
+                                                                : (imageUrl as (path: string) => string)(item.item.poster_path)} 
+                                                            alt={item.item.title} 
+                                                        />
+                                                    ) : (
+                                                        <div className="calendar-episode-no-poster">
+                                                            <span>{item.item.title}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
+                                        ))}
+                                        {hasMore && (
+                                            <div 
+                                                className="calendar-episode-more"
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    setShowAllEpisodes({ dateKey, items: dayItems })
+                                                }}
+                                                style={{ 
+                                                    marginLeft: '-32px',
+                                                    position: 'relative',
+                                                    zIndex: 0
+                                                }}
+                                            >
+                                                +{dayItems.length - maxVisible}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )
                         })}
@@ -314,10 +294,118 @@ const Upcoming: React.FC = () => {
                 {selectedItem && (
                     <MediaDetailView
                         item={selectedItem}
-                        mode="watchlist"
+                        mode={selectedItem.media_type === 'movie' ? 'browse' : 'watchlist'}
                         onClose={() => setSelectedItem(null)}
                         onUpdate={refreshItems}
                     />
+                )}
+
+                {showAllEpisodes && (
+                    <div className="modal-overlay" onClick={() => setShowAllEpisodes(null)}>
+                        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                            <button 
+                                className="modal-close"
+                                onClick={() => setShowAllEpisodes(null)}
+                            >
+                                <i className="fas fa-times"></i>
+                            </button>
+                            <h2 className="modal-title">
+                                {new Date(showAllEpisodes.dateKey).toLocaleDateString('en-US', { 
+                                    weekday: 'long',
+                                    month: 'long', 
+                                    day: 'numeric' 
+                                })}
+                            </h2>
+                            <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+                                {showAllEpisodes.items.length} episode{showAllEpisodes.items.length !== 1 ? 's' : ''} scheduled
+                            </p>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                {showAllEpisodes.items.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        style={{
+                                            display: 'flex',
+                                            gap: '1rem',
+                                            padding: '1rem',
+                                            background: 'rgba(255,255,255,0.03)',
+                                            border: '1px solid rgba(255,255,255,0.06)',
+                                            borderRadius: '10px',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                        onClick={() => {
+                                            setSelectedItem(item.item)
+                                            setShowAllEpisodes(null)
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.background = 'rgba(133,138,227,0.1)'
+                                            e.currentTarget.style.borderColor = 'rgba(133,138,227,0.3)'
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
+                                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+                                        }}
+                                    >
+                                        <div style={{
+                                            width: '48px',
+                                            height: '72px',
+                                            flexShrink: 0,
+                                            borderRadius: '4px',
+                                            overflow: 'hidden',
+                                            background: 'linear-gradient(135deg, rgba(133,138,227,0.3), rgba(255,255,255,0.05))'
+                                        }}>
+                                            {item.item.poster_path ? (
+                                                <img 
+                                                    src={item.item.media_type === 'anime' 
+                                                        ? item.item.poster_path 
+                                                        : (imageUrl as (path: string) => string)(item.item.poster_path)} 
+                                                    alt={item.item.title}
+                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                />
+                                            ) : (
+                                                <div style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    color: 'rgba(255,255,255,0.4)',
+                                                    fontSize: '0.6rem',
+                                                    fontWeight: 600,
+                                                    textAlign: 'center',
+                                                    padding: '0.3rem'
+                                                }}>
+                                                    <span>{item.item.title}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.3rem', justifyContent: 'center' }}>
+                                            <div style={{ 
+                                                fontSize: '0.9rem', 
+                                                fontWeight: 600, 
+                                                color: 'var(--color-platinum)',
+                                                whiteSpace: 'nowrap',
+                                                overflow: 'hidden',
+                                                textOverflow: 'ellipsis'
+                                            }}>
+                                                {item.title}
+                                            </div>
+                                            {item.episode && (
+                                                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
+                                                    Season {item.episode.season_number}, Episode {item.episode.episode_number}
+                                                </div>
+                                            )}
+                                            {item.type === 'movie' && (
+                                                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
+                                                    Movie Release
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
                 )}
             </div>
         </section>

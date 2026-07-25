@@ -43,7 +43,9 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({
     const isWatchlistItem = 'id' in item && typeof item.id === 'string'
     const tmdbId = isWatchlistItem ? (item as WatchlistItem).tmdb_id : (item as TMDBResult).id
     const isInWatchlist = mode === 'watchlist' || watchlistId !== null
-    const isTV = isWatchlistItem ? true : (item as TMDBResult).media_type === 'tv'
+    const isTV = isWatchlistItem 
+        ? (item as WatchlistItem).media_type === 'tv' || (item as WatchlistItem).media_type === 'anime'
+        : (item as TMDBResult).media_type === 'tv'
     const isAnime = isWatchlistItem ? (item as WatchlistItem).media_type === 'anime' : false
 
     // Set initial season to the last watched episode's season (only for watchlist mode)
@@ -444,9 +446,9 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({
 
     const posterUrl = isWatchlistItem
         ? ((item as WatchlistItem).poster_path 
-            ? (isAnime ? (item as WatchlistItem).poster_path : imageUrl((item as WatchlistItem).poster_path))
+            ? (isAnime ? (item as WatchlistItem).poster_path : imageUrl((item as WatchlistItem).poster_path || ''))
             : null)
-        : imageUrl((item as TMDBResult).poster_path ?? null)
+        : imageUrl((item as TMDBResult).poster_path || null)
 
     const isBrowseMode = mode === 'browse'
     const showCast = isBrowseMode && cast.length > 0
@@ -463,7 +465,7 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({
                     <div className="discover-loading"><div className="discover-spinner" /><p>Loading details...</p></div>
                 ) : (
                     <div className={isBrowseMode ? "modal-layout" : "media-detail-layout"}>
-                        <div className={isBrowseMode ? "modal-poster" : "media-detail-info"}>
+                        <div className={isBrowseMode ? "modal-poster" : "media-detail-poster"}>
                             {posterUrl ? (
                                 <img src={posterUrl} alt={title} />
                             ) : (
@@ -520,6 +522,10 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({
                                         ))}
                                     </div>
                                 </div>
+                            )}
+
+                            {isBrowseMode && isInWatchlist && (
+                                <div className="modal-in-watchlist">✓ Already in your watchlist</div>
                             )}
 
                             {showProgress && (
