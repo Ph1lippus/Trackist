@@ -5,18 +5,18 @@ Track your movies, TV shows, and anime — all in one place.
 ## Features
 
 - User authentication -> Auth by SupaBase.
-- Search movies, TV shows, and anime
-- Personal watchlist
+- Search movies, TV shows, animes and even people.
+- Watchlists to either make public or private, public lets you share with others. 
 - Statistics and insights 
 - 8 languages supported -> These are the 8 languages I either speak or have been currently learning, if you want any added please ask for it! 
 - PWA (Progressive Web App)
-- Stremio addon integration -> To track automaticaly the episodes after they are watched.
+- Stremio addon integration -> To track automaticaly the episodes after they have been watched.
 
 ## Tech Stack
 
 - **Frontend:** React, TypeScript, Vite, Bootstrap 5
 - **Backend:** Supabase Db and Auth
-- **APIs:** TMDB, AniList, SupaBase
+- **APIs:** TMDB, SupaBase, FanArt
 - **Deployment:** Vercel
 
 ## Live App
