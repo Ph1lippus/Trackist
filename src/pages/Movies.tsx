@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { supabase } from '../services/supabaseClient'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
+import AddToListModal from '../components/modals/AddToListModal'
 import type { WatchlistItem, TMDBResult } from '../types'
 
 const Movies: React.FC = () => {
@@ -9,10 +10,11 @@ const Movies: React.FC = () => {
     const [loading, setLoading] = useState(true)
     const [confirmModal, setConfirmModal] = useState<{
         isOpen: boolean
-        action: 'watch' | 'unwatch'
+        action: 'watch' | 'unwatch' 
         item: TMDBResult
     } | null>(null)
     const [searchQuery, setSearchQuery] = useState('')
+    const [addToListItem, setAddToListItem] = useState<TMDBResult | null>(null)
 
     useEffect(() => {
         const fetchWatchlist = async () => {
@@ -128,6 +130,7 @@ const Movies: React.FC = () => {
                                         isInWatchlist={true}
                                         onAdd={() => {}}
                                         onMarkWatched={(item) => setConfirmModal({ isOpen: true, action: 'watch', item })}
+                                        onAddToList={setAddToListItem}
                                     />
                                 )
                             })}
@@ -154,6 +157,7 @@ const Movies: React.FC = () => {
                                         isInWatchlist={true}
                                         onAdd={() => {}}
                                         onMarkUnwatched={(item) => setConfirmModal({ isOpen: true, action: 'unwatch', item })}
+                                        onAddToList={setAddToListItem}
                                     />
                                 )
                             })}
@@ -184,6 +188,7 @@ const Movies: React.FC = () => {
                     confirmColor={confirmModal.action === 'watch' ? 'success' : 'danger'}
                 />
             )}
+            {addToListItem && <AddToListModal item={addToListItem} isOpen={!!addToListItem} onClose={() => setAddToListItem(null)} />}
         </div>
     )
 }

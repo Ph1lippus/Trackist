@@ -71,31 +71,23 @@ const MovieDetail: React.FC = () => {
     }
 
     const getLogoUrl = (): string | null => {
-    // Try TMDB logos first – filter for English only
     if (details?.images?.logos) {
-        // 1. Find English logo
         const englishLogo = details.images.logos.find(
             (logo: any) => logo.iso_639_1 === 'en'
         )
         if (englishLogo) {
             return imageUrlOriginal(englishLogo.file_path)
         }
-
-        // 2. If no English logo, try logo with no language tag
         const noLanguageLogo = details.images.logos.find(
             (logo: any) => logo.iso_639_1 === null || logo.iso_639_1 === ''
         )
         if (noLanguageLogo) {
             return imageUrlOriginal(noLanguageLogo.file_path)
         }
-
-        // 3. Fallback to first logo available
         if (details.images.logos.length > 0) {
             return imageUrlOriginal(details.images.logos[0].file_path)
         }
     }
-
-    // Try Fanart logos as fallback (these are usually generic, language-neutral)
     if (fanartImages?.hdmovielogo?.[0]?.url) {
         return fanartImages.hdmovielogo[0].url
     }
@@ -156,7 +148,13 @@ const MovieDetail: React.FC = () => {
     const ageRating = getAgeRating()
     const overview = details.overview || 'No description available.'
     const genres = details.genres || []
-    const cast = details.credits?.cast?.slice(0, 10) || []
+    const cast = (details.credits?.cast || [])
+        .slice(0, 10)
+        .sort((a: { profile_path?: string | null }, b: { profile_path?: string | null }) => {
+            if (a.profile_path && !b.profile_path) return -1
+            if (!a.profile_path && b.profile_path) return 1
+            return 0
+        })
     const providers = getProviders()
 
     return (

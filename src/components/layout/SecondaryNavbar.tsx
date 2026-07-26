@@ -15,6 +15,7 @@ const SecondaryNavbar: React.FC = () => {
         { to: '/Tvshows', label: 'TV Shows' },
         { to: '/Upcoming', label: 'Upcoming' },
         { to: '/Friends', label: 'Friends' },
+        { to: '/Statistics', label: 'Statistics' },
         { to: '/More', label: 'More' },
     ];
 

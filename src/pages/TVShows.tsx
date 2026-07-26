@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
-import type { WatchlistItem } from '../types'
+import MediaCard from '../components/media/MediaCard'
+import AddToListModal from '../components/modals/AddToListModal'
+import type { WatchlistItem, TMDBResult } from '../types'
 
 const TVShows: React.FC = () => {
     const navigate = useNavigate()

@@ -62,7 +62,7 @@ export interface WatchlistItem {
     total_episodes?: number
     current_season?: number
     current_episode?: number
-    status: 'watching' | 'completed' | 'dropped'
+    status: 'planning' | 'watching' | 'completed' | 'dropped'
     rating?: number
     notes?: string
     added_at: string
@@ -96,5 +96,31 @@ export interface WatchlistEpisode {
     notes?: string
     created_at: string
     updated_at: string
+}
+
+export interface UserList {
+    id: string
+    user_id: string
+    title: string
+    description?: string
+    is_public: boolean
+    completed_at?: string
+    created_at: string
+    updated_at: string
+}
+
+export interface ListItem {
+    id: string
+    list_id: string
+    media_type: 'movie' | 'tv' | 'anime'
+    tmdb_id: number
+    anilist_id?: number
+    title: string
+    poster_path?: string
+    overview?: string
+    release_date?: string
+    vote_average?: number
+    added_at: string
+    watched_at?: string
 }
 

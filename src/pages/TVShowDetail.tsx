@@ -156,16 +156,29 @@ const TVShowDetail: React.FC = () => {
     }
 
     const getLogoUrl = (): string | null => {
-        // Try TMDB logos first
-        if (details?.images?.logos?.[0]?.file_path) {
-            return imageUrlOriginal(details.images.logos[0].file_path)
+        if (details?.images?.logos) {
+            const englishLogo = details.images.logos.find(
+                (logo: any) => logo.iso_639_1 === 'en'
+            )
+            if (englishLogo) {
+                return imageUrlOriginal(englishLogo.file_path)
+            }
+            const noLanguageLogo = details.images.logos.find(
+                (logo: any) => logo.iso_639_1 === null || logo.iso_639_1 === ''
+            )
+            if (noLanguageLogo) {
+                return imageUrlOriginal(noLanguageLogo.file_path)
+            }
+            if (details.images.logos.length > 0) {
+                return imageUrlOriginal(details.images.logos[0].file_path)
+            }
         }
-        // Try Fanart logos
         if (fanartImages?.hdtvlogo?.[0]?.url) {
             return fanartImages.hdtvlogo[0].url
         }
+    
         return null
-    }
+        }  
 
     const getAgeRating = (): string => {
         if (!details?.content_ratings?.results) return ''
@@ -202,7 +215,13 @@ const TVShowDetail: React.FC = () => {
     const ageRating = getAgeRating()
     const overview = details.overview || 'No description available.'
     const genres = details.genres || []
-    const cast = details.credits?.cast?.slice(0, 10) || []
+    const cast = (details.credits?.cast || [])
+        .slice(0, 10)
+        .sort((a: { profile_path?: string | null }, b: { profile_path?: string | null }) => {
+            if (a.profile_path && !b.profile_path) return -1
+            if (!a.profile_path && b.profile_path) return 1
+            return 0
+        })
     const providers = getProviders()
 
     return (

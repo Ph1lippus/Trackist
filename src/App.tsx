@@ -19,10 +19,12 @@ import Credits from './pages/Credits'
 import ForgotPassword from './pages/ForgotPassword'
 import Profile from './pages/Profile'
 import Friends from './pages/Friends'
+import Statistics from './pages/Statistics'
 import EditProfile from './pages/EditProfile'
 import MovieDetail from './pages/MovieDetail'
 import TVShowDetail from './pages/TVShowDetail'
 import PersonDetail from './pages/PersonDetail'
+import Lists from './pages/Lists'
 
 const AppContent: React.FC = () => {
     const location = useLocation()
@@ -83,7 +85,7 @@ const AppContent: React.FC = () => {
         )
     }
 
-    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/Friends']
+    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/Friends', '/Statistics']
     const hideFooter = Boolean(user) && mediaPages.includes(location.pathname)
 
     return (
@@ -97,6 +99,7 @@ const AppContent: React.FC = () => {
                     <Route path="/Tvshows" element={user ? <TVShows /> : <Navigate to="/login" replace />} />
                     <Route path="/Upcoming" element={user ? <Upcoming /> : <Navigate to="/login" replace />} />
                     <Route path="/Friends" element={user ? <Friends /> : <Navigate to="/login" replace />} />
+                    <Route path="/Statistics" element={user ? <Statistics /> : <Navigate to="/login" replace />} />
                     <Route path="/More" element={user ? <More /> : <Navigate to="/login" replace />} />
                     <Route path="/Settings" element={user ? <Settings /> : <Navigate to="/login" replace />} />
                     <Route path="/Credits" element={<Credits />} />
@@ -109,6 +112,7 @@ const AppContent: React.FC = () => {
                     <Route path="/movie/:id" element={<MovieDetail />} />
                     <Route path="/tv/:id" element={<TVShowDetail />} />
                     <Route path="/person/:id" element={<PersonDetail />} />
+                    <Route path="/lists" element={user ? <Lists /> : <Navigate to="/login" replace />} />
                     <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />
                 </Routes>
             </main>

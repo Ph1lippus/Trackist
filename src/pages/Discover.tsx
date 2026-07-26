@@ -4,6 +4,7 @@ import { searchMulti, searchPerson, getPopularMovies, getTrendingMovies, getTopR
 import type { TMDBResult, WatchlistItem } from '../types'
 import MediaCard from '../components/media/MediaCard'
 import AddModal from '../components/modals/AddModal'
+import AddToListModal from '../components/modals/AddToListModal'
 
 type ResultItem = TMDBResult
 
@@ -17,6 +18,7 @@ const Discover: React.FC = () => {
     const [page, setPage] = useState(1)
     const [hasMore, setHasMore] = useState(true)
     const [addItem, setAddItem] = useState<ResultItem | null>(null)
+    const [addToListItem, setAddToListItem] = useState<ResultItem | null>(null)
     const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set())
 
     const sentinelRef = useRef<HTMLDivElement>(null)
@@ -275,6 +277,7 @@ const Discover: React.FC = () => {
                                         item={item}
                                         isInWatchlist={watchlistIds.has(item.id)}
                                         onAdd={setAddItem}
+                                        onAddToList={setAddToListItem}
                                     />
                                 )
                             ))}
@@ -300,6 +303,7 @@ const Discover: React.FC = () => {
                     onAddWatchlistItem={handleAddWithEpisodes}
                 />
             )}
+            {addToListItem && <AddToListModal item={addToListItem} isOpen={!!addToListItem} onClose={() => setAddToListItem(null)} />}
         </div>
     )
 }

@@ -1,44 +1,152 @@
-import React from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../hooks/useAuth'
-import { signOutUser } from '../../services/profileService'
+import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { NavLink, useNavigate } from 'react-router-dom';
+import type { User } from '@supabase/supabase-js';
+import { supabase } from '../../services/supabaseClient';
 
 const Navbar: React.FC = () => {
-    const navigate = useNavigate()
-    const { user, profile } = useAuth(true)
+    const navigate = useNavigate();
+    const [user, setUser] = useState<User | null>(null);
+    const [menuOpen, setMenuOpen] = useState(false);
+    const [closing, setClosing] = useState(false);
+    const menuRef = useRef<HTMLDivElement>(null);
+    const buttonRef = useRef<HTMLButtonElement>(null);
+
+    useEffect(() => {
+        // Get initial session
+        supabase.auth.getSession().then(({ data: { session } }) => {
+            setUser(session?.user || null);
+        });
+
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user || null);
+        });
+
+        return () => subscription.unsubscribe();
+    }, []);
+
+    const closeMenu = useCallback(() => {
+        setClosing(true);
+        setTimeout(() => {
+            setMenuOpen(false);
+            setClosing(false);
+        }, 150); // matches --dropdown-close-dur
+    }, []);
+
+    // Close menu on outside click
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (
+                menuRef.current &&
+                !menuRef.current.contains(e.target as Node) &&
+                buttonRef.current &&
+                !buttonRef.current.contains(e.target as Node)
+            ) {
+                closeMenu();
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [closeMenu]);
+
+    const toggleMenu = useCallback(() => {
+        if (menuOpen) {
+            closeMenu();
+        } else {
+            setMenuOpen(true);
+        }
+    }, [menuOpen, closeMenu]);
 
     const handleLogout = async () => {
-        await signOutUser()
-        navigate('/login')
-    }
+        closeMenu();
+        // Ask for confirmation before logout
+        if (window.confirm('Are you sure you want to logout?')) {
+            await supabase.auth.signOut();
+            navigate('/login');
+        }
+    };
 
-    const nickname = profile?.display_name || user?.user_metadata?.username || user?.user_metadata?.nickname || user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Viewer'
+    const nickname = user?.user_metadata?.username 
+        || user?.user_metadata?.nickname 
+        || user?.user_metadata?.full_name 
+        || user?.email?.split('@')[0] 
+        || 'Viewer';
 
     return (
         <nav className="navbar-brand-row" aria-label="Main navigation">
             <div className="container navbar-inner">
-                <NavLink className="navbar-brand" to="/">TRACKIST</NavLink>
-
+                <div className="navbar-brand-centered">
+                    <NavLink className="navbar-brand" to="/">Track1st</NavLink>
+                </div>
                 <div className="navbar-actions">
                     {user ? (
                         <>
-                            <NavLink className="navbar-user" to={`/Profile/${nickname}`} title={nickname}>
-                                {nickname}
-                            </NavLink>
-                            <button className="navbar-action-link" onClick={handleLogout}>
-                                Logout
-                            </button>
+                            <div className="navbar-user-wrap">
+                                <NavLink 
+                                    className="navbar-user" 
+                                    to="/Profile"
+                                    title={nickname}
+                                >
+                                    {nickname}
+                                </NavLink>
+                            </div>
+                            <div className="t-dropdown-wrap">
+                                <button
+                                    ref={buttonRef}
+                                    className="navbar-menu-btn"
+                                    onClick={toggleMenu}
+                                    aria-label="Menu"
+                                    aria-expanded={menuOpen}
+                                >
+                                    <div className={`navbar-hamburger ${menuOpen ? 'is-active' : ''}`}>
+                                        <span className="hamburger-line"></span>
+                                        <span className="hamburger-line"></span>
+                                        <span className="hamburger-line"></span>
+                                    </div>
+                                </button>
+                                <div
+                                    ref={menuRef}
+                                    className={`t-dropdown ${menuOpen ? (closing ? 'is-closing' : 'is-open') : ''}`}
+                                    data-origin="top-right"
+                                >
+                                    <button className="t-dropdown-item" onClick={() => {
+                                        closeMenu();
+                                        navigate('/Settings');
+                                    }}>
+                                        <i className="fa-solid fa-gear"></i>
+                                        Settings
+                                    </button>
+                                    <button className="t-dropdown-item" onClick={handleLogout}>
+                                        <i className="fa-solid fa-right-from-bracket"></i>
+                                        Logout
+                                    </button>
+                                </div>
+                            </div>
                         </>
                     ) : (
                         <>
-                            <NavLink className="navbar-action-link" to="/login">Login</NavLink>
-                            <NavLink className="navbar-action-link" to="/register">Register</NavLink>
+                            <NavLink
+                                className={({ isActive }) =>
+                                    `navbar-action-link navbar-auth-link${isActive ? ' active' : ''}`
+                                }
+                                to="/login"
+                            >
+                                Login
+                            </NavLink>
+                            <NavLink
+                                className={({ isActive }) =>
+                                    `navbar-action-link navbar-auth-link${isActive ? ' active' : ''}`
+                                }
+                                to="/register"
+                            >
+                                Register
+                            </NavLink>
                         </>
                     )}
                 </div>
             </div>
         </nav>
-    )
-}
+    );
+};
 
-export default Navbar
+export default Navbar;
