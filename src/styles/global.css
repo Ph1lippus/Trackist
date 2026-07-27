@@ -4748,4 +4748,262 @@ button:focus-visible {
     transition: width 0.6s ease;
 }
 
+/* ===== PROGRESS FIX MODAL ===== */
+.progress-fix-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    backdrop-filter: blur(4px);
+    animation: confirmOverlayIn 0.2s ease;
+}
+
+.progress-fix-modal-content {
+    background: rgba(15, 15, 20, 0.98);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    max-width: 460px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 2rem;
+    animation: confirmModalIn 0.25s ease;
+}
+
+.progress-fix-modal-icon {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.progress-fix-modal-title {
+    text-align: center;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-platinum);
+    margin-bottom: 0.75rem;
+}
+
+.progress-fix-modal-message {
+    text-align: center;
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 0.75rem;
+}
+
+.progress-fix-modal-submessage {
+    text-align: left;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.8rem;
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.progress-fix-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.progress-fix-modal-btn {
+    padding: 0.6rem 1.5rem;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-platinum);
+    min-width: 100px;
+}
+
+.progress-fix-modal-btn:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.progress-fix-modal-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.progress-fix-modal-btn--cancel {
+    border-color: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.progress-fix-modal-btn--confirm {
+    border-color: rgba(133, 138, 227, 0.3);
+    color: var(--color-primary);
+}
+
+.progress-fix-modal-btn--confirm:hover:not(:disabled) {
+    background: rgba(133, 138, 227, 0.15);
+    border-color: var(--color-primary);
+    box-shadow: 0 0 8px rgba(133, 138, 227, 0.3);
+}
+
+/* Progress stats */
+.progress-fix-modal-progress {
+    margin-top: 1rem;
+}
+
+.progress-fix-modal-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.progress-fix-stat {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 0.6rem 0.4rem;
+}
+
+.progress-fix-stat-label {
+    display: block;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.45);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.3rem;
+}
+
+.progress-fix-stat-value {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--color-platinum);
+}
+
+.progress-fix-stat-value--success {
+    color: var(--color-mint);
+}
+
+.progress-fix-stat-value--error {
+    color: #ff6b6b;
+}
+
+/* Currently processing */
+.progress-fix-modal-current {
+    text-align: center;
+    padding: 0.5rem;
+    margin-bottom: 0.75rem;
+    background: rgba(133, 138, 227, 0.08);
+    border: 1px solid rgba(133, 138, 227, 0.15);
+    border-radius: 8px;
+}
+
+.progress-fix-current-label {
+    display: block;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 0.2rem;
+}
+
+.progress-fix-current-show {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--color-primary);
+    font-weight: 600;
+}
+
+/* Progress bar */
+.progress-fix-modal-bar-wrap {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.progress-fix-modal-bar {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, var(--color-primary), var(--color-mint));
+    transition: width 0.3s ease;
+}
+
+/* Spinner */
+.progress-fix-modal-spinner {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.progress-fix-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(133, 138, 227, 0.15);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: progressFixSpin 0.8s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes progressFixSpin {
+    to { transform: rotate(360deg); }
+}
+
+/* Summary errors */
+.progress-fix-modal-summary {
+    margin-bottom: 1.5rem;
+}
+
+.progress-fix-modal-errors {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: rgba(255, 107, 107, 0.05);
+    border: 1px solid rgba(255, 107, 107, 0.15);
+    border-radius: 8px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.progress-fix-errors-title {
+    font-size: 0.8rem;
+    color: #ff6b6b;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+}
+
+.progress-fix-errors-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.progress-fix-errors-list li {
+    font-size: 0.78rem;
+    color: rgba(255, 107, 107, 0.8);
+    padding: 0.2rem 0;
+    border-bottom: 1px solid rgba(255, 107, 107, 0.08);
+}
+
+.progress-fix-errors-list li:last-child {
+    border-bottom: none;
+}
+
+@keyframes confirmOverlayIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes confirmModalIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
 

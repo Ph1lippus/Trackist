@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { searchMulti, searchPerson, getPopularMovies, getTrendingMovies, getTopRatedMovies, getPopularTV, getTrendingTV, getTopRatedTV, getPersonMovies, getPersonTV, getPopularPeople } from '../services/tmdbService'
-import type { TMDBResult, WatchlistItem } from '../types'
+import type { TMDBResult } from '../types'
 import MediaCard from '../components/media/MediaCard'
-import AddModal from '../components/modals/AddModal'
-import AddToListModal from '../components/modals/AddToListModal'
 
 type ResultItem = TMDBResult
 
@@ -17,8 +15,6 @@ const Discover: React.FC = () => {
     const [sortBy, setSortBy] = useState<'popular' | 'trending' | 'top_rated'>('popular')
     const [page, setPage] = useState(1)
     const [hasMore, setHasMore] = useState(true)
-    const [addItem, setAddItem] = useState<ResultItem | null>(null)
-    const [addToListItem, setAddToListItem] = useState<ResultItem | null>(null)
     const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set())
 
     const sentinelRef = useRef<HTMLDivElement>(null)
@@ -202,9 +198,8 @@ const Discover: React.FC = () => {
         }
     }
 
-    const handleAddWithEpisodes = (item: WatchlistItem) => {
-        setWatchlistIds(prev => new Set(prev).add(Number(item.tmdb_id)))
-        setAddItem(null)
+    const handleAddBypass = (item: ResultItem) => {
+        addToWatchlist(item, 'watching')
     }
 
     const getSectionTitle = (): string => {
@@ -276,8 +271,7 @@ const Discover: React.FC = () => {
                                         key={`${item.media_type}-${item.id}`}
                                         item={item}
                                         isInWatchlist={watchlistIds.has(item.id)}
-                                        onAdd={setAddItem}
-                                        onAddToList={setAddToListItem}
+                                        onAdd={handleAddBypass}
                                     />
                                 )
                             ))}
@@ -294,16 +288,6 @@ const Discover: React.FC = () => {
                     </div>
                 )}
             </div>
-
-            {addItem && (
-                <AddModal 
-                    item={addItem} 
-                    onClose={() => setAddItem(null)} 
-                    onAdd={addToWatchlist}
-                    onAddWatchlistItem={handleAddWithEpisodes}
-                />
-            )}
-            {addToListItem && <AddToListModal item={addToListItem} isOpen={!!addToListItem} onClose={() => setAddToListItem(null)} />}
         </div>
     )
 }

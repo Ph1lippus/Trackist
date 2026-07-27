@@ -2,12 +2,14 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../services/supabaseClient';
+import ProgressFixModal from '../modals/ProgressFixModal';
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate();
     const [user, setUser] = useState<User | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
     const [closing, setClosing] = useState(false);
+    const [showFixModal, setShowFixModal] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -109,6 +111,13 @@ const Navbar: React.FC = () => {
                                     className={`t-dropdown ${menuOpen ? (closing ? 'is-closing' : 'is-open') : ''}`}
                                     data-origin="top-right"
                                 >
+                                <button className="t-dropdown-item" onClick={() => {
+                                        closeMenu();
+                                        setShowFixModal(true);
+                                    }}>
+                                        <i className="fa-solid fa-wrench"></i>
+                                        Fix Progress
+                                    </button>
                                     <button className="t-dropdown-item" onClick={() => {
                                         closeMenu();
                                         navigate('/Settings');
@@ -145,6 +154,14 @@ const Navbar: React.FC = () => {
                     )}
                 </div>
             </div>
+            <ProgressFixModal
+                isOpen={showFixModal}
+                onClose={() => setShowFixModal(false)}
+                onComplete={() => {
+                    // Refresh the current page if on a watchlist page
+                    window.dispatchEvent(new CustomEvent('watchlist-refresh'))
+                }}
+            />
         </nav>
     );
 };

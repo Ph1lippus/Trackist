@@ -1,47 +1,193 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
-import { imageUrl } from '../services/tmdbService'
+import { getTVDetails } from '../services/tmdbService'
 import MediaCard from '../components/media/MediaCard'
-import AddToListModal from '../components/modals/AddToListModal'
 import type { WatchlistItem, TMDBResult } from '../types'
+
+interface TVShowWithProgress extends WatchlistItem {
+    total_episodes_watched: number
+}
 
 const TVShows: React.FC = () => {
     const navigate = useNavigate()
-    const [items, setItems] = useState<WatchlistItem[]>([])
+    const [items, setItems] = useState<TVShowWithProgress[]>([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
 
-    useEffect(() => {
-        const fetchWatchlist = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) {
-                setLoading(false)
-                return
-            }
-
-            const { data, error } = await supabase
-                .from('watchlist')
-                .select('*')
-                .eq('user_id', user.id)
-                .in('media_type', ['tv', 'anime'])
-                .order('updated_at', { ascending: false })
-
-            if (!error) {
-                setItems(data || [])
-            }
+    const fetchWatchlist = useCallback(async () => {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
             setLoading(false)
+            return
         }
-        fetchWatchlist()
+
+        const { data, error } = await supabase
+            .from('watchlist')
+            .select('*')
+            .eq('user_id', user.id)
+            .in('media_type', ['tv', 'anime'])
+            .order('updated_at', { ascending: false })
+
+        if (!error && data) {
+            // Fetch episode progress for each TV show
+            const itemsWithProgress: TVShowWithProgress[] = await Promise.all(
+                (data || []).map(async (item: WatchlistItem) => {
+                    let totalEpisodesWatched = 0
+                    const { data: episodeData } = await supabase
+                        .from('watchlist_episodes')
+                        .select('watched')
+                        .eq('watchlist_id', item.id)
+                        .eq('watched', true)
+
+                    if (episodeData) {
+                        totalEpisodesWatched = episodeData.length
+                    }
+
+                    return {
+                        ...item,
+                        total_episodes_watched: totalEpisodesWatched
+                    }
+                })
+            )
+            setItems(itemsWithProgress)
+        }
+        setLoading(false)
     }, [])
+
+    useEffect(() => {
+        fetchWatchlist().catch(() => {})
+    }, [fetchWatchlist])
+
+    // Listen for watchlist-refresh event from the Fix Progress modal
+    useEffect(() => {
+        const handleRefresh = () => {
+            fetchWatchlist().catch(() => {})
+        }
+        window.addEventListener('watchlist-refresh', handleRefresh)
+        return () => window.removeEventListener('watchlist-refresh', handleRefresh)
+    }, [fetchWatchlist])
+
+    // Reset trigger: check if completed shows now have new episodes/seasons
+    useEffect(() => {
+        const checkForNewEpisodes = async () => {
+            // Check shows in the completed container (status='completed' OR all episodes watched)
+            const completedShows = items.filter(
+                item => (item.status === 'completed' || (
+                    item.status === 'watching' && 
+                    item.total_episodes !== undefined && 
+                    item.total_episodes > 0 && 
+                    item.total_episodes_watched >= item.total_episodes
+                )) && 
+                item.total_episodes_watched > 0 &&
+                item.total_episodes !== undefined
+            )
+
+            if (completedShows.length === 0) return
+
+            const updatedItems = [...items]
+            let hasChanges = false
+
+            for (const show of completedShows) {
+                if (!show.tmdb_id) continue
+
+                try {
+                    const details = await getTVDetails(show.tmdb_id)
+                    const currentTotalEpisodes = details.number_of_episodes || 0
+                    const storedTotalEpisodes = show.total_episodes || 0
+
+                    // If TMDB now reports more episodes than when we stored it, move it back to watching
+                    if (currentTotalEpisodes > storedTotalEpisodes) {
+                        const index = updatedItems.findIndex(item => item.id === show.id)
+                        if (index !== -1) {
+                            updatedItems[index] = {
+                                ...updatedItems[index],
+                                status: 'watching',
+                                total_episodes: currentTotalEpisodes,
+                                total_seasons: details.number_of_seasons || show.total_seasons
+                            }
+                        }
+                        hasChanges = true
+
+                        // Also update the database to reflect the new status and totals
+                        await supabase.from('watchlist').update({
+                            status: 'watching',
+                            total_episodes: currentTotalEpisodes,
+                            total_seasons: details.number_of_seasons || show.total_seasons,
+                            updated_at: new Date().toISOString()
+                        }).eq('id', show.id)
+                    }
+                } catch (err) {
+                    console.error(`Failed to check for new episodes for ${show.title}:`, err)
+                }
+            }
+
+            if (hasChanges) {
+                setItems(updatedItems)
+            }
+        }
+
+        // Run check on initial load
+        if (!loading && items.length > 0) {
+            checkForNewEpisodes()
+        }
+
+        // Also run check every 5 minutes to catch newly released episodes
+        const interval = setInterval(() => {
+            if (items.length > 0) {
+                checkForNewEpisodes()
+            }
+        }, 5 * 60 * 1000)
+
+        // Run check when page becomes visible (user switches back to this tab)
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && items.length > 0) {
+                checkForNewEpisodes()
+            }
+        }
+        document.addEventListener('visibilitychange', handleVisibilityChange)
+
+        return () => {
+            clearInterval(interval)
+            document.removeEventListener('visibilitychange', handleVisibilityChange)
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loading, items.length])
 
     const filteredItems = items.filter(item => 
         item.title.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
-    const watchingItems = filteredItems.filter(item => item.status === 'watching')
-    const watchlistItems = filteredItems.filter(item => item.status !== 'watching' && item.status !== 'dropped')
-    const droppedItems = filteredItems.filter(item => item.status === 'dropped')
+    // Container A: Currently Watching - some episodes watched, but total watched < total available
+    const currentlyWatching = filteredItems.filter(
+        item => item.status === 'watching' && 
+        item.total_episodes_watched > 0 && 
+        (item.total_episodes === undefined || item.total_episodes_watched < item.total_episodes)
+    )
+
+    // Container B: Watchlist (Not Started) - in watchlist with 0 episodes watched
+    const notStarted = filteredItems.filter(
+        item => (item.status === 'watching' || item.status === 'planning') && 
+        item.total_episodes_watched === 0
+    )
+
+    // Container C: Completed - all available episodes watched
+    const completed = filteredItems.filter(
+        item => (item.status === 'completed' || (
+            item.status === 'watching' && 
+            item.total_episodes !== undefined && 
+            item.total_episodes > 0 && 
+            item.total_episodes_watched >= item.total_episodes
+        ))
+    )
+
+    const buildTmdbItem = (item: WatchlistItem): TMDBResult => ({
+        id: item.tmdb_id as number,
+        title: item.title,
+        poster_path: item.poster_path,
+        vote_average: item.vote_average,
+        media_type: 'tv'
+    })
 
     if (loading) return (
         <section className="dashboard-page">
@@ -71,119 +217,75 @@ const TVShows: React.FC = () => {
                     </form>
                 </div>
 
-                {watchingItems.length > 0 && (
-                    <div className="watchlist-section">
-                        <h3 className="watchlist-section__title">Currently Watching</h3>
+                {/* Container A (Top): Currently Watching */}
+                <div className="watchlist-section">
+                    <h3 className="watchlist-section__title">Currently Watching</h3>
+                    {currentlyWatching.length > 0 ? (
                         <div className="discover-grid">
-                            {watchingItems.map((item) => (
-                                <article
-                                    className="media-card"
+                            {currentlyWatching.map((item) => (
+                                <MediaCard
                                     key={item.id}
-                                    onClick={() => navigate(`/tv/${item.tmdb_id}`)}
-                                >
-                                    <div className="media-card__poster">
-                                        {item.poster_path ? (
-                                            <img
-                                                src={item.media_type === 'anime' ? item.poster_path : imageUrl(item.poster_path) || ''}
-                                                alt={item.title}
-                                                loading="lazy"
-                                            />
-                                        ) : (
-                                            <div className="media-card__no-poster">
-                                                <span>{item.title}</span>
-                                            </div>
-                                        )}
-                                        {item.vote_average && new Date(item.release_date || '9999-12-31') <= new Date() && (
-                                            <div className="media-card__rating" style={{ background: 'rgba(0,0,0,0.75)', color: '#ffad38', fontSize: '0.7rem' }}>
-                                                ★ {item.vote_average.toFixed(1)}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div className="media-card__body">
-                                        <h3>{item.title}</h3>
-                                        <span className="media-card__type">TV Show</span>
-                                    </div>
-                                </article>
+                                    item={buildTmdbItem(item)}
+                                    isInWatchlist={true}
+                                    onAdd={() => {}}
+                                    onMarkWatched={() => navigate(`/tv/${item.tmdb_id}`)}
+                                />
                             ))}
                         </div>
-                    </div>
-                )}
+                    ) : (
+                        <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
+                            {searchQuery ? 'No matching shows' : 'No shows currently in progress'}
+                        </p>
+                    )}
+                </div>
 
-                {watchlistItems.length > 0 && (
-                    <div className="watchlist-section">
-                        <h3 className="watchlist-section__title">Watchlist</h3>
+                {/* Container B (Middle): Watchlist (Not Started) */}
+                <div className="watchlist-section">
+                    <h3 className="watchlist-section__title">Watchlist (Not Started)</h3>
+                    {notStarted.length > 0 ? (
                         <div className="discover-grid">
-                            {watchlistItems.map((item) => (
-                                <article
-                                    className="media-card"
+                            {notStarted.map((item) => (
+                                <MediaCard
                                     key={item.id}
-                                    onClick={() => navigate(`/tv/${item.tmdb_id}`)}
-                                >
-                                    <div className="media-card__poster">
-                                        {item.poster_path ? (
-                                            <img
-                                                src={item.media_type === 'anime' ? item.poster_path : imageUrl(item.poster_path) || ''}
-                                                alt={item.title}
-                                                loading="lazy"
-                                            />
-                                        ) : (
-                                            <div className="media-card__no-poster">
-                                                <span>{item.title}</span>
-                                            </div>
-                                        )}
-                                        <div className="media-card__rating" style={{ background: 'rgba(0,0,0,0.75)', color: '#888', fontSize: '0.6rem' }}>
-                                            {item.status}
-                                        </div>
-                                    </div>
-                                    <div className="media-card__body">
-                                        <h3>{item.title}</h3>
-                                        <span className="media-card__type">TV Show</span>
-                                    </div>
-                                </article>
+                                    item={buildTmdbItem(item)}
+                                    isInWatchlist={true}
+                                    onAdd={() => {}}
+                                    onMarkWatched={() => navigate(`/tv/${item.tmdb_id}`)}
+                                />
                             ))}
                         </div>
-                    </div>
-                )}
+                    ) : (
+                        <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
+                            {searchQuery ? 'No matching shows' : 'No shows queued to start'}
+                        </p>
+                    )}
+                </div>
 
-                {droppedItems.length > 0 && (
-                    <div className="watchlist-section">
-                        <h3 className="watchlist-section__title">Dropped</h3>
+                {/* Container C (Bottom): Completed */}
+                <div className="watchlist-section">
+                    <h3 className="watchlist-section__title">Completed</h3>
+                    {completed.length > 0 ? (
                         <div className="discover-grid">
-                            {droppedItems.map((item) => (
-                                <article
-                                    className="media-card"
+                            {completed.map((item) => (
+                                <MediaCard
                                     key={item.id}
-                                    onClick={() => navigate(`/tv/${item.tmdb_id}`)}
-                                >
-                                    <div className="media-card__poster">
-                                        {item.poster_path ? (
-                                            <img
-                                                src={item.media_type === 'anime' ? item.poster_path : imageUrl(item.poster_path) || ''}
-                                                alt={item.title}
-                                                loading="lazy"
-                                            />
-                                        ) : (
-                                            <div className="media-card__no-poster">
-                                                <span>{item.title}</span>
-                                            </div>
-                                        )}
-                                        <div className="media-card__rating" style={{ background: 'rgba(0,0,0,0.75)', color: '#f44336', fontSize: '0.6rem' }}>
-                                            dropped
-                                        </div>
-                                    </div>
-                                    <div className="media-card__body">
-                                        <h3>{item.title}</h3>
-                                        <span className="media-card__type">TV Show</span>
-                                    </div>
-                                </article>
+                                    item={buildTmdbItem(item)}
+                                    isInWatchlist={true}
+                                    onAdd={() => {}}
+                                    onMarkUnwatched={() => navigate(`/tv/${item.tmdb_id}`)}
+                                />
                             ))}
                         </div>
-                    </div>
-                )}
+                    ) : (
+                        <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
+                            {searchQuery ? 'No matching shows' : 'No completed shows yet'}
+                        </p>
+                    )}
+                </div>
 
-                {filteredItems.length === 0 && (
+                {filteredItems.length === 0 && !searchQuery && (
                     <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>
-                        {searchQuery ? 'No TV shows match your search' : 'No TV shows or anime in your watchlist. Discover some!'}
+                        No TV shows or anime in your watchlist. Discover some!
                     </p>
                 )}
             </div>

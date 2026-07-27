@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { supabase } from '../services/supabaseClient'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
-import AddToListModal from '../components/modals/AddToListModal'
 import type { WatchlistItem, TMDBResult } from '../types'
+
+const INITIAL_WATCHED_LIMIT = 8
 
 const Movies: React.FC = () => {
     const [items, setItems] = useState<WatchlistItem[]>([])
@@ -14,7 +15,9 @@ const Movies: React.FC = () => {
         item: TMDBResult
     } | null>(null)
     const [searchQuery, setSearchQuery] = useState('')
-    const [addToListItem, setAddToListItem] = useState<TMDBResult | null>(null)
+    const [watchedDisplayCount, setWatchedDisplayCount] = useState(INITIAL_WATCHED_LIMIT)
+
+    const watchedSentinelRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
         const fetchWatchlist = async () => {
@@ -83,6 +86,24 @@ const Movies: React.FC = () => {
     const watchlistItems = filteredItems.filter(item => item.status === 'watching')
     const watchedItems = filteredItems.filter(item => item.status !== 'watching')
 
+    const visibleWatchedItems = watchedItems.slice(0, watchedDisplayCount)
+    const hasMoreWatched = watchedDisplayCount < watchedItems.length
+
+    // Infinite scroll observer for watched section
+    useEffect(() => {
+        const sentinel = watchedSentinelRef.current
+        if (!sentinel || !hasMoreWatched) return
+
+        const observer = new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+                setWatchedDisplayCount(prev => prev + INITIAL_WATCHED_LIMIT)
+            }
+        }, { rootMargin: '400px' })
+
+        observer.observe(sentinel)
+        return () => observer.disconnect()
+    }, [hasMoreWatched, watchedItems.length])
+
     if (loading) return (
         <section className="dashboard-page">
             <div className="dashboard-shell">
@@ -111,9 +132,10 @@ const Movies: React.FC = () => {
                     </form>
                 </div>
 
-                {watchlistItems.length > 0 && (
-                    <div className="watchlist-section">
-                        <h3 className="watchlist-section__title">To Watch</h3>
+                {/* Container 1 (Top): Watchlist (to watch) */}
+                <div className="watchlist-section">
+                    <h3 className="watchlist-section__title">To Watch</h3>
+                    {watchlistItems.length > 0 ? (
                         <div className="discover-grid">
                             {watchlistItems.map((item) => {
                                 const tmdbItem: TMDBResult = {
@@ -130,46 +152,52 @@ const Movies: React.FC = () => {
                                         isInWatchlist={true}
                                         onAdd={() => {}}
                                         onMarkWatched={(item) => setConfirmModal({ isOpen: true, action: 'watch', item })}
-                                        onAddToList={setAddToListItem}
                                     />
                                 )
                             })}
                         </div>
-                    </div>
-                )}
+                    ) : (
+                        <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
+                            {searchQuery ? 'No movies match your search' : 'No movies to watch. Add some!'}
+                        </p>
+                    )}
+                </div>
 
-                {watchedItems.length > 0 && (
-                    <div className="watchlist-section">
-                        <h3 className="watchlist-section__title">Watched</h3>
-                        <div className="discover-grid watchlist-grid--watched">
-                            {watchedItems.map((item) => {
-                                const tmdbItem: TMDBResult = {
-                                    id: item.tmdb_id as number,
-                                    title: item.title,
-                                    poster_path: item.poster_path,
-                                    vote_average: item.vote_average,
-                                    media_type: 'movie'
-                                }
-                                return (
-                                    <MediaCard
-                                        key={item.id}
-                                        item={tmdbItem}
-                                        isInWatchlist={true}
-                                        onAdd={() => {}}
-                                        onMarkUnwatched={(item) => setConfirmModal({ isOpen: true, action: 'unwatch', item })}
-                                        onAddToList={setAddToListItem}
-                                    />
-                                )
-                            })}
-                        </div>
-                    </div>
-                )}
-
-                {filteredItems.length === 0 && (
-                    <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>
-                        {searchQuery ? 'No movies match your search' : 'No movies in your watchlist. Discover some!'}
-                    </p>
-                )}
+                {/* Container 2 (Bottom): Already Watched with infinite scroll */}
+                <div className="watchlist-section">
+                    <h3 className="watchlist-section__title">Already Watched</h3>
+                    {visibleWatchedItems.length > 0 ? (
+                        <>
+                            <div className="discover-grid watchlist-grid--watched">
+                                {visibleWatchedItems.map((item) => {
+                                    const tmdbItem: TMDBResult = {
+                                        id: item.tmdb_id as number,
+                                        title: item.title,
+                                        poster_path: item.poster_path,
+                                        vote_average: item.vote_average,
+                                        media_type: 'movie'
+                                    }
+                                    return (
+                                        <MediaCard
+                                            key={item.id}
+                                            item={tmdbItem}
+                                            isInWatchlist={true}
+                                            onAdd={() => {}}
+                                            onMarkUnwatched={(item) => setConfirmModal({ isOpen: true, action: 'unwatch', item })}
+                                        />
+                                    )
+                                })}
+                            </div>
+                            {hasMoreWatched && (
+                                <div ref={watchedSentinelRef} style={{ height: '1px' }} />
+                            )}
+                        </>
+                    ) : (
+                        <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
+                            No watched movies yet
+                        </p>
+                    )}
+                </div>
             </div>
 
             {confirmModal && (
@@ -188,7 +216,6 @@ const Movies: React.FC = () => {
                     confirmColor={confirmModal.action === 'watch' ? 'success' : 'danger'}
                 />
             )}
-            {addToListItem && <AddToListModal item={addToListItem} isOpen={!!addToListItem} onClose={() => setAddToListItem(null)} />}
         </div>
     )
 }
