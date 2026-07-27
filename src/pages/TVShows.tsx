@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { getTVDetails } from '../services/tmdbService'
 import MediaCard from '../components/media/MediaCard'
+import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
 
 interface TVShowWithProgress extends WatchlistItem {
@@ -14,6 +15,7 @@ const TVShows: React.FC = () => {
     const [items, setItems] = useState<TVShowWithProgress[]>([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
+    const [markAllModal, setMarkAllModal] = useState<WatchlistItem | null>(null)
 
     const fetchWatchlist = useCallback(async () => {
         const { data: { user } } = await supabase.auth.getUser()
@@ -189,6 +191,18 @@ const TVShows: React.FC = () => {
         media_type: 'tv'
     })
 
+    const handleMarkAllWatched = async (item: WatchlistItem) => {
+        // Mark the show as completed in the database
+        await supabase.from('watchlist').update({
+            status: 'completed',
+            completed_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+        }).eq('id', item.id)
+
+        setMarkAllModal(null)
+        fetchWatchlist()
+    }
+
     if (loading) return (
         <section className="dashboard-page">
             <div className="dashboard-shell">
@@ -228,7 +242,7 @@ const TVShows: React.FC = () => {
                                     item={buildTmdbItem(item)}
                                     isInWatchlist={true}
                                     onAdd={() => {}}
-                                    onMarkWatched={() => navigate(`/tv/${item.tmdb_id}`)}
+                                    onMarkWatched={() => setMarkAllModal(item)}
                                 />
                             ))}
                         </div>
@@ -250,7 +264,7 @@ const TVShows: React.FC = () => {
                                     item={buildTmdbItem(item)}
                                     isInWatchlist={true}
                                     onAdd={() => {}}
-                                    onMarkWatched={() => navigate(`/tv/${item.tmdb_id}`)}
+                                    onMarkWatched={() => setMarkAllModal(item)}
                                 />
                             ))}
                         </div>
@@ -289,6 +303,22 @@ const TVShows: React.FC = () => {
                     </p>
                 )}
             </div>
+
+            {markAllModal && (
+                <ConfirmModal
+                    isOpen={true}
+                    title="Mark as Fully Watched"
+                    message={`Have you fully watched "${markAllModal.title}"? This will mark all episodes as watched and set the status to completed.`}
+                    onConfirm={() => handleMarkAllWatched(markAllModal)}
+                    onCancel={() => {
+                        setMarkAllModal(null)
+                        navigate(`/tv/${markAllModal.tmdb_id}`)
+                    }}
+                    confirmText="Yes, Fully Watched"
+                    cancelText="Go to Details"
+                    confirmColor="success"
+                />
+            )}
         </div>
     )
 }

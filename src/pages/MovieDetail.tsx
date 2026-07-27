@@ -10,6 +10,7 @@ const MovieDetail: React.FC = () => {
     const [details, setDetails] = useState<TMDBResult | null>(null)
     const [fanartImages, setFanartImages] = useState<{ hdmovielogo?: Array<{ url: string }> } | null>(null)
     const [isInWatchlist, setIsInWatchlist] = useState(false)
+    const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
     const [showTrailer, setShowTrailer] = useState(false)
     const [trailerKey, setTrailerKey] = useState<string | null>(null)
@@ -17,6 +18,7 @@ const MovieDetail: React.FC = () => {
     useEffect(() => {
         const fetchDetails = async () => {
             if (!id) return
+            setLoading(true)
             try {
                 const [data, fanart] = await Promise.all([
                     getMovieDetails(Number(id)),
@@ -47,6 +49,7 @@ const MovieDetail: React.FC = () => {
             } catch (err) {
                 console.error('Failed to load movie details:', err)
             }
+            setLoading(false)
         }
         fetchDetails()
     }, [id])
@@ -133,6 +136,19 @@ const MovieDetail: React.FC = () => {
             setIsInWatchlist(true)
         }
         setAdding(false)
+    }
+
+    if (loading) {
+        return (
+            <div className="detail-page">
+                <div className="detail-page__content">
+                    <div className="discover-loading">
+                        <div className="discover-spinner" />
+                        <p>Loading movie details...</p>
+                    </div>
+                </div>
+            </div>
+        )
     }
 
     if (!details) {

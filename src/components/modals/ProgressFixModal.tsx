@@ -74,6 +74,8 @@ const ProgressFixModal: React.FC<ProgressFixModalProps> = ({ isOpen, onClose, on
                             Shows with <strong>status="completed" but missing progress</strong> will be recalculated.
                             <br />
                             Shows with <strong>missing total_episodes</strong> will be updated from TMDB.
+                            <br />
+                            Episodes with <strong>missing TMDB episode ID</strong> will be backfilled automatically.
                         </p>
                         <div className="progress-fix-modal-actions">
                             <button

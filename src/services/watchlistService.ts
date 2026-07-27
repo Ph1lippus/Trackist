@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient'
-import { getTVDetails } from './tmdbService'
+import { getTVDetails, getTVSeasonDetails } from './tmdbService'
 import type { WatchlistItem } from '../types'
 
 export interface FixProgress {
@@ -9,6 +9,58 @@ export interface FixProgress {
     errors: number
     currentShow?: string
     errorDetails: string[]
+}
+
+/**
+ * Backfill tmdb_episode_id for episodes that have it as NULL
+ */
+export const backfillTmdbEpisodeIds = async (tmdbId: number, watchlistId: string): Promise<number> => {
+    let fixedCount = 0
+    try {
+        // Get all episodes in the DB for this watchlist that have NULL tmdb_episode_id
+        const { data: episodes, error } = await supabase
+            .from('watchlist_episodes')
+            .select('season_number, episode_number, id')
+            .eq('watchlist_id', watchlistId)
+            .is('tmdb_episode_id', null)
+
+        if (error || !episodes || episodes.length === 0) return 0
+
+        // Fetch season details from TMDB to get episode IDs
+        const details = await getTVDetails(tmdbId)
+        const seasonNumbers = (details.seasons || [])
+            .filter((s: { season_number: number }) => s.season_number > 0)
+            .map((s: { season_number: number }) => s.season_number)
+
+        // Build a map of (season, episode) -> tmdb_episode_id
+        const episodeIdMap = new Map<string, number>()
+        for (const season of seasonNumbers) {
+            const sData = await getTVSeasonDetails(tmdbId, season)
+            const sEpisodes = sData.episodes || []
+            for (const ep of sEpisodes) {
+                episodeIdMap.set(`${ep.season_number}-${ep.episode_number}`, ep.id)
+            }
+        }
+
+        // Update each episode that has a match
+        for (const ep of episodes) {
+            const key = `${ep.season_number}-${ep.episode_number}`
+            const tmdbEpisodeId = episodeIdMap.get(key)
+            if (tmdbEpisodeId) {
+                const { error: updateError } = await supabase
+                    .from('watchlist_episodes')
+                    .update({ tmdb_episode_id: tmdbEpisodeId, updated_at: new Date().toISOString() })
+                    .eq('id', ep.id)
+
+                if (!updateError) {
+                    fixedCount++
+                }
+            }
+        }
+    } catch (err) {
+        console.error(`Failed to backfill tmdb_episode_ids for watchlist ${watchlistId}:`, err)
+    }
+    return fixedCount
 }
 
 /**
@@ -37,6 +89,9 @@ export const recalculateProgress = async (showId: string): Promise<{ fixed: bool
         const details = await getTVDetails(show.tmdb_id)
         const totalEpisodes = details.number_of_episodes || 0
         const totalSeasons = details.number_of_seasons || 1
+
+        // Backfill tmdb_episode_id for episodes that are missing it
+        await backfillTmdbEpisodeIds(show.tmdb_id, showId)
 
         // Count watched episodes from watchlist_episodes
         const { data: watchedEpisodes, error: epError } = await supabase
