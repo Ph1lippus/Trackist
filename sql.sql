@@ -6,7 +6,6 @@ CREATE TABLE public.watchlist (
   user_id uuid NOT NULL,
   media_type text NOT NULL CHECK (media_type = ANY (ARRAY['movie'::text, 'tv'::text, 'anime'::text])),
   tmdb_id integer,
-  anilist_id integer,
   title text NOT NULL,
   poster_path text,
   overview text,
@@ -17,13 +16,13 @@ CREATE TABLE public.watchlist (
   current_season integer DEFAULT 1,
   current_episode integer DEFAULT 0,
   status text DEFAULT 'planning'::text CHECK (status = ANY (ARRAY['planning'::text, 'watching'::text, 'completed'::text, 'dropped'::text])),
-  rating integer CHECK (rating >= 0 AND rating <= 10),
-  notes text,
   started_watching_at timestamp with time zone,
   completed_at timestamp with time zone,
   last_watched_at timestamp with time zone,
   added_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  last_season_number integer DEFAULT 1,
+  last_season_check timestamp with time zone,
   CONSTRAINT watchlist_pkey PRIMARY KEY (id),
   CONSTRAINT watchlist_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
@@ -33,7 +32,6 @@ CREATE TABLE public.watchlist_episodes (
   season_number integer NOT NULL DEFAULT 1,
   episode_number integer NOT NULL,
   tmdb_episode_id integer,
-  anilist_episode_id integer,
   title text,
   still_path text,
   overview text,
@@ -42,8 +40,6 @@ CREATE TABLE public.watchlist_episodes (
   runtime integer,
   watched boolean DEFAULT false,
   watched_at timestamp with time zone,
-  user_rating integer CHECK (user_rating >= 0 AND user_rating <= 10),
-  notes text,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT watchlist_episodes_pkey PRIMARY KEY (id),
@@ -138,4 +134,15 @@ CREATE TABLE public.profiles (
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.user_addons (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  url text NOT NULL,
+  name text,
+  manifest jsonb,
+  enabled boolean DEFAULT true,
+  added_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_addons_pkey PRIMARY KEY (id),
+  CONSTRAINT user_addons_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );

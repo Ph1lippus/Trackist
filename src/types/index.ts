@@ -9,6 +9,7 @@ export interface TMDBResult {
     overview?: string
     release_date?: string
     first_air_date?: string
+    last_air_date?: string
     vote_average?: number
     genres?: Array<{ id: number; name: string }>
     credits?: {
@@ -70,6 +71,8 @@ export interface WatchlistItem {
     started_watching_at?: string
     completed_at?: string
     last_watched_at?: string
+    last_season_number?: number
+    last_season_check?: string
     next_episode_to_watch?: {
         season_number: number
         episode_number: number

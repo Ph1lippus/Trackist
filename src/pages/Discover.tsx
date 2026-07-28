@@ -1,21 +1,49 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+    import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { searchMulti, searchPerson, getPopularMovies, getTrendingMovies, getTopRatedMovies, getPopularTV, getTrendingTV, getTopRatedTV, getPersonMovies, getPersonTV, getPopularPeople } from '../services/tmdbService'
+import { saveAllEpisodesForShow } from '../services/watchlistService'
 import type { TMDBResult } from '../types'
 import MediaCard from '../components/media/MediaCard'
 
 type ResultItem = TMDBResult
 
 const Discover: React.FC = () => {
-    const [query, setQuery] = useState('')  
+    // Initialize state from sessionStorage if available
+    const getInitialState = () => {
+        try {
+            const savedState = sessionStorage.getItem('discoverState')
+            if (savedState) {
+                const state = JSON.parse(savedState)
+                sessionStorage.removeItem('discoverState')
+                return {
+                    query: state.query || '',
+                    mediaType: state.mediaType || 'all',
+                    sortBy: state.sortBy || 'popular',
+                    page: state.page || 1
+                }
+            }
+        } catch (err) {
+            console.error('Failed to parse saved state:', err)
+        }
+        return {
+            query: '',
+            mediaType: 'all' as const,
+            sortBy: 'popular' as const,
+            page: 1
+        }
+    }
+
+    const initialState = getInitialState()
+    const [query, setQuery] = useState(initialState.query)  
     const [results, setResults] = useState<ResultItem[]>([])
     const [loading, setLoading] = useState(true)
     const [loadingMore, setLoadingMore] = useState(false)
-    const [mediaType, setMediaType] = useState<'all' | 'movie' | 'tv' | 'person'>('all')
-    const [sortBy, setSortBy] = useState<'popular' | 'trending' | 'top_rated'>('popular')
-    const [page, setPage] = useState(1)
+    const [mediaType, setMediaType] = useState<'all' | 'movie' | 'tv' | 'person'>(initialState.mediaType)
+    const [sortBy, setSortBy] = useState<'popular' | 'trending' | 'top_rated'>(initialState.sortBy)
+    const [page, setPage] = useState(initialState.page)
     const [hasMore, setHasMore] = useState(true)
     const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set())
+    const isRestoringStateRef = useRef(initialState.page > 1)
 
     const sentinelRef = useRef<HTMLDivElement>(null)
     const fetchingRef = useRef(false)
@@ -35,6 +63,32 @@ const Discover: React.FC = () => {
         }
         fetchWatchlist()
     }, [])
+
+    // Restore scroll position when component mounts
+    useEffect(() => {
+        const scrollPosition = sessionStorage.getItem('scrollPosition')
+        if (scrollPosition) {
+            setTimeout(() => {
+                window.scrollTo(0, parseInt(scrollPosition))
+                sessionStorage.removeItem('scrollPosition')
+            }, 100)
+        }
+    }, [])
+
+    // Save state to sessionStorage when navigating away
+    useEffect(() => {
+        const handleBeforeUnload = () => {
+            sessionStorage.setItem('discoverState', JSON.stringify({
+                query,
+                mediaType,
+                sortBy,
+                page
+            }))
+        }
+        
+        window.addEventListener('beforeunload', handleBeforeUnload)
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+    }, [query, mediaType, sortBy, page])
 
     const fetchData = useCallback(async (pageNum: number) => {
         if (fetchingRef.current) return
@@ -149,8 +203,13 @@ const Discover: React.FC = () => {
 
     const fetchTrigger = `${mediaType}-${sortBy}-${query}`
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect -- data fetching on dependency change
-        fetchData(1)
+        if (isRestoringStateRef.current) {
+            isRestoringStateRef.current = false
+            fetchData(page)
+        } else {
+            fetchData(1)
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fetchTrigger, fetchData])
 
     useEffect(() => {
@@ -180,7 +239,7 @@ const Discover: React.FC = () => {
         const mediaTypeValue = item.media_type === 'movie' ? 'movie' : 'tv'
         const itemTitle = item.title || item.name || ''
 
-        const { error } = await supabase.from('watchlist').insert({
+        const insertData: Record<string, unknown> = {
             user_id: user.id,
             media_type: mediaTypeValue,
             tmdb_id: item.id,
@@ -190,11 +249,27 @@ const Discover: React.FC = () => {
             release_date: item.release_date,
             vote_average: item.vote_average,
             status
-        })
+        }
+
+        // Add TV-specific fields
+        if (mediaTypeValue === 'tv') {
+            insertData.total_seasons = item.number_of_seasons || 1
+            insertData.total_episodes = item.number_of_episodes || 0
+            insertData.current_season = 1
+            insertData.current_episode = 0
+            insertData.last_season_number = item.number_of_seasons || 1
+            insertData.last_season_check = new Date().toISOString()
+        }
+
+        const { data, error } = await supabase.from('watchlist').insert(insertData).select().single()
 
         if (error) alert('Error: ' + error.message)
-        else {
+        else if (data) {
             setWatchlistIds(prev => new Set(prev).add(item.id))
+            // Save all episodes for TV shows
+            if (mediaTypeValue === 'tv' && data.id) {
+                await saveAllEpisodesForShow(item.id, data.id)
+            }
         }
     }
 

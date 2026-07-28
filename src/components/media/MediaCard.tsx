@@ -69,13 +69,11 @@ const MediaCard: React.FC<MediaCardProps> = ({
                 )}
                 {!compact && !isPerson && !isInWatchlist && onAdd && (
                     <button
-                        className="media-card__add-icon"
+                        className="media-card__icon-btn"
                         onClick={(e) => { e.stopPropagation(); onAdd(item); }}
                         title="Add to watchlist"
                     >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="16" height="16">
-                            <path d="M12 5v14M5 12h14" />
-                        </svg>
+                        <i className="fa-regular fa-bookmark"></i>
                     </button>
                 )}
                 {!compact && !isPerson && onAddToList && (
@@ -89,42 +87,33 @@ const MediaCard: React.FC<MediaCardProps> = ({
                         </svg>
                     </button>
                 )}
-                {!compact && !isPerson && isInWatchlist && onMarkWatched && (
+                {!compact && !isPerson && isInWatchlist && onMarkWatched && !onMarkUnwatched && (
                     <button
-                        className="media-card__check-icon"
+                        className="media-card__icon-btn media-card__icon-btn--second"
                         onClick={(e) => {
                             e.stopPropagation()
                             onMarkWatched(item)
                         }}
                         title="Mark as watched"
-                        style={{ cursor: 'pointer' }}
                     >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#68ffae" strokeWidth="2.5" width="16" height="16">
-                            <path d="M20 6L9 17l-5-5" />
-                        </svg>
+                        <i className="fa-solid fa-eye"></i>
                     </button>
                 )}
                 {!compact && !isPerson && isInWatchlist && onMarkUnwatched && (
                     <button
-                        className="media-card__unwatch-icon"
+                        className="media-card__icon-btn"
                         onClick={(e) => {
                             e.stopPropagation()
                             onMarkUnwatched(item)
                         }}
-                        title="Move back to watchlist"
-                        style={{ cursor: 'pointer' }}
+                        title="Mark as unwatched"
                     >
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#ff6b6b" strokeWidth="2.5" width="16" height="16">
-                            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                            <path d="M3 3v5h5" />
-                        </svg>
+                        <i className="fa-solid fa-eye-slash"></i>
                     </button>
                 )}
                 {!compact && !isPerson && isInWatchlist && !onMarkWatched && !onMarkUnwatched && (
-                    <div className="media-card__check-icon" title="In watchlist">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="#68ffae" strokeWidth="2.5" width="16" height="16">
-                            <path d="M20 6L9 17l-5-5" />
-                        </svg>
+                    <div className="media-card__icon-btn" title="In watchlist">
+                        <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
                     </div>
                 )}
             </div>

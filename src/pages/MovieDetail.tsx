@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { getMovieDetails, imageUrl, imageUrlOriginal, getFanartImages } from '../services/tmdbService'
+import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
 
 const MovieDetail: React.FC = () => {
@@ -10,10 +11,19 @@ const MovieDetail: React.FC = () => {
     const [details, setDetails] = useState<TMDBResult | null>(null)
     const [fanartImages, setFanartImages] = useState<{ hdmovielogo?: Array<{ url: string }> } | null>(null)
     const [isInWatchlist, setIsInWatchlist] = useState(false)
+    const [watchlistId, setWatchlistId] = useState<string | null>(null)
+    const [watchlistStatus, setWatchlistStatus] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
     const [showTrailer, setShowTrailer] = useState(false)
     const [trailerKey, setTrailerKey] = useState<string | null>(null)
+    const [showCast, setShowCast] = useState(false)
+    const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean } | null>(null)
+    const [markWatchedModal, setMarkWatchedModal] = useState<{ isOpen: boolean; markAsWatched: boolean } | null>(null)
+
+    useEffect(() => {
+        window.scrollTo(0, 0)
+    }, [id])
 
     useEffect(() => {
         const fetchDetails = async () => {
@@ -40,11 +50,15 @@ const MovieDetail: React.FC = () => {
                 if (user) {
                     const { data: watchlistData } = await supabase
                         .from('watchlist')
-                        .select('id')
+                        .select('id, status')
                         .eq('user_id', user.id)
                         .eq('tmdb_id', Number(id))
                         .single()
                     setIsInWatchlist(!!watchlistData)
+                    if (watchlistData) {
+                        setWatchlistId(watchlistData.id)
+                        setWatchlistStatus(watchlistData.status)
+                    }
                 }
             } catch (err) {
                 console.error('Failed to load movie details:', err)
@@ -118,7 +132,7 @@ const MovieDetail: React.FC = () => {
         }
 
         setAdding(true)
-        const { error } = await supabase.from('watchlist').insert({
+        const { data, error } = await supabase.from('watchlist').insert({
             user_id: user.id,
             media_type: 'movie',
             tmdb_id: details.id,
@@ -128,14 +142,34 @@ const MovieDetail: React.FC = () => {
             release_date: details.release_date,
             vote_average: details.vote_average,
             status
-        })
+        }).select().single()
+
+        if (error) {
+            alert('Error: ' + error.message)
+        } else if (data) {
+            setIsInWatchlist(true)
+            setWatchlistId(data.id)
+            setWatchlistStatus(data.status)
+        }
+        setAdding(false)
+    }
+
+    const handleRemoveFromWatchlist = async () => {
+        if (!watchlistId) return
+
+        const { error } = await supabase
+            .from('watchlist')
+            .delete()
+            .eq('id', watchlistId)
 
         if (error) {
             alert('Error: ' + error.message)
         } else {
-            setIsInWatchlist(true)
+            setIsInWatchlist(false)
+            setWatchlistId(null)
+            setWatchlistStatus(null)
         }
-        setAdding(false)
+        setConfirmModal(null)
     }
 
     if (loading) {
@@ -174,7 +208,7 @@ const MovieDetail: React.FC = () => {
     const providers = getProviders()
 
     return (
-        <div className="detail-page">
+        <div className="detail-page detail-page--no-scroll">
             {backdropUrl && (
                 <div className="detail-page__backdrop">
                     <img src={backdropUrl} alt={title} />
@@ -182,50 +216,47 @@ const MovieDetail: React.FC = () => {
                 </div>
             )}
             
-            <div className="detail-page__content">
-                <button className="detail-page__back" onClick={() => navigate(-1)}>
-                    ← Back
-                </button>
+            <div className="detail-page__content detail-page__content--split">
+                <div className="detail-page__main detail-page__main--movie">
+                    <div className="detail-page__left">
+                        <div className="detail-page__title-section">
+                        <div className="detail-page__logo-section">
+                            {logoUrl ? (
+                                <img src={logoUrl} alt={title} className="detail-page__logo" />
+                            ) : (
+                                <h1 className="detail-page__title">{title}</h1>
+                            )}
+                        </div>
+                        
+                        <div className="detail-page__meta">
+                            {year && <span className="detail-page__year">{year}</span>}
+                            {rating && <span className="detail-page__rating">★ {rating}</span>}
+                            {runtime && <span className="detail-page__runtime">{runtime}</span>}
+                            {ageRating && <span className="detail-page__age-rating">{ageRating}</span>}
+                        </div>
 
-                <div className="detail-page__header">
-                    <div className="detail-page__logo-section">
-                        {logoUrl ? (
-                            <img src={logoUrl} alt={title} className="detail-page__logo" />
-                        ) : (
-                            <h1 className="detail-page__title">{title}</h1>
+                        {providers.length > 0 && (
+                            <div className="detail-page__providers">
+                                {providers.map((p: { logo_path: string }, idx: number) => (
+                                    <img
+                                        key={idx}
+                                        src={`https://image.tmdb.org/t/p/w92${p.logo_path}`}
+                                        alt="Provider"
+                                        className="detail-page__provider-logo"
+                                    />
+                                ))}
+                            </div>
+                        )}
+
+                        {genres.length > 0 && (
+                            <div className="detail-page__genres">
+                                {genres.map((g: { id: number; name: string }) => (
+                                    <span key={g.id} className="detail-page__genre">{g.name}</span>
+                                ))}
+                            </div>
                         )}
                     </div>
-                    
-                    <div className="detail-page__meta">
-                        {year && <span className="detail-page__year">{year}</span>}
-                        {rating && <span className="detail-page__rating">★ {rating}</span>}
-                        {runtime && <span className="detail-page__runtime">{runtime}</span>}
-                        {ageRating && <span className="detail-page__age-rating">{ageRating}</span>}
-                    </div>
 
-                    {providers.length > 0 && (
-                        <div className="detail-page__providers">
-                            {providers.map((p: { logo_path: string }, idx: number) => (
-                                <img
-                                    key={idx}
-                                    src={`https://image.tmdb.org/t/p/w92${p.logo_path}`}
-                                    alt="Provider"
-                                    className="detail-page__provider-logo"
-                                />
-                            ))}
-                        </div>
-                    )}
-
-                    {genres.length > 0 && (
-                        <div className="detail-page__genres">
-                            {genres.map((g: { id: number; name: string }) => (
-                                <span key={g.id} className="detail-page__genre">{g.name}</span>
-                            ))}
-                        </div>
-                    )}
-                </div>
-
-                <div className="detail-page__main">
                     <div className="detail-page__overview-section">
                         <h2 className="detail-page__section-title">Overview</h2>
                         <p className="detail-page__overview">{overview}</p>
@@ -233,77 +264,163 @@ const MovieDetail: React.FC = () => {
                         <div className="detail-page__actions">
                             {trailerKey && (
                                 <button 
-                                    className="detail-page__btn detail-page__btn--trailer"
+                                    className="detail-page__icon-btn"
                                     onClick={() => setShowTrailer(!showTrailer)}
+                                    title={showTrailer ? 'Close Trailer' : 'Watch Trailer'}
                                 >
-                                    {showTrailer ? 'Close Trailer' : 'Watch Trailer'}
+                                    <i className="fa-solid fa-clapperboard"></i>
+                                </button>
+                            )}
+                            {cast.length > 0 && (
+                                <button 
+                                    className="detail-page__icon-btn"
+                                    onClick={() => setShowCast(!showCast)}
+                                    title={showCast ? 'Hide Cast' : 'Cast'}
+                                >
+                                    <i className="fa-solid fa-users"></i>
                                 </button>
                             )}
                             {!isInWatchlist ? (
                                 <>
                                     <button 
-                                        className="detail-page__btn detail-page__btn--watch"
+                                        className="detail-page__icon-btn"
                                         onClick={() => handleAddToWatchlist('watching')}
                                         disabled={adding}
+                                        title="Add to Watchlist"
                                     >
-                                        {adding ? 'Adding...' : 'Add to Watchlist'}
+                                        <i className="fa-regular fa-bookmark"></i>
                                     </button>
                                     <button 
-                                        className="detail-page__btn detail-page__btn--watched"
+                                        className="detail-page__icon-btn"
                                         onClick={() => handleAddToWatchlist('completed')}
                                         disabled={adding}
+                                        title="Mark as Watched"
                                     >
-                                        Mark as Watched
+                                        <i className="fa-solid fa-eye"></i>
                                     </button>
                                 </>
                             ) : (
-                                <div className="detail-page__in-watchlist">✓ In your watchlist</div>
+                                <>
+                                    <button 
+                                        className="detail-page__icon-btn"
+                                        onClick={() => setConfirmModal({ isOpen: true })}
+                                        title="Remove from Watchlist"
+                                    >
+                                        <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
+                                    </button>
+                                    <button 
+                                        className="detail-page__icon-btn"
+                                        onClick={() => {
+                                            if (!watchlistId) return
+                                            const markAsWatched = details?.status !== 'completed'
+                                            setMarkWatchedModal({ isOpen: true, markAsWatched })
+                                        }}
+                                        title={watchlistStatus === 'completed' ? 'Mark as Unwatched' : 'Mark as Watched'}
+                                    >
+                                        <i className={watchlistStatus === 'completed' ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
+                                    </button>
+                                </>
                             )}
                         </div>
 
                         {showTrailer && trailerKey && (
-                            <div className="detail-page__trailer-container">
-                                <iframe
-                                    src={`https://www.youtube.com/embed/${trailerKey}?autoplay=1`}
-                                    title="Trailer"
-                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                    allowFullScreen
-                                    className="detail-page__trailer-iframe"
-                                />
+                            <div className="detail-page__trailer-overlay" onClick={() => setShowTrailer(false)}>
+                                <div className="detail-page__trailer-modal" onClick={(e) => e.stopPropagation()}>
+                                    <button 
+                                        className="detail-page__trailer-close"
+                                        onClick={() => setShowTrailer(false)}
+                                    >
+                                        <i className="fa-solid fa-xmark"></i>
+                                    </button>
+                                    <iframe
+                                        src={`https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&vq=hd1080`}
+                                        title="Trailer"
+                                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                        allowFullScreen
+                                        className="detail-page__trailer-iframe"
+                                    />
+                                </div>
                             </div>
                         )}
                     </div>
 
-                    {cast.length > 0 && (
+                    {showCast && cast.length > 0 && (
                         <div className="detail-page__cast-section">
-                            <h2 className="detail-page__section-title">Cast</h2>
-                            <div className="detail-page__cast-list">
-                                {cast.map((c: { id: number; name: string; profile_path?: string; character?: string }) => (
-                                    <div 
-                                        key={c.id} 
-                                        className="detail-page__cast-item"
-                                        onClick={() => navigate(`/person/${c.id}`)}
-                                    >
-                                        {c.profile_path && (
-                                            <img 
-                                                src={imageUrl(c.profile_path) || ''} 
-                                                alt={c.name} 
-                                                className="detail-page__cast-photo"
-                                            />
-                                        )}
-                                        <div className="detail-page__cast-info">
-                                            <span className="detail-page__cast-name">{c.name}</span>
-                                            {c.character && (
-                                                <span className="detail-page__cast-character">{c.character}</span>
+                            {showCast && (
+                                <div className="detail-page__cast-list">
+                                    {cast.map((c: { id: number; name: string; profile_path?: string; character?: string }) => (
+                                        <div 
+                                            key={c.id} 
+                                            className="detail-page__cast-item"
+                                            onClick={() => navigate(`/person/${c.id}`)}
+                                        >
+                                            {c.profile_path && (
+                                                <img 
+                                                    src={imageUrl(c.profile_path) || ''} 
+                                                    alt={c.name} 
+                                                    className="detail-page__cast-photo"
+                                                />
                                             )}
+                                            <div className="detail-page__cast-info">
+                                                <span className="detail-page__cast-name">{c.name}</span>
+                                                {c.character && (
+                                                    <span className="detail-page__cast-character">{c.character}</span>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     )}
+                    </div>
+                    <div className="detail-page__right" style={{ display: 'none' }}>
+                    </div>
                 </div>
             </div>
+
+            {confirmModal && (
+                <ConfirmModal
+                    isOpen={confirmModal.isOpen}
+                    title="Remove from Watchlist"
+                    message="Are you sure you want to remove this movie from your watchlist?"
+                    onConfirm={handleRemoveFromWatchlist}
+                    onCancel={() => setConfirmModal(null)}
+                    confirmText="Remove"
+                    cancelText="Cancel"
+                    confirmColor="danger"
+                />
+            )}
+            {markWatchedModal && (
+                <ConfirmModal
+                    isOpen={markWatchedModal.isOpen}
+                    title={markWatchedModal.markAsWatched ? 'Mark as Watched' : 'Mark as Unwatched'}
+                    message={markWatchedModal.markAsWatched ? 'Are you sure you want to mark this movie as watched?' : 'Are you sure you want to mark this movie as unwatched?'}
+                    onConfirm={async () => {
+                        if (!watchlistId) return
+                        const newStatus = markWatchedModal.markAsWatched ? 'completed' : 'watching'
+                        const { error } = await supabase
+                            .from('watchlist')
+                            .update({ 
+                                status: newStatus,
+                                completed_at: newStatus === 'completed' ? new Date().toISOString() : null,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', watchlistId)
+                        if (error) {
+                            alert('Error: ' + error.message)
+                        } else {
+                            setWatchlistStatus(newStatus)
+                            setDetails(prev => prev ? { ...prev, status: newStatus as any } : null)
+                        }
+                        setMarkWatchedModal(null)
+                    }}
+                    onCancel={() => setMarkWatchedModal(null)}
+                    confirmText={markWatchedModal.markAsWatched ? 'Mark as Watched' : 'Mark as Unwatched'}
+                    cancelText="Cancel"
+                    confirmColor="primary"
+                />
+            )}
         </div>
     )
 }

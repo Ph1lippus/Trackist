@@ -40,6 +40,13 @@ const Movies: React.FC = () => {
             setLoading(false)
         }
         fetchWatchlist()
+        
+        // Restore scroll position
+        const savedPosition = sessionStorage.getItem('scrollPosition')
+        if (savedPosition) {
+            window.scrollTo(0, parseInt(savedPosition))
+            sessionStorage.removeItem('scrollPosition')
+        }
     }, [])
 
     const updateStatus = async (id: string, status: string) => {
@@ -203,15 +210,15 @@ const Movies: React.FC = () => {
             {confirmModal && (
                 <ConfirmModal
                     isOpen={confirmModal.isOpen}
-                    title={confirmModal.action === 'watch' ? 'Mark as Watched' : 'Move to Watchlist'}
+                    title={confirmModal.action === 'watch' ? 'Mark as Watched' : 'Mark as Unwatched'}
                     message={
                         confirmModal.action === 'watch'
                             ? `Are you sure you want to mark "${confirmModal.item.title || confirmModal.item.name}" as watched?`
-                            : `Are you sure you want to move "${confirmModal.item.title || confirmModal.item.name}" back to your watchlist?`
+                            : `Are you sure you want to mark "${confirmModal.item.title || confirmModal.item.name}" as unwatched?`
                     }
                     onConfirm={handleConfirmAction}
                     onCancel={() => setConfirmModal(null)}
-                    confirmText="Confirm"
+                    confirmText={confirmModal.action === 'watch' ? 'Mark as Watched' : 'Mark as Unwatched'}
                     cancelText="Cancel"
                     confirmColor={confirmModal.action === 'watch' ? 'success' : 'danger'}
                 />

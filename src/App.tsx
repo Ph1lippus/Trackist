@@ -13,7 +13,6 @@ import Discover from './pages/Discover'
 import Movies from './pages/Movies'
 import TVShows from './pages/TVShows'
 import Upcoming from './pages/Upcoming'
-import More from './pages/More'
 import Settings from './pages/Settings'
 import Credits from './pages/Credits'
 import ForgotPassword from './pages/ForgotPassword'
@@ -24,6 +23,7 @@ import EditProfile from './pages/EditProfile'
 import MovieDetail from './pages/MovieDetail'
 import TVShowDetail from './pages/TVShowDetail'
 import PersonDetail from './pages/PersonDetail'
+import EpisodeDetail from './pages/EpisodeDetail'
 import Lists from './pages/Lists'
 
 const AppContent: React.FC = () => {
@@ -31,7 +31,7 @@ const AppContent: React.FC = () => {
     const [user, setUser] = useState<User | null>(null)
     const [loading, setLoading] = useState(true)
 
-    const isDetailPage = location.pathname.match(/^\/(movie|tv|person)\/\d+$/)
+    const isDetailPage = location.pathname.match(/^\/(movie|tv|person)\/\d+$/) || location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/)
 
     useEffect(() => {
         let active = true
@@ -100,7 +100,6 @@ const AppContent: React.FC = () => {
                     <Route path="/Upcoming" element={user ? <Upcoming /> : <Navigate to="/login" replace />} />
                     <Route path="/Friends" element={user ? <Friends /> : <Navigate to="/login" replace />} />
                     <Route path="/Statistics" element={user ? <Statistics /> : <Navigate to="/login" replace />} />
-                    <Route path="/More" element={user ? <More /> : <Navigate to="/login" replace />} />
                     <Route path="/Settings" element={user ? <Settings /> : <Navigate to="/login" replace />} />
                     <Route path="/Credits" element={<Credits />} />
                     <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
@@ -111,6 +110,7 @@ const AppContent: React.FC = () => {
                     <Route path="/Profile" element={user ? <Profile /> : <Navigate to="/login" replace />} />
                     <Route path="/movie/:id" element={<MovieDetail />} />
                     <Route path="/tv/:id" element={<TVShowDetail />} />
+                    <Route path="/tv/:id/season/:season/episode/:episode" element={<EpisodeDetail />} />
                     <Route path="/person/:id" element={<PersonDetail />} />
                     <Route path="/lists" element={user ? <Lists /> : <Navigate to="/login" replace />} />
                     <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />

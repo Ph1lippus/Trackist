@@ -69,6 +69,8 @@ const ProgressFixModal: React.FC<ProgressFixModalProps> = ({ isOpen, onClose, on
                             This may take a few moments. The operation cannot be undone once started.
                         </p>
                         <p className="progress-fix-modal-submessage">
+                            Shows with <strong>no episodes in watchlist_episodes table</strong> will have all episodes saved.
+                            <br />
                             Shows with <strong>status="watching" but current_episode=0</strong> will be set to episode 1.
                             <br />
                             Shows with <strong>status="completed" but missing progress</strong> will be recalculated.

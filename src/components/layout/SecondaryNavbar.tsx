@@ -16,15 +16,16 @@ const SecondaryNavbar: React.FC = () => {
         { to: '/Upcoming', label: 'Upcoming' },
         { to: '/Friends', label: 'Friends' },
         { to: '/Statistics', label: 'Statistics' },
-        { to: '/More', label: 'More' },
     ];
 
     // Map pathname to nav item - handle root route redirecting to discover
     const getActiveTabIndex = useCallback(() => {
         const path = location.pathname === '/' ? '/Discover' : location.pathname;
         const index = navItems.findIndex(item => item.to === path);
-        return index === -1 ? 0 : index;
+        return index === -1 ? -1 : index;
     }, [location.pathname]);
+
+    const isActivePage = getActiveTabIndex() !== -1;
 
     // Set pill position on first render, on route change, and on resize
     useEffect(() => {
@@ -35,6 +36,14 @@ const SecondaryNavbar: React.FC = () => {
 
             const activeTab = container.querySelector(`[data-index="${getActiveTabIndex()}"]`) as HTMLElement;
             if (!activeTab) return;
+
+            // Hide pill if not on an active page
+            if (!isActivePage) {
+                pill.style.opacity = '0';
+                return;
+            }
+
+            pill.style.opacity = '1';
 
             const shouldAnimate = !isInitialRender.current;
             
@@ -64,7 +73,7 @@ const SecondaryNavbar: React.FC = () => {
             clearTimeout(timer2);
             window.removeEventListener('resize', updatePillPosition);
         };
-    }, [getActiveTabIndex]);
+    }, [getActiveTabIndex, isActivePage]);
 
     // Update pill on clicked tab
     const handleTabClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -92,7 +101,7 @@ const SecondaryNavbar: React.FC = () => {
                         key={item.to}
                         to={item.to}
                         className={({ isActive }) =>
-                            `secondary-navbar-link${isActive ? ' active' : ''}`
+                            `secondary-navbar-link${isActive && isActivePage ? ' active' : ''}`
                         }
                         role="tab"
                         data-index={index}

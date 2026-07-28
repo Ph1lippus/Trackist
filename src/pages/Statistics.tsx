@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { supabase } from '../services/supabaseClient'
-import type { WatchlistItem, WatchlistEpisode } from '../types'
+import type { WatchlistItem } from '../types'
 
 interface Stats {
     totalItems: number
@@ -58,19 +58,18 @@ const Statistics: React.FC = () => {
             const items = (watchlist || []) as WatchlistItem[]
 
             // Fetch all watched episodes
-            const watchlistIds = items.map(item => item.id)
-            let episodes: WatchlistEpisode[] = []
+            // Get watched episode statistics for the current user
+            let totalEpisodesWatched = 0
+            let totalWatchTimeMinutes = 0
 
-            if (watchlistIds.length > 0) {
-                const { data: episodesData, error: episodesError } = await supabase
-                    .from('watchlist_episodes')
-                    .select('*')
-                    .in('watchlist_id', watchlistIds)
-                    .eq('watched', true)
+            const { data: episodeStats, error: episodeStatsError } = await supabase
+                .rpc('get_my_watch_statistics')
 
-                if (!episodesError) {
-                    episodes = (episodesData || []) as WatchlistEpisode[]
-                }
+            if (episodeStatsError) {
+                console.error('Error fetching episode statistics:', episodeStatsError)
+            } else if (episodeStats && episodeStats.length > 0) {
+                totalEpisodesWatched = Number(episodeStats[0].total_episodes_watched)
+                totalWatchTimeMinutes = Number(episodeStats[0].total_watch_time_minutes)
             }
 
             // Anime is counted as TV shows
@@ -84,9 +83,6 @@ const Statistics: React.FC = () => {
             const totalWatching = items.filter(i => i.status === 'watching').length
             const totalPlanning = items.filter(i => i.status === 'planning').length
             const totalDropped = items.filter(i => i.status === 'dropped').length
-
-            const totalEpisodesWatched = episodes.length
-            const totalWatchTimeMinutes = episodes.reduce((sum, ep) => sum + (ep.runtime || 0), 0)
 
             const ratedItems = items.filter(i => i.rating != null && i.rating > 0)
             const averageRating = ratedItems.length > 0

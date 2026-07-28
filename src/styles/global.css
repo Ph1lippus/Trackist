@@ -140,98 +140,143 @@ html, body {
 }
 
 /* ===== NAVBAR STYLE ===== */
+
+
 .navbar-brand-row {
-  position: relative;
-  background-color: transparent;
-  z-index: 100;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    position: relative;
+    background-color: transparent;
+    z-index: 100;
 }
 
 .navbar-brand-row::after {
-  content: '';
-  position: absolute;
-  left: 50%;
-  bottom: 0;
-  transform: translateX(-50%);
-  width: min(92%, 760px);
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    transform: translateX(-50%);
+    width: min(92%, 760px);
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.18), transparent);
 }
 
 .navbar-brand-row .container,
 .navbar-brand-row .navbar-inner {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  position: relative;
-  width: 100%;
-  gap: 0.75rem;
-  padding: 1rem 0;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    position: relative;
+    width: 100%;
+    gap: 0.5rem;
+    padding: 0.65rem 0;
+    min-height: 48px;
 }
 
-.navbar-brand-row .navbar-brand {
-  grid-column: 2;
-  justify-self: center;
-  font-family: var(--font-display);
-  font-weight: 300;
-  font-size: 1.6rem;
-  letter-spacing: 4px;
-  margin: 0;
-  color: var(--color-light);
-  text-decoration: none;
-  transition: color 0.3s ease;
-  cursor: pointer;
-  white-space: nowrap;
+.navbar-left {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    min-width: 18px;
 }
 
-.navbar-brand-row .navbar-brand:hover {
-  color: var(--color-primary);
+.navbar-brand-centered {
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .navbar-actions {
-  grid-column: 3;
-  justify-self: end;
-  display: flex;
-  align-items: center;
-  gap: 1.1rem;
-  flex-wrap: nowrap;
-  min-width: 0;
+    grid-column: 3;
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+    flex-wrap: nowrap;
+    min-width: 0;
+    margin-right: 0;
+}
+
+.navbar-brand-row .navbar-brand {
+    font-family: var(--font-display);
+    font-weight: 300;
+    font-size: 1.4rem;
+    letter-spacing: 4px;
+    margin: 0;
+    color: var(--color-light);
+    text-decoration: none;
+    transition: color 0.3s ease;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.navbar-brand-row .navbar-brand:hover {
+    color: var(--color-primary);
+}
+
+.navbar-back-btn {
+    color: var(--color-platinum);
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease, transform 0.2s ease;
+    font-size: 1.2rem;
+    width: 16px;
+    height: 10px;
+}
+
+.navbar-back-btn:hover {
+    color: var(--color-primary);
+}
+
+.navbar-actions {
+    grid-column: 3;
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    flex-wrap: nowrap;
+    min-width: 0;
 }
 
 .navbar-user-wrap {
-  display: inline-flex;
-  align-items: center;
-  min-width: 0;
-  flex-shrink: 0;
-  position: relative;
-  z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    min-width: 0;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
 }
 
 .navbar-user {
-  color: var(--color-platinum);
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: color 0.2s ease;
-  max-width: 160px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+    color: var(--color-platinum);
+    font-size:  0.82rem;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .navbar-user:hover {
-  color: var(--color-primary);
+    color: var(--color-primary);
 }
 
 .navbar-action-link {
-  color: rgba(255, 255, 255, 0.8);
-  text-decoration: none;
-  font-size: 0.95rem;
-  font-weight: 600;
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  transition: color 0.2s ease, opacity 0.2s ease;
-  white-space: nowrap;
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    font-size: 0.95rem;
+    font-weight: 600;
+    background: transparent;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: color 0.2s ease, opacity 0.2s ease;
+    white-space: nowrap;
 }
 
 .navbar-action-link:hover,
@@ -240,17 +285,19 @@ html, body {
   opacity: 1;
 }
 
+
 .navbar-menu-btn {
-  background: transparent;
-  border: none;
-  color: var(--color-light);
-  cursor: pointer;
-  padding: 0.25rem;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: color 0.3s ease;
-  border-radius: 6px;
+    background: transparent;
+    border: none;
+    color: var(--color-light);
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.3s ease;
+    border-radius: 6px;
 }
 
 .navbar-menu-btn:hover {
@@ -259,8 +306,8 @@ html, body {
 
 /* ===== CUSTOM HAMBURGER MENU ICON ===== */
 .navbar-hamburger {
-  width: 18px;
-  height: 12px;
+  width: 16px;
+  height: 10px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -1424,9 +1471,23 @@ html, body {
 /* ===== DETAIL PAGES ===== */
 .detail-page {
     position: relative;
-    min-height: 100vh;
+    height: 100vh;
     width: 100%;
-    padding-bottom: 7rem;
+    overflow: hidden;
+}
+
+.detail-page--no-scroll {
+    height: 100vh;
+    overflow: hidden;
+}
+
+.detail-page--no-scroll::-webkit-scrollbar {
+    display: none;
+}
+
+.detail-page--no-scroll {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
 .detail-page__backdrop {
@@ -1450,18 +1511,24 @@ html, body {
     inset: 0;
     background: linear-gradient(
         to bottom,
-        rgba(5, 5, 5, 0.55) 0%,
-        rgba(5, 5, 5, 0.7) 30%,
-        rgba(5, 5, 5, 0.82) 60%,
-        rgba(5, 5, 5, 0.9) 100%
-    );
+        rgba(5, 5, 5, 0.35) 0%,
+        rgba(5, 5, 5, 0.48) 30%,
+        rgba(5, 5, 5, 0.65) 60%,
+        rgba(5, 5, 5, 0.78) 100%
+    )
 }
 
 .detail-page__content {
     position: relative;
     max-width: 90%;
     margin: 0 auto;
-    padding: 2rem 1.5rem;
+    padding: 0 2rem;
+}
+
+.detail-page__content--split {
+    height: calc(100vh - 10rem);
+    display: flex;
+    flex-direction: column;
 }
 
 .detail-page__back {
@@ -1474,8 +1541,14 @@ html, body {
     font-size: 0.9rem;
     font-weight: 500;
     transition: all 0.2s ease;
-    margin-bottom: 2rem;
     display: inline-block;
+}
+
+.detail-page__back--fixed {
+    position: fixed;
+    top: 5rem;
+    left: 2rem;
+    z-index: 100;
 }
 
 .detail-page__back:hover {
@@ -1484,12 +1557,17 @@ html, body {
     color: var(--color-primary);
 }
 
+.detail-page__title-section {
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
 .detail-page__header {
-    margin-bottom: 2.5rem;
+    margin-bottom: 3.5rem;
 }
 
 .detail-page__logo-section {
-    margin-bottom: 1rem;
+    margin-bottom: 2rem;
     min-height: 80px;
     display: flex;
     align-items: center;
@@ -1497,7 +1575,7 @@ html, body {
 
 .detail-page__logo {
     max-width: 400px;
-    max-height: 120px;
+    max-height: 160px;
     width: auto;
     height: auto;
     object-fit: contain;
@@ -1578,24 +1656,34 @@ html, body {
     display: flex;
     flex-direction: column;
     gap: 2rem;
+    width: 100%;
+    flex: 1;
+    overflow: hidden;
 }
 
 .detail-page__main--tv {
     display: grid;
-    grid-template-columns: 1fr 400px;
-    gap: 2rem;
+    grid-template-columns: 1fr 600px;
+    gap: 2.5rem;
+    align-items: stretch;
+    height: 100%;
+    overflow: hidden;
 }
 
 .detail-page__left {
+    padding-top: 3rem;
     display: flex;
     flex-direction: column;
     gap: 2rem;
+    overflow: hidden;
+    padding-right: 1rem;
 }
 
 .detail-page__right {
-    position: sticky;
-    top: 6rem;
-    align-self: start;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
 }
 
 .detail-page__section-title {
@@ -1627,6 +1715,7 @@ html, body {
     font-weight: 600;
     border-radius: 10px;
     cursor: pointer;
+    width: 150px;
     transition: all 0.2s ease;
 }
 
@@ -1652,15 +1741,78 @@ html, body {
     color: #ff4757;
 }
 
+
+
+.detail-page__btn--cast:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    background: rgba(133, 138, 227, 0.15);
+    color: var(--color-primary);
+}
+
 .detail-page__btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
-.detail-page__trailer-container {
-    margin-top: 1.5rem;
+.detail-page__icon-btn {
+    background: transparent;
+    border: none;
+    color: var(--color-platinum);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease, transform 0.2s ease;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+}
+
+.detail-page__icon-btn:hover:not(:disabled) {
+    color: var(--color-primary);
+    
+}
+
+.detail-page__icon-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.detail-page__trailer-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 4000;
+    background: rgba(0, 0, 0, 0.9);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.detail-page__trailer-modal {
+    position: relative;
+    max-width: 1200px;
     width: 100%;
-    max-width: 800px;
+}
+
+.detail-page__trailer-close {
+    position: absolute;
+    top: -40px;
+    right: 0;
+    background: transparent;
+    border: none;
+    color: var(--color-platinum);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    transition: color 0.2s ease;
+}
+
+.detail-page__trailer-close:hover {
+    color: var(--color-primary);
 }
 
 .detail-page__trailer-iframe {
@@ -1677,8 +1829,24 @@ html, body {
     padding: 0.8rem 0;
 }
 
-.detail-page__cast-section {
-    margin-top: 1rem;
+
+.detail-page__cast-toggle {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--color-platinum);
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    width: 100%;
+}
+
+.detail-page__cast-toggle:hover {
+    background: rgba(133, 138, 227, 0.15);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
 }
 
 .detail-page__cast-list {
@@ -1740,37 +1908,77 @@ html, body {
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 16px;
     padding: 1.5rem;
-    max-height: calc(100vh - 8rem);
-    overflow-y: auto;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 .detail-page__episodes-header {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     margin-bottom: 1rem;
     gap: 1rem;
 }
 
+.detail-page__season-nav {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--color-platinum);
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    height: 44px;
+}
+
+.detail-page__season-nav:hover:not(:disabled) {
+    background: rgba(133, 138, 227, 0.15);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+
+.detail-page__season-nav:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
 .detail-page__season-select {
-    padding: 0.5rem 1rem;
+    padding: 0.6rem 1.2rem;
     background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 8px;
     color: var(--color-platinum);
     font-size: 0.9rem;
+    font-weight: 500;
     cursor: pointer;
     outline: none;
+    transition: all 0.2s ease;
+    height: 44px;
 }
 
 .detail-page__season-select:focus {
     border-color: var(--color-primary);
+    background: rgba(255, 255, 255, 0.12);
+}
+
+.detail-page__season-select option {
+    background: rgba(15, 15, 20, 0.98);
+    color: var(--color-platinum);
+    padding: 0.5rem;
 }
 
 .detail-page__episode-list {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
+    flex: 1;
+    overflow-y: auto;
 }
 
 .detail-page__episode-card {
@@ -1782,16 +1990,23 @@ html, body {
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
+    margin-right: 10px;
 }
 
-.detail-page__episode-card:hover:not(.unreleased) {
+.detail-page__episode-card:hover:not(.unreleased):not(.watched) {
     background: rgba(133, 138, 227, 0.1);
     border-color: rgba(133, 138, 227, 0.3);
-    transform: translateX(4px);
+}
+
+.detail-page__episode-card.watched:hover {
+    background: rgba(104, 255, 174, 0.25);
+    border-color: rgba(104, 255, 174, 0.7);
 }
 
 .detail-page__episode-card.watched {
-    opacity: 0.7;
+    background: rgba(104, 255, 174, 0.15);
+    border-color: rgba(104, 255, 174, 0.5);
+    opacity: 1;
 }
 
 .detail-page__episode-card.unreleased {
@@ -1801,6 +2016,7 @@ html, body {
 
 .detail-page__episode-still {
     width: 120px;
+    height: 100%;
     flex-shrink: 0;
     border-radius: 8px;
     overflow: hidden;
@@ -1841,11 +2057,6 @@ html, body {
     font-size: 0.75rem;
 }
 
-.detail-page__episode-check.checked {
-    background: #68ffae;
-    color: var(--color-black);
-}
-
 .detail-page__episode-details strong {
     font-size: 0.95rem;
     color: var(--color-platinum);
@@ -1864,6 +2075,43 @@ html, body {
     gap: 0.75rem;
     font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.4);
+}
+
+.detail-page__episode-ellipsis-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.detail-page__episode-ellipsis-btn:hover {
+    color: var(--color-primary);
+}
+
+.detail-page__episodes-more-btn {
+    background: rgba(133, 138, 227, 0.1);
+    border: 1px solid rgba(133, 138, 227, 0.3);
+    color: var(--color-primary);
+    padding: 0.6rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    align-self: center;
+    margin-top: 0.5rem;
+}
+
+.detail-page__episodes-more-btn:hover {
+    background: rgba(133, 138, 227, 0.2);
+    border-color: var(--color-primary);
+    transform: translateY(-1px);
 }
 
 /* Person Detail Page */
@@ -2332,7 +2580,7 @@ html, body {
 
 @media (max-width: 480px) {
     .detail-page__content {
-        padding: 1.5rem 1rem;
+        padding: 0 1.5rem;
     }
 
     .detail-page__title {
@@ -3570,6 +3818,35 @@ button:focus-visible {
     transform: scale(1.1);
 }
 
+.media-card__icon-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: transparent;
+    border: none;
+    color: var(--color-platinum);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: color 0.2s ease, transform 0.15s ease;
+    font-size: 1rem;
+}
+
+
+
+.media-card__icon-btn:hover {
+    color: var(--color-primary);
+}
+
+.media-card__icon-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .media-card__check-icon {
     background: rgba(104,255,174,0.15);
     border: 1px solid rgba(104,255,174,0.3);
@@ -4097,6 +4374,23 @@ button:focus-visible {
     font-size: 0.7rem;
     color: rgba(255,255,255,0.35);
     margin-top: 0.15rem;
+}
+
+.media-detail-episode-ellipsis-btn {
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.media-detail-episode-ellipsis-btn:hover {
+    color: var(--color-primary);
 }
 
 @media (max-width: 768px) {
@@ -4955,6 +5249,111 @@ button:focus-visible {
 
 @keyframes progressFixSpin {
     to { transform: rotate(360deg); }
+}
+
+/* Episode Detail Page */
+.detail-page__main--episode {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.detail-page__episode-header {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.detail-page__episode-info-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.detail-page__episode-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-platinum);
+    margin: 0;
+}
+
+.detail-page__episode-name {
+    font-size: 1.2rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0;
+}
+
+.detail-page__episode-watch-btn {
+    background: rgba(104, 255, 174, 0.1);
+    border: 1px solid rgba(104, 255, 174, 0.3);
+    color: #68ffae;
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    align-self: flex-start;
+}
+
+.detail-page__episode-watch-btn:hover {
+    background: rgba(104, 255, 174, 0.2);
+    border-color: #68ffae;
+    transform: translateY(-1px);
+}
+
+.detail-page__episode-watch-btn.watched {
+    background: #68ffae;
+    color: var(--color-black);
+}
+
+.detail-page__episode-watch-btn.watched:hover {
+    background: rgba(104, 255, 174, 0.8);
+}
+
+.detail-page__episode-overview {
+    background: rgba(15, 15, 20, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.detail-page__episode-overview h4 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-platinum);
+    margin: 0 0 0.75rem 0;
+}
+
+.detail-page__episode-overview p {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+}
+
+.detail-page__back-btn {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--color-platinum);
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.detail-page__back-btn:hover {
+    background: rgba(133, 138, 227, 0.15);
+    border-color: var(--color-primary);
+    color: var(--color-primary);
 }
 
 /* Summary errors */

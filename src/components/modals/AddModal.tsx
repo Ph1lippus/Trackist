@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../../services/supabaseClient'
 import { getTVDetails, getTVSeasonDetails, imageUrl } from '../../services/tmdbService'
+import { saveAllEpisodesForShow } from '../../services/watchlistService'
 import type { TMDBResult, WatchlistItem } from '../../types'
 
 interface AddModalProps {
@@ -102,18 +103,27 @@ const AddModal: React.FC<AddModalProps> = ({ item, onClose, onAdd, onAddWatchlis
             overview: item.overview,
             release_date: item.release_date || item.first_air_date,
             vote_average: item.vote_average,
+            total_seasons: item.number_of_seasons || 1,
+            total_episodes: item.number_of_episodes || 0,
+            current_season: 1,
+            current_episode: 0,
+            last_season_number: item.number_of_seasons || 1,
+            last_season_check: new Date().toISOString(),
             status: 'watching'
         }).select().single()
 
         if (error) {
             alert('Error: ' + error.message)
         } else if (data) {
+            // Save all episodes to watchlist_episodes table
+            await saveAllEpisodesForShow(item.id, data.id)
+            
             // Add selected episodes as watched
             const watchlistId = data.id
             const episodeInserts = Array.from(selectedEpisodes).map(key => {
                 const [season, epNum] = key.split('-').map(Number)
                 const ep = episodes.find(e => e.season_number === season && e.episode_number === epNum)
-                return supabase.from('watchlist_episodes').insert({
+                return supabase.from('watchlist_episodes').upsert({
                     watchlist_id: watchlistId,
                     season_number: season,
                     episode_number: epNum,
@@ -123,6 +133,8 @@ const AddModal: React.FC<AddModalProps> = ({ item, onClose, onAdd, onAddWatchlis
                     runtime: ep?.runtime,
                     watched: true,
                     watched_at: new Date().toISOString()
+                }, {
+                    onConflict: 'watchlist_id,season_number,episode_number'
                 })
             })
             await Promise.all(episodeInserts)

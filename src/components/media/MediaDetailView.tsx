@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../services/supabaseClient'
 import { getMovieDetails, getTVDetails, getTVSeasonDetails, imageUrl } from '../../services/tmdbService'
+import { saveAllEpisodesForShow } from '../../services/watchlistService'
 import EpisodeWatchModal from '../modals/EpisodeWatchModal'
 import type { TMDBResult, WatchlistItem, WatchlistEpisode } from '../../types'
 
@@ -272,22 +273,50 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({
                 return
             }
 
-            await supabase.from('watchlist_episodes').upsert({
-                watchlist_id: epWatchlistId,
-                season_number: episode.season_number,
-                episode_number: episode.episode_number,
-                tmdb_episode_id: episode.tmdb_episode_id,
-                title: episode.title,
-                still_path: episode.still_path,
-                overview: episode.overview,
-                vote_average: episode.vote_average,
-                air_date: episode.air_date,
-                runtime: episode.runtime,
-                watched: true,
-                watched_at: new Date().toISOString()
-            }, {
-                onConflict: 'watchlist_id,season_number,episode_number'
-            })
+            // Check if episode record exists in DB
+            const { data: existingEp } = await supabase
+                .from('watchlist_episodes')
+                .select('*')
+                .eq('watchlist_id', epWatchlistId)
+                .eq('season_number', episode.season_number)
+                .eq('episode_number', episode.episode_number)
+                .maybeSingle()
+
+            if (existingEp) {
+                // Mark as watched
+                const { error } = await supabase
+                    .from('watchlist_episodes')
+                    .update({
+                        watched: true,
+                        watched_at: new Date().toISOString(),
+                        tmdb_episode_id: episode.tmdb_episode_id,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', existingEp.id)
+
+                if (error) {
+                    console.error('Failed to update episode:', error)
+                    return
+                }
+            } else {
+                // Insert new record
+                await supabase.from('watchlist_episodes').upsert({
+                    watchlist_id: epWatchlistId,
+                    season_number: episode.season_number,
+                    episode_number: episode.episode_number,
+                    tmdb_episode_id: episode.tmdb_episode_id,
+                    title: episode.title,
+                    still_path: episode.still_path,
+                    overview: episode.overview,
+                    vote_average: episode.vote_average,
+                    air_date: episode.air_date,
+                    runtime: episode.runtime,
+                    watched: true,
+                    watched_at: new Date().toISOString()
+                }, {
+                    onConflict: 'watchlist_id,season_number,episode_number'
+                })
+            }
 
             setEpisodes(prev => prev.map(ep =>
                 ep.id === episode.id ? { ...ep, watched: true } : ep
@@ -313,21 +342,6 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({
         setEpisodeModal(null)
     }
 
-    const handleEpisodeClick = (episode: WatchlistEpisode) => {
-        const currentWatchlistId = watchlistId || (isWatchlistItem ? (item as WatchlistItem).id : null)
-        
-        if (!isInWatchlist && mode === 'browse') {
-            // First add to watchlist, then mark episode
-            handleAddToWatchlist().then(() => {
-                if (watchlistId) {
-                    setEpisodeModal({ watchlistId, episode })
-                }
-            })
-        } else if (!episode.watched && isEpisodeReleased(episode) && currentWatchlistId) {
-            setEpisodeModal({ watchlistId: currentWatchlistId, episode })
-        }
-    }
-
     const handleAddToWatchlist = async () => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) {
@@ -346,6 +360,12 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({
             overview: tmdbItem.overview,
             release_date: tmdbItem.release_date || tmdbItem.first_air_date,
             vote_average: tmdbItem.vote_average,
+            total_seasons: tmdbItem.number_of_seasons || 1,
+            total_episodes: tmdbItem.number_of_episodes || 0,
+            current_season: 1,
+            current_episode: 0,
+            last_season_number: tmdbItem.number_of_seasons || 1,
+            last_season_check: new Date().toISOString(),
             status: 'watching'
         }).select().single()
 
@@ -354,6 +374,8 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({
         } else if (data) {
             setWatchlistId(data.id)
             onAddWatchlistItem?.(data)
+            // Save all episodes to watchlist_episodes table
+            await saveAllEpisodesForShow(tmdbItem.id, data.id)
         }
     }
 
@@ -627,7 +649,6 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({
                                                     ? "modal-episode-item"
                                                     : `media-detail-episode-card ${ep.watched ? 'watched' : ''} ${!isEpisodeReleased(ep) ? 'unreleased' : ''}`
                                                 }
-                                                onClick={() => isBrowseMode ? undefined : (isEpisodeReleased(ep) ? handleEpisodeClick(ep) : undefined)}
                                                 style={isBrowseMode ? {} : (!isEpisodeReleased(ep) ? { cursor: 'not-allowed', opacity: 0.6 } : {})}
                                             >
                                                 {isBrowseMode ? (
@@ -646,7 +667,14 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({
                                                                 <img src={imageUrl(ep.still_path) || ''} alt={ep.title || `Episode ${ep.episode_number}`} />
                                                             </div>
                                                         )}
-                                                        <div className="media-detail-episode-info">
+                                                        <div className="media-detail-episode-info" onClick={() => {
+                                                            if (isEpisodeReleased(ep)) {
+                                                                const currentWatchlistId = watchlistId || (isWatchlistItem ? (item as WatchlistItem).id : null)
+                                                                if (currentWatchlistId) {
+                                                                    markEpisodeWatched(currentWatchlistId, ep, false)
+                                                                }
+                                                            }
+                                                        }}>
                                                             <div className="media-detail-episode-number">
                                                                 <div className={`media-detail-episode-check ${ep.watched ? 'checked' : ''}`}>
                                                                     {ep.watched && <span>✓</span>}
@@ -663,6 +691,16 @@ const MediaDetailView: React.FC<MediaDetailViewProps> = ({
                                                                 </div>
                                                             </div>
                                                         </div>
+                                                        <button 
+                                                            className="media-detail-episode-ellipsis-btn"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                window.open(`/tv/${tmdbId}/season/${ep.season_number}/episode/${ep.episode_number}`, '_blank')
+                                                            }}
+                                                            title="View episode details"
+                                                        >
+                                                            <i className="fa-solid fa-ellipsis"></i>
+                                                        </button>
                                                     </>
                                                 )}
                                             </div>

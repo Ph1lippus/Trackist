@@ -61,6 +61,15 @@ const TVShows: React.FC = () => {
         fetchWatchlist().catch(() => {})
     }, [fetchWatchlist])
 
+    // Restore scroll position on mount
+    useEffect(() => {
+        const savedPosition = sessionStorage.getItem('scrollPosition')
+        if (savedPosition) {
+            window.scrollTo(0, parseInt(savedPosition))
+            sessionStorage.removeItem('scrollPosition')
+        }
+    }, [])
+
     // Listen for watchlist-refresh event from the Fix Progress modal
     useEffect(() => {
         const handleRefresh = () => {

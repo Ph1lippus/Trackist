@@ -1,17 +1,22 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../services/supabaseClient';
 import ProgressFixModal from '../modals/ProgressFixModal';
 
 const Navbar: React.FC = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const [user, setUser] = useState<User | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
     const [closing, setClosing] = useState(false);
     const [showFixModal, setShowFixModal] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
+
+    const isDetailPage = location.pathname.match(/^\/(movie|tv|person)\/\d+$/) || 
+                          location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/);
+    const showBackButton = Boolean(isDetailPage);
 
     useEffect(() => {
         // Get initial session
@@ -77,6 +82,27 @@ const Navbar: React.FC = () => {
     return (
         <nav className="navbar-brand-row" aria-label="Main navigation">
             <div className="container navbar-inner">
+                <div className="navbar-left">
+                    {showBackButton && (
+                        <i
+                            className="fa-solid fa-chevron-left navbar-back-btn"
+                            onClick={() => {
+                                sessionStorage.setItem('scrollPosition', window.scrollY.toString());
+                                navigate(-1);
+                            }}
+                            role="button"
+                            tabIndex={0}
+                            aria-label="Go back"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    sessionStorage.setItem('scrollPosition', window.scrollY.toString());
+                                    navigate(-1);
+                                }
+                            }}
+                        />
+                    )}
+                </div>
                 <div className="navbar-brand-centered">
                     <NavLink className="navbar-brand" to="/">Track1st</NavLink>
                 </div>

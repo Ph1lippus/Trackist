@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
-import { getTVDetails, getTVSeasonDetails, imageUrl } from '../services/tmdbService'
+import { imageUrl } from '../services/tmdbService'
 import type { WatchlistItem, WatchlistEpisode } from '../types'
-import MediaDetailView from '../components/media/MediaDetailView'
 
 interface UpcomingItem {
     id: string
@@ -15,9 +15,9 @@ interface UpcomingItem {
 }
 
 const Upcoming: React.FC = () => {
+    const navigate = useNavigate()
     const [upcomingItems, setUpcomingItems] = useState<UpcomingItem[]>([])
     const [loading, setLoading] = useState(true)
-    const [selectedItem, setSelectedItem] = useState<WatchlistItem | null>(null)
     const [currentMonth, setCurrentMonth] = useState(new Date())
     const [showAllEpisodes, setShowAllEpisodes] = useState<{dateKey: string, items: UpcomingItem[]} | null>(null)
 
@@ -29,25 +29,58 @@ const Upcoming: React.FC = () => {
                 return
             }
 
-            const { data, error } = await supabase
+            // Check if any shows need a season check (stale check > 6 hours ago)
+            // Only check shows that have last_season_number set
+            const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
+            const { data: staleShows } = await supabase
+                .from('watchlist')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('media_type', 'tv')
+                .not('last_season_number', 'is', null)
+                .or(`last_season_check.is.null,last_season_check.lt.${sixHoursAgo}`)
+                .limit(1)
+
+
+            // If there are stale shows, trigger the Edge Function to check for new seasons
+            if (staleShows && staleShows.length > 0) {
+                try {
+                    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim()
+                    const { data: { session } } = await supabase.auth.getSession()
+
+                    if (session?.access_token) {
+                        fetch(`${supabaseUrl}/functions/v1/check-new-seasons`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${session.access_token}`
+                            },
+                            body: JSON.stringify({ userId: user.id })
+                        }).catch(err => {
+                            console.error('Failed to trigger season check:', err)
+                        })
+                    }
+                } catch (err) {
+                    console.error('Failed to trigger season check:', err)
+                }
+            }
+
+            const today = new Date()
+            today.setHours(0, 0, 0, 0)
+
+            const items: UpcomingItem[] = []
+
+            // Fetch upcoming movies from watchlist
+            const { data: movies, error: movieError } = await supabase
                 .from('watchlist')
                 .select('*')
                 .eq('user_id', user.id)
-                .order('added_at', { ascending: true })
+                .eq('media_type', 'movie')
+                .gte('release_date', today.toISOString().split('T')[0])
 
-            if (!error && data) {
-                const today = new Date()
-                today.setHours(0, 0, 0, 0)
-
-                const items: UpcomingItem[] = []
-                
-                // Separate TV/Anime and Movies
-                const tvItems = data.filter(i => i.media_type !== 'movie')
-                const movieItems = data.filter(i => i.media_type === 'movie')
-
-                // Handle Movies
-                movieItems.forEach(item => {
-                    if (item.release_date && new Date(item.release_date) >= today) {
+            if (!movieError && movies) {
+                movies.forEach(item => {
+                    if (item.release_date) {
                         items.push({
                             id: item.id,
                             title: item.title,
@@ -58,80 +91,75 @@ const Upcoming: React.FC = () => {
                         })
                     }
                 })
-                
-                // Fetch all show details in parallel for TV/Anime
-                const showDetailsPromises = tvItems.map(async (item) => {
-                    if (!item.tmdb_id) return null
-                    try {
-                        const details = await getTVDetails(item.tmdb_id)
-                        return { item, details }
-                    } catch (err) {
-                        console.error(`Failed to load show ${item.title}:`, err)
-                        return null
-                    }
-                })
-                
-                const showResults = await Promise.all(showDetailsPromises)
-                
-                // Fetch all seasons in parallel for each show
-                const seasonPromises = showResults.flatMap((result) => {
-                    if (!result || !result.details.seasons) return []
-                    const { item, details } = result
-                    // Only check recent and future seasons to save on API calls
-                    // If it's a "planning" or "watching" show, we care about upcoming episodes
-                    return details.seasons
-                        .filter((s: { season_number: number }) => s.season_number > 0)
-                        .map(async (season: { season_number: number }) => {
-                            try {
-                                const seasonData = await getTVSeasonDetails(item.tmdb_id, season.season_number)
-                                return { item, season, seasonData }
-                            } catch (err) {
-                                console.error(`Failed to load season ${season.season_number}:`, err)
-                                return null
-                            }
-                        })
-                })
-                
-                const seasonResults = await Promise.all(seasonPromises)
-                
-                // Process episodes
-                for (const result of seasonResults) {
-                    if (!result || !result.seasonData.episodes) continue
-                    const { item, season, seasonData } = result
-                    
-                    for (const ep of seasonData.episodes) {
-                        if (ep.air_date && new Date(ep.air_date) >= today) {
-                            items.push({
-                                id: `${item.id}-${season.season_number}-${ep.episode_number}`,
-                                title: item.title,
-                                poster_path: item.poster_path || null,
-                                type: 'episode',
-                                date: ep.air_date,
-                                item,
-                                episode: {
-                                    id: `${item.id}-${season.season_number}-${ep.episode_number}`,
-                                    watchlist_id: item.id,
-                                    season_number: season.season_number,
-                                    episode_number: ep.episode_number,
-                                    title: ep.name,
-                                    still_path: ep.still_path,
-                                    overview: ep.overview,
-                                    vote_average: ep.vote_average,
-                                    air_date: ep.air_date,
-                                    runtime: ep.runtime,
-                                    watched: false,
-                                    created_at: new Date().toISOString(),
-                                    updated_at: new Date().toISOString()
-                                }
-                            })
-                        }
-                    }
-                }
-                
-                // Sort items by date
-                items.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-                setUpcomingItems(items)
             }
+
+            // Fetch unwatched episodes from the latest season of each TV show
+            // We query watchlist_episodes joined with watchlist to get show info
+            const { data: episodes, error: episodeError } = await supabase
+                .from('watchlist_episodes')
+                .select(`
+                    *,
+                    watchlist!inner (
+                        id,
+                        user_id,
+                        media_type,
+                        tmdb_id,
+                        title,
+                        poster_path,
+                        last_season_number
+                    )
+                `)
+                .eq('watchlist.user_id', user.id)
+                .eq('watchlist.media_type', 'tv')
+                .eq('watched', false)
+                .not('air_date', 'is', null)
+                .gte('air_date', today.toISOString().split('T')[0])
+                .order('air_date', { ascending: false })
+
+            if (!episodeError && episodes) {
+                episodes.forEach(ep => {
+                    items.push({
+                        id: `${ep.watchlist_id}-${ep.season_number}-${ep.episode_number}`,
+                        title: ep.watchlist.title,
+                        poster_path: ep.watchlist.poster_path || null,
+                        type: 'episode',
+                        date: ep.air_date || '',
+                        item: {
+                            id: ep.watchlist.id,
+                            user_id: ep.watchlist.user_id,
+                            media_type: ep.watchlist.media_type as 'tv' | 'anime',
+                            tmdb_id: ep.watchlist.tmdb_id,
+                            title: ep.watchlist.title,
+                            poster_path: ep.watchlist.poster_path,
+                            added_at: '',
+                            updated_at: '',
+                            status: 'watching'
+                        },
+                        episode: {
+                            id: ep.id,
+                            watchlist_id: ep.watchlist_id,
+                            season_number: ep.season_number,
+                            episode_number: ep.episode_number,
+                            tmdb_episode_id: ep.tmdb_episode_id,
+                            title: ep.title,
+                            still_path: ep.still_path,
+                            overview: ep.overview,
+                            vote_average: ep.vote_average,
+                            air_date: ep.air_date,
+                            runtime: ep.runtime,
+                            watched: ep.watched,
+                            watched_at: ep.watched_at,
+                            created_at: ep.created_at,
+                            updated_at: ep.updated_at
+                        }
+                    })
+                })
+            }
+
+            // Sort items by date (newest first)
+            items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+
+            setUpcomingItems(items)
             setLoading(false)
         }
         fetchUpcoming()
@@ -141,10 +169,13 @@ const Upcoming: React.FC = () => {
         if (!upcoming.date) return groups
         const date = new Date(upcoming.date)
         const key = date.toISOString().split('T')[0]
-        if (!groups[key]) {
-            groups[key] = []
+        // Only include items in the current month being viewed
+        if (date.getMonth() === currentMonth.getMonth() && date.getFullYear() === currentMonth.getFullYear()) {
+            if (!groups[key]) {
+                groups[key] = []
+            }
+            groups[key].push(upcoming)
         }
-        groups[key].push(upcoming)
         return groups
     }, {} as Record<string, UpcomingItem[]>)
 
@@ -170,18 +201,27 @@ const Upcoming: React.FC = () => {
 
     const navigateMonth = (direction: number) => {
         setCurrentMonth(prev => {
-            const newDate = new Date(prev)
-            newDate.setMonth(newDate.getMonth() + direction)
+            const year = prev.getFullYear()
+            const month = prev.getMonth()
+            const newDate = new Date(year, month + direction, 1)
+            const now = new Date()
+            // Don't allow navigating to months before current month
+            if (newDate.getFullYear() < now.getFullYear() || 
+                (newDate.getFullYear() === now.getFullYear() && newDate.getMonth() < now.getMonth())) {
+                return prev
+            }
             return newDate
         })
     }
 
+    const canGoBack = () => {
+        const now = new Date()
+        return currentMonth.getFullYear() > now.getFullYear() || 
+               (currentMonth.getFullYear() === now.getFullYear() && currentMonth.getMonth() > now.getMonth())
+    }
+
     const calendarDays = getDaysInMonth(currentMonth)
     const monthName = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-
-    const refreshItems = () => {
-        window.location.reload()
-    }
 
     if (loading) return (
         <section className="dashboard-page">
@@ -201,6 +241,8 @@ const Upcoming: React.FC = () => {
                         className="calendar-nav-btn-inline"
                         onClick={() => navigateMonth(-1)}
                         title="Previous month"
+                        disabled={!canGoBack()}
+                        style={{ opacity: canGoBack() ? 1 : 0.3, cursor: canGoBack() ? 'pointer' : 'not-allowed' }}
                     >
                         <i className="fas fa-chevron-left"></i>
                     </button>
@@ -222,7 +264,7 @@ const Upcoming: React.FC = () => {
                         ))}
                         {calendarDays.map((day, index) => {
                             if (!day) return <div key={`empty-${index}`} className="calendar-day calendar-day--empty" />
-                            
+
                             const dateKey = day.toISOString().split('T')[0]
                             const dayItems = groupedItems[dateKey] || []
                             const isToday = new Date().toDateString() === day.toDateString()
@@ -244,7 +286,13 @@ const Upcoming: React.FC = () => {
                                             <div 
                                                 key={item.id}
                                                 className="calendar-episode"
-                                                onClick={() => setSelectedItem(item.item)}
+                                                onClick={() => {
+                                                    if (item.type === 'movie') {
+                                                        navigate(`/movie/${item.item.tmdb_id}`)
+                                                    } else {
+                                                        navigate(`/tv/${item.item.tmdb_id}`)
+                                                    }
+                                                }}
                                                 style={{ 
                                                     marginLeft: idx > 0 ? '-32px' : '0',
                                                     position: 'relative',
@@ -291,15 +339,6 @@ const Upcoming: React.FC = () => {
                     </main>
                 </div>
 
-                {selectedItem && (
-                    <MediaDetailView
-                        item={selectedItem}
-                        mode={selectedItem.media_type === 'movie' ? 'browse' : 'watchlist'}
-                        onClose={() => setSelectedItem(null)}
-                        onUpdate={refreshItems}
-                    />
-                )}
-
                 {showAllEpisodes && (
                     <div className="modal-overlay" onClick={() => setShowAllEpisodes(null)}>
                         <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -334,7 +373,11 @@ const Upcoming: React.FC = () => {
                                             transition: 'all 0.2s ease'
                                         }}
                                         onClick={() => {
-                                            setSelectedItem(item.item)
+                                            if (item.type === 'movie') {
+                                                navigate(`/movie/${item.item.tmdb_id}`)
+                                            } else {
+                                                navigate(`/tv/${item.item.tmdb_id}`)
+                                            }
                                             setShowAllEpisodes(null)
                                         }}
                                         onMouseEnter={(e) => {
