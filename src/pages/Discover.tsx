@@ -1,13 +1,15 @@
-    import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { searchMulti, searchPerson, getPopularMovies, getTrendingMovies, getTopRatedMovies, getPopularTV, getTrendingTV, getTopRatedTV, getPersonMovies, getPersonTV, getPopularPeople } from '../services/tmdbService'
-import { saveAllEpisodesForShow } from '../services/watchlistService'
 import type { TMDBResult } from '../types'
 import MediaCard from '../components/media/MediaCard'
+import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso'
+import { useScrollRestoration } from '../hooks/useScrollRestoration'
 
 type ResultItem = TMDBResult
 
 const Discover: React.FC = () => {
+    const { clearScrollPosition } = useScrollRestoration()
     // Initialize state from sessionStorage if available
     const getInitialState = () => {
         try {
@@ -45,7 +47,7 @@ const Discover: React.FC = () => {
     const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set())
     const isRestoringStateRef = useRef(initialState.page > 1)
 
-    const sentinelRef = useRef<HTMLDivElement>(null)
+    const virtuosoRef = useRef<VirtuosoHandle | null>(null)
     const fetchingRef = useRef(false)
 
     useEffect(() => {
@@ -69,11 +71,26 @@ const Discover: React.FC = () => {
         const scrollPosition = sessionStorage.getItem('scrollPosition')
         if (scrollPosition) {
             setTimeout(() => {
-                window.scrollTo(0, parseInt(scrollPosition))
+                if (virtuosoRef.current) {
+                    virtuosoRef.current.scrollToIndex({
+                        index: Math.floor(parseInt(scrollPosition) / 100),
+                        behavior: 'auto'
+                    })
+                }
                 sessionStorage.removeItem('scrollPosition')
-            }, 100)
+            }, 300)
         }
     }, [])
+
+    // Clear scroll position when navigating to detail page
+    useEffect(() => {
+        const handleNavigation = () => {
+            clearScrollPosition()
+        }
+        
+        window.addEventListener('beforeunload', handleNavigation)
+        return () => window.removeEventListener('beforeunload', handleNavigation)
+    }, [clearScrollPosition])
 
     // Save state to sessionStorage when navigating away
     useEffect(() => {
@@ -212,19 +229,12 @@ const Discover: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [fetchTrigger, fetchData])
 
-    useEffect(() => {
-        const sentinel = sentinelRef.current
-        if (!sentinel) return
-
-        const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting && hasMore && !fetchingRef.current && !loadingMore) {
-                fetchData(page + 1)
-            }
-        }, { rootMargin: '400px' })
-
-        observer.observe(sentinel)
-        return () => observer.disconnect()
-    }, [hasMore, loadingMore, page, fetchData, loading])
+    // Virtuoso end reached handler for infinite scroll
+    const handleEndReached = useCallback(() => {
+        if (hasMore && !fetchingRef.current && !loadingMore) {
+            fetchData(page + 1)
+        }
+    }, [hasMore, loadingMore, page, fetchData])
 
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -266,10 +276,6 @@ const Discover: React.FC = () => {
         if (error) alert('Error: ' + error.message)
         else if (data) {
             setWatchlistIds(prev => new Set(prev).add(item.id))
-            // Save all episodes for TV shows
-            if (mediaTypeValue === 'tv' && data.id) {
-                await saveAllEpisodesForShow(item.id, data.id)
-            }
         }
     }
 
@@ -333,15 +339,23 @@ const Discover: React.FC = () => {
                 ) : (
                     <div className="watchlist-section">
                         <h3 className="watchlist-section__title">{getSectionTitle()}</h3>
-                        <div className="discover-grid">
-                            {results.map((item) => (
-                                item.media_type === 'person' ? (
-                                    <MediaCard
-                                        key={`${item.media_type}-${item.id}`}
-                                        item={item}
-                                        compact={true}
-                                    />
-                                ) : (
+                        <Virtuoso
+                            ref={virtuosoRef}
+                            totalCount={results.length}
+                            endReached={handleEndReached}
+                            overscan={200}
+                            itemContent={(index) => {
+                                const item = results[index]
+                                if (item.media_type === 'person') {
+                                    return (
+                                        <MediaCard
+                                            key={`${item.media_type}-${item.id}`}
+                                            item={item}
+                                            compact={true}
+                                        />
+                                    )
+                                }
+                                return (
                                     <MediaCard
                                         key={`${item.media_type}-${item.id}`}
                                         item={item}
@@ -349,17 +363,28 @@ const Discover: React.FC = () => {
                                         onAdd={handleAddBypass}
                                     />
                                 )
-                            ))}
-                        </div>
-                        <div ref={sentinelRef} style={{ height: '1px' }} />
-                        {loadingMore && (
-                            <div className="discover-loading"><div className="discover-spinner" /><p>Loading more...</p></div>
-                        )}
-                        {!hasMore && results.length > 0 && (
-                            <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: '0.85rem', padding: '1rem' }}>
-                                You've reached the end
-                            </p>
-                        )}
+                            }}
+                            components={{
+                                Footer: () => {
+                                    if (loadingMore) {
+                                        return (
+                                            <div className="discover-loading" style={{ padding: '2rem' }}>
+                                                <div className="discover-spinner" />
+                                                <p>Loading more...</p>
+                                            </div>
+                                        )
+                                    }
+                                    if (!hasMore && results.length > 0) {
+                                        return (
+                                            <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: '0.85rem', padding: '1rem' }}>
+                                                You've reached the end
+                                            </p>
+                                        )
+                                    }
+                                    return null
+                                }
+                            }}
+                        />
                     </div>
                 )}
             </div>

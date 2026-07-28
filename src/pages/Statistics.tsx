@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../services/supabaseClient'
+import { useCache } from '../hooks/useCache'
 import type { WatchlistItem } from '../types'
 
 interface Stats {
@@ -12,6 +13,7 @@ interface Stats {
     totalWatching: number
     totalPlanning: number
     totalDropped: number
+    totalCaughtUp: number
     totalEpisodesWatched: number
     totalWatchTimeMinutes: number
     averageRating: number | null
@@ -35,6 +37,7 @@ const formatMinutes = (minutes: number): string => {
 const Statistics: React.FC = () => {
     const [stats, setStats] = useState<Stats | null>(null)
     const [loading, setLoading] = useState(true)
+    const { stats: cacheStats, clearCache, isClearing } = useCache()
 
     useEffect(() => {
         const fetchStats = async () => {
@@ -57,22 +60,25 @@ const Statistics: React.FC = () => {
 
             const items = (watchlist || []) as WatchlistItem[]
 
-            // Fetch all watched episodes
-            // Get watched episode statistics for the current user
+            // Fetch episode statistics
             let totalEpisodesWatched = 0
             let totalWatchTimeMinutes = 0
 
-            const { data: episodeStats, error: episodeStatsError } = await supabase
-                .rpc('get_my_watch_statistics')
+            try {
+                const { data: episodeStats, error: episodeStatsError } = await supabase
+                    .rpc('get_my_watch_statistics')
 
-            if (episodeStatsError) {
-                console.error('Error fetching episode statistics:', episodeStatsError)
-            } else if (episodeStats && episodeStats.length > 0) {
-                totalEpisodesWatched = Number(episodeStats[0].total_episodes_watched)
-                totalWatchTimeMinutes = Number(episodeStats[0].total_watch_time_minutes)
+                if (episodeStatsError) {
+                    console.error('Error fetching episode statistics:', episodeStatsError)
+                } else if (episodeStats && episodeStats.length > 0) {
+                    totalEpisodesWatched = Number(episodeStats[0].total_episodes_watched)
+                    totalWatchTimeMinutes = Number(episodeStats[0].total_watch_time_minutes)
+                }
+            } catch (error) {
+                console.error('Failed to fetch episode statistics:', error)
             }
 
-            // Anime is counted as TV shows
+            // Separate movies and TV shows/anime
             const movies = items.filter(i => i.media_type === 'movie')
             const tvShows = items.filter(i => i.media_type === 'tv' || i.media_type === 'anime')
 
@@ -83,6 +89,7 @@ const Statistics: React.FC = () => {
             const totalWatching = items.filter(i => i.status === 'watching').length
             const totalPlanning = items.filter(i => i.status === 'planning').length
             const totalDropped = items.filter(i => i.status === 'dropped').length
+            const totalCaughtUp = items.filter(i => i.status === 'caught_up').length
 
             const ratedItems = items.filter(i => i.rating != null && i.rating > 0)
             const averageRating = ratedItems.length > 0
@@ -101,6 +108,7 @@ const Statistics: React.FC = () => {
                 { status: 'Completed', count: totalCompleted },
                 { status: 'Watching', count: totalWatching },
                 { status: 'Planning', count: totalPlanning },
+                { status: 'Caught Up', count: totalCaughtUp },
                 { status: 'Dropped', count: totalDropped },
             ]
             const mostCommonStatus = statusCounts.reduce((a, b) => a.count > b.count ? a : b).status
@@ -119,6 +127,7 @@ const Statistics: React.FC = () => {
                 totalWatching,
                 totalPlanning,
                 totalDropped,
+                totalCaughtUp,
                 totalEpisodesWatched,
                 totalWatchTimeMinutes,
                 averageRating,
@@ -133,6 +142,17 @@ const Statistics: React.FC = () => {
 
         fetchStats()
     }, [])
+
+    const statusData = useMemo(() => {
+        if (!stats) return []
+        return [
+            { label: 'Completed', count: stats.totalCompleted, color: '--color-mint' },
+            { label: 'Watching', count: stats.totalWatching, color: '#ffc107' },
+            { label: 'Planning', count: stats.totalPlanning, color: '#888' },
+            { label: 'Caught Up', count: stats.totalCaughtUp, color: '#0096ff' },
+            { label: 'Dropped', count: stats.totalDropped, color: '#f44336' },
+        ].filter(s => s.count > 0)
+    }, [stats])
 
     if (loading) return (
         <section className="dashboard-page">
@@ -156,7 +176,28 @@ const Statistics: React.FC = () => {
                 <div className="discover-section">
                     <div className="discover-section__head">
                         <h2>Statistics</h2>
-                        <span>Your tracking overview</span>
+                        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.4)' }}>
+                                Cache: {cacheStats.memoryEntries + cacheStats.dbEntries} entries
+                            </span>
+                            <button
+                                onClick={clearCache}
+                                disabled={isClearing || (cacheStats.memoryEntries === 0 && cacheStats.dbEntries === 0)}
+                                style={{
+                                    padding: '0.4rem 0.8rem',
+                                    border: '1px solid rgba(255,255,255,0.15)',
+                                    background: 'rgba(255,255,255,0.05)',
+                                    color: 'rgba(255,255,255,0.7)',
+                                    borderRadius: '8px',
+                                    cursor: isClearing ? 'not-allowed' : 'pointer',
+                                    fontSize: '0.8rem',
+                                    opacity: (cacheStats.memoryEntries === 0 && cacheStats.dbEntries === 0) ? 0.5 : 1,
+                                    transition: 'all 0.2s ease'
+                                }}
+                            >
+                                {isClearing ? 'Clearing...' : 'Clear Cache'}
+                            </button>
+                        </div>
                     </div>
 
                     {/* Summary Row */}
@@ -208,7 +249,7 @@ const Statistics: React.FC = () => {
                             </div>
                             <div className="breakdown-item">
                                 <div className="breakdown-item__header">
-                                    <span className="breakdown-item__label">TV Shows</span>
+                                    <span className="breakdown-item__label">TV Shows & Anime</span>
                                     <span className="breakdown-item__count">{stats.totalTvShows}</span>
                                 </div>
                                 <div className="breakdown-bar">
@@ -228,54 +269,23 @@ const Statistics: React.FC = () => {
                     <div className="statistics-section">
                         <h3 className="statistics-section__title">Status Breakdown</h3>
                         <div className="statistics-breakdown">
-                            <div className="breakdown-item">
-                                <div className="breakdown-item__header">
-                                    <span className="breakdown-item__label">Completed</span>
-                                    <span className="breakdown-item__count">{stats.totalCompleted}</span>
+                            {statusData.map(status => (
+                                <div className="breakdown-item" key={status.label}>
+                                    <div className="breakdown-item__header">
+                                        <span className="breakdown-item__label">{status.label}</span>
+                                        <span className="breakdown-item__count">{status.count}</span>
+                                    </div>
+                                    <div className="breakdown-bar">
+                                        <div
+                                            className="breakdown-bar__fill"
+                                            style={{
+                                                width: `${stats.totalItems > 0 ? (status.count / stats.totalItems) * 100 : 0}%`,
+                                                background: `linear-gradient(90deg, ${status.color}, ${status.color}dd)`
+                                            }}
+                                        />
+                                    </div>
                                 </div>
-                                <div className="breakdown-bar">
-                                    <div
-                                        className="breakdown-bar__fill breakdown-bar__fill--completed"
-                                        style={{ width: `${stats.totalItems > 0 ? (stats.totalCompleted / stats.totalItems) * 100 : 0}%` }}
-                                    />
-                                </div>
-                            </div>
-                            <div className="breakdown-item">
-                                <div className="breakdown-item__header">
-                                    <span className="breakdown-item__label">Watching</span>
-                                    <span className="breakdown-item__count">{stats.totalWatching}</span>
-                                </div>
-                                <div className="breakdown-bar">
-                                    <div
-                                        className="breakdown-bar__fill breakdown-bar__fill--watching"
-                                        style={{ width: `${stats.totalItems > 0 ? (stats.totalWatching / stats.totalItems) * 100 : 0}%` }}
-                                    />
-                                </div>
-                            </div>
-                            <div className="breakdown-item">
-                                <div className="breakdown-item__header">
-                                    <span className="breakdown-item__label">Planning</span>
-                                    <span className="breakdown-item__count">{stats.totalPlanning}</span>
-                                </div>
-                                <div className="breakdown-bar">
-                                    <div
-                                        className="breakdown-bar__fill breakdown-bar__fill--planning"
-                                        style={{ width: `${stats.totalItems > 0 ? (stats.totalPlanning / stats.totalItems) * 100 : 0}%` }}
-                                    />
-                                </div>
-                            </div>
-                            <div className="breakdown-item">
-                                <div className="breakdown-item__header">
-                                    <span className="breakdown-item__label">Dropped</span>
-                                    <span className="breakdown-item__count">{stats.totalDropped}</span>
-                                </div>
-                                <div className="breakdown-bar">
-                                    <div
-                                        className="breakdown-bar__fill breakdown-bar__fill--dropped"
-                                        style={{ width: `${stats.totalItems > 0 ? (stats.totalDropped / stats.totalItems) * 100 : 0}%` }}
-                                    />
-                                </div>
-                            </div>
+                            ))}
                         </div>
                     </div>
 

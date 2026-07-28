@@ -9,6 +9,7 @@ interface ConfirmModalProps {
     confirmText?: string
     cancelText?: string
     confirmColor?: 'primary' | 'success' | 'danger'
+    disabled?: boolean
 }
 
 const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -19,7 +20,8 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
     onCancel,
     confirmText = 'Confirm',
     cancelText = 'Cancel',
-    confirmColor = 'primary'
+    confirmColor = 'primary',
+    disabled = false
 }) => {
     if (!isOpen) return null
 
@@ -69,19 +71,26 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                     <button 
                         onClick={onConfirm} 
                         className="confirm-modal-btn confirm-modal-btn--confirm"
+                        disabled={disabled}
                         style={{
                             borderColor: colorStyle.borderColor,
-                            color: colorStyle.color
+                            color: colorStyle.color,
+                            opacity: disabled ? 0.5 : 1,
+                            cursor: disabled ? 'not-allowed' : 'pointer'
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = colorStyle.hoverBg
-                            e.currentTarget.style.borderColor = colorStyle.hoverBorder
-                            e.currentTarget.style.boxShadow = `0 0 8px ${colorStyle.hoverShadow}`
+                            if (!disabled) {
+                                e.currentTarget.style.background = colorStyle.hoverBg
+                                e.currentTarget.style.borderColor = colorStyle.hoverBorder
+                                e.currentTarget.style.boxShadow = `0 0 8px ${colorStyle.hoverShadow}`
+                            }
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
-                            e.currentTarget.style.borderColor = colorStyle.borderColor
-                            e.currentTarget.style.boxShadow = 'none'
+                            if (!disabled) {
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+                                e.currentTarget.style.borderColor = colorStyle.borderColor
+                                e.currentTarget.style.boxShadow = 'none'
+                            }
                         }}
                     >
                         {confirmText}

@@ -1,10 +1,12 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
-import { getTVDetails } from '../services/tmdbService'
+import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
+import { getWatchedEpisodeCount, markEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
+import { useScrollRestoration } from '../hooks/useScrollRestoration'
 
 interface TVShowWithProgress extends WatchlistItem {
     total_episodes_watched: number
@@ -12,10 +14,18 @@ interface TVShowWithProgress extends WatchlistItem {
 
 const TVShows: React.FC = () => {
     const navigate = useNavigate()
+    const { clearScrollPosition } = useScrollRestoration()
     const [items, setItems] = useState<TVShowWithProgress[]>([])
     const [loading, setLoading] = useState(true)
     const [searchQuery, setSearchQuery] = useState('')
     const [markAllModal, setMarkAllModal] = useState<WatchlistItem | null>(null)
+    const [markingAllWatched, setMarkingAllWatched] = useState(false)
+    const [showAllCurrentlyWatching, setShowAllCurrentlyWatching] = useState(false)
+    const [showAllNotStarted, setShowAllNotStarted] = useState(false)
+    const [showAllCompleted, setShowAllCompleted] = useState(false)
+
+    const CURRENTLY_WATCHING_ROW_COUNT = 2 // Show 2 rows for "Currently Watching"
+    const OTHER_SECTION_ROW_COUNT = 1 // Show 1 row for other sections
 
     const fetchWatchlist = useCallback(async () => {
         const { data: { user } } = await supabase.auth.getUser()
@@ -35,15 +45,37 @@ const TVShows: React.FC = () => {
             // Fetch episode progress for each TV show
             const itemsWithProgress: TVShowWithProgress[] = await Promise.all(
                 (data || []).map(async (item: WatchlistItem) => {
-                    let totalEpisodesWatched = 0
-                    const { data: episodeData } = await supabase
-                        .from('watchlist_episodes')
-                        .select('watched')
-                        .eq('watchlist_id', item.id)
-                        .eq('watched', true)
+                    const totalEpisodesWatched = await getWatchedEpisodeCount(item.id)
 
-                    if (episodeData) {
-                        totalEpisodesWatched = episodeData.length
+                    // For shows that appear completed, verify total_episodes from TMDB
+                    if (item.tmdb_id && (
+                        item.status === 'completed' || item.status === 'caught_up' ||
+                        (item.total_episodes !== undefined && 
+                         item.total_episodes > 0 && 
+                         totalEpisodesWatched >= item.total_episodes)
+                    )) {
+                        try {
+                            const details = await getTVDetails(item.tmdb_id)
+                            const currentTotalEpisodes = details.number_of_episodes || 0
+                            const storedTotalEpisodes = item.total_episodes || 0
+
+                            if (currentTotalEpisodes !== storedTotalEpisodes) {
+                                await supabase.from('watchlist').update({
+                                    total_episodes: currentTotalEpisodes,
+                                    total_seasons: details.number_of_seasons || item.total_seasons,
+                                    updated_at: new Date().toISOString()
+                                }).eq('id', item.id)
+
+                                return {
+                                    ...item,
+                                    total_episodes: currentTotalEpisodes,
+                                    total_seasons: details.number_of_seasons || item.total_seasons,
+                                    total_episodes_watched: totalEpisodesWatched
+                                }
+                            }
+                        } catch (err) {
+                            console.error(`Failed to verify total_episodes for ${item.title}:`, err)
+                        }
                     }
 
                     return {
@@ -58,7 +90,10 @@ const TVShows: React.FC = () => {
     }, [])
 
     useEffect(() => {
-        fetchWatchlist().catch(() => {})
+        const load = async () => {
+            await fetchWatchlist()
+        }
+        load().catch(() => {})
     }, [fetchWatchlist])
 
     // Restore scroll position on mount
@@ -69,6 +104,16 @@ const TVShows: React.FC = () => {
             sessionStorage.removeItem('scrollPosition')
         }
     }, [])
+
+    // Clear scroll position when navigating to detail page
+    useEffect(() => {
+        const handleNavigation = () => {
+            clearScrollPosition()
+        }
+        
+        window.addEventListener('beforeunload', handleNavigation)
+        return () => window.removeEventListener('beforeunload', handleNavigation)
+    }, [clearScrollPosition])
 
     // Listen for watchlist-refresh event from the Fix Progress modal
     useEffect(() => {
@@ -82,9 +127,8 @@ const TVShows: React.FC = () => {
     // Reset trigger: check if completed shows now have new episodes/seasons
     useEffect(() => {
         const checkForNewEpisodes = async () => {
-            // Check shows in the completed container (status='completed' OR all episodes watched)
             const completedShows = items.filter(
-                item => (item.status === 'completed' || (
+                item => (item.status === 'completed' || item.status === 'caught_up' || (
                     item.status === 'watching' && 
                     item.total_episodes !== undefined && 
                     item.total_episodes > 0 && 
@@ -107,7 +151,6 @@ const TVShows: React.FC = () => {
                     const currentTotalEpisodes = details.number_of_episodes || 0
                     const storedTotalEpisodes = show.total_episodes || 0
 
-                    // If TMDB now reports more episodes than when we stored it, move it back to watching
                     if (currentTotalEpisodes > storedTotalEpisodes) {
                         const index = updatedItems.findIndex(item => item.id === show.id)
                         if (index !== -1) {
@@ -120,7 +163,6 @@ const TVShows: React.FC = () => {
                         }
                         hasChanges = true
 
-                        // Also update the database to reflect the new status and totals
                         await supabase.from('watchlist').update({
                             status: 'watching',
                             total_episodes: currentTotalEpisodes,
@@ -138,19 +180,16 @@ const TVShows: React.FC = () => {
             }
         }
 
-        // Run check on initial load
         if (!loading && items.length > 0) {
             checkForNewEpisodes()
         }
 
-        // Also run check every 5 minutes to catch newly released episodes
         const interval = setInterval(() => {
             if (items.length > 0) {
                 checkForNewEpisodes()
             }
         }, 5 * 60 * 1000)
 
-        // Run check when page becomes visible (user switches back to this tab)
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'visible' && items.length > 0) {
                 checkForNewEpisodes()
@@ -184,13 +223,17 @@ const TVShows: React.FC = () => {
 
     // Container C: Completed - all available episodes watched
     const completed = filteredItems.filter(
-        item => (item.status === 'completed' || (
+        item => (item.status === 'completed' || item.status === 'caught_up' || (
             item.status === 'watching' && 
             item.total_episodes !== undefined && 
             item.total_episodes > 0 && 
             item.total_episodes_watched >= item.total_episodes
         ))
     )
+
+    const visibleCurrentlyWatching = currentlyWatching
+    const visibleNotStarted = notStarted
+    const visibleCompleted = completed
 
     const buildTmdbItem = (item: WatchlistItem): TMDBResult => ({
         id: item.tmdb_id as number,
@@ -201,15 +244,44 @@ const TVShows: React.FC = () => {
     })
 
     const handleMarkAllWatched = async (item: WatchlistItem) => {
-        // Mark the show as completed in the database
-        await supabase.from('watchlist').update({
-            status: 'completed',
-            completed_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-        }).eq('id', item.id)
+        if (!item.tmdb_id) return
 
-        setMarkAllModal(null)
-        fetchWatchlist()
+        setMarkingAllWatched(true)
+        try {
+            // Fetch all episodes from TMDB
+            const details = await getTVDetails(item.tmdb_id)
+            const seasonNumbers = (details.seasons || [])
+                .filter((s: { season_number: number }) => s.season_number > 0)
+                .map((s: { season_number: number }) => s.season_number)
+
+            // Insert all episodes into watchlist_episodes
+            for (const season of seasonNumbers) {
+                const seasonData = await getTVSeasonDetails(item.tmdb_id, season)
+                const episodes = seasonData.episodes || []
+                for (const ep of episodes) {
+                    await markEpisodeWatched(item.id, season, ep.episode_number, {
+                        tmdb_episode_id: ep.id,
+                        title: ep.name,
+                        still_path: ep.still_path,
+                        overview: ep.overview,
+                        vote_average: ep.vote_average,
+                        air_date: ep.air_date,
+                        runtime: ep.runtime
+                    })
+                }
+            }
+
+            // Check TMDB status and update accordingly (completed vs caught_up)
+            await checkAndUpdateCompleted(item.id, item.tmdb_id)
+
+            setMarkAllModal(null)
+            fetchWatchlist()
+        } catch (err) {
+            console.error('Failed to mark all episodes as watched:', err)
+            alert('Failed to mark all episodes as watched. Please try again.')
+        } finally {
+            setMarkingAllWatched(false)
+        }
     }
 
     if (loading) return (
@@ -222,7 +294,7 @@ const TVShows: React.FC = () => {
 
     return (
         <div className="discover-page">
-            <div className="discover-container">
+            <div className="discover-container" style={{ width: '85%' }}>
                 <div className="discover-search-wrap">
                     <form onSubmit={(e) => e.preventDefault()}>
                         <div className="discover-search-box">
@@ -242,10 +314,21 @@ const TVShows: React.FC = () => {
 
                 {/* Container A (Top): Currently Watching */}
                 <div className="watchlist-section">
-                    <h3 className="watchlist-section__title">Currently Watching</h3>
+                    <div className="watchlist-section__header">
+                        <h3 className="watchlist-section__title">Currently Watching</h3>
+                        {currentlyWatching.length > 0 && (
+                            <button 
+                                className="expand-icon-btn"
+                                onClick={() => setShowAllCurrentlyWatching(!showAllCurrentlyWatching)}
+                                aria-label={showAllCurrentlyWatching ? 'Show less' : 'Show more'}
+                            >
+                                <i className={`fa-solid fa-angle-${showAllCurrentlyWatching ? 'down' : 'up'}`}></i>
+                            </button>
+                        )}
+                    </div>
                     {currentlyWatching.length > 0 ? (
-                        <div className="discover-grid">
-                            {currentlyWatching.map((item) => (
+                        <div className={`discover-grid ${!showAllCurrentlyWatching ? 'watchlist-grid--collapsed' : ''}`} data-rows={CURRENTLY_WATCHING_ROW_COUNT}>
+                            {visibleCurrentlyWatching.map((item) => (
                                 <MediaCard
                                     key={item.id}
                                     item={buildTmdbItem(item)}
@@ -264,10 +347,21 @@ const TVShows: React.FC = () => {
 
                 {/* Container B (Middle): Watchlist (Not Started) */}
                 <div className="watchlist-section">
-                    <h3 className="watchlist-section__title">Watchlist (Not Started)</h3>
+                    <div className="watchlist-section__header">
+                        <h3 className="watchlist-section__title">Watchlist (Not Started)</h3>
+                        {notStarted.length > 0 && (
+                            <button 
+                                className="expand-icon-btn"
+                                onClick={() => setShowAllNotStarted(!showAllNotStarted)}
+                                aria-label={showAllNotStarted ? 'Show less' : 'Show more'}
+                            >
+                                <i className={`fa-solid fa-angle-${showAllNotStarted ? 'down' : 'up'}`}></i>
+                            </button>
+                        )}
+                    </div>
                     {notStarted.length > 0 ? (
-                        <div className="discover-grid">
-                            {notStarted.map((item) => (
+                        <div className={`discover-grid ${!showAllNotStarted ? 'watchlist-grid--collapsed' : ''}`} data-rows={OTHER_SECTION_ROW_COUNT}>
+                            {visibleNotStarted.map((item) => (
                                 <MediaCard
                                     key={item.id}
                                     item={buildTmdbItem(item)}
@@ -286,10 +380,21 @@ const TVShows: React.FC = () => {
 
                 {/* Container C (Bottom): Completed */}
                 <div className="watchlist-section">
-                    <h3 className="watchlist-section__title">Completed</h3>
+                    <div className="watchlist-section__header">
+                        <h3 className="watchlist-section__title">Completed</h3>
+                        {completed.length > 0 && (
+                            <button 
+                                className="expand-icon-btn"
+                                onClick={() => setShowAllCompleted(!showAllCompleted)}
+                                aria-label={showAllCompleted ? 'Show less' : 'Show more'}
+                            >
+                                <i className={`fa-solid fa-angle-${showAllCompleted ? 'down' : 'up'}`}></i>
+                            </button>
+                        )}
+                    </div>
                     {completed.length > 0 ? (
-                        <div className="discover-grid">
-                            {completed.map((item) => (
+                        <div className={`discover-grid ${!showAllCompleted ? 'watchlist-grid--collapsed' : ''}`} data-rows={OTHER_SECTION_ROW_COUNT}>
+                            {visibleCompleted.map((item) => (
                                 <MediaCard
                                     key={item.id}
                                     item={buildTmdbItem(item)}
@@ -320,10 +425,12 @@ const TVShows: React.FC = () => {
                     message={`Have you fully watched "${markAllModal.title}"? This will mark all episodes as watched and set the status to completed.`}
                     onConfirm={() => handleMarkAllWatched(markAllModal)}
                     onCancel={() => {
-                        setMarkAllModal(null)
-                        navigate(`/tv/${markAllModal.tmdb_id}`)
+                        if (!markingAllWatched) {
+                            setMarkAllModal(null)
+                            navigate(`/tv/${markAllModal.tmdb_id}`)
+                        }
                     }}
-                    confirmText="Yes, Fully Watched"
+                    confirmText={markingAllWatched ? 'Marking...' : 'Yes, Fully Watched'}
                     cancelText="Go to Details"
                     confirmColor="success"
                 />

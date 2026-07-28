@@ -139,7 +139,7 @@ const PersonDetail: React.FC = () => {
                 </div>
             </div>
 
-            <div className="detail-page__content">
+            <div className="detail-page__content_person">
                 <div className="detail-page__main">
                     <div className="detail-page__biography-section">
                         <h2 className="detail-page__section-title">Biography</h2>

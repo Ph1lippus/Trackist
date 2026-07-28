@@ -2,10 +2,24 @@ import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getFanartImages } from '../services/tmdbService'
-import { saveAllEpisodesForShow } from '../services/watchlistService'
+import { markEpisodeWatched, unmarkEpisodeWatched, getWatchedEpisodes, checkAndUpdateCaughtUp, checkAndUpdateCompleted, updateStatusToWatching } from '../services/watchlistService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import EpisodeChoiceModal from '../components/modals/EpisodeChoiceModal'
-import type { TMDBResult, WatchlistEpisode } from '../types'
+import type { TMDBResult } from '../types'
+
+interface LocalEpisode {
+    id: string
+    season_number: number
+    episode_number: number
+    tmdb_episode_id?: number
+    title?: string
+    still_path?: string
+    overview?: string
+    vote_average?: number
+    air_date?: string
+    runtime?: number
+    watched: boolean // local only - true if in watchlist_episodes table
+}
 
 const TVShowDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>()
@@ -17,32 +31,32 @@ const TVShowDetail: React.FC = () => {
     const [watchlistId, setWatchlistId] = useState<string | null>(null)
     const [adding, setAdding] = useState(false)
     const [seasons, setSeasons] = useState<number[]>([])
-    const [episodes, setEpisodes] = useState<WatchlistEpisode[]>([])
+    const [episodes, setEpisodes] = useState<LocalEpisode[]>([])
     const [selectedSeason, setSelectedSeason] = useState(1)
     const [showTrailer, setShowTrailer] = useState(false)
     const [trailerKey, setTrailerKey] = useState<string | null>(null)
     const [confirmModal, setConfirmModal] = useState<{
         isOpen: boolean
-        episode: WatchlistEpisode
+        episode: LocalEpisode
         markAll: boolean
         isUnwatch: boolean
     } | null>(null)
     const [removeEpisodeModal, setRemoveEpisodeModal] = useState<{
         isOpen: boolean
-        episode: WatchlistEpisode
+        episode: LocalEpisode
     } | null>(null)
     const [removeWatchlistModal, setRemoveWatchlistModal] = useState<{ isOpen: boolean } | null>(null)
     const [markWatchedModal, setMarkWatchedModal] = useState<{ isOpen: boolean; markAsWatched: boolean } | null>(null)
     const [addEpisodeModal, setAddEpisodeModal] = useState<{
         isOpen: boolean
-        episode: WatchlistEpisode
+        episode: LocalEpisode
     } | null>(null)
     const [showCast, setShowCast] = useState(false)
     const hasUserSelectedSeason = useRef(false)
     const episodeToScrollRef = useRef<string | null>(null)
     const episodeRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
 
-    const isEpisodeReleased = (episode: WatchlistEpisode): boolean => {
+    const isEpisodeReleased = (episode: LocalEpisode): boolean => {
         if (!episode.air_date) return true
         return new Date(episode.air_date) <= new Date()
     }
@@ -71,7 +85,14 @@ const TVShowDetail: React.FC = () => {
                 setFanartImages(fanart)
                 
                 if (data.seasons?.[0]) {
-                    setSelectedSeason(data.seasons[0].season_number)
+                    // Find the first valid season (not season 0, has episodes)
+                    const firstValidSeason = data.seasons.find(
+                        (s: { season_number: number; episode_count?: number }) => 
+                            s.season_number > 0 && (s.episode_count === undefined || s.episode_count > 0)
+                    )
+                    if (firstValidSeason) {
+                        setSelectedSeason(firstValidSeason.season_number)
+                    }
                 }
 
                 // Find trailer from videos
@@ -109,32 +130,35 @@ const TVShowDetail: React.FC = () => {
             if (!details || !id) return
             
             try {
+                // Filter out seasons with 0 episodes (empty seasons)
                 const seasonList = (details.seasons || [])
-                    .filter((s: { season_number: number }) => s.season_number > 0)
+                    .filter((s: { season_number: number; episode_count?: number }) => 
+                        s.season_number > 0 && (s.episode_count === undefined || s.episode_count > 0)
+                    )
                     .map((s: { season_number: number }) => s.season_number)
                 setSeasons(seasonList)
 
-                let watchedEpisodes: WatchlistEpisode[] = []
+                // Get watched episodes from DB (these are episodes in watchlist_episodes table)
+                let watchedEpisodeKeys = new Set<string>()
                 if (isInWatchlist && watchlistId) {
-                    const { data: we } = await supabase
-                        .from('watchlist_episodes')
-                        .select('*')
-                        .eq('watchlist_id', watchlistId)
-                        .eq('watched', true)
-                    watchedEpisodes = we || []
+                    const watchedEps = await getWatchedEpisodes(watchlistId)
+                    watchedEpisodeKeys = new Set(
+                        watchedEps.map(ep => `${ep.season_number}-${ep.episode_number}`)
+                    )
                 }
 
-                const allEpisodes: WatchlistEpisode[] = []
-                for (const season of seasonList) {
-                    const sData = await getTVSeasonDetails(Number(id), season)
+                // Fetch all seasons in parallel for better performance
+                const seasonPromises = seasonList.map(season => getTVSeasonDetails(Number(id), season))
+                const seasonDataArray = await Promise.all(seasonPromises)
+                
+                const allEpisodes: LocalEpisode[] = []
+                seasonDataArray.forEach((sData, index) => {
+                    const season = seasonList[index]
                     const sEpisodes = sData.episodes || []
                     for (const ep of sEpisodes) {
-                        const watched = watchedEpisodes?.find(we =>
-                            we.season_number === season && we.episode_number === ep.episode_number
-                        )
+                        const key = `${season}-${ep.episode_number}`
                         allEpisodes.push({
                             id: `${id}-${season}-${ep.episode_number}`,
-                            watchlist_id: watchlistId || '',
                             season_number: season,
                             episode_number: ep.episode_number,
                             tmdb_episode_id: ep.id,
@@ -144,46 +168,46 @@ const TVShowDetail: React.FC = () => {
                             vote_average: ep.vote_average,
                             air_date: ep.air_date,
                             runtime: ep.runtime,
-                            watched: !!watched,
-                            created_at: new Date().toISOString(),
-                            updated_at: new Date().toISOString()
+                            watched: watchedEpisodeKeys.has(key)
                         })
                     }
-                }
+                })
                 setEpisodes(allEpisodes)
 
                 // Find last watched episode and set season/scroll if user hasn't manually selected
-                if (!hasUserSelectedSeason.current && watchedEpisodes.length > 0) {
-                    const lastWatched = watchedEpisodes.reduce((latest, ep) => {
-                        if (!latest) return ep
-                        const latestDate = new Date(latest.watched_at || latest.created_at)
-                        const epDate = new Date(ep.watched_at || ep.created_at)
-                        return epDate > latestDate ? ep : latest
-                    })
-                    
-                    if (lastWatched) {
-                        // Check if all episodes in the last watched season are fully watched
-                        const episodesInSeason = allEpisodes.filter(ep => ep.season_number === lastWatched.season_number)
-                        const allReleasedInSeasonWatched = episodesInSeason.filter(ep => isEpisodeReleased(ep)).every(ep => ep.watched)
+                if (!hasUserSelectedSeason.current && watchedEpisodeKeys.size > 0) {
+                    // Find the last watched episode by looking at the highest season+episode
+                    const watchedEps = allEpisodes.filter(ep => ep.watched)
+                    if (watchedEps.length > 0) {
+                        const lastWatched = watchedEps.reduce((max, ep) => {
+                            if (ep.season_number > max.season_number) return ep
+                            if (ep.season_number === max.season_number && ep.episode_number > max.episode_number) return ep
+                            return max
+                        }, watchedEps[0])
                         
-                        let targetSeason = lastWatched.season_number
-                        let targetEpisode = lastWatched.episode_number
-                        
-                        // If all released episodes in the season are watched, go to next season
-                        if (allReleasedInSeasonWatched) {
-                            const nextSeasonIndex = seasonList.indexOf(lastWatched.season_number) + 1
-                            if (nextSeasonIndex < seasonList.length) {
-                                targetSeason = seasonList[nextSeasonIndex]
-                                // Find first episode of next season
-                                const firstEpisodeOfNextSeason = allEpisodes.find(ep => ep.season_number === targetSeason)
-                                if (firstEpisodeOfNextSeason) {
-                                    targetEpisode = firstEpisodeOfNextSeason.episode_number
+                        if (lastWatched) {
+                            // Check if all episodes in the last watched season are fully watched
+                            const episodesInSeason = allEpisodes.filter(ep => ep.season_number === lastWatched.season_number)
+                            const allReleasedInSeasonWatched = episodesInSeason.filter(ep => isEpisodeReleased(ep)).every(ep => ep.watched)
+                            
+                            let targetSeason = lastWatched.season_number
+                            let targetEpisode = lastWatched.episode_number
+                            
+                            // If all released episodes in the season are watched, go to next season
+                            if (allReleasedInSeasonWatched) {
+                                const nextSeasonIndex = seasonList.indexOf(lastWatched.season_number) + 1
+                                if (nextSeasonIndex < seasonList.length) {
+                                    targetSeason = seasonList[nextSeasonIndex]
+                                    const firstEpisodeOfNextSeason = allEpisodes.find(ep => ep.season_number === targetSeason)
+                                    if (firstEpisodeOfNextSeason) {
+                                        targetEpisode = firstEpisodeOfNextSeason.episode_number
+                                    }
                                 }
                             }
+                            
+                            setSelectedSeason(targetSeason)
+                            episodeToScrollRef.current = `${id}-${targetSeason}-${targetEpisode}`
                         }
-                        
-                        setSelectedSeason(targetSeason)
-                        episodeToScrollRef.current = `${id}-${targetSeason}-${targetEpisode}`
                     }
                 }
             } catch (err) {
@@ -202,7 +226,6 @@ const TVShowDetail: React.FC = () => {
 
         setAdding(true)
 
-        // Fetch total episodes and seasons from TMDB
         const totalEpisodes = details.number_of_episodes || 0
         const totalSeasons = details.number_of_seasons || 1
 
@@ -229,8 +252,6 @@ const TVShowDetail: React.FC = () => {
         } else if (data) {
             setIsInWatchlist(true)
             setWatchlistId(data.id)
-            // Save all episodes to watchlist_episodes table
-            await saveAllEpisodesForShow(details.id, data.id)
         }
         setAdding(false)
     }
@@ -263,14 +284,10 @@ const TVShowDetail: React.FC = () => {
         return releasedEpisodes.every(ep => ep.watched)
     }
 
-    const hasUnwatchedEpisodesBefore = (episode: WatchlistEpisode): boolean => {
+    const hasUnwatchedEpisodesBefore = (episode: LocalEpisode): boolean => {
         const episodesBefore = episodes.filter(ep => {
-            if (ep.season_number < episode.season_number) {
-                return true
-            }
-            if (ep.season_number === episode.season_number && ep.episode_number < episode.episode_number) {
-                return true
-            }
+            if (ep.season_number < episode.season_number) return true
+            if (ep.season_number === episode.season_number && ep.episode_number < episode.episode_number) return true
             return false
         })
         return episodesBefore.some(ep => !ep.watched)
@@ -278,20 +295,21 @@ const TVShowDetail: React.FC = () => {
 
     const getLogoUrl = (): string | null => {
         if (details?.images?.logos) {
-            const englishLogo = details.images.logos.find(
-                (logo: any) => logo.iso_639_1 === 'en'
+            const logos = details.images.logos as Array<{ file_path: string; iso_639_1?: string | null }>
+            const englishLogo = logos.find(
+                (logo) => logo.iso_639_1 === 'en'
             )
             if (englishLogo) {
                 return imageUrlOriginal(englishLogo.file_path)
             }
-            const noLanguageLogo = details.images.logos.find(
-                (logo: any) => logo.iso_639_1 === null || logo.iso_639_1 === ''
+            const noLanguageLogo = logos.find(
+                (logo) => logo.iso_639_1 === null || logo.iso_639_1 === ''
             )
             if (noLanguageLogo) {
                 return imageUrlOriginal(noLanguageLogo.file_path)
             }
-            if (details.images.logos.length > 0) {
-                return imageUrlOriginal(details.images.logos[0].file_path)
+            if (logos.length > 0) {
+                return imageUrlOriginal(logos[0].file_path)
             }
         }
         if (fanartImages?.hdtvlogo?.[0]?.url) {
@@ -299,7 +317,7 @@ const TVShowDetail: React.FC = () => {
         }
     
         return null
-        }  
+    }  
 
     const getAgeRating = (): string => {
         if (!details?.content_ratings?.results) return ''
@@ -322,8 +340,8 @@ const TVShowDetail: React.FC = () => {
         return providers.slice(0, 5)
     }
 
-    const markEpisodeWatched = async (episode: WatchlistEpisode, markAll: boolean) => {
-        if (!watchlistId) return
+    const markEpisodeAsWatched = async (episode: LocalEpisode, markAll: boolean) => {
+        if (!watchlistId || !details) return
 
         if (markAll) {
             // Mark all episodes up to and including this one
@@ -349,29 +367,33 @@ const TVShowDetail: React.FC = () => {
             }))
 
             try {
-                const updates = episodesToMark.map(ep =>
-                    supabase.from('watchlist_episodes').upsert({
-                        watchlist_id: watchlistId,
-                        season_number: ep.season_number,
-                        episode_number: ep.episode_number,
+                // Mark all episodes in parallel for better performance
+                const markPromises = episodesToMark.map(ep => 
+                    markEpisodeWatched(watchlistId, ep.season_number, ep.episode_number, {
                         tmdb_episode_id: ep.tmdb_episode_id,
                         title: ep.title,
                         still_path: ep.still_path,
                         overview: ep.overview,
                         vote_average: ep.vote_average,
                         air_date: ep.air_date,
-                        runtime: ep.runtime,
-                        watched: true,
-                        watched_at: new Date().toISOString()
-                    }, {
-                        onConflict: 'watchlist_id,season_number,episode_number'
+                        runtime: ep.runtime
                     })
                 )
-
-                await Promise.all(updates)
-                await recalculateWatchlistProgress()
+                await Promise.all(markPromises)
+                // Update status from 'planning' to 'watching' if needed
+                await updateStatusToWatching(watchlistId)
+                await checkAndUpdateCaughtUp(watchlistId, details.id)
+                await checkAndUpdateCompleted(watchlistId, details.id)
             } catch (err) {
                 console.error('Failed to mark episodes:', err)
+                // Revert on error
+                setEpisodes(prev => prev.map(ep => {
+                    const shouldMark = isEpisodeReleased(ep) && (
+                        ep.season_number < episode.season_number ||
+                        (ep.season_number === episode.season_number && ep.episode_number <= episode.episode_number)
+                    )
+                    return shouldMark ? { ...ep, watched: false } : ep
+                }))
                 return
             }
         } else {
@@ -390,80 +412,38 @@ const TVShowDetail: React.FC = () => {
             ))
 
             try {
-                // Check if episode record exists in DB
-                const { data: existingEp } = await supabase
-                    .from('watchlist_episodes')
-                    .select('*')
-                    .eq('watchlist_id', watchlistId)
-                    .eq('season_number', episode.season_number)
-                    .eq('episode_number', episode.episode_number)
-                    .maybeSingle()
-
                 if (newWatchedState) {
-                    if (existingEp) {
-                        // Update existing record
-                        const { error } = await supabase
-                            .from('watchlist_episodes')
-                            .update({
-                                watched: true,
-                                watched_at: new Date().toISOString(),
-                                updated_at: new Date().toISOString()
-                            })
-                            .eq('id', existingEp.id)
-
-                        if (error) {
-                            setEpisodes(prev => prev.map(ep => 
-                                ep.id === episode.id ? { ...ep, watched: !newWatchedState } : ep
-                            ))
-                            console.error('Failed to update episode:', error)
-                            return
-                        }
-                    } else {
-                        // Insert new record
-                        const { error } = await supabase
-                            .from('watchlist_episodes')
-                            .insert({
-                                watchlist_id: watchlistId,
-                                season_number: episode.season_number,
-                                episode_number: episode.episode_number,
-                                tmdb_episode_id: episode.tmdb_episode_id,
-                                title: episode.title,
-                                still_path: episode.still_path,
-                                overview: episode.overview,
-                                vote_average: episode.vote_average,
-                                air_date: episode.air_date,
-                                runtime: episode.runtime,
-                                watched: true,
-                                watched_at: new Date().toISOString()
-                            })
-
-                        if (error) {
-                            setEpisodes(prev => prev.map(ep => 
-                                ep.id === episode.id ? { ...ep, watched: !newWatchedState } : ep
-                            ))
-                            console.error('Failed to insert episode:', error)
-                            return
-                        }
+                    // INSERT into watchlist_episodes
+                    const success = await markEpisodeWatched(watchlistId, episode.season_number, episode.episode_number, {
+                        tmdb_episode_id: episode.tmdb_episode_id,
+                        title: episode.title,
+                        still_path: episode.still_path,
+                        overview: episode.overview,
+                        vote_average: episode.vote_average,
+                        air_date: episode.air_date,
+                        runtime: episode.runtime
+                    })
+                    if (!success) {
+                        setEpisodes(prev => prev.map(ep => 
+                            ep.id === episode.id ? { ...ep, watched: false } : ep
+                        ))
+                        return
                     }
                 } else {
-                    // Delete from database when unwatching
-                    if (existingEp) {
-                        const { error } = await supabase
-                            .from('watchlist_episodes')
-                            .delete()
-                            .eq('id', existingEp.id)
-
-                        if (error) {
-                            setEpisodes(prev => prev.map(ep => 
-                                ep.id === episode.id ? { ...ep, watched: !newWatchedState } : ep
-                            ))
-                            console.error('Failed to delete episode:', error)
-                            return
-                        }
+                    // DELETE from watchlist_episodes
+                    const success = await unmarkEpisodeWatched(watchlistId, episode.season_number, episode.episode_number)
+                    if (!success) {
+                        setEpisodes(prev => prev.map(ep => 
+                            ep.id === episode.id ? { ...ep, watched: true } : ep
+                        ))
+                        return
                     }
                 }
 
-                await recalculateWatchlistProgress()
+                // Update status from 'planning' to 'watching' if needed
+                await updateStatusToWatching(watchlistId)
+                await checkAndUpdateCaughtUp(watchlistId, details.id)
+                await checkAndUpdateCompleted(watchlistId, details.id)
             } catch (err) {
                 setEpisodes(prev => prev.map(ep => 
                     ep.id === episode.id ? { ...ep, watched: !newWatchedState } : ep
@@ -474,7 +454,7 @@ const TVShowDetail: React.FC = () => {
     }
 
     const handleRemoveEpisode = async () => {
-        if (!removeEpisodeModal || !watchlistId) return
+        if (!removeEpisodeModal || !watchlistId || !details) return
 
         const episode = removeEpisodeModal.episode
 
@@ -484,31 +464,16 @@ const TVShowDetail: React.FC = () => {
         ))
 
         try {
-            // Delete from database
-            const { data: existingEp } = await supabase
-                .from('watchlist_episodes')
-                .select('*')
-                .eq('watchlist_id', watchlistId)
-                .eq('season_number', episode.season_number)
-                .eq('episode_number', episode.episode_number)
-                .maybeSingle()
-
-            if (existingEp) {
-                const { error } = await supabase
-                    .from('watchlist_episodes')
-                    .delete()
-                    .eq('id', existingEp.id)
-
-                if (error) {
-                    setEpisodes(prev => prev.map(ep => 
-                        ep.id === episode.id ? { ...ep, watched: true } : ep
-                    ))
-                    console.error('Failed to delete episode:', error)
-                    return
-                }
+            const success = await unmarkEpisodeWatched(watchlistId, episode.season_number, episode.episode_number)
+            if (!success) {
+                setEpisodes(prev => prev.map(ep => 
+                    ep.id === episode.id ? { ...ep, watched: true } : ep
+                ))
+                return
             }
 
-            await recalculateWatchlistProgress()
+            await checkAndUpdateCaughtUp(watchlistId, details.id)
+            await checkAndUpdateCompleted(watchlistId, details.id)
         } catch (err) {
             setEpisodes(prev => prev.map(ep => 
                 ep.id === episode.id ? { ...ep, watched: true } : ep
@@ -517,73 +482,6 @@ const TVShowDetail: React.FC = () => {
         }
 
         setRemoveEpisodeModal(null)
-    }
-
-    const recalculateWatchlistProgress = async () => {
-        if (!watchlistId || !details) return
-
-        // Count total watched episodes from current state
-        let watchedCount = 0
-        for (const ep of episodes) {
-            if (ep.watchlist_id !== watchlistId) continue
-            if (ep.watched) watchedCount++
-        }
-
-        const totalEpisodes = details.number_of_episodes || 0
-        const totalSeasons = details.number_of_seasons || 1
-
-        // Determine new status
-        let newStatus: string
-        let newCurrentEpisode: number
-        let newCurrentSeason: number
-
-        if (totalEpisodes > 0 && watchedCount >= totalEpisodes) {
-            newStatus = 'completed'
-            newCurrentEpisode = totalEpisodes
-            const watchedEps = episodes.filter(ep => ep.watched)
-            if (watchedEps.length > 0) {
-                const lastWatched = watchedEps.reduce((max, ep) =>
-                    ep.season_number > max.season_number ? ep : max
-                , watchedEps[0])
-                newCurrentSeason = lastWatched.season_number
-            } else {
-                newCurrentSeason = 1
-            }
-        } else if (watchedCount > 0) {
-            newStatus = 'watching'
-            newCurrentEpisode = watchedCount
-            const watchedEps = episodes.filter(ep => ep.watched)
-            if (watchedEps.length > 0) {
-                const lastWatched = watchedEps.reduce((max, ep) =>
-                    ep.season_number > max.season_number ? ep : max
-                , watchedEps[0])
-                newCurrentSeason = lastWatched.season_number
-            } else {
-                newCurrentSeason = 1
-            }
-        } else {
-            newStatus = 'watching'
-            newCurrentEpisode = 0
-            newCurrentSeason = 1
-        }
-
-
-        const { error } = await supabase
-            .from('watchlist')
-            .update({
-                total_episodes: totalEpisodes,
-                total_seasons: totalSeasons,
-                current_episode: newCurrentEpisode,
-                current_season: newCurrentSeason,
-                status: newStatus,
-                completed_at: newStatus === 'completed' ? new Date().toISOString() : null,
-                updated_at: new Date().toISOString()
-            })
-            .eq('id', watchlistId)
-
-        if (error) {
-            console.error('Failed to update watchlist progress:', error)
-        }
     }
 
     const filteredEpisodes = episodes.filter(ep => ep.season_number === selectedSeason)
@@ -610,7 +508,11 @@ const TVShowDetail: React.FC = () => {
     const title = details.name || 'Untitled'
     const firstYear = details.first_air_date?.slice(0, 4) || ''
     const lastYear = details.last_air_date?.slice(0, 4) || ''
-    const year = details.status === 'Ended' && lastYear && lastYear !== firstYear ? `${firstYear}-${lastYear}` : firstYear
+    const year = firstYear
+    ? (details.status === 'Ended'
+        ? (lastYear && lastYear !== firstYear ? `${firstYear}-${lastYear}` : firstYear)
+        : `${firstYear}-`)
+    : ''
     const rating = details.vote_average?.toFixed(1)
     const ageRating = getAgeRating()
     const overview = details.overview || 'No description available.'
@@ -623,6 +525,9 @@ const TVShowDetail: React.FC = () => {
             return 0
         })
     const providers = getProviders()
+
+    // Count seasons that actually have episodes for display
+    const displaySeasonCount = seasons.length
 
     return (
         <div className="detail-page detail-page--no-scroll">
@@ -648,7 +553,7 @@ const TVShowDetail: React.FC = () => {
                             <div className="detail-page__meta">
                                 {year && <span className="detail-page__year">{year}</span>}
                                 {rating && <span className="detail-page__rating">★ {rating}</span>}
-                                {details.number_of_seasons && <span className="detail-page__seasons">{details.number_of_seasons} Seasons</span>}
+                                {displaySeasonCount > 0 && <span className="detail-page__seasons">{displaySeasonCount} Seasons</span>}
                                 {ageRating && <span className="detail-page__age-rating">{ageRating}</span>}
                             </div>
 
@@ -711,36 +616,24 @@ const TVShowDetail: React.FC = () => {
                                             className="detail-page__icon-btn"
                                             onClick={async () => {
                                                 await handleAddToWatchlist()
-                                                if (watchlistId) {
-                                                    // Mark all episodes as watched
-                                                    const releasedEpisodes = episodes.filter(ep => isEpisodeReleased(ep))
-                                                    for (const ep of releasedEpisodes) {
-                                                        await supabase.from('watchlist_episodes').upsert({
-                                                            watchlist_id: watchlistId,
-                                                            season_number: ep.season_number,
-                                                            episode_number: ep.episode_number,
+                                                if (watchlistId && details) {
+                                                    // Mark ALL episodes as watched (not just released) - parallel execution
+                                                    const markPromises = episodes.map(ep => 
+                                                        markEpisodeWatched(watchlistId, ep.season_number, ep.episode_number, {
                                                             tmdb_episode_id: ep.tmdb_episode_id,
                                                             title: ep.title,
                                                             still_path: ep.still_path,
                                                             overview: ep.overview,
                                                             vote_average: ep.vote_average,
                                                             air_date: ep.air_date,
-                                                            runtime: ep.runtime,
-                                                            watched: true,
-                                                            watched_at: new Date().toISOString()
-                                                        }, {
-                                                            onConflict: 'watchlist_id,season_number,episode_number'
+                                                            runtime: ep.runtime
                                                         })
-                                                    }
-                                                    // Update watchlist status to completed
-                                                    await supabase.from('watchlist').update({
-                                                        status: 'completed',
-                                                        completed_at: new Date().toISOString()
-                                                    }).eq('id', watchlistId)
+                                                    )
+                                                    await Promise.all(markPromises)
+                                                    // Check TMDB status: if ended -> completed, if still airing -> caught_up
+                                                    await checkAndUpdateCompleted(watchlistId, details.id)
                                                     // Refresh episodes
-                                                    setEpisodes(prev => prev.map(ep => 
-                                                        isEpisodeReleased(ep) ? { ...ep, watched: true } : ep
-                                                    ))
+                                                    setEpisodes(prev => prev.map(ep => ({ ...ep, watched: true })))
                                                 }
                                             }}
                                             disabled={adding}
@@ -883,52 +776,11 @@ const TVShowDetail: React.FC = () => {
                                                 if (!ep.watched && hasUnwatchedEpisodesBefore(ep)) {
                                                     setAddEpisodeModal({ isOpen: true, episode: ep })
                                                 } else if (!ep.watched) {
-                                                    // Force mark as watched
-                                                    setEpisodes(prev => prev.map(e => 
-                                                        e.id === ep.id ? { ...e, watched: true } : e
-                                                    ))
-                                                    // Directly insert/update in DB
-                                                    supabase
-                                                        .from('watchlist_episodes')
-                                                        .select('*')
-                                                        .eq('watchlist_id', watchlistId)
-                                                        .eq('season_number', ep.season_number)
-                                                        .eq('episode_number', ep.episode_number)
-                                                        .maybeSingle()
-                                                        .then(({ data: existingEp }) => {
-                                                            if (existingEp) {
-                                                                supabase
-                                                                    .from('watchlist_episodes')
-                                                                    .update({
-                                                                        watched: true,
-                                                                        watched_at: new Date().toISOString(),
-                                                                        updated_at: new Date().toISOString()
-                                                                    })
-                                                                    .eq('id', existingEp.id)
-                                                                    .then(() => recalculateWatchlistProgress())
-                                                            } else {
-                                                                supabase
-                                                                    .from('watchlist_episodes')
-                                                                    .insert({
-                                                                        watchlist_id: watchlistId,
-                                                                        season_number: ep.season_number,
-                                                                        episode_number: ep.episode_number,
-                                                                        tmdb_episode_id: ep.tmdb_episode_id,
-                                                                        title: ep.title,
-                                                                        still_path: ep.still_path,
-                                                                        overview: ep.overview,
-                                                                        vote_average: ep.vote_average,
-                                                                        air_date: ep.air_date,
-                                                                        runtime: ep.runtime,
-                                                                        watched: true,
-                                                                        watched_at: new Date().toISOString()
-                                                                    })
-                                                                    .then(() => recalculateWatchlistProgress())
-                                                            }
-                                                        })
+                                                    // Mark as watched
+                                                    markEpisodeAsWatched(ep, false)
                                                 } else {
                                                     // Toggle to unwatched
-                                                    markEpisodeWatched(ep, false)
+                                                    markEpisodeAsWatched(ep, false)
                                                 }
                                             }
                                         }}>
@@ -972,9 +824,9 @@ const TVShowDetail: React.FC = () => {
                     }
                     onConfirm={() => {
                         if (confirmModal.isUnwatch) {
-                            markEpisodeWatched(confirmModal.episode, false)
+                            markEpisodeAsWatched(confirmModal.episode, false)
                         } else {
-                            markEpisodeWatched(confirmModal.episode, confirmModal.markAll)
+                            markEpisodeAsWatched(confirmModal.episode, confirmModal.markAll)
                         }
                         setConfirmModal(null)
                     }}
@@ -1016,49 +868,37 @@ const TVShowDetail: React.FC = () => {
                     title={markWatchedModal.markAsWatched ? 'Mark as Watched' : 'Mark as Unwatched'}
                     message={markWatchedModal.markAsWatched ? 'Are you sure you want to mark all released episodes as watched?' : 'Are you sure you want to mark all episodes as unwatched?'}
                     onConfirm={async () => {
-                        if (!watchlistId) return
+                        if (!watchlistId || !details) return
                         const newWatchedState = markWatchedModal.markAsWatched
                         
-                        // Mark/unmark all released episodes
+                        // Mark/unmark all released episodes in parallel
                         const releasedEpisodes = episodes.filter(ep => isEpisodeReleased(ep))
-                        for (const ep of releasedEpisodes) {
-                            await supabase.from('watchlist_episodes').upsert({
-                                watchlist_id: watchlistId,
-                                season_number: ep.season_number,
-                                episode_number: ep.episode_number,
-                                tmdb_episode_id: ep.tmdb_episode_id,
-                                title: ep.title,
-                                still_path: ep.still_path,
-                                overview: ep.overview,
-                                vote_average: ep.vote_average,
-                                air_date: ep.air_date,
-                                runtime: ep.runtime,
-                                watched: newWatchedState,
-                                watched_at: newWatchedState ? new Date().toISOString() : null
-                            }, {
-                                onConflict: 'watchlist_id,season_number,episode_number'
-                            })
-                        }
+                        const markPromises = releasedEpisodes.map(ep => {
+                            if (newWatchedState) {
+                                return markEpisodeWatched(watchlistId, ep.season_number, ep.episode_number, {
+                                    tmdb_episode_id: ep.tmdb_episode_id,
+                                    title: ep.title,
+                                    still_path: ep.still_path,
+                                    overview: ep.overview,
+                                    vote_average: ep.vote_average,
+                                    air_date: ep.air_date,
+                                    runtime: ep.runtime
+                                })
+                            } else {
+                                return unmarkEpisodeWatched(watchlistId, ep.season_number, ep.episode_number)
+                            }
+                        })
+                        await Promise.all(markPromises)
                         
-                        // Update watchlist status based on whether all episodes are watched
-                        const totalEpisodes = details?.number_of_episodes || 0
-                        const watchedCount = newWatchedState ? releasedEpisodes.length : 0
-                        let newStatus = 'watching'
-                        if (watchedCount >= totalEpisodes) {
-                            newStatus = 'completed'
-                        }
-                        
-                        await supabase.from('watchlist').update({
-                            status: newStatus,
-                            completed_at: newStatus === 'completed' ? new Date().toISOString() : null,
-                            updated_at: new Date().toISOString()
-                        }).eq('id', watchlistId)
+                        // Update status from 'planning' to 'watching' if needed
+                        await updateStatusToWatching(watchlistId)
+                        await checkAndUpdateCaughtUp(watchlistId, details.id)
+                        await checkAndUpdateCompleted(watchlistId, details.id)
                         
                         // Refresh episodes
                         setEpisodes(prev => prev.map(ep => 
                             isEpisodeReleased(ep) ? { ...ep, watched: newWatchedState } : ep
                         ))
-                        setDetails(prev => prev ? { ...prev, status: newStatus as any } : null)
                         setMarkWatchedModal(null)
                     }}
                     onCancel={() => setMarkWatchedModal(null)}
@@ -1073,11 +913,11 @@ const TVShowDetail: React.FC = () => {
                     title="Mark Episode as Watched"
                     message={`There are unwatched episodes before S${addEpisodeModal.episode.season_number}E${addEpisodeModal.episode.episode_number}. Do you want to mark only this episode or all episodes up to this one as watched?`}
                     onMarkAll={() => {
-                        markEpisodeWatched(addEpisodeModal.episode, true)
+                        markEpisodeAsWatched(addEpisodeModal.episode, true)
                         setAddEpisodeModal(null)
                     }}
                     onMarkOne={() => {
-                        markEpisodeWatched(addEpisodeModal.episode, false)
+                        markEpisodeAsWatched(addEpisodeModal.episode, false)
                         setAddEpisodeModal(null)
                     }}
                     onCancel={() => {

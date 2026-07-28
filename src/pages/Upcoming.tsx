@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
-import type { WatchlistItem, WatchlistEpisode } from '../types'
+import type { WatchlistItem } from '../types'
 
 interface UpcomingItem {
     id: string
@@ -11,7 +11,13 @@ interface UpcomingItem {
     type: 'episode' | 'movie'
     date: string
     item: WatchlistItem
-    episode?: WatchlistEpisode // Only for episodes
+    episode?: {
+        season_number: number
+        episode_number: number
+        tmdb_episode_id?: number
+        title?: string
+        still_path?: string
+    }
 }
 
 const Upcoming: React.FC = () => {
@@ -30,17 +36,15 @@ const Upcoming: React.FC = () => {
             }
 
             // Check if any shows need a season check (stale check > 6 hours ago)
-            // Only check shows that have last_season_number set
             const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
             const { data: staleShows } = await supabase
                 .from('watchlist')
-                .select('id')
+                .select('id, tmdb_id, last_season_number, last_season_check')
                 .eq('user_id', user.id)
                 .eq('media_type', 'tv')
                 .not('last_season_number', 'is', null)
                 .or(`last_season_check.is.null,last_season_check.lt.${sixHoursAgo}`)
                 .limit(1)
-
 
             // If there are stale shows, trigger the Edge Function to check for new seasons
             if (staleShows && staleShows.length > 0) {
@@ -67,6 +71,7 @@ const Upcoming: React.FC = () => {
 
             const today = new Date()
             today.setHours(0, 0, 0, 0)
+            const todayStr = today.toISOString().split('T')[0]
 
             const items: UpcomingItem[] = []
 
@@ -76,7 +81,7 @@ const Upcoming: React.FC = () => {
                 .select('*')
                 .eq('user_id', user.id)
                 .eq('media_type', 'movie')
-                .gte('release_date', today.toISOString().split('T')[0])
+                .gte('release_date', todayStr)
 
             if (!movieError && movies) {
                 movies.forEach(item => {
@@ -93,71 +98,82 @@ const Upcoming: React.FC = () => {
                 })
             }
 
-            // Fetch unwatched episodes from the latest season of each TV show
-            // We query watchlist_episodes joined with watchlist to get show info
-            const { data: episodes, error: episodeError } = await supabase
-                .from('watchlist_episodes')
-                .select(`
-                    *,
-                    watchlist!inner (
-                        id,
-                        user_id,
-                        media_type,
-                        tmdb_id,
-                        title,
-                        poster_path,
-                        last_season_number
-                    )
-                `)
-                .eq('watchlist.user_id', user.id)
-                .eq('watchlist.media_type', 'tv')
-                .eq('watched', false)
-                .not('air_date', 'is', null)
-                .gte('air_date', today.toISOString().split('T')[0])
-                .order('air_date', { ascending: false })
+            // Fetch all TV shows for the user to get their latest season info
+            const { data: tvShows, error: tvError } = await supabase
+                .from('watchlist')
+                .select('*')
+                .eq('user_id', user.id)
+                .eq('media_type', 'tv')
 
-            if (!episodeError && episodes) {
-                episodes.forEach(ep => {
-                    items.push({
-                        id: `${ep.watchlist_id}-${ep.season_number}-${ep.episode_number}`,
-                        title: ep.watchlist.title,
-                        poster_path: ep.watchlist.poster_path || null,
-                        type: 'episode',
-                        date: ep.air_date || '',
-                        item: {
-                            id: ep.watchlist.id,
-                            user_id: ep.watchlist.user_id,
-                            media_type: ep.watchlist.media_type as 'tv' | 'anime',
-                            tmdb_id: ep.watchlist.tmdb_id,
-                            title: ep.watchlist.title,
-                            poster_path: ep.watchlist.poster_path,
-                            added_at: '',
-                            updated_at: '',
-                            status: 'watching'
-                        },
-                        episode: {
-                            id: ep.id,
-                            watchlist_id: ep.watchlist_id,
-                            season_number: ep.season_number,
-                            episode_number: ep.episode_number,
-                            tmdb_episode_id: ep.tmdb_episode_id,
-                            title: ep.title,
-                            still_path: ep.still_path,
-                            overview: ep.overview,
-                            vote_average: ep.vote_average,
-                            air_date: ep.air_date,
-                            runtime: ep.runtime,
-                            watched: ep.watched,
-                            watched_at: ep.watched_at,
-                            created_at: ep.created_at,
-                            updated_at: ep.updated_at
+            if (!tvError && tvShows) {
+                // Process each show to find upcoming (unwatched, future) episodes
+                for (const show of tvShows) {
+                    if (!show.tmdb_id || !show.last_season_number) continue
+
+                    // Get the latest season number
+                    const latestSeason = show.last_season_number
+
+                    // Fetch season details from TMDB to get all episodes
+                    try {
+                        const response = await fetch(
+                            `https://api.themoviedb.org/3/tv/${show.tmdb_id}/season/${latestSeason}?api_key=${import.meta.env.VITE_TMDB_API_KEY}`
+                        )
+
+                        if (!response.ok) continue
+
+                        const seasonData = await response.json()
+                        const episodes = seasonData.episodes || []
+
+                        for (const ep of episodes) {
+                            // Only consider episodes with a future air date
+                            if (!ep.air_date || ep.air_date < todayStr) continue
+
+                            // Check if this episode is already watched (exists in watchlist_episodes)
+                            const { data: watchedEp } = await supabase
+                                .from('watchlist_episodes')
+                                .select('id')
+                                .eq('watchlist_id', show.id)
+                                .eq('season_number', latestSeason)
+                                .eq('episode_number', ep.episode_number)
+                                .maybeSingle()
+
+                            // If NOT watched (not in watchlist_episodes), it's upcoming
+                            if (!watchedEp) {
+                                items.push({
+                                    id: `${show.id}-${latestSeason}-${ep.episode_number}`,
+                                    title: show.title,
+                                    poster_path: show.poster_path || null,
+                                    type: 'episode',
+                                    date: ep.air_date,
+                                    item: {
+                                        id: show.id,
+                                        user_id: show.user_id,
+                                        media_type: 'tv',
+                                        tmdb_id: show.tmdb_id,
+                                        title: show.title,
+                                        poster_path: show.poster_path,
+                                        added_at: show.added_at,
+                                        updated_at: show.updated_at,
+                                        status: 'watching'
+                                    },
+                                    episode: {
+                                        season_number: latestSeason,
+                                        episode_number: ep.episode_number,
+                                        tmdb_episode_id: ep.id,
+                                        title: ep.name,
+                                        still_path: ep.still_path
+                                    }
+                                })
+                            }
                         }
-                    })
-                })
+                    } catch (err) {
+                        console.error(`Failed to fetch season details for ${show.title}:`, err)
+                    }
+                }
             }
 
-            // Sort items by date (newest first)
-            items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+            // Sort items by date (ascending - closest first)
+            items.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
 
             setUpcomingItems(items)
             setLoading(false)

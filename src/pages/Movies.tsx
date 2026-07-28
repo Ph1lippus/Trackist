@@ -3,10 +3,13 @@ import { supabase } from '../services/supabaseClient'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
+import { useScrollRestoration } from '../hooks/useScrollRestoration'
 
 const INITIAL_WATCHED_LIMIT = 8
+const WATCHLIST_ROW_COUNT = 2 
 
 const Movies: React.FC = () => {
+    const { clearScrollPosition } = useScrollRestoration()
     const [items, setItems] = useState<WatchlistItem[]>([])
     const [loading, setLoading] = useState(true)
     const [confirmModal, setConfirmModal] = useState<{
@@ -16,6 +19,8 @@ const Movies: React.FC = () => {
     } | null>(null)
     const [searchQuery, setSearchQuery] = useState('')
     const [watchedDisplayCount, setWatchedDisplayCount] = useState(INITIAL_WATCHED_LIMIT)
+    const [showAllWatchlist, setShowAllWatchlist] = useState(false)
+    const [showAllWatched, setShowAllWatched] = useState(false)
 
     const watchedSentinelRef = useRef<HTMLDivElement>(null)
 
@@ -40,14 +45,17 @@ const Movies: React.FC = () => {
             setLoading(false)
         }
         fetchWatchlist()
-        
-        // Restore scroll position
-        const savedPosition = sessionStorage.getItem('scrollPosition')
-        if (savedPosition) {
-            window.scrollTo(0, parseInt(savedPosition))
-            sessionStorage.removeItem('scrollPosition')
-        }
     }, [])
+
+    // Clear scroll position when navigating to detail page
+    useEffect(() => {
+        const handleNavigation = () => {
+            clearScrollPosition()
+        }
+        
+        window.addEventListener('beforeunload', handleNavigation)
+        return () => window.removeEventListener('beforeunload', handleNavigation)
+    }, [clearScrollPosition])
 
     const updateStatus = async (id: string, status: string) => {
         const updateData: Record<string, string> = { status, updated_at: new Date().toISOString() }
@@ -93,7 +101,8 @@ const Movies: React.FC = () => {
     const watchlistItems = filteredItems.filter(item => item.status === 'watching')
     const watchedItems = filteredItems.filter(item => item.status !== 'watching')
 
-    const visibleWatchedItems = watchedItems.slice(0, watchedDisplayCount)
+    const visibleWatchlistItems = watchlistItems
+    const visibleWatchedItems = watchedItems
     const hasMoreWatched = watchedDisplayCount < watchedItems.length
 
     // Infinite scroll observer for watched section
@@ -121,7 +130,7 @@ const Movies: React.FC = () => {
 
     return (
         <div className="discover-page">
-            <div className="discover-container">
+            <div className="discover-container" style={{ width: '85%' }}>
                 <div className="discover-search-wrap">
                     <form onSubmit={(e) => e.preventDefault()}>
                         <div className="discover-search-box">
@@ -141,10 +150,21 @@ const Movies: React.FC = () => {
 
                 {/* Container 1 (Top): Watchlist (to watch) */}
                 <div className="watchlist-section">
-                    <h3 className="watchlist-section__title">To Watch</h3>
+                    <div className="watchlist-section__header">
+                        <h3 className="watchlist-section__title">To Watch</h3>
+                        {watchlistItems.length > 0 && (
+                            <button 
+                                className="expand-icon-btn"
+                                onClick={() => setShowAllWatchlist(!showAllWatchlist)}
+                                aria-label={showAllWatchlist ? 'Show less' : 'Show more'}
+                            >
+                                <i className={`fa-solid fa-angle-${showAllWatchlist ? 'down' : 'up'}`}></i>
+                            </button>
+                        )}
+                    </div>
                     {watchlistItems.length > 0 ? (
-                        <div className="discover-grid">
-                            {watchlistItems.map((item) => {
+                        <div className={`discover-grid ${!showAllWatchlist ? 'watchlist-grid--collapsed' : ''}`} data-rows={WATCHLIST_ROW_COUNT}>
+                            {visibleWatchlistItems.map((item) => {
                                 const tmdbItem: TMDBResult = {
                                     id: item.tmdb_id as number,
                                     title: item.title,
@@ -170,12 +190,23 @@ const Movies: React.FC = () => {
                     )}
                 </div>
 
-                {/* Container 2 (Bottom): Already Watched with infinite scroll */}
+                {/* Container 2 (Bottom): Already Watched */}
                 <div className="watchlist-section">
-                    <h3 className="watchlist-section__title">Already Watched</h3>
+                    <div className="watchlist-section__header">
+                        <h3 className="watchlist-section__title">Already Watched</h3>
+                        {watchedItems.length > 0 && (
+                            <button 
+                                className="expand-icon-btn"
+                                onClick={() => setShowAllWatched(!showAllWatched)}
+                                aria-label={showAllWatched ? 'Show less' : 'Show more'}
+                            >
+                                <i className={`fa-solid fa-angle-${showAllWatched ? 'down' : 'up'}`}></i>
+                            </button>
+                        )}
+                    </div>
                     {visibleWatchedItems.length > 0 ? (
                         <>
-                            <div className="discover-grid watchlist-grid--watched">
+                            <div className={`discover-grid watchlist-grid--watched ${!showAllWatched ? 'watchlist-grid--collapsed' : ''}`} data-rows={1}>
                                 {visibleWatchedItems.map((item) => {
                                     const tmdbItem: TMDBResult = {
                                         id: item.tmdb_id as number,
@@ -195,7 +226,7 @@ const Movies: React.FC = () => {
                                     )
                                 })}
                             </div>
-                            {hasMoreWatched && (
+                            {hasMoreWatched && !showAllWatched && (
                                 <div ref={watchedSentinelRef} style={{ height: '1px' }} />
                             )}
                         </>

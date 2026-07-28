@@ -15,7 +15,7 @@ CREATE TABLE public.watchlist (
   total_episodes integer DEFAULT 0,
   current_season integer DEFAULT 1,
   current_episode integer DEFAULT 0,
-  status text DEFAULT 'planning'::text CHECK (status = ANY (ARRAY['planning'::text, 'watching'::text, 'completed'::text, 'dropped'::text])),
+  status text DEFAULT 'planning'::text CHECK (status = ANY (ARRAY['planning'::text, 'watching'::text, 'completed'::text, 'dropped'::text, 'caught_up'::text])),
   started_watching_at timestamp with time zone,
   completed_at timestamp with time zone,
   last_watched_at timestamp with time zone,
@@ -38,8 +38,6 @@ CREATE TABLE public.watchlist_episodes (
   vote_average real,
   air_date date,
   runtime integer,
-  watched boolean DEFAULT false,
-  watched_at timestamp with time zone,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT watchlist_episodes_pkey PRIMARY KEY (id),
@@ -82,20 +80,6 @@ CREATE TABLE public.list_items (
   CONSTRAINT list_items_pkey PRIMARY KEY (id),
   CONSTRAINT list_items_list_id_fkey FOREIGN KEY (list_id) REFERENCES public.lists(id)
 );
-CREATE TABLE public.viewing_history (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  media_type text NOT NULL CHECK (media_type = ANY (ARRAY['movie'::text, 'tv'::text, 'anime'::text])),
-  tmdb_id integer NOT NULL,
-  title text NOT NULL,
-  poster_path text,
-  watched_date date NOT NULL DEFAULT CURRENT_DATE,
-  list_item_id uuid,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT viewing_history_pkey PRIMARY KEY (id),
-  CONSTRAINT viewing_history_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
-  CONSTRAINT viewing_history_list_item_id_fkey FOREIGN KEY (list_item_id) REFERENCES public.list_items(id)
-);
 CREATE TABLE public.badges (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   name text NOT NULL,
@@ -106,15 +90,6 @@ CREATE TABLE public.badges (
   requirement_value integer NOT NULL,
   created_at timestamp with time zone DEFAULT now(),
   CONSTRAINT badges_pkey PRIMARY KEY (id)
-);
-CREATE TABLE public.user_badges (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  badge_id uuid NOT NULL,
-  earned_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT user_badges_pkey PRIMARY KEY (id),
-  CONSTRAINT user_badges_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
-  CONSTRAINT user_badges_badge_id_fkey FOREIGN KEY (badge_id) REFERENCES public.badges(id)
 );
 CREATE TABLE public.list_follows (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

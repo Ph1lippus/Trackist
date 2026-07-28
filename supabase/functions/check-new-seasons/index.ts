@@ -18,20 +18,6 @@ interface TMDBTVDetails {
   seasons: TMDBSeason[]
 }
 
-interface TMDBSeasonDetails {
-  episodes: Array<{
-    id: number
-    episode_number: number
-    season_number: number
-    name: string
-    still_path?: string
-    overview?: string
-    vote_average?: number
-    air_date?: string
-    runtime?: number
-  }>
-}
-
 serve(async (req) => {
   try {
     // Only allow POST requests
@@ -96,19 +82,24 @@ serve(async (req) => {
 
         const details: TMDBTVDetails = await tmdbResponse.json()
         const currentTotalSeasons = details.number_of_seasons || 1
-
-        // Always fetch the latest season's episodes to ensure data is current
-        const latestSeason = currentTotalSeasons
+        const storedLastSeason = show.last_season_number || 1
 
         // Update the watchlist with the current season number and check timestamp
+        const updates: Record<string, unknown> = {
+          last_season_number: currentTotalSeasons,
+          total_seasons: currentTotalSeasons,
+          last_season_check: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }
+
+        // If show was marked as 'completed' or 'caught_up' and TMDB has more seasons, move to 'watching'
+        if ((show.status === 'completed' || show.status === 'caught_up') && currentTotalSeasons > storedLastSeason) {
+          updates.status = 'watching'
+        }
+
         const { error: updateError } = await supabase
           .from('watchlist')
-          .update({
-            last_season_number: currentTotalSeasons,
-            total_seasons: currentTotalSeasons,
-            last_season_check: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          })
+          .update(updates)
           .eq('id', show.id)
 
         if (updateError) {
@@ -116,48 +107,7 @@ serve(async (req) => {
           continue
         }
 
-        // Fetch and save episodes for the latest season
-        const seasonResponse = await fetch(
-          `${TMDB_BASE_URL}/tv/${show.tmdb_id}/season/${latestSeason}?api_key=${TMDB_API_KEY}`
-        )
-
-        if (!seasonResponse.ok) {
-          errors++
-          continue
-        }
-
-        const seasonData: TMDBSeasonDetails = await seasonResponse.json()
-        const episodes = seasonData.episodes || []
-
-        for (const ep of episodes) {
-          await supabase
-            .from('watchlist_episodes')
-            .upsert({
-              watchlist_id: show.id,
-              season_number: latestSeason,
-              episode_number: ep.episode_number,
-              tmdb_episode_id: ep.id,
-              title: ep.name,
-              still_path: ep.still_path,
-              overview: ep.overview,
-              vote_average: ep.vote_average,
-              air_date: ep.air_date,
-              runtime: ep.runtime,
-              watched: false
-            }, {
-              onConflict: 'watchlist_id,season_number,episode_number'
-            })
-        }
-
         updated++
-
-        // If the show was completed, move it back to watching
-        if (show.status === 'completed') {
-          await supabase
-            .from('watchlist')
-            .update({ status: 'watching', updated_at: new Date().toISOString() })
-            .eq('id', show.id)
-        }
 
         // Small delay to avoid rate limiting
         await new Promise(resolve => setTimeout(resolve, 200))

@@ -6,6 +6,7 @@ const IMAGE_BASE_ORIGINAL = 'https://image.tmdb.org/t/p/original'
 const FANART_BASE = 'https://webservice.fanart.tv/v3'
 
 import type { TMDBResult } from '../types'
+import { getCachedOrFetch } from './cacheService'
 
 export const searchMulti = async (query: string): Promise<{ results: TMDBResult[] }> => {
     const res = await fetch(
@@ -75,13 +76,27 @@ export const getMovieDetails = async (id: number) => {
 }
 
 export const getTVDetails = async (id: number) => {
-    const res = await fetch(`${BASE_URL}/tv/${id}?api_key=${API_KEY}&append_to_response=credits,videos,aggregate_credits,images,watch/providers,content_ratings`)
-    return res.json()
+    return getCachedOrFetch(
+        'tv-details',
+        id,
+        async () => {
+            const res = await fetch(`${BASE_URL}/tv/${id}?api_key=${API_KEY}&append_to_response=credits,videos,aggregate_credits,images,watch/providers,content_ratings`)
+            return res.json()
+        },
+        { ttl: 6 * 60 * 60 * 1000 } // 6 hours
+    )
 }
 
 export const getTVSeasonDetails = async (tvId: number, seasonNumber: number) => {
-    const res = await fetch(`${BASE_URL}/tv/${tvId}/season/${seasonNumber}?api_key=${API_KEY}`)
-    return res.json()
+    return getCachedOrFetch(
+        'tv-season',
+        `${tvId}-${seasonNumber}`,
+        async () => {
+            const res = await fetch(`${BASE_URL}/tv/${tvId}/season/${seasonNumber}?api_key=${API_KEY}`)
+            return res.json()
+        },
+        { ttl: 6 * 60 * 60 * 1000 } // 6 hours
+    )
 }
 
 export const getTVSeasons = async (id: number, seasonNumber: number) => {
@@ -101,13 +116,20 @@ export const imageUrlOriginal = (path: string | null) => {
 
 export const getFanartImages = async (tmdbId: number, type: 'movies' | 'tv') => {
     if (!FANART_API_KEY) return null
-    try {
-        const res = await fetch(`${FANART_BASE}/${type}/${tmdbId}?api_key=${FANART_API_KEY}`)
-        if (!res.ok) return null
-        return res.json()
-    } catch {
-        return null
-    }
+    return getCachedOrFetch(
+        'fanart',
+        `${type}-${tmdbId}`,
+        async () => {
+            try {
+                const res = await fetch(`${FANART_BASE}/${type}/${tmdbId}?api_key=${FANART_API_KEY}`)
+                if (!res.ok) return null
+                return res.json()
+            } catch {
+                return null
+            }
+        },
+        { ttl: 24 * 60 * 60 * 1000 } // 24 hours
+    )
 }
 
 export const getPersonMovies = async (id: number): Promise<{ results: TMDBResult[] }> => {
