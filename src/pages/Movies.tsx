@@ -1,12 +1,11 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState } from 'react'
 import { supabase } from '../services/supabaseClient'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
 
-const INITIAL_WATCHED_LIMIT = 8
-const WATCHLIST_ROW_COUNT = 2 
+
 
 const Movies: React.FC = () => {
     const { clearScrollPosition } = useScrollRestoration()
@@ -18,11 +17,7 @@ const Movies: React.FC = () => {
         item: TMDBResult
     } | null>(null)
     const [searchQuery, setSearchQuery] = useState('')
-    const [watchedDisplayCount, setWatchedDisplayCount] = useState(INITIAL_WATCHED_LIMIT)
-    const [showAllWatchlist, setShowAllWatchlist] = useState(false)
-    const [showAllWatched, setShowAllWatched] = useState(false)
-
-    const watchedSentinelRef = useRef<HTMLDivElement>(null)
+    
 
     useEffect(() => {
         const fetchWatchlist = async () => {
@@ -103,22 +98,6 @@ const Movies: React.FC = () => {
 
     const visibleWatchlistItems = watchlistItems
     const visibleWatchedItems = watchedItems
-    const hasMoreWatched = watchedDisplayCount < watchedItems.length
-
-    // Infinite scroll observer for watched section
-    useEffect(() => {
-        const sentinel = watchedSentinelRef.current
-        if (!sentinel || !hasMoreWatched) return
-
-        const observer = new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting) {
-                setWatchedDisplayCount(prev => prev + INITIAL_WATCHED_LIMIT)
-            }
-        }, { rootMargin: '400px' })
-
-        observer.observe(sentinel)
-        return () => observer.disconnect()
-    }, [hasMoreWatched, watchedItems.length])
 
     if (loading) return (
         <section className="dashboard-page">
@@ -148,28 +127,17 @@ const Movies: React.FC = () => {
                     </form>
                 </div>
 
-                {/* Container 1 (Top): Watchlist (to watch) */}
                 <div className="watchlist-section">
                     <div className="watchlist-section__header">
                         <h3 className="watchlist-section__title">To Watch</h3>
-                        {watchlistItems.length > 0 && (
-                            <button 
-                                className="expand-icon-btn"
-                                onClick={() => setShowAllWatchlist(!showAllWatchlist)}
-                                aria-label={showAllWatchlist ? 'Show less' : 'Show more'}
-                            >
-                                <i className={`fa-solid fa-angle-${showAllWatchlist ? 'down' : 'up'}`}></i>
-                            </button>
-                        )}
                     </div>
                     {watchlistItems.length > 0 ? (
-                        <div className={`discover-grid ${!showAllWatchlist ? 'watchlist-grid--collapsed' : ''}`} data-rows={WATCHLIST_ROW_COUNT}>
+                        <div className={`discover-grid`}>
                             {visibleWatchlistItems.map((item) => {
                                 const tmdbItem: TMDBResult = {
                                     id: item.tmdb_id as number,
                                     title: item.title,
                                     poster_path: item.poster_path,
-                                    vote_average: item.vote_average,
                                     media_type: 'movie'
                                 }
                                 return (
@@ -194,25 +162,16 @@ const Movies: React.FC = () => {
                 <div className="watchlist-section">
                     <div className="watchlist-section__header">
                         <h3 className="watchlist-section__title">Already Watched</h3>
-                        {watchedItems.length > 0 && (
-                            <button 
-                                className="expand-icon-btn"
-                                onClick={() => setShowAllWatched(!showAllWatched)}
-                                aria-label={showAllWatched ? 'Show less' : 'Show more'}
-                            >
-                                <i className={`fa-solid fa-angle-${showAllWatched ? 'down' : 'up'}`}></i>
-                            </button>
-                        )}
+
                     </div>
                     {visibleWatchedItems.length > 0 ? (
                         <>
-                            <div className={`discover-grid watchlist-grid--watched ${!showAllWatched ? 'watchlist-grid--collapsed' : ''}`} data-rows={1}>
+                            <div className={`discover-grid watchlist-grid--watched}`} data-rows={1}>
                                 {visibleWatchedItems.map((item) => {
                                     const tmdbItem: TMDBResult = {
                                         id: item.tmdb_id as number,
                                         title: item.title,
                                         poster_path: item.poster_path,
-                                        vote_average: item.vote_average,
                                         media_type: 'movie'
                                     }
                                     return (
@@ -226,9 +185,6 @@ const Movies: React.FC = () => {
                                     )
                                 })}
                             </div>
-                            {hasMoreWatched && !showAllWatched && (
-                                <div ref={watchedSentinelRef} style={{ height: '1px' }} />
-                            )}
                         </>
                     ) : (
                         <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
