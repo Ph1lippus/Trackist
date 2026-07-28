@@ -327,7 +327,10 @@ const TVShows: React.FC = () => {
                         )}
                     </div>
                     {currentlyWatching.length > 0 ? (
-                        <div className={`discover-grid ${!showAllCurrentlyWatching ? 'watchlist-grid--collapsed' : ''}`} data-rows={CURRENTLY_WATCHING_ROW_COUNT}>
+                        <div 
+                            className={`discover-grid ${!showAllCurrentlyWatching ? 'watchlist-grid--collapsed' : ''}`}
+                            style={!showAllCurrentlyWatching ? { maxHeight: `${CURRENTLY_WATCHING_ROW_COUNT * 245}px` } : undefined}
+                        >
                             {visibleCurrentlyWatching.map((item) => (
                                 <MediaCard
                                     key={item.id}
@@ -360,7 +363,10 @@ const TVShows: React.FC = () => {
                         )}
                     </div>
                     {notStarted.length > 0 ? (
-                        <div className={`discover-grid ${!showAllNotStarted ? 'watchlist-grid--collapsed' : ''}`} data-rows={OTHER_SECTION_ROW_COUNT}>
+                        <div 
+                            className={`discover-grid ${!showAllNotStarted ? 'watchlist-grid--collapsed' : ''}`}
+                            style={!showAllNotStarted ? { maxHeight: `${OTHER_SECTION_ROW_COUNT * 245}px` } : undefined}
+                        >
                             {visibleNotStarted.map((item) => (
                                 <MediaCard
                                     key={item.id}
@@ -393,7 +399,10 @@ const TVShows: React.FC = () => {
                         )}
                     </div>
                     {completed.length > 0 ? (
-                        <div className={`discover-grid ${!showAllCompleted ? 'watchlist-grid--collapsed' : ''}`} data-rows={OTHER_SECTION_ROW_COUNT}>
+                        <div 
+                            className={`discover-grid ${!showAllCompleted ? 'watchlist-grid--collapsed' : ''}`}
+                            style={!showAllCompleted ? { maxHeight: `${OTHER_SECTION_ROW_COUNT * 245}px` } : undefined}
+                        >
                             {visibleCompleted.map((item) => (
                                 <MediaCard
                                     key={item.id}

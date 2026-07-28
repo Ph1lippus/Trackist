@@ -163,7 +163,10 @@ const Movies: React.FC = () => {
                         )}
                     </div>
                     {watchlistItems.length > 0 ? (
-                        <div className={`discover-grid ${!showAllWatchlist ? 'watchlist-grid--collapsed' : ''}`} data-rows={WATCHLIST_ROW_COUNT}>
+                        <div 
+                            className={`discover-grid ${!showAllWatchlist ? 'watchlist-grid--collapsed' : ''}`}
+                            style={!showAllWatchlist ? { maxHeight: `${WATCHLIST_ROW_COUNT * 245}px` } : undefined}
+                        >
                             {visibleWatchlistItems.map((item) => {
                                 const tmdbItem: TMDBResult = {
                                     id: item.tmdb_id as number,
@@ -205,9 +208,12 @@ const Movies: React.FC = () => {
                         )}
                     </div>
                     {visibleWatchedItems.length > 0 ? (
-                        <>
-                            <div className={`discover-grid watchlist-grid--watched ${!showAllWatched ? 'watchlist-grid--collapsed' : ''}`} data-rows={1}>
-                                {visibleWatchedItems.map((item) => {
+                            <>
+                                <div 
+                                    className={`discover-grid watchlist-grid--watched ${!showAllWatched ? 'watchlist-grid--collapsed' : ''}`}
+                                    style={!showAllWatched ? { maxHeight: `${1 * 245}px` } : undefined}
+                                >
+                                    {visibleWatchedItems.map((item) => {
                                     const tmdbItem: TMDBResult = {
                                         id: item.tmdb_id as number,
                                         title: item.title,
