@@ -12,6 +12,47 @@ export interface FixProgress {
 }
 
 /**
+ * Save all episodes for a TV show to the watchlist_episodes table.
+ * Called when a new show is added to the watchlist to pre-populate
+ * all episodes so users can mark individual episodes as watched.
+ */
+export const saveAllEpisodesForShow = async (tmdbId: number, watchlistId: string): Promise<void> => {
+    try {
+        const details = await getTVDetails(tmdbId)
+        const seasonNumbers = (details.seasons || [])
+            .filter((s: { season_number: number }) => s.season_number > 0)
+            .map((s: { season_number: number }) => s.season_number)
+
+        for (const season of seasonNumbers) {
+            const seasonData = await getTVSeasonDetails(tmdbId, season)
+            const episodes = seasonData.episodes || []
+            const episodeInserts = episodes.map((ep: { episode_number: number; id?: number; name?: string; still_path?: string; overview?: string; air_date?: string; runtime?: number }) => ({
+                watchlist_id: watchlistId,
+                season_number: season,
+                episode_number: ep.episode_number,
+                tmdb_episode_id: ep.id,
+                title: ep.name,
+                still_path: ep.still_path,
+                overview: ep.overview,
+                air_date: ep.air_date,
+                runtime: ep.runtime
+            }))
+
+            // Insert in batches to avoid hitting limits
+            const batchSize = 100
+            for (let i = 0; i < episodeInserts.length; i += batchSize) {
+                const batch = episodeInserts.slice(i, i + batchSize)
+                await supabase.from('watchlist_episodes').upsert(batch, {
+                    onConflict: 'watchlist_id,season_number,episode_number'
+                })
+            }
+        }
+    } catch (err) {
+        console.error(`Failed to save all episodes for show ${tmdbId}:`, err)
+    }
+}
+
+/**
  * Mark an episode as watched by INSERTING it into watchlist_episodes.
  * If it already exists (unique constraint), this is a no-op.
  */
@@ -196,7 +237,7 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
         if (watchedCount >= totalEpisodes) {
             // Check TMDB show status to determine if truly completed or just caught up
             const showEnded = details.status === 'Ended'
-            
+
             await supabase
                 .from('watchlist')
                 .update({

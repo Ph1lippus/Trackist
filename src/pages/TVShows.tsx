@@ -20,9 +20,6 @@ const TVShows: React.FC = () => {
     const [searchQuery, setSearchQuery] = useState('')
     const [markAllModal, setMarkAllModal] = useState<WatchlistItem | null>(null)
     const [markingAllWatched, setMarkingAllWatched] = useState(false)
-    const [showAllCurrentlyWatching, setShowAllCurrentlyWatching] = useState(false)
-    const [showAllNotStarted, setShowAllNotStarted] = useState(false)
-    const [showAllCompleted, setShowAllCompleted] = useState(false)
 
     const fetchWatchlist = useCallback(async () => {
         const { data: { user } } = await supabase.auth.getUser()
@@ -47,8 +44,8 @@ const TVShows: React.FC = () => {
                     // For shows that appear completed, verify total_episodes from TMDB
                     if (item.tmdb_id && (
                         item.status === 'completed' || item.status === 'caught_up' ||
-                        (item.total_episodes !== undefined && 
-                         item.total_episodes > 0 && 
+                        (item.total_episodes !== undefined &&
+                         item.total_episodes > 0 &&
                          totalEpisodesWatched >= item.total_episodes)
                     )) {
                         try {
@@ -107,7 +104,7 @@ const TVShows: React.FC = () => {
         const handleNavigation = () => {
             clearScrollPosition()
         }
-        
+
         window.addEventListener('beforeunload', handleNavigation)
         return () => window.removeEventListener('beforeunload', handleNavigation)
     }, [clearScrollPosition])
@@ -126,11 +123,11 @@ const TVShows: React.FC = () => {
         const checkForNewEpisodes = async () => {
             const completedShows = items.filter(
                 item => (item.status === 'completed' || item.status === 'caught_up' || (
-                    item.status === 'watching' && 
-                    item.total_episodes !== undefined && 
-                    item.total_episodes > 0 && 
+                    item.status === 'watching' &&
+                    item.total_episodes !== undefined &&
+                    item.total_episodes > 0 &&
                     item.total_episodes_watched >= item.total_episodes
-                )) && 
+                )) &&
                 item.total_episodes_watched > 0 &&
                 item.total_episodes !== undefined
             )
@@ -201,29 +198,29 @@ const TVShows: React.FC = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [loading, items.length])
 
-    const filteredItems = items.filter(item => 
+    const filteredItems = items.filter(item =>
         item.title.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
     // Container A: Currently Watching - some episodes watched, but total watched < total available
     const currentlyWatching = filteredItems.filter(
-        item => item.status === 'watching' && 
-        item.total_episodes_watched > 0 && 
+        item => item.status === 'watching' &&
+        item.total_episodes_watched > 0 &&
         (item.total_episodes === undefined || item.total_episodes_watched < item.total_episodes)
     )
 
     // Container B: Watchlist (Not Started) - in watchlist with 0 episodes watched
     const notStarted = filteredItems.filter(
-        item => (item.status === 'watching' || item.status === 'planning') && 
+        item => (item.status === 'watching' || item.status === 'planning') &&
         item.total_episodes_watched === 0
     )
 
     // Container C: Completed - all available episodes watched
     const completed = filteredItems.filter(
         item => (item.status === 'completed' || item.status === 'caught_up' || (
-            item.status === 'watching' && 
-            item.total_episodes !== undefined && 
-            item.total_episodes > 0 && 
+            item.status === 'watching' &&
+            item.total_episodes !== undefined &&
+            item.total_episodes > 0 &&
             item.total_episodes_watched >= item.total_episodes
         ))
     )

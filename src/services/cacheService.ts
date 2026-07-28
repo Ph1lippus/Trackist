@@ -18,7 +18,6 @@ class CacheService {
     private db: IDBDatabase | null = null
     private initPromise: Promise<void> | null = null
     private maxMemoryEntries = 100
-    private maxDbEntries = 1000
 
     constructor() {
         this.initPromise = this.initDB()
@@ -113,13 +112,11 @@ class CacheService {
         fetcher: () => Promise<T>,
         ttl: number
     ): Promise<T> {
-        const key = this.generateKey(type, identifier)
-
         // Return cached data immediately if available
         const cached = await this.get<T>(type, identifier)
         if (cached) {
             // Revalidate in background
-            this.revalidate(key, type, identifier, fetcher, ttl).catch(() => {})
+            this.revalidate(type, identifier, fetcher, ttl).catch(() => {})
             return cached
         }
 
@@ -130,7 +127,6 @@ class CacheService {
     }
 
     private async revalidate<T>(
-        key: string,
         type: string,
         identifier: string | number,
         fetcher: () => Promise<T>,
