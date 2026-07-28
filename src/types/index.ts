@@ -80,6 +80,11 @@ export interface WatchlistItem {
     has_new_episodes?: boolean
 }
 
+export interface Genre {
+    id: number
+    name: string
+}
+
 export interface WatchlistEpisode {
     id: string
     watchlist_id: string

@@ -24,9 +24,6 @@ const TVShows: React.FC = () => {
     const [showAllNotStarted, setShowAllNotStarted] = useState(false)
     const [showAllCompleted, setShowAllCompleted] = useState(false)
 
-    const CURRENTLY_WATCHING_ROW_COUNT = 2 // Show 2 rows for "Currently Watching"
-    const OTHER_SECTION_ROW_COUNT = 1 // Show 1 row for other sections
-
     const fetchWatchlist = useCallback(async () => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) {
@@ -239,7 +236,6 @@ const TVShows: React.FC = () => {
         id: item.tmdb_id as number,
         title: item.title,
         poster_path: item.poster_path,
-        vote_average: item.vote_average,
         media_type: 'tv'
     })
 
@@ -264,7 +260,6 @@ const TVShows: React.FC = () => {
                         title: ep.name,
                         still_path: ep.still_path,
                         overview: ep.overview,
-                        vote_average: ep.vote_average,
                         air_date: ep.air_date,
                         runtime: ep.runtime
                     })
@@ -316,18 +311,9 @@ const TVShows: React.FC = () => {
                 <div className="watchlist-section">
                     <div className="watchlist-section__header">
                         <h3 className="watchlist-section__title">Currently Watching</h3>
-                        {currentlyWatching.length > 0 && (
-                            <button 
-                                className="expand-icon-btn"
-                                onClick={() => setShowAllCurrentlyWatching(!showAllCurrentlyWatching)}
-                                aria-label={showAllCurrentlyWatching ? 'Show less' : 'Show more'}
-                            >
-                                <i className={`fa-solid fa-angle-${showAllCurrentlyWatching ? 'down' : 'up'}`}></i>
-                            </button>
-                        )}
                     </div>
                     {currentlyWatching.length > 0 ? (
-                        <div className={`discover-grid ${!showAllCurrentlyWatching ? 'watchlist-grid--collapsed' : ''}`} data-rows={CURRENTLY_WATCHING_ROW_COUNT}>
+                        <div className={`discover-grid`} >
                             {visibleCurrentlyWatching.map((item) => (
                                 <MediaCard
                                     key={item.id}
@@ -349,18 +335,10 @@ const TVShows: React.FC = () => {
                 <div className="watchlist-section">
                     <div className="watchlist-section__header">
                         <h3 className="watchlist-section__title">Watchlist (Not Started)</h3>
-                        {notStarted.length > 0 && (
-                            <button 
-                                className="expand-icon-btn"
-                                onClick={() => setShowAllNotStarted(!showAllNotStarted)}
-                                aria-label={showAllNotStarted ? 'Show less' : 'Show more'}
-                            >
-                                <i className={`fa-solid fa-angle-${showAllNotStarted ? 'down' : 'up'}`}></i>
-                            </button>
-                        )}
+
                     </div>
                     {notStarted.length > 0 ? (
-                        <div className={`discover-grid ${!showAllNotStarted ? 'watchlist-grid--collapsed' : ''}`} data-rows={OTHER_SECTION_ROW_COUNT}>
+                        <div className={`discover-grid`}>
                             {visibleNotStarted.map((item) => (
                                 <MediaCard
                                     key={item.id}
@@ -382,18 +360,9 @@ const TVShows: React.FC = () => {
                 <div className="watchlist-section">
                     <div className="watchlist-section__header">
                         <h3 className="watchlist-section__title">Completed</h3>
-                        {completed.length > 0 && (
-                            <button 
-                                className="expand-icon-btn"
-                                onClick={() => setShowAllCompleted(!showAllCompleted)}
-                                aria-label={showAllCompleted ? 'Show less' : 'Show more'}
-                            >
-                                <i className={`fa-solid fa-angle-${showAllCompleted ? 'down' : 'up'}`}></i>
-                            </button>
-                        )}
                     </div>
                     {completed.length > 0 ? (
-                        <div className={`discover-grid ${!showAllCompleted ? 'watchlist-grid--collapsed' : ''}`} data-rows={OTHER_SECTION_ROW_COUNT}>
+                        <div className={`discover-grid`}>
                             {visibleCompleted.map((item) => (
                                 <MediaCard
                                     key={item.id}

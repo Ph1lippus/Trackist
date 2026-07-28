@@ -1,316 +1,121 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { supabase } from '../services/supabaseClient'
-import { searchMulti, searchPerson, getPopularMovies, getTrendingMovies, getTopRatedMovies, getPopularTV, getTrendingTV, getTopRatedTV, getPersonMovies, getPersonTV, getPopularPeople } from '../services/tmdbService'
-import type { TMDBResult } from '../types'
+import React, { useEffect, useRef, useMemo, useCallback } from 'react'
+import { useLocation } from 'react-router-dom'
+import useDiscoverStore, { useDiscoverResults, useDiscoverFilters, useDiscoverLoading, useDiscoverActions } from '../stores/discoverStore'
 import MediaCard from '../components/media/MediaCard'
-import { Virtuoso, type VirtuosoHandle } from 'react-virtuoso'
-import { useScrollRestoration } from '../hooks/useScrollRestoration'
-
-type ResultItem = TMDBResult
+import type { TMDBResult } from '../types'
 
 const Discover: React.FC = () => {
-    const { clearScrollPosition } = useScrollRestoration()
-    // Initialize state from sessionStorage if available
-    const getInitialState = () => {
-        try {
-            const savedState = sessionStorage.getItem('discoverState')
-            if (savedState) {
-                const state = JSON.parse(savedState)
-                sessionStorage.removeItem('discoverState')
-                return {
-                    query: state.query || '',
-                    mediaType: state.mediaType || 'all',
-                    sortBy: state.sortBy || 'popular',
-                    page: state.page || 1
-                }
-            }
-        } catch (err) {
-            console.error('Failed to parse saved state:', err)
-        }
-        return {
-            query: '',
-            mediaType: 'all' as const,
-            sortBy: 'popular' as const,
-            page: 1
-        }
-    }
-
-    const initialState = getInitialState()
-    const [query, setQuery] = useState(initialState.query)  
-    const [results, setResults] = useState<ResultItem[]>([])
-    const [loading, setLoading] = useState(true)
-    const [loadingMore, setLoadingMore] = useState(false)
-    const [mediaType, setMediaType] = useState<'all' | 'movie' | 'tv' | 'person'>(initialState.mediaType)
-    const [sortBy, setSortBy] = useState<'popular' | 'trending' | 'top_rated'>(initialState.sortBy)
-    const [page, setPage] = useState(initialState.page)
-    const [hasMore, setHasMore] = useState(true)
-    const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set())
-    const isRestoringStateRef = useRef(initialState.page > 1)
-
-    const virtuosoRef = useRef<VirtuosoHandle | null>(null)
-    const fetchingRef = useRef(false)
-
+    const location = useLocation()
+    const isVisible = location.pathname === '/' || location.pathname === '/Discover'
+    
+    // Store selectors
+    const results = useDiscoverResults()
+    const filters = useDiscoverFilters()
+    const loading = useDiscoverLoading()
+    const actions = useDiscoverActions()
+    const store = useDiscoverStore()
+    
+    // Refs
+    const observerRef = useRef<IntersectionObserver | null>(null)
+    const loadMoreRef = useRef<HTMLDivElement | null>(null)
+    
+    // Memoized filtered results (currently no filtering, but ready for future use)
+    const filteredResults = useMemo(() => results, [results])
+    
+    // Fetch genres on mount
     useEffect(() => {
-        const fetchWatchlist = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) return
-            const { data } = await supabase.from('watchlist').select('tmdb_id').eq('user_id', user.id)
-            if (data) {
-                const ids = new Set<number>()
-                data.forEach((w: { tmdb_id?: number }) => {
-                    if (w.tmdb_id) ids.add(w.tmdb_id)
-                })
-                setWatchlistIds(ids)
-            }
-        }
-        fetchWatchlist()
-    }, [])
-
-    // Restore scroll position when component mounts
+        store.fetchGenres()
+    }, [store])
+    
+    // Fetch data when filters change
     useEffect(() => {
-        const scrollPosition = sessionStorage.getItem('scrollPosition')
-        if (scrollPosition) {
-            setTimeout(() => {
-                if (virtuosoRef.current) {
-                    virtuosoRef.current.scrollToIndex({
-                        index: Math.floor(parseInt(scrollPosition) / 100),
-                        behavior: 'auto'
-                    })
+        if (store.isDataLoaded) {
+            actions.fetchData(1)
+        }
+    }, [filters.mediaType, filters.sortBy, filters.selectedGenre, filters.selectedYear, filters.query, store, actions])
+    
+    // Handle visibility changes for scroll restoration
+    useEffect(() => {
+        if (isVisible) {
+            store.setIsVisible(true)
+        }
+    }, [isVisible, store])
+    
+    // Infinite scroll observer
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && loading.hasMore && !loading.isLoadingMore) {
+                    actions.fetchData(store.page + 1)
                 }
-                sessionStorage.removeItem('scrollPosition')
-            }, 300)
+            },
+            { threshold: 0.1, rootMargin: '200px' }
+        )
+        
+        observerRef.current = observer
+        
+        return () => {
+            observer.disconnect()
+        }
+    }, [loading.hasMore, loading.isLoadingMore, store.page, actions, store])
+    
+    // Callback ref for loadMore element
+    const setLoadMoreRef = useCallback((node: HTMLDivElement | null) => {
+        if (loadMoreRef.current && observerRef.current) {
+            observerRef.current.unobserve(loadMoreRef.current)
+        }
+        loadMoreRef.current = node
+        
+        if (node && observerRef.current) {
+            observerRef.current.observe(node)
         }
     }, [])
-
-    // Clear scroll position when navigating to detail page
-    useEffect(() => {
-        const handleNavigation = () => {
-            clearScrollPosition()
-        }
-        
-        window.addEventListener('beforeunload', handleNavigation)
-        return () => window.removeEventListener('beforeunload', handleNavigation)
-    }, [clearScrollPosition])
-
-    // Save state to sessionStorage when navigating away
-    useEffect(() => {
-        const handleBeforeUnload = () => {
-            sessionStorage.setItem('discoverState', JSON.stringify({
-                query,
-                mediaType,
-                sortBy,
-                page
-            }))
-        }
-        
-        window.addEventListener('beforeunload', handleBeforeUnload)
-        return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-    }, [query, mediaType, sortBy, page])
-
-    const fetchData = useCallback(async (pageNum: number) => {
-        if (fetchingRef.current) return
-        fetchingRef.current = true
-
-        if (pageNum === 1) {
-            setLoading(true)
-        } else {
-            setLoadingMore(true)
-        }
-
-        try {
-            let newResults: ResultItem[] = []
-            let totalPages = 1
-
-            if (query.trim()) {
-                const [multiData, personData] = await Promise.all([
-                    searchMulti(query),
-                    searchPerson(query)
-                ])
-                let combined = [...(multiData.results || []), ...(personData.results || [])]
-                
-                // Deduplicate by id to avoid actors/actresses appearing twice
-                const seen = new Set<number>()
-                combined = combined.filter(item => {
-                    if (seen.has(item.id)) return false
-                    seen.add(item.id)
-                    return true
-                })
-                
-                combined = combined.map(r => {
-                    // Person results have profile_path but no title, and no media_type
-                    if (r.profile_path && !r.title && !r.media_type) {
-                        return { ...r, media_type: 'person' as const }
-                    }
-                    return { ...r, media_type: r.media_type || (r.title ? 'movie' as const : 'tv' as const) }
-                })
-                if (mediaType === 'movie') {
-                    combined = combined.filter(r => r.media_type === 'movie')
-                } else if (mediaType === 'tv') {
-                    combined = combined.filter(r => r.media_type === 'tv')
-                } else if (mediaType === 'person') {
-                    combined = combined.filter(r => r.media_type === 'person')
-                }
-                // If searching for people, also fetch their filmography
-                if (query.trim() && combined.some(r => r.media_type === 'person')) {
-                    const personIds = combined.filter(r => r.media_type === 'person').map(r => r.id)
-                    const [personMovies, personTV] = await Promise.all([
-                        Promise.all(personIds.map(id => getPersonMovies(id))),
-                        Promise.all(personIds.map(id => getPersonTV(id)))
-                    ])
-                    const films = [
-                        ...personMovies.flatMap(d => (d.results || []).map(r => ({ ...r, media_type: 'movie' as const }))),
-                        ...personTV.flatMap(d => (d.results || []).map(r => ({ ...r, media_type: 'tv' as const })))
-                    ]
-                    // Deduplicate films by id
-                    const filmSeen = new Set<number>()
-                    const uniqueFilms = films.filter(f => {
-                        if (filmSeen.has(f.id)) return false
-                        filmSeen.add(f.id)
-                        return true
-                    })
-                    combined = [...combined, ...uniqueFilms]
-                }
-                
-                newResults = combined
-                totalPages = 1
-            } else if (mediaType === 'movie') {
-                const data = sortBy === 'trending' ? await getTrendingMovies(pageNum) : sortBy === 'top_rated' ? await getTopRatedMovies(pageNum) : await getPopularMovies(pageNum)
-                newResults = ((data as { results: TMDBResult[] }).results || []).map(r => ({ ...r, media_type: 'movie' as const }))
-                totalPages = (data as { total_pages?: number }).total_pages || 1
-            } else if (mediaType === 'tv') {
-                const data = sortBy === 'trending' ? await getTrendingTV(pageNum) : sortBy === 'top_rated' ? await getTopRatedTV(pageNum) : await getPopularTV(pageNum)
-                newResults = ((data as { results: TMDBResult[] }).results || []).map(r => ({ ...r, media_type: 'tv' as const }))
-                totalPages = (data as { total_pages?: number }).total_pages || 1
-            } else if (mediaType === 'person') {
-                const data = await getPopularPeople(pageNum)
-                newResults = (data.results || []).map(r => ({ ...r, media_type: 'person' as const }))
-                totalPages = (data as { total_pages?: number }).total_pages || 1
-            } else {
-                const [moviesData, tvData] = await Promise.all([
-                    getPopularMovies(pageNum),
-                    getPopularTV(pageNum)
-                ])
-                const movies = ((moviesData as { results: TMDBResult[] }).results || []).map(r => ({ ...r, media_type: 'movie' as const }))
-                const tv = ((tvData as { results: TMDBResult[] }).results || []).map(r => ({ ...r, media_type: 'tv' as const }))
-                const combined = [...movies, ...tv]
-                // Shuffle on first page only (page 1) so subsequent pages don't re-shuffle existing results
-                if (pageNum === 1) {
-                    for (let i = combined.length - 1; i > 0; i--) {
-                        const j = Math.floor(Math.random() * (i + 1));
-                        [combined[i], combined[j]] = [combined[j], combined[i]]
-                    }
-                }
-                newResults = combined
-                // Use actual page limit from both sources
-                const moviesTotal = (moviesData as { total_pages?: number }).total_pages || 1
-                const tvTotal = (tvData as { total_pages?: number }).total_pages || 1
-                totalPages = Math.max(moviesTotal, tvTotal)
-            }
-
-            setResults(prev => pageNum === 1 ? newResults : [...prev, ...newResults])
-            setPage(pageNum)
-            setHasMore(pageNum < totalPages)
-        } catch (err) {
-            console.error('Failed to load:', err)
-        }
-        setLoading(false)
-        setLoadingMore(false)
-        fetchingRef.current = false
-    }, [mediaType, sortBy, query])
-
-    const fetchTrigger = `${mediaType}-${sortBy}-${query}`
-    useEffect(() => {
-        if (isRestoringStateRef.current) {
-            isRestoringStateRef.current = false
-            fetchData(page)
-        } else {
-            fetchData(1)
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [fetchTrigger, fetchData])
-
-    // Virtuoso end reached handler for infinite scroll
-    const handleEndReached = useCallback(() => {
-        if (hasMore && !fetchingRef.current && !loadingMore) {
-            fetchData(page + 1)
-        }
-    }, [hasMore, loadingMore, page, fetchData])
-
+    
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!query.trim()) return
-        fetchData(1)
+        if (!filters.query.trim()) return
+        await actions.fetchData(1)
     }
-
-    const addToWatchlist = async (item: ResultItem, status: string) => {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return alert('Please log in')
-
-        const mediaTypeValue = item.media_type === 'movie' ? 'movie' : 'tv'
-        const itemTitle = item.title || item.name || ''
-
-        const insertData: Record<string, unknown> = {
-            user_id: user.id,
-            media_type: mediaTypeValue,
-            tmdb_id: item.id,
-            title: itemTitle,
-            poster_path: item.poster_path,
-            overview: item.overview,
-            release_date: item.release_date,
-            vote_average: item.vote_average,
-            status
-        }
-
-        // Add TV-specific fields
-        if (mediaTypeValue === 'tv') {
-            insertData.total_seasons = item.number_of_seasons || 1
-            insertData.total_episodes = item.number_of_episodes || 0
-            insertData.current_season = 1
-            insertData.current_episode = 0
-            insertData.last_season_number = item.number_of_seasons || 1
-            insertData.last_season_check = new Date().toISOString()
-        }
-
-        const { data, error } = await supabase.from('watchlist').insert(insertData).select().single()
-
-        if (error) alert('Error: ' + error.message)
-        else if (data) {
-            setWatchlistIds(prev => new Set(prev).add(item.id))
+    
+    const handleClearFilters = () => {
+        actions.resetFilters()
+        window.scrollTo(0, 0)
+    }
+    
+    const handleAddToWatchlist = (item: TMDBResult) => {
+        if (store.watchlistIds.has(item.id)) {
+            actions.removeFromWatchlist(item.id)
+        } else {
+            actions.addToWatchlist(item.id)
         }
     }
-
-    const handleAddBypass = (item: ResultItem) => {
-        addToWatchlist(item, 'watching')
+    
+    // Determine if we should show the page
+    if (!isVisible) {
+        return <div className="discover-page" style={{ display: 'none' }} />
     }
-
-    const getSectionTitle = (): string => {
-        if (query.trim()) return `Results for "${query}"`
-        const source = mediaType === 'all'
-            ? 'Popular Movies & TV Shows'
-            : sortBy === 'popular'
-                ? 'Popular'
-                : sortBy === 'trending'
-                    ? 'Trending'
-                    : 'Top Rated'
-        if (mediaType === 'person') return 'Popular People'
-        return mediaType === 'movie' ? `${source} Movies` : mediaType === 'tv' ? `${source} TV Shows` : source
-    }
-
+    
     return (
         <div className="discover-page">
-            <div className="discover-container">
+            <div className="discover-container" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <div className="discover-search-wrap">
                     <form onSubmit={handleSearch}>
                         <div className="discover-search-box">
-                            <svg className="discover-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <svg
+                                className="discover-search-icon"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                            >
                                 <circle cx="11" cy="11" r="8" />
                                 <path d="M21 21l-4.35-4.35" />
                             </svg>
                             <input
                                 className="discover-search"
                                 placeholder="Search movies, TV shows, actors, directors..."
-                                value={query}
-                                onChange={(e) => setQuery(e.target.value)}
+                                value={filters.query}
+                                onChange={(e) => actions.setQuery(e.target.value)}
                             />
                         </div>
                     </form>
@@ -318,73 +123,126 @@ const Discover: React.FC = () => {
 
                 <div className="discover-controls">
                     <div className="discover-tabs">
-                        <button className={`discover-tab ${mediaType === 'all' ? 'active' : ''}`} onClick={() => { setMediaType('all'); setQuery(''); }}>All</button>
-                        <button className={`discover-tab ${mediaType === 'movie' ? 'active' : ''}`} onClick={() => { setMediaType('movie'); setQuery(''); }}>Movies</button>
-                        <button className={`discover-tab ${mediaType === 'tv' ? 'active' : ''}`} onClick={() => { setMediaType('tv'); setQuery(''); }}>TV Shows</button>
-                        <button className={`discover-tab ${mediaType === 'person' ? 'active' : ''}`} onClick={() => { setMediaType('person'); setQuery(''); }}>People</button>
+                        <button
+                            className={`discover-tab ${filters.mediaType === 'all' ? 'active' : ''}`}
+                            onClick={() => actions.setMediaType('all')}
+                        >
+                            All
+                        </button>
+                        <button
+                            className={`discover-tab ${filters.mediaType === 'movie' ? 'active' : ''}`}
+                            onClick={() => actions.setMediaType('movie')}
+                        >
+                            Movies
+                        </button>
+                        <button
+                            className={`discover-tab ${filters.mediaType === 'tv' ? 'active' : ''}`}
+                            onClick={() => actions.setMediaType('tv')}
+                        >
+                            TV Shows
+                        </button>
+                        <button
+                            className={`discover-tab ${filters.mediaType === 'person' ? 'active' : ''}`}
+                            onClick={() => actions.setMediaType('person')}
+                        >
+                            People
+                        </button>
                     </div>
-                    {mediaType !== 'person' && (
+                    {filters.mediaType !== 'person' && (
                         <div className="discover-sorts">
-                            <button className={`discover-sort-btn ${sortBy === 'popular' ? 'active' : ''}`} onClick={() => setSortBy('popular')}>Popular</button>
-                            <button className={`discover-sort-btn ${sortBy === 'trending' ? 'active' : ''}`} onClick={() => setSortBy('trending')}>Trending</button>
-                            <button className={`discover-sort-btn ${sortBy === 'top_rated' ? 'active' : ''}`} onClick={() => setSortBy('top_rated')}>Top Rated</button>
+                            <select
+                                className="discover-filter-select"
+                                value={filters.sortBy}
+                                onChange={(e) => actions.setSortBy(e.target.value as typeof filters.sortBy)}
+                            >
+                                <option value="popularity.desc">Popularity (High to Low)</option>
+                                <option value="popularity.asc">Popularity (Low to High)</option>
+                                <option value="vote_average.desc">Rating (High to Low)</option>
+                                <option value="vote_average.asc">Rating (Low to High)</option>
+                                <option value="release_date.desc">Release Date (Newest)</option>
+                                <option value="release_date.asc">Release Date (Oldest)</option>
+                                <option value="original_title.asc">Title (A-Z)</option>
+                                <option value="original_title.desc">Title (Z-A)</option>
+                            </select>
+                            <select
+                                className="discover-filter-select"
+                                value={filters.selectedGenre ?? ''}
+                                onChange={(e) => actions.setSelectedGenre(e.target.value ? Number(e.target.value) : null)}
+                            >
+                                <option value="">All Genres</option>
+                                {store.genres.map((genre: { id: number; name: string }) => (
+                                    <option key={genre.id} value={genre.id}>
+                                        {genre.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <select
+                                className="discover-filter-select"
+                                value={filters.selectedYear ?? ''}
+                                onChange={(e) => actions.setSelectedYear(e.target.value ? Number(e.target.value) : null)}
+                            >
+                                <option value="">All Years</option>
+                                {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+                                    <option key={year} value={year}>
+                                        {year}
+                                    </option>
+                                ))}
+                            </select>
+                            <button
+                                className="discover-filter-select"
+                                style={{ cursor: 'pointer' }}
+                                onClick={handleClearFilters}
+                            >
+                                Clear Filters
+                            </button>
                         </div>
                     )}
                 </div>
 
-                {loading ? (
-                    <div className="discover-loading"><div className="discover-spinner" /><p>Loading...</p></div>
-                ) : results.length === 0 ? (
-                    <div className="discover-empty"><p>{query ? 'No results found' : 'Nothing to show'}</p></div>
+                {loading.isLoading || !store.isDataLoaded ? (
+                    <div className="discover-loading">
+                        <div className="discover-spinner" />
+                        <p>Loading...</p>
+                    </div>
+                ) : filteredResults.length === 0 ? (
+                    <div className="discover-empty">
+                        <p>{filters.query ? 'No results found' : 'Nothing to show'}</p>
+                    </div>
                 ) : (
-                    <div className="watchlist-section">
-                        <h3 className="watchlist-section__title">{getSectionTitle()}</h3>
-                        <Virtuoso
-                            ref={virtuosoRef}
-                            totalCount={results.length}
-                            endReached={handleEndReached}
-                            overscan={200}
-                            itemContent={(index) => {
-                                const item = results[index]
-                                if (item.media_type === 'person') {
-                                    return (
-                                        <MediaCard
-                                            key={`${item.media_type}-${item.id}`}
-                                            item={item}
-                                            compact={true}
-                                        />
-                                    )
-                                }
-                                return (
+                    <div style={{ flex: 1, minHeight: '400px', width: '100%' }}>
+                        <div className="discover-grid">
+                            {filteredResults.map((item) => (
+                                <div key={`${item.media_type}-${item.id}`} style={{ padding: '0.5rem' }}>
                                     <MediaCard
-                                        key={`${item.media_type}-${item.id}`}
                                         item={item}
-                                        isInWatchlist={watchlistIds.has(item.id)}
-                                        onAdd={handleAddBypass}
+                                        compact={item.media_type === 'person'}
+                                        onAdd={handleAddToWatchlist}
+                                        isInWatchlist={store.watchlistIds.has(item.id)}
                                     />
-                                )
-                            }}
-                            components={{
-                                Footer: () => {
-                                    if (loadingMore) {
-                                        return (
-                                            <div className="discover-loading" style={{ padding: '2rem' }}>
-                                                <div className="discover-spinner" />
-                                                <p>Loading more...</p>
-                                            </div>
-                                        )
-                                    }
-                                    if (!hasMore && results.length > 0) {
-                                        return (
-                                            <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontSize: '0.85rem', padding: '1rem' }}>
-                                                You've reached the end
-                                            </p>
-                                        )
-                                    }
-                                    return null
-                                }
-                            }}
-                        />
+                                </div>
+                            ))}
+                        </div>
+                        {loading.isLoadingMore && (
+                            <div className="discover-loading" style={{ padding: '2rem' }}>
+                                <div className="discover-spinner" />
+                                <p>Loading more...</p>
+                            </div>
+                        )}
+                        {!loading.hasMore && filteredResults.length > 0 && (
+                            <p
+                                style={{
+                                    textAlign: 'center',
+                                    color: 'rgba(255,255,255,0.3)',
+                                    fontSize: '0.85rem',
+                                    padding: '1rem',
+                                }}
+                            >
+                                You've reached the end
+                            </p>
+                        )}
+                        {loading.hasMore && !loading.isLoadingMore && (
+                            <div ref={setLoadMoreRef} style={{ height: '50px' }} />
+                        )}
                     </div>
                 )}
             </div>

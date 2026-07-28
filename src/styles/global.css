@@ -19,6 +19,10 @@
     --dropdown-close-dur: 150ms;
 }
 
+body.no-scroll {
+  overflow: hidden;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -681,6 +685,37 @@ html, body {
     background: var(--color-primary);
 }
 
+.discover-filter-select {
+    padding: 0.5rem 0.85rem;
+    border: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.04);
+    color: rgba(255,255,255,0.7);
+    font-size: 0.8rem;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    outline: none;
+}
+
+.discover-filter-select:hover {
+    color: var(--color-platinum);
+    background: rgba(255,255,255,0.06);
+    border-color: rgba(255,255,255,0.1);
+}
+
+.discover-filter-select:focus {
+    border-color: rgba(133,138,227,0.4);
+    background: rgba(255,255,255,0.08);
+    color: var(--color-platinum);
+}
+
+.discover-filter-select option {
+    background: rgba(15,15,20,0.98);
+    color: var(--color-platinum);
+}
+
 /* Sections */
 .discover-section {
     background: rgba(255,255,255,0.03);
@@ -798,6 +833,13 @@ html, body {
     display: grid;
     gap: 1rem;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    width: 100%;
+    margin: 0 auto;
+    padding: 1rem 0;
+}
+
+.discover-grid-item {
+    padding: 0.5rem;
 }
 
 .discover-people-list {

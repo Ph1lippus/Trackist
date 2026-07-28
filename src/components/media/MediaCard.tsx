@@ -64,19 +64,20 @@ const MediaCard: React.FC<MediaCardProps> = ({
                         <span>{displayTitle}</span>
                     </div>
                 )}
-                {!compact && item.vote_average && (
-                    <div className="media-card__rating">{item.vote_average.toFixed(1)}</div>
-                )}
-                {!compact && !isPerson && !isInWatchlist && onAdd && (
+                {!compact && onAdd && (
                     <button
                         className="media-card__icon-btn"
                         onClick={(e) => { e.stopPropagation(); onAdd(item); }}
-                        title="Add to watchlist"
+                        title={isInWatchlist ? (isPerson ? "Following" : "In watchlist") : (isPerson ? "Follow" : "Add to watchlist")}
                     >
-                        <i className="fa-regular fa-bookmark"></i>
+                        {isInWatchlist ? (
+                            <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
+                        ) : (
+                            <i className="fa-regular fa-bookmark"></i>
+                        )}
                     </button>
                 )}
-                {!compact && !isPerson && onAddToList && (
+                {!compact && onAddToList && !isPerson && (
                     <button
                         className="media-card__list-icon"
                         onClick={(e) => { e.stopPropagation(); onAddToList(item); }}

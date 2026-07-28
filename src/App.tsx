@@ -25,6 +25,7 @@ import TVShowDetail from './pages/TVShowDetail'
 import PersonDetail from './pages/PersonDetail'
 import EpisodeDetail from './pages/EpisodeDetail'
 import Lists from './pages/Lists'
+import DetailLayout from './components/layout/DetailLayout'
 
 const AppContent: React.FC = () => {
     const location = useLocation()
@@ -93,8 +94,8 @@ const AppContent: React.FC = () => {
             <Navbar />
             <main className={`page-main flex-grow-1 ${hideFooter ? 'page-main--no-footer' : ''}`}>
                 <Routes>
-                    <Route path="/" element={user ? <Discover /> : <Home />} />
-                    <Route path="/Discover" element={user ? <Discover /> : <Navigate to="/login" replace />} />
+                    <Route path="/" element={user ? <Discover key="discover" /> : <Home />} />
+                    <Route path="/Discover" element={user ? <Discover key="discover" /> : <Navigate to="/login" replace />} />
                     <Route path="/Movies" element={user ? <Movies /> : <Navigate to="/login" replace />} />
                     <Route path="/Tvshows" element={user ? <TVShows /> : <Navigate to="/login" replace />} />
                     <Route path="/Upcoming" element={user ? <Upcoming /> : <Navigate to="/login" replace />} />
@@ -108,9 +109,11 @@ const AppContent: React.FC = () => {
                     <Route path="/EditProfile" element={user ? <EditProfile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile/:username" element={user ? <Profile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile" element={user ? <Profile /> : <Navigate to="/login" replace />} />
+                    <Route element={<DetailLayout />}>
                     <Route path="/movie/:id" element={<MovieDetail />} />
                     <Route path="/tv/:id" element={<TVShowDetail />} />
                     <Route path="/tv/:id/season/:season/episode/:episode" element={<EpisodeDetail />} />
+                    </Route>
                     <Route path="/person/:id" element={<PersonDetail />} />
                     <Route path="/lists" element={user ? <Lists /> : <Navigate to="/login" replace />} />
                     <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />

@@ -8,16 +8,16 @@ const FANART_BASE = 'https://webservice.fanart.tv/v3'
 import type { TMDBResult } from '../types'
 import { getCachedOrFetch } from './cacheService'
 
-export const searchMulti = async (query: string): Promise<{ results: TMDBResult[] }> => {
+export const searchMulti = async (query: string, page: number = 1): Promise<{ results: TMDBResult[]; total_pages?: number }> => {
     const res = await fetch(
-        `${BASE_URL}/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(query)}`
+        `${BASE_URL}/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(query)}&page=${page}`
     )
     return res.json()
 }
 
-export const searchPerson = async (query: string): Promise<{ results: TMDBResult[] }> => {
+export const searchPerson = async (query: string, page: number = 1): Promise<{ results: TMDBResult[]; total_pages?: number }> => {
     const res = await fetch(
-        `${BASE_URL}/search/person?api_key=${API_KEY}&query=${encodeURIComponent(query)}`
+        `${BASE_URL}/search/person?api_key=${API_KEY}&query=${encodeURIComponent(query)}&page=${page}`
     )
     return res.json()
 }
@@ -41,32 +41,58 @@ export const getPersonDetails = async (id: number): Promise<{
 }
 
 export const getPopularMovies = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
-    const res = await fetch(`${BASE_URL}/movie/popular?api_key=${API_KEY}&page=${page}`)
+    const url = new URL(`${BASE_URL}/movie/popular`)
+    url.searchParams.append('api_key', API_KEY)
+    url.searchParams.append('language', 'en-US')
+    url.searchParams.append('region', 'US')
+    url.searchParams.append('page', String(page))
+    const res = await fetch(url.toString())
     return res.json()
 }
 
 export const getTrendingMovies = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
-    const res = await fetch(`${BASE_URL}/trending/movie/week?api_key=${API_KEY}&page=${page}`)
+    const url = new URL(`${BASE_URL}/trending/movie/week`)
+    url.searchParams.append('api_key', API_KEY)
+    url.searchParams.append('language', 'en-US')
+    url.searchParams.append('page', String(page))
+    const res = await fetch(url.toString())
     return res.json()
 }
 
 export const getTopRatedMovies = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
-    const res = await fetch(`${BASE_URL}/movie/top_rated?api_key=${API_KEY}&page=${page}`)
+    const url = new URL(`${BASE_URL}/movie/top_rated`)
+    url.searchParams.append('api_key', API_KEY)
+    url.searchParams.append('language', 'en-US')
+    url.searchParams.append('region', 'US')
+    url.searchParams.append('page', String(page))
+    const res = await fetch(url.toString())
     return res.json()
 }
 
 export const getPopularTV = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
-    const res = await fetch(`${BASE_URL}/tv/popular?api_key=${API_KEY}&page=${page}`)
+    const url = new URL(`${BASE_URL}/tv/popular`)
+    url.searchParams.append('api_key', API_KEY)
+    url.searchParams.append('language', 'en-US')
+    url.searchParams.append('page', String(page))
+    const res = await fetch(url.toString())
     return res.json()
 }
 
 export const getTrendingTV = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
-    const res = await fetch(`${BASE_URL}/trending/tv/week?api_key=${API_KEY}&page=${page}`)
+    const url = new URL(`${BASE_URL}/trending/tv/week`)
+    url.searchParams.append('api_key', API_KEY)
+    url.searchParams.append('language', 'en-US')
+    url.searchParams.append('page', String(page))
+    const res = await fetch(url.toString())
     return res.json()
 }
 
 export const getTopRatedTV = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
-    const res = await fetch(`${BASE_URL}/tv/top_rated?api_key=${API_KEY}&page=${page}`)
+    const url = new URL(`${BASE_URL}/tv/top_rated`)
+    url.searchParams.append('api_key', API_KEY)
+    url.searchParams.append('language', 'en-US')
+    url.searchParams.append('page', String(page))
+    const res = await fetch(url.toString())
     return res.json()
 }
 
@@ -145,4 +171,63 @@ export const getPersonTV = async (id: number): Promise<{ results: TMDBResult[] }
 export const getPopularPeople = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
     const res = await fetch(`${BASE_URL}/person/popular?api_key=${API_KEY}&page=${page}`)
     return res.json()
+}
+
+// ─── Discover / Filter endpoints ──────────────────────────────────────────────
+
+export const discoverMovies = async (params: {
+    page?: number
+    sort_by?: string
+    primary_release_year?: number
+    with_genres?: string
+    'release_date.lte'?: string
+    'release_date.gte'?: string
+}) => {
+    const url = new URL(`${BASE_URL}/discover/movie`)
+    url.searchParams.append('api_key', API_KEY)
+    url.searchParams.append('language', 'en-US')
+    url.searchParams.append('region', 'US')
+    if (params.page) url.searchParams.append('page', String(params.page))
+    if (params.sort_by) url.searchParams.append('sort_by', params.sort_by)
+    if (params.primary_release_year) url.searchParams.append('primary_release_year', String(params.primary_release_year))
+    if (params.with_genres) url.searchParams.append('with_genres', params.with_genres)
+    if (params['release_date.lte']) url.searchParams.append('release_date.lte', params['release_date.lte'])
+    if (params['release_date.gte']) url.searchParams.append('release_date.gte', params['release_date.gte'])
+    const res = await fetch(url.toString())
+    return res.json()
+}
+
+export const discoverTV = async (params: {
+    page?: number
+    sort_by?: string
+    first_air_date_year?: number
+    with_genres?: string
+    'first_air_date.lte'?: string
+    'first_air_date.gte'?: string
+}) => {
+    const url = new URL(`${BASE_URL}/discover/tv`)
+    url.searchParams.append('api_key', API_KEY)
+    url.searchParams.append('language', 'en-US')
+    if (params.page) url.searchParams.append('page', String(params.page))
+    if (params.sort_by) url.searchParams.append('sort_by', params.sort_by)
+    if (params.first_air_date_year) url.searchParams.append('first_air_date_year', String(params.first_air_date_year))
+    if (params.with_genres) url.searchParams.append('with_genres', params.with_genres)
+    if (params['first_air_date.lte']) url.searchParams.append('first_air_date.lte', params['first_air_date.lte'])
+    if (params['first_air_date.gte']) url.searchParams.append('first_air_date.gte', params['first_air_date.gte'])
+    const res = await fetch(url.toString())
+    return res.json()
+}
+
+export const getGenres = async (type: 'movie' | 'tv') => {
+    const cacheKey = `genres-${type}`
+    return getCachedOrFetch(
+        'genres',
+        cacheKey,
+        async () => {
+            const res = await fetch(`${BASE_URL}/genre/${type}/list?api_key=${API_KEY}`)
+            const data = await res.json()
+            return data.genres || []
+        },
+        { ttl: 24 * 60 * 60 * 1000 } // 24 hours
+    )
 }

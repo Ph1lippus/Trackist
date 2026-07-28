@@ -55,6 +55,7 @@ const TVShowDetail: React.FC = () => {
     const hasUserSelectedSeason = useRef(false)
     const episodeToScrollRef = useRef<string | null>(null)
     const episodeRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
+    const episodeListRef = useRef<HTMLDivElement>(null)
 
     const isEpisodeReleased = (episode: LocalEpisode): boolean => {
         if (!episode.air_date) return true
@@ -67,7 +68,15 @@ const TVShowDetail: React.FC = () => {
 
     useEffect(() => {
         if (episodeToScrollRef.current && episodeRefs.current[episodeToScrollRef.current]) {
-            episodeRefs.current[episodeToScrollRef.current]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            const targetElement = episodeRefs.current[episodeToScrollRef.current]
+            if (targetElement && episodeListRef.current) {
+                const container = episodeListRef.current
+                const targetTop = targetElement.offsetTop
+                container.scrollTo({
+                    top: targetTop - container.offsetTop,
+                    behavior: 'smooth'
+                })
+            }
             episodeToScrollRef.current = null
         }
     }, [selectedSeason, episodes])
@@ -758,7 +767,7 @@ const TVShowDetail: React.FC = () => {
                                 </div>
                             )}
                             
-                            <div className="detail-page__episode-list">
+                            <div className="detail-page__episode-list" ref={episodeListRef}>
                                 {filteredEpisodes.map((ep) => (
                                     <div 
                                         key={ep.id} 
