@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { useShallow } from 'zustand/react/shallow'
 import type { TMDBResult } from '../types'
 import {
     searchMulti,
@@ -417,31 +418,40 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
 
 // Selector hooks for optimized re-renders
 export const useDiscoverResults = () => useDiscoverStore((state) => state.results)
-export const useDiscoverFilters = () => useDiscoverStore((state) => ({
-    mediaType: state.mediaType,
-    sortBy: state.sortBy,
-    selectedGenre: state.selectedGenre,
-    selectedYear: state.selectedYear,
-    query: state.query,
-}))
-export const useDiscoverLoading = () => useDiscoverStore((state: DiscoverState) => ({
-    isLoading: state.isLoading,
-    isLoadingMore: state.isLoadingMore,
-    hasMore: state.hasMore,
-    isDataLoaded: state.isDataLoaded,
-}))
-export const useDiscoverActions = () => useDiscoverStore((state: DiscoverState) => ({
-    fetchData: state.fetchData,
-    setQuery: state.setQuery,
-    setMediaType: state.setMediaType,
-    setSortBy: state.setSortBy,
-    setSelectedGenre: state.setSelectedGenre,
-    setSelectedYear: state.setSelectedYear,
-    resetFilters: state.resetFilters,
-    saveScroll: state.saveScroll,
-    addToWatchlist: state.addToWatchlist,
-    removeFromWatchlist: state.removeFromWatchlist,
-    watchlistIds: state.watchlistIds,
-}))
+export const useDiscoverFilters = () => {
+    const selector = useShallow((state: DiscoverState) => ({
+        mediaType: state.mediaType,
+        sortBy: state.sortBy,
+        selectedGenre: state.selectedGenre,
+        selectedYear: state.selectedYear,
+        query: state.query,
+    }))
+    return useDiscoverStore(selector)
+}
+export const useDiscoverLoading = () => {
+    const selector = useShallow((state: DiscoverState) => ({
+        isLoading: state.isLoading,
+        isLoadingMore: state.isLoadingMore,
+        hasMore: state.hasMore,
+        isDataLoaded: state.isDataLoaded,
+    }))
+    return useDiscoverStore(selector)
+}
+export const useDiscoverActions = () => {
+    const selector = useShallow((state: DiscoverState) => ({
+        fetchData: state.fetchData,
+        setQuery: state.setQuery,
+        setMediaType: state.setMediaType,
+        setSortBy: state.setSortBy,
+        setSelectedGenre: state.setSelectedGenre,
+        setSelectedYear: state.setSelectedYear,
+        resetFilters: state.resetFilters,
+        saveScroll: state.saveScroll,
+        addToWatchlist: state.addToWatchlist,
+        removeFromWatchlist: state.removeFromWatchlist,
+        watchlistIds: state.watchlistIds,
+    }))
+    return useDiscoverStore(selector)
+}
 
 export default useDiscoverStore
