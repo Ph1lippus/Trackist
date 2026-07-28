@@ -752,44 +752,32 @@ html, body {
 
 /* Collapsed grid - limits height to show only N rows */
 .watchlist-grid--collapsed {
-    max-height: calc(var(--collapsed-rows, 1) * 240px); /* Card height + gap */
+    max-height: calc(var(--collapsed-rows, 1) * 245px); /* Card height (200px) + gap (45px) */
     overflow: hidden;
-    position: relative;
-}
-
-.watchlist-grid--collapsed::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 80px;
-    background: linear-gradient(to bottom, transparent, rgba(5, 5, 5, 0.95));
-    pointer-events: none;
 }
 
 /* Responsive row heights for different screen sizes */
 @media (max-width: 480px) {
     .watchlist-grid--collapsed {
-        max-height: calc(var(--collapsed-rows, 1) * 200px);
+        max-height: calc(var(--collapsed-rows, 1) * 205px);
     }
 }
 
 @media (min-width: 481px) and (max-width: 768px) {
     .watchlist-grid--collapsed {
-        max-height: calc(var(--collapsed-rows, 1) * 220px);
+        max-height: calc(var(--collapsed-rows, 1) * 225px);
     }
 }
 
 @media (min-width: 769px) and (max-width: 1200px) {
     .watchlist-grid--collapsed {
-        max-height: calc(var(--collapsed-rows, 1) * 240px);
+        max-height: calc(var(--collapsed-rows, 1) * 245px);
     }
 }
 
 @media (min-width: 1201px) {
     .watchlist-grid--collapsed {
-        max-height: calc(var(--collapsed-rows, 1) * 260px);
+        max-height: calc(var(--collapsed-rows, 1) * 265px);
     }
 }
 
