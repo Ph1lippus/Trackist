@@ -25,6 +25,7 @@ import TVShowDetail from './pages/TVShowDetail'
 import PersonDetail from './pages/PersonDetail'
 import EpisodeDetail from './pages/EpisodeDetail'
 import Lists from './pages/Lists'
+import Finished from './pages/Finished'
 import DetailLayout from './components/layout/DetailLayout'
 
 const AppContent: React.FC = () => {
@@ -86,7 +87,7 @@ const AppContent: React.FC = () => {
         )
     }
 
-    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/Friends', '/Statistics']
+    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/Friends', '/Statistics', '/Finished']
     const hideFooter = Boolean(user) && mediaPages.includes(location.pathname)
 
     return (
@@ -116,6 +117,7 @@ const AppContent: React.FC = () => {
                     </Route>
                     <Route path="/person/:id" element={<PersonDetail />} />
                     <Route path="/lists" element={user ? <Lists /> : <Navigate to="/login" replace />} />
+                    <Route path="/Finished" element={user ? <Finished /> : <Navigate to="/login" replace />} />
                     <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />
                 </Routes>
             </main>

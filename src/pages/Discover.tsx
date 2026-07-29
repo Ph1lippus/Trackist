@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useMemo, useCallback, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import useDiscoverStore, { useDiscoverResults, useDiscoverFilters, useDiscoverLoading, useDiscoverActions, useDiscoverWatchlistIds } from '../stores/discoverStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
-import { Virtuoso } from 'react-virtuoso'
+import { VirtuosoGrid } from 'react-virtuoso'
 
 
 const Discover: React.FC = () => {
@@ -24,25 +24,6 @@ const Discover: React.FC = () => {
     const [searchInput, setSearchInput] = useState(filters.query)
 
 
-    // Refs
-    const observerRef = useRef<IntersectionObserver | null>(null)
-    const loadMoreRef = useRef<HTMLDivElement | null>(null)
-    const loadingRef = useRef(loading)
-    const actionsRef = useRef(actions)
-    const pageRef = useRef(store.page)
-
-    // Keep refs in sync with latest values
-    useEffect(() => {
-        loadingRef.current = loading
-    }, [loading])
-
-    useEffect(() => {
-        actionsRef.current = actions
-    }, [actions])
-
-    useEffect(() => {
-        pageRef.current = store.page
-    }, [store.page])
     
     // Memoized filtered results (currently no filtering, but ready for future use)
     const filteredResults = useMemo(() => results, [results])
@@ -67,54 +48,6 @@ const Discover: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isVisible])
     
-    // Callback ref for loadMore element
-    // Create the observer ONCE – never re‑created
-    useEffect(() => {
-        const observer = new IntersectionObserver(
-            (entries) => {
-                if (entries[0].isIntersecting) {
-                    const { hasMore, isLoadingMore } = loadingRef.current
-                    if (hasMore && !isLoadingMore) {
-                        actionsRef.current.fetchData(pageRef.current + 1)
-                    }
-                }
-            },
-            { threshold: 0.1, rootMargin: '200px' }
-        )
-
-        observerRef.current = observer
-
-        // If a sentinel is already attached, observe it
-        if (loadMoreRef.current) {
-            observer.observe(loadMoreRef.current)
-        }
-
-        return () => {
-            observer.disconnect()
-            observerRef.current = null
-        }
-    }, []) // 👈 EMPTY – never re‑runs
-
-    // Simple callback ref – only updates the node
-    const setLoadMoreRef = useCallback((node: HTMLDivElement | null) => {
-        loadMoreRef.current = node
-
-        if (observerRef.current) {
-            if (node) {
-                observerRef.current.observe(node)
-            }
-            // When node becomes null, we don't disconnect – we just wait
-            // for the next node. Disconnecting would require re‑creating.
-        }
-    }, []) // 👈 EMPTY – never re‑created
-
-    useEffect(() => {
-        return () => {
-            if (observerRef.current) {
-                observerRef.current.disconnect()
-            }
-        }
-    }, [])
 
     useEffect(() => {
         const handleScroll = () => {
@@ -123,6 +56,17 @@ const Discover: React.FC = () => {
         window.addEventListener('scroll', handleScroll)
         return () => window.removeEventListener('scroll', handleScroll)
     }, [store])
+
+    useEffect(() => {
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual'
+        }
+        return () => {
+            if ('scrollRestoration' in history) {
+                history.scrollRestoration = 'auto'
+            }
+        }
+    }, [])
     
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -167,7 +111,7 @@ const Discover: React.FC = () => {
     }
     
     return (
-        <div className="discover-page">
+        <div className="discover-page" style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
             <div className="discover-container" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
                 <div className="discover-search-wrap">
                     <form onSubmit={handleSearch}>
@@ -280,41 +224,61 @@ const Discover: React.FC = () => {
                         <p>{filters.query ? 'No results found' : 'Nothing to show'}</p>
                     </div>
                 ) : (
-                    <div>
-                        <div className="discover-grid">
-                            {filteredResults.map((item) => (
-                                <div key={`${item.media_type}-${item.id}`}>
-                                    <MediaCard
-                                        item={item}
-                                        compact={item.media_type === 'person'}
-                                        onAdd={handleAddToWatchlist}
-                                        isInWatchlist={watchlistIds.has(item.id)}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                        {loading.isLoadingMore && (
-                            <div className="discover-loading" style={{ padding: '2rem' }}>
-                                <div className="discover-spinner" />
-                                <p>Loading more...</p>
-                            </div>
-                        )}
-                        {!loading.hasMore && filteredResults.length > 0 && (
-                            <p
-                                style={{
-                                    textAlign: 'center',
-                                    color: 'rgba(255,255,255,0.3)',
-                                    fontSize: '0.85rem',
-                                    padding: '1rem',
+                        <div style={{ flex: 1, minHeight: 0, width: '100%' }}>
+                            <VirtuosoGrid
+                                style={{ height: '100%', width: '100%' }}
+                                useWindowScroll={true}
+                                totalCount={filteredResults.length}
+                                initialItemCount={20}
+                                endReached={() => {
+                                    if (loading.hasMore && !loading.isLoadingMore) {
+                                        actions.fetchData(store.page + 1)
+                                    }
                                 }}
-                            >
-                                You've reached the end
-                            </p>
-                        )}
-                {loading.hasMore && !loading.isLoadingMore && (
-                            <div ref={setLoadMoreRef} style={{ height: '50px' }} />
-                        )}
-                    </div>
+                                overscan={400}
+                                listClassName="discover-grid"
+                                itemContent={(index) => {
+                                    const item = filteredResults[index]
+                                    return (
+                                        <div key={item.id} style={{}}>
+                                            <MediaCard
+                                                item={item}
+                                                compact={item.media_type === 'person'}
+                                                onAdd={handleAddToWatchlist}
+                                                isInWatchlist={watchlistIds.has(item.id)}
+                                            />
+                                        </div>
+                                    )
+                                }}
+                                components={{
+                                    Footer: () => {
+                                        if (loading.isLoadingMore) {
+                                            return (
+                                                <div className="discover-loading" style={{ padding: '2rem' }}>
+                                                    <div className="discover-spinner" />
+                                                    <p>Loading more...</p>
+                                                </div>
+                                            )
+                                        }
+                                        if (!loading.hasMore && filteredResults.length > 0) {
+                                            return (
+                                                <p
+                                                    style={{
+                                                        textAlign: 'center',
+                                                        color: 'rgba(255,255,255,0.3)',
+                                                        fontSize: '0.85rem',
+                                                        padding: '1rem',
+                                                    }}
+                                                >
+                                                    You've reached the end
+                                                </p>
+                                            )
+                                        }
+                                        return null
+                                    }
+                                }}
+                            />
+                        </div>
                 )}
             </div>
 

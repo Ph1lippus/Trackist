@@ -1,137 +1,592 @@
 import React, { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
-import { requestPasswordReset, updateUserEmail } from '../services/profileService'
+import { requestPasswordReset, updateUserEmail, getProfile, updateProfile } from '../services/profileService'
+import { useCache } from '../hooks/useCache'
+import { validateDisplayName, validateEmail } from '../utils/validation'
+import type { User } from '@supabase/supabase-js'
+
+type SettingsSection = 'account' | 'profile' | 'privacy' | 'notifications' | 'data' | 'danger'
 
 const Settings: React.FC = () => {
-    const [username, setUsername] = useState('')
+    const navigate = useNavigate()
+    const [currentUser, setCurrentUser] = useState<User | null>(null)
+    const [activeSection, setActiveSection] = useState<SettingsSection>('account')
+    const [loading, setLoading] = useState(true)
+
+    // Account states
     const [email, setEmail] = useState('')
-    const [loading, setLoading] = useState(false)
-    const [message, setMessage] = useState('')
     const [emailLoading, setEmailLoading] = useState(false)
     const [resetLoading, setResetLoading] = useState(false)
+    const [accountMessage, setAccountMessage] = useState('')
+    const [accountError, setAccountError] = useState('')
+
+    // Profile states
+    const [displayName, setDisplayName] = useState('')
+    const [bio, setBio] = useState('')
+    const [profileLoading, setProfileLoading] = useState(false)
+    const [profileMessage, setProfileMessage] = useState('')
+    const [profileError, setProfileError] = useState('')
+
+    // Privacy states
+    const [isPrivate, setIsPrivate] = useState(false)
+    const [privacyLoading, setPrivacyLoading] = useState(false)
+    const [privacyMessage, setPrivacyMessage] = useState('')
+
+    // Data states
+    const { stats: cacheStats, clearCache, isClearing } = useCache()
+    const [exportLoading, setExportLoading] = useState(false)
+    const [dataMessage, setDataMessage] = useState('')
+
+    // Danger zone
+    const [deleteConfirm, setDeleteConfirm] = useState('')
+    const [deleteLoading, setDeleteLoading] = useState(false)
+    const [deleteError, setDeleteError] = useState('')
 
     useEffect(() => {
-        const loadProfile = async () => {
+        const loadSettings = async () => {
             const { data: { user } } = await supabase.auth.getUser()
-            if (user?.user_metadata) {
-                setUsername(user.user_metadata.username || '')
+            setCurrentUser(user)
+
+            if (user) {
+                setEmail(user.email || '')
+
+                const { data: profileData } = await getProfile(user.id)
+                if (profileData) {
+                    setDisplayName(profileData.display_name || '')
+                    setBio(profileData.bio || '')
+                }
             }
-            if (user?.email) {
-                setEmail(user.email)
-            }
+
+            setLoading(false)
         }
 
-        void loadProfile()
+        void loadSettings()
     }, [])
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        setLoading(true)
-        setMessage('')
-
-        const { data: { user }, error } = await supabase.auth.updateUser({
-            data: {
-                username
-            }
-        })
-
-        setLoading(false)
-
-        if (error) {
-            setMessage(error.message)
-            return
-        }
-
-        if (user) {
-            setMessage('Profile updated successfully')
-        }
-    }
 
     const handleEmailUpdate = async (e: React.FormEvent) => {
         e.preventDefault()
+        setAccountError('')
+        setAccountMessage('')
+
+        const emailError = validateEmail(email)
+        if (emailError) {
+            setAccountError(emailError)
+            return
+        }
+
         setEmailLoading(true)
-        setMessage('')
 
         const { error } = await updateUserEmail(email.trim().toLowerCase())
 
         setEmailLoading(false)
 
         if (error) {
-            setMessage(error.message)
+            setAccountError(error.message)
             return
         }
 
-        setMessage('A confirmation link has been sent to your new email address.')
+        setAccountMessage('A confirmation link has been sent to your new email address.')
     }
 
     const handlePasswordReset = async () => {
         if (!email) {
-            setMessage('Please provide an email address first')
+            setAccountError('Please provide an email address first')
             return
         }
 
+        setAccountError('')
+        setAccountMessage('')
         setResetLoading(true)
-        setMessage('')
 
         const { error } = await requestPasswordReset(email.trim().toLowerCase())
 
         setResetLoading(false)
 
         if (error) {
-            setMessage(error.message)
+            setAccountError(error.message)
             return
         }
 
-        setMessage('A password reset link has been sent to your email.')
+        setAccountMessage('A password reset link has been sent to your email.')
     }
 
-    return (
-        <section className="dashboard-page">
-            <div className="dashboard-shell">
-                <div className="dashboard-section">
-                    <div className="dashboard-section__head">
-                        <h2>Settings</h2>
-                        <span>Update your profile details</span>
+    const handleProfileUpdate = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setProfileError('')
+        setProfileMessage('')
+
+        if (!currentUser) return
+
+        const nameError = validateDisplayName(displayName)
+        if (nameError) {
+            setProfileError(nameError)
+            return
+        }
+
+        if (bio.length > 200) {
+            setProfileError('Bio must be 200 characters or less')
+            return
+        }
+
+        setProfileLoading(true)
+
+        const { error } = await updateProfile(currentUser.id, {
+            display_name: displayName,
+            bio: bio
+        })
+
+        setProfileLoading(false)
+
+        if (error) {
+            setProfileError(error.message)
+            return
+        }
+
+        setProfileMessage('Profile updated successfully')
+    }
+
+    const handlePrivacyUpdate = async () => {
+        setPrivacyLoading(true)
+        setPrivacyMessage('')
+
+        const { error } = await supabase.auth.updateUser({
+            data: { is_private: !isPrivate }
+        })
+
+        setPrivacyLoading(false)
+
+        if (error) {
+            setPrivacyMessage(error.message)
+            return
+        }
+
+        setIsPrivate(!isPrivate)
+        setPrivacyMessage(`Profile is now ${!isPrivate ? 'private' : 'public'}`)
+    }
+
+    const handleExportData = async () => {
+        if (!currentUser) return
+
+        setExportLoading(true)
+        setDataMessage('')
+
+        try {
+            const { data: watchlist } = await supabase
+                .from('watchlist')
+                .select('*')
+                .eq('user_id', currentUser.id)
+
+            const { data: lists } = await supabase
+                .from('lists')
+                .select('*')
+                .eq('user_id', currentUser.id)
+
+            const { data: follows } = await supabase
+                .from('user_follows')
+                .select('*')
+                .eq('follower_id', currentUser.id)
+
+            const exportData = {
+                exported_at: new Date().toISOString(),
+                user: {
+                    email: currentUser.email,
+                    display_name: displayName,
+                    bio: bio
+                },
+                watchlist: watchlist || [],
+                lists: lists || [],
+                following: follows || []
+            }
+
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = `trackist-export-${new Date().toISOString().split('T')[0]}.json`
+            a.click()
+            URL.revokeObjectURL(url)
+
+            setDataMessage('Data exported successfully')
+        } catch {
+            setDataMessage('Failed to export data')
+        }
+
+        setExportLoading(false)
+    }
+
+    const handleDeleteAccount = async () => {
+        setDeleteError('')
+
+        if (deleteConfirm !== 'DELETE') {
+            setDeleteError('Please type DELETE to confirm')
+            return
+        }
+
+        if (!currentUser) return
+
+        setDeleteLoading(true)
+
+        try {
+            await supabase.from('watchlist').delete().eq('user_id', currentUser.id)
+            await supabase.from('lists').delete().eq('user_id', currentUser.id)
+            await supabase.from('user_follows').delete().eq('follower_id', currentUser.id)
+            await supabase.from('user_follows').delete().eq('followed_id', currentUser.id)
+            await supabase.from('profiles').delete().eq('id', currentUser.id)
+
+            await supabase.auth.signOut()
+            navigate('/login')
+        } catch {
+            setDeleteError('Failed to delete account. Please contact support.')
+        }
+
+        setDeleteLoading(false)
+    }
+
+    const handleLogout = async () => {
+        if (window.confirm('Are you sure you want to logout?')) {
+            await supabase.auth.signOut()
+            navigate('/login')
+        }
+    }
+
+    if (loading) {
+        return (
+            <section className="dashboard-page">
+                <div className="dashboard-shell">
+                    <div className="discover-loading">
+                        <div className="discover-spinner"></div>
+                        <p>Loading settings...</p>
                     </div>
+                </div>
+            </section>
+        )
+    }
 
-                    <form className="auth-card" onSubmit={handleSubmit}>
-                        <div className="mb-3">
-                            <label className="form-label">Username</label>
-                            <input
-                                className="form-control"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
-                                placeholder="Enter username"
-                            />
-                        </div>
+    const sections: { id: SettingsSection; label: string; icon: string }[] = [
+        { id: 'account', label: 'Account', icon: 'fa-user-shield' },
+        { id: 'profile', label: 'Profile', icon: 'fa-id-card' },
+        { id: 'privacy', label: 'Privacy', icon: 'fa-lock' },
+        { id: 'notifications', label: 'Notifications', icon: 'fa-bell' },
+        { id: 'data', label: 'Data & Cache', icon: 'fa-database' },
+        { id: 'danger', label: 'Danger Zone', icon: 'fa-triangle-exclamation' }
+    ]
 
-                        {message && <div className="alert alert-info">{message}</div>}
+    return (
+        <section className="dashboard-page settings-page">
+            <div className="dashboard-shell">
+                <div className="discover-section">
+                    <div className="discover-section__head">
+                        <h2>Settings</h2>
+                        <span>Manage your account and preferences</span>
+                    </div>
+                </div>
 
-                        <button className="btn btn-primary w-100" type="submit" disabled={loading}>
-                            {loading ? 'Saving...' : 'Save changes'}
+                <div className="settings-layout">
+                    <aside className="settings-sidebar">
+                        {sections.map(section => (
+                            <button
+                                key={section.id}
+                                className={`settings-nav-item ${activeSection === section.id ? 'active' : ''} ${section.id === 'danger' ? 'settings-nav-item--danger' : ''}`}
+                                onClick={() => setActiveSection(section.id)}
+                            >
+                                <i className={`fa-solid ${section.icon}`}></i>
+                                <span>{section.label}</span>
+                            </button>
+                        ))}
+                        <button
+                            className="settings-nav-item settings-nav-item--logout"
+                            onClick={handleLogout}
+                        >
+                            <i className="fa-solid fa-right-from-bracket"></i>
+                            <span>Logout</span>
                         </button>
-                    </form>
+                    </aside>
 
-                    <form className="auth-card mt-4" onSubmit={handleEmailUpdate}>
-                        <div className="mb-3">
-                            <label className="form-label">Email address</label>
-                            <input
-                                className="form-control"
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                placeholder="Enter your new email"
-                            />
-                        </div>
-                        <button className="btn btn-outline-primary w-100" type="submit" disabled={emailLoading}>
-                            {emailLoading ? 'Sending confirmation...' : 'Change email'}
-                        </button>
-                    </form>
+                    <div className="settings-content">
+                        {activeSection === 'account' && (
+                            <div className="settings-panel">
+                                <div className="settings-panel__header">
+                                    <h3>Account</h3>
+                                    <p>Manage your email and password</p>
+                                </div>
 
-                    <div className="auth-card mt-4">
-                        <button className="btn btn-outline-secondary w-100" type="button" onClick={handlePasswordReset} disabled={resetLoading}>
-                            {resetLoading ? 'Sending reset link...' : 'Send password reset link'}
-                        </button>
+                                <form className="settings-form" onSubmit={handleEmailUpdate}>
+                                    <div className="settings-field">
+                                        <label className="settings-field__label">Email Address</label>
+                                        <input
+                                            className="settings-field__input"
+                                            type="email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            placeholder="Enter your new email"
+                                        />
+                                        <span className="settings-field__hint">Changing your email requires confirmation via a link sent to the new address.</span>
+                                    </div>
+
+                                    {accountError && <div className="settings-alert settings-alert--error">{accountError}</div>}
+                                    {accountMessage && <div className="settings-alert settings-alert--success">{accountMessage}</div>}
+
+                                    <button className="settings-btn settings-btn--primary" type="submit" disabled={emailLoading}>
+                                        {emailLoading ? <><i className="fa-solid fa-spinner fa-spin"></i> Sending...</> : <><i className="fa-solid fa-envelope"></i> Change Email</>}
+                                    </button>
+                                </form>
+
+                                <div className="settings-divider"></div>
+
+                                <div className="settings-form">
+                                    <div className="settings-field">
+                                        <label className="settings-field__label">Password</label>
+                                        <span className="settings-field__hint">Need to change your password? We'll send a reset link to your email.</span>
+                                    </div>
+
+                                    <button className="settings-btn settings-btn--secondary" type="button" onClick={handlePasswordReset} disabled={resetLoading}>
+                                        {resetLoading ? <><i className="fa-solid fa-spinner fa-spin"></i> Sending...</> : <><i className="fa-solid fa-key"></i> Send Password Reset Link</>}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeSection === 'profile' && (
+                            <div className="settings-panel">
+                                <div className="settings-panel__header">
+                                    <h3>Profile</h3>
+                                    <p>Update your display name and bio</p>
+                                </div>
+
+                                <form className="settings-form" onSubmit={handleProfileUpdate}>
+                                    <div className="settings-field">
+                                        <label className="settings-field__label">Display Name</label>
+                                        <input
+                                            className="settings-field__input"
+                                            type="text"
+                                            value={displayName}
+                                            onChange={(e) => setDisplayName(e.target.value)}
+                                            placeholder="Your display name"
+                                            maxLength={50}
+                                        />
+                                        <span className="settings-field__hint">{displayName.length}/50 characters</span>
+                                    </div>
+
+                                    <div className="settings-field">
+                                        <label className="settings-field__label">Bio</label>
+                                        <textarea
+                                            className="settings-field__input settings-field__textarea"
+                                            value={bio}
+                                            onChange={(e) => setBio(e.target.value)}
+                                            placeholder="Tell us about yourself..."
+                                            maxLength={200}
+                                            rows={4}
+                                        />
+                                        <span className="settings-field__hint">{bio.length}/200 characters</span>
+                                    </div>
+
+                                    {profileError && <div className="settings-alert settings-alert--error">{profileError}</div>}
+                                    {profileMessage && <div className="settings-alert settings-alert--success">{profileMessage}</div>}
+
+                                    <button className="settings-btn settings-btn--primary" type="submit" disabled={profileLoading}>
+                                        {profileLoading ? <><i className="fa-solid fa-spinner fa-spin"></i> Saving...</> : <><i className="fa-solid fa-floppy-disk"></i> Save Changes</>}
+                                    </button>
+                                </form>
+
+                                <div className="settings-divider"></div>
+
+                                <div className="settings-form">
+                                    <div className="settings-field">
+                                        <label className="settings-field__label">Avatar</label>
+                                        <span className="settings-field__hint">Update your profile picture</span>
+                                    </div>
+                                    <button
+                                        className="settings-btn settings-btn--secondary"
+                                        type="button"
+                                        onClick={() => navigate('/EditProfile')}
+                                    >
+                                        <i className="fa-solid fa-image"></i> Edit Avatar
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeSection === 'privacy' && (
+                            <div className="settings-panel">
+                                <div className="settings-panel__header">
+                                    <h3>Privacy</h3>
+                                    <p>Control who can see your profile and activity</p>
+                                </div>
+
+                                <div className="settings-toggle-row">
+                                    <div className="settings-toggle-row__info">
+                                        <span className="settings-toggle-row__label">Private Profile</span>
+                                        <span className="settings-toggle-row__desc">When enabled, only your followers can see your watchlist and lists</span>
+                                    </div>
+                                    <label className="settings-switch">
+                                        <input
+                                            type="checkbox"
+                                            checked={isPrivate}
+                                            onChange={handlePrivacyUpdate}
+                                            disabled={privacyLoading}
+                                        />
+                                        <span className="settings-switch__slider"></span>
+                                    </label>
+                                </div>
+
+                                {privacyMessage && <div className="settings-alert settings-alert--success">{privacyMessage}</div>}
+
+                                <div className="settings-divider"></div>
+
+                                <div className="settings-info-box">
+                                    <i className="fa-solid fa-circle-info"></i>
+                                    <div>
+                                        <h4>Privacy Information</h4>
+                                        <ul>
+                                            <li>Your display name and bio are always visible</li>
+                                            <li>Private profiles hide watchlist and lists from non-followers</li>
+                                            <li>Statistics are always visible on your profile</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeSection === 'notifications' && (
+                            <div className="settings-panel">
+                                <div className="settings-panel__header">
+                                    <h3>Notifications</h3>
+                                    <p>Manage how you receive updates</p>
+                                </div>
+
+                                <div className="settings-toggle-row">
+                                    <div className="settings-toggle-row__info">
+                                        <span className="settings-toggle-row__label">New Episode Alerts</span>
+                                        <span className="settings-toggle-row__desc">Get notified when shows you're watching release new episodes</span>
+                                    </div>
+                                    <label className="settings-switch">
+                                        <input type="checkbox" defaultChecked />
+                                        <span className="settings-switch__slider"></span>
+                                    </label>
+                                </div>
+
+                                <div className="settings-toggle-row">
+                                    <div className="settings-toggle-row__info">
+                                        <span className="settings-toggle-row__label">New Season Alerts</span>
+                                        <span className="settings-toggle-row__desc">Get notified when shows you've caught up on get new seasons</span>
+                                    </div>
+                                    <label className="settings-switch">
+                                        <input type="checkbox" defaultChecked />
+                                        <span className="settings-switch__slider"></span>
+                                    </label>
+                                </div>
+
+                                <div className="settings-toggle-row">
+                                    <div className="settings-toggle-row__info">
+                                        <span className="settings-toggle-row__label">New Followers</span>
+                                        <span className="settings-toggle-row__desc">Get notified when someone follows you</span>
+                                    </div>
+                                    <label className="settings-switch">
+                                        <input type="checkbox" defaultChecked />
+                                        <span className="settings-switch__slider"></span>
+                                    </label>
+                                </div>
+
+                                <div className="settings-divider"></div>
+
+                                <div className="settings-info-box">
+                                    <i className="fa-solid fa-circle-info"></i>
+                                    <div>
+                                        <h4>About Notifications</h4>
+                                        <p>Notification preferences are saved to your account and apply across all your devices.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeSection === 'data' && (
+                            <div className="settings-panel">
+                                <div className="settings-panel__header">
+                                    <h3>Data & Cache</h3>
+                                    <p>Manage your data and cache settings</p>
+                                </div>
+
+                                <div className="settings-data-card">
+                                    <div className="settings-data-card__info">
+                                        <span className="settings-data-card__label">Cache Status</span>
+                                        <span className="settings-data-card__value">
+                                            {cacheStats.memoryEntries + cacheStats.dbEntries} entries cached
+                                        </span>
+                                        <span className="settings-data-card__sub">
+                                            {cacheStats.memoryEntries} in memory · {cacheStats.dbEntries} in database
+                                        </span>
+                                    </div>
+                                    <button
+                                        className="settings-btn settings-btn--secondary"
+                                        onClick={clearCache}
+                                        disabled={isClearing || (cacheStats.memoryEntries === 0 && cacheStats.dbEntries === 0)}
+                                    >
+                                        {isClearing ? <><i className="fa-solid fa-spinner fa-spin"></i> Clearing...</> : <><i className="fa-solid fa-trash"></i> Clear Cache</>}
+                                    </button>
+                                </div>
+
+                                <div className="settings-divider"></div>
+
+                                <div className="settings-data-card">
+                                    <div className="settings-data-card__info">
+                                        <span className="settings-data-card__label">Export Your Data</span>
+                                        <span className="settings-data-card__value">Download all your Trackist data</span>
+                                        <span className="settings-data-card__sub">Includes watchlist, lists, and follows in JSON format</span>
+                                    </div>
+                                    <button
+                                        className="settings-btn settings-btn--secondary"
+                                        onClick={handleExportData}
+                                        disabled={exportLoading}
+                                    >
+                                        {exportLoading ? <><i className="fa-solid fa-spinner fa-spin"></i> Exporting...</> : <><i className="fa-solid fa-download"></i> Export Data</>}
+                                    </button>
+                                </div>
+
+                                {dataMessage && <div className="settings-alert settings-alert--success">{dataMessage}</div>}
+                            </div>
+                        )}
+
+                        {activeSection === 'danger' && (
+                            <div className="settings-panel settings-panel--danger">
+                                <div className="settings-panel__header">
+                                    <h3>Danger Zone</h3>
+                                    <p>Irreversible and destructive actions</p>
+                                </div>
+
+                                <div className="settings-danger-card">
+                                    <div className="settings-danger-card__info">
+                                        <span className="settings-danger-card__label">Delete Account</span>
+                                        <span className="settings-danger-card__desc">
+                                            Permanently delete your account and all associated data. This action cannot be undone.
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="settings-form">
+                                    <div className="settings-field">
+                                        <label className="settings-field__label">Type DELETE to confirm</label>
+                                        <input
+                                            className="settings-field__input settings-field__input--danger"
+                                            type="text"
+                                            value={deleteConfirm}
+                                            onChange={(e) => setDeleteConfirm(e.target.value)}
+                                            placeholder="DELETE"
+                                        />
+                                    </div>
+
+                                    {deleteError && <div className="settings-alert settings-alert--error">{deleteError}</div>}
+
+                                    <button
+                                        className="settings-btn settings-btn--danger"
+                                        onClick={handleDeleteAccount}
+                                        disabled={deleteLoading || deleteConfirm !== 'DELETE'}
+                                    >
+                                        {deleteLoading ? <><i className="fa-solid fa-spinner fa-spin"></i> Deleting...</> : <><i className="fa-solid fa-trash-can"></i> Delete My Account</>}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

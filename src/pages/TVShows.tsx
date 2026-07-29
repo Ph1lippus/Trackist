@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
 import { getWatchedEpisodeCount, markEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
@@ -13,7 +12,6 @@ interface TVShowWithProgress extends WatchlistItem {
 }
 
 const TVShows: React.FC = () => {
-    const navigate = useNavigate()
     const { clearScrollPosition } = useScrollRestoration()
     const [items, setItems] = useState<TVShowWithProgress[]>([])
     const [loading, setLoading] = useState(true)
@@ -198,9 +196,21 @@ const TVShows: React.FC = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [loading, items.length])
 
-    const filteredItems = items.filter(item =>
-        item.title.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    const [searchActive, setSearchActive] = useState(false)
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault()
+        setSearchActive(true)
+    }
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(e.target.value)
+        setSearchActive(false)
+    }
+
+    const filteredItems = searchActive
+        ? items.filter(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()))
+        : items
 
     // Container A: Currently Watching - some episodes watched, but total watched < total available
     const currentlyWatching = filteredItems.filter(
@@ -215,19 +225,8 @@ const TVShows: React.FC = () => {
         item.total_episodes_watched === 0
     )
 
-    // Container C: Completed - all available episodes watched
-    const completed = filteredItems.filter(
-        item => (item.status === 'completed' || item.status === 'caught_up' || (
-            item.status === 'watching' &&
-            item.total_episodes !== undefined &&
-            item.total_episodes > 0 &&
-            item.total_episodes_watched >= item.total_episodes
-        ))
-    )
-
     const visibleCurrentlyWatching = currentlyWatching
     const visibleNotStarted = notStarted
-    const visibleCompleted = completed
 
     const buildTmdbItem = (item: WatchlistItem): TMDBResult => ({
         id: item.tmdb_id as number,
@@ -288,7 +287,7 @@ const TVShows: React.FC = () => {
         <div className="discover-page">
             <div className="discover-container" style={{ width: '85%' }}>
                 <div className="discover-search-wrap">
-                    <form onSubmit={(e) => e.preventDefault()}>
+                    <form onSubmit={handleSearch}>
                         <div className="discover-search-box">
                             <svg className="discover-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <circle cx="11" cy="11" r="8" />
@@ -298,7 +297,7 @@ const TVShows: React.FC = () => {
                                 className="discover-search"
                                 placeholder="Search your TV shows..."
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onChange={handleSearchChange}
                             />
                         </div>
                     </form>
@@ -349,30 +348,6 @@ const TVShows: React.FC = () => {
                     ) : (
                         <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
                             {searchQuery ? 'No matching shows' : 'No shows queued to start'}
-                        </p>
-                    )}
-                </div>
-
-                {/* Container C (Bottom): Completed */}
-                <div className="watchlist-section">
-                    <div className="watchlist-section__header">
-                        <h3 className="watchlist-section__title">Completed</h3>
-                    </div>
-                    {completed.length > 0 ? (
-                        <div className={`discover-grid`}>
-                            {visibleCompleted.map((item) => (
-                                <MediaCard
-                                    key={item.id}
-                                    item={buildTmdbItem(item)}
-                                    isInWatchlist={true}
-                                    onAdd={() => {}}
-                                    onMarkUnwatched={() => navigate(`/tv/${item.tmdb_id}`)}
-                                />
-                            ))}
-                        </div>
-                    ) : (
-                        <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
-                            {searchQuery ? 'No matching shows' : 'No completed shows yet'}
                         </p>
                     )}
                 </div>

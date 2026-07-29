@@ -89,15 +89,25 @@ const Movies: React.FC = () => {
         setConfirmModal(null)
     }
 
-    const filteredItems = items.filter(item => 
-        item.title.toLowerCase().includes(searchQuery.toLowerCase())
-    )
+    const [searchActive, setSearchActive] = useState(false)
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault()
+        setSearchActive(true)
+    }
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setSearchQuery(e.target.value)
+        setSearchActive(false)
+    }
+
+    const filteredItems = searchActive
+        ? items.filter(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()))
+        : items
 
     const watchlistItems = filteredItems.filter(item => item.status === 'watching')
-    const watchedItems = filteredItems.filter(item => item.status !== 'watching')
 
     const visibleWatchlistItems = watchlistItems
-    const visibleWatchedItems = watchedItems
 
     if (loading) return (
         <section className="dashboard-page">
@@ -111,7 +121,7 @@ const Movies: React.FC = () => {
         <div className="discover-page">
             <div className="discover-container" style={{ width: '85%' }}>
                 <div className="discover-search-wrap">
-                    <form onSubmit={(e) => e.preventDefault()}>
+                    <form onSubmit={handleSearch}>
                         <div className="discover-search-box">
                             <svg className="discover-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <circle cx="11" cy="11" r="8" />
@@ -121,7 +131,7 @@ const Movies: React.FC = () => {
                                 className="discover-search"
                                 placeholder="Search your movies..."
                                 value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onChange={handleSearchChange}
                             />
                         </div>
                     </form>
@@ -158,40 +168,6 @@ const Movies: React.FC = () => {
                     )}
                 </div>
 
-                {/* Container 2 (Bottom): Already Watched */}
-                <div className="watchlist-section">
-                    <div className="watchlist-section__header">
-                        <h3 className="watchlist-section__title">Already Watched</h3>
-
-                    </div>
-                    {visibleWatchedItems.length > 0 ? (
-                        <>
-                            <div className={`discover-grid watchlist-grid--watched}`} data-rows={1}>
-                                {visibleWatchedItems.map((item) => {
-                                    const tmdbItem: TMDBResult = {
-                                        id: item.tmdb_id as number,
-                                        title: item.title,
-                                        poster_path: item.poster_path,
-                                        media_type: 'movie'
-                                    }
-                                    return (
-                                        <MediaCard
-                                            key={item.id}
-                                            item={tmdbItem}
-                                            isInWatchlist={true}
-                                            onAdd={() => {}}
-                                            onMarkUnwatched={(item) => setConfirmModal({ isOpen: true, action: 'unwatch', item })}
-                                        />
-                                    )
-                                })}
-                            </div>
-                        </>
-                    ) : (
-                        <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
-                            No watched movies yet
-                        </p>
-                    )}
-                </div>
             </div>
 
             {confirmModal && (
