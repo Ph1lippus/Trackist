@@ -25,21 +25,21 @@ const Discover: React.FC = () => {
     // Fetch genres on mount
     useEffect(() => {
         store.fetchGenres()
-    }, [store])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [])
     
-    // Fetch data when filters change
+    // Fetch data on mount and when filters change
     useEffect(() => {
-        if (store.isDataLoaded) {
-            actions.fetchData(1)
-        }
-    }, [filters.mediaType, filters.sortBy, filters.selectedGenre, filters.selectedYear, filters.query, store, actions])
+        actions.fetchData(1)
+    }, [filters.mediaType, filters.sortBy, filters.selectedGenre, filters.selectedYear, filters.query, actions])
     
     // Handle visibility changes for scroll restoration
     useEffect(() => {
         if (isVisible) {
             store.setIsVisible(true)
         }
-    }, [isVisible, store])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isVisible])
     
     // Infinite scroll observer
     useEffect(() => {
@@ -57,7 +57,7 @@ const Discover: React.FC = () => {
         return () => {
             observer.disconnect()
         }
-    }, [loading.hasMore, loading.isLoadingMore, store.page, actions, store])
+    }, [loading.hasMore, loading.isLoadingMore, store.page, actions])
     
     // Callback ref for loadMore element
     const setLoadMoreRef = useCallback((node: HTMLDivElement | null) => {

@@ -73,7 +73,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     hasMore: true,
     scrollY: 0,
     watchlistIds: new Set<number>(),
-    isLoading: true,
+    isLoading: false,
     isLoadingMore: false,
     genres: [],
     isDataLoaded: false,
