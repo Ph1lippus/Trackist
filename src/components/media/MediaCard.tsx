@@ -64,7 +64,8 @@ const MediaCard: React.FC<MediaCardProps> = ({
                         <span>{displayTitle}</span>
                     </div>
                 )}
-                {!compact && onAdd && (
+                {/* Bookmark icon: shown when onAdd is provided and no watched/unwatched action is relevant */}
+                {!compact && onAdd && !(isInWatchlist && (onMarkWatched || onMarkUnwatched)) && (
                     <button
                         className="media-card__icon-btn"
                         onClick={(e) => { e.stopPropagation(); onAdd(item); }}
@@ -77,6 +78,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
                         )}
                     </button>
                 )}
+                {/* Add to list icon: shown when onAddToList is provided and item is not a person */}
                 {!compact && onAddToList && !isPerson && (
                     <button
                         className="media-card__list-icon"
@@ -88,9 +90,10 @@ const MediaCard: React.FC<MediaCardProps> = ({
                         </svg>
                     </button>
                 )}
+                {/* Mark as watched: shown when item is in watchlist and onMarkWatched is provided */}
                 {!compact && !isPerson && isInWatchlist && onMarkWatched && !onMarkUnwatched && (
                     <button
-                        className="media-card__icon-btn media-card__icon-btn--second"
+                        className="media-card__icon-btn"
                         onClick={(e) => {
                             e.stopPropagation()
                             onMarkWatched(item)
@@ -100,7 +103,8 @@ const MediaCard: React.FC<MediaCardProps> = ({
                         <i className="fa-solid fa-eye"></i>
                     </button>
                 )}
-                {!compact && !isPerson && isInWatchlist && onMarkUnwatched && (
+                {/* Mark as unwatched: shown when item is in watchlist and onMarkUnwatched is provided */}
+                {!compact && !isPerson && isInWatchlist && onMarkUnwatched && !onMarkWatched && (
                     <button
                         className="media-card__icon-btn"
                         onClick={(e) => {
@@ -112,7 +116,8 @@ const MediaCard: React.FC<MediaCardProps> = ({
                         <i className="fa-solid fa-eye-slash"></i>
                     </button>
                 )}
-                {!compact && !isPerson && isInWatchlist && !onMarkWatched && !onMarkUnwatched && (
+                {/* In watchlist indicator (no action): shown when item is in watchlist but no watched/unwatched callback is provided */}
+                {!compact && !isPerson && isInWatchlist && !onMarkWatched && !onMarkUnwatched && !onAdd && (
                     <div className="media-card__icon-btn" title="In watchlist">
                         <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
                     </div>

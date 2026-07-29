@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useMemo, useCallback } from 'react'
 import { useLocation } from 'react-router-dom'
-import useDiscoverStore, { useDiscoverResults, useDiscoverFilters, useDiscoverLoading, useDiscoverActions } from '../stores/discoverStore'
+import useDiscoverStore, { useDiscoverResults, useDiscoverFilters, useDiscoverLoading, useDiscoverActions, useDiscoverWatchlistIds } from '../stores/discoverStore'
 import MediaCard from '../components/media/MediaCard'
 import type { TMDBResult } from '../types'
 
@@ -13,6 +13,7 @@ const Discover: React.FC = () => {
     const filters = useDiscoverFilters()
     const loading = useDiscoverLoading()
     const actions = useDiscoverActions()
+    const watchlistIds = useDiscoverWatchlistIds()
     const store = useDiscoverStore()
     
     // Refs
@@ -22,9 +23,10 @@ const Discover: React.FC = () => {
     // Memoized filtered results (currently no filtering, but ready for future use)
     const filteredResults = useMemo(() => results, [results])
     
-    // Fetch genres on mount
+    // Fetch genres and watchlist IDs on mount
     useEffect(() => {
         store.fetchGenres()
+        store.fetchWatchlistIds()
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
     
@@ -83,7 +85,7 @@ const Discover: React.FC = () => {
     }
     
     const handleAddToWatchlist = (item: TMDBResult) => {
-        if (store.watchlistIds.has(item.id)) {
+        if (watchlistIds.has(item.id)) {
             actions.removeFromWatchlist(item.id)
         } else {
             actions.addToWatchlist(item.id)
@@ -217,7 +219,7 @@ const Discover: React.FC = () => {
                                         item={item}
                                         compact={item.media_type === 'person'}
                                         onAdd={handleAddToWatchlist}
-                                        isInWatchlist={store.watchlistIds.has(item.id)}
+                                        isInWatchlist={watchlistIds.has(item.id)}
                                     />
                                 </div>
                             ))}

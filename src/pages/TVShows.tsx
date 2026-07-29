@@ -393,11 +393,10 @@ const TVShows: React.FC = () => {
                     onCancel={() => {
                         if (!markingAllWatched) {
                             setMarkAllModal(null)
-                            navigate(`/tv/${markAllModal.tmdb_id}`)
                         }
                     }}
                     confirmText={markingAllWatched ? 'Marking...' : 'Yes, Fully Watched'}
-                    cancelText="Go to Details"
+                    cancelText="Cancel"
                     confirmColor="success"
                 />
             )}

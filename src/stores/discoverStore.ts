@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
+import { supabase } from '../services/supabaseClient'
 import type { TMDBResult } from '../types'
 import {
     searchMulti,
@@ -57,6 +58,7 @@ interface DiscoverState {
     reset: () => void
     fetchData: (pageNum?: number) => Promise<void>
     fetchGenres: () => Promise<void>
+    fetchWatchlistIds: () => Promise<void>
     setIsVisible: (visible: boolean) => void
     setFilters: (filters: Partial<DiscoverState>) => void
 }
@@ -143,6 +145,19 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     },
     
     setFilters: (filters) => set(filters),
+
+    fetchWatchlistIds: async () => {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { data } = await supabase
+            .from('watchlist')
+            .select('tmdb_id')
+            .eq('user_id', user.id)
+        if (data) {
+            const ids = new Set(data.map(item => item.tmdb_id).filter((id): id is number => id != null))
+            set({ watchlistIds: ids })
+        }
+    },
 
     fetchGenres: async () => {
         const [movieGenres, tvGenres] = await Promise.all([
@@ -418,6 +433,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
 
 // Selector hooks for optimized re-renders
 export const useDiscoverResults = () => useDiscoverStore((state) => state.results)
+export const useDiscoverWatchlistIds = () => useDiscoverStore((state) => state.watchlistIds)
 export const useDiscoverFilters = () => {
     const selector = useShallow((state: DiscoverState) => ({
         mediaType: state.mediaType,
@@ -449,7 +465,6 @@ export const useDiscoverActions = () => {
         saveScroll: state.saveScroll,
         addToWatchlist: state.addToWatchlist,
         removeFromWatchlist: state.removeFromWatchlist,
-        watchlistIds: state.watchlistIds,
     }))
     return useDiscoverStore(selector)
 }
