@@ -1,7 +1,8 @@
-import React, { useEffect, useRef, useMemo, useCallback } from 'react'
+import React, { useEffect, useRef, useMemo, useCallback, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import useDiscoverStore, { useDiscoverResults, useDiscoverFilters, useDiscoverLoading, useDiscoverActions, useDiscoverWatchlistIds } from '../stores/discoverStore'
 import MediaCard from '../components/media/MediaCard'
+import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
 
 const Discover: React.FC = () => {
@@ -16,6 +17,9 @@ const Discover: React.FC = () => {
     const watchlistIds = useDiscoverWatchlistIds()
     const store = useDiscoverStore()
     
+    // State for confirmation modal when removing from watchlist
+    const [removeConfirmItem, setRemoveConfirmItem] = useState<TMDBResult | null>(null)
+
     // Refs
     const observerRef = useRef<IntersectionObserver | null>(null)
     const loadMoreRef = useRef<HTMLDivElement | null>(null)
@@ -86,9 +90,17 @@ const Discover: React.FC = () => {
     
     const handleAddToWatchlist = (item: TMDBResult) => {
         if (watchlistIds.has(item.id)) {
-            actions.removeFromWatchlist(item.id)
+            // Show confirmation before removing
+            setRemoveConfirmItem(item)
         } else {
             actions.addToWatchlist(item.id)
+        }
+    }
+
+    const handleConfirmRemove = () => {
+        if (removeConfirmItem) {
+            actions.removeFromWatchlist(removeConfirmItem.id)
+            setRemoveConfirmItem(null)
         }
     }
     
@@ -242,12 +254,25 @@ const Discover: React.FC = () => {
                                 You've reached the end
                             </p>
                         )}
-                        {loading.hasMore && !loading.isLoadingMore && (
+                {loading.hasMore && !loading.isLoadingMore && (
                             <div ref={setLoadMoreRef} style={{ height: '50px' }} />
                         )}
                     </div>
                 )}
             </div>
+
+            {removeConfirmItem && (
+                <ConfirmModal
+                    isOpen={true}
+                    title="Remove from Watchlist"
+                    message={`Are you sure you want to remove "${removeConfirmItem.title || removeConfirmItem.name}" from your watchlist?`}
+                    onConfirm={handleConfirmRemove}
+                    onCancel={() => setRemoveConfirmItem(null)}
+                    confirmText="Remove"
+                    cancelText="Cancel"
+                    confirmColor="danger"
+                />
+            )}
         </div>
     )
 }
