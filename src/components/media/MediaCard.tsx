@@ -105,9 +105,8 @@ const MediaCard: React.FC<MediaCardProps> = ({
     return (
         <article className="media-card">
             <div className="media-card__poster" onClick={handleClick}>
-                {imgUrl ? (
-                    <img src={imgUrl} alt={displayTitle} loading="lazy" />
-                ) : (
+                {imgUrl && <img src={imgUrl} alt={displayTitle} loading="lazy" />}
+                {!imgUrl && (
                     <div className="media-card__no-poster">
                         <span>{displayTitle}</span>
                     </div>

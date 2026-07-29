@@ -74,6 +74,9 @@ const Discover: React.FC = () => {
     const virtuosoState = useDiscoverVirtuosoState()
     const pageState = useDiscoverPage()
 
+    // Debug logging
+    console.log('Discover render:', { resultsCount: results.length, loading, filters, isVisible })
+
     // Local UI state
     const [removeConfirmItem, setRemoveConfirmItem] = useState<TMDBResult | null>(null)
     const [searchInput, setSearchInput] = useState(filters.query)
@@ -260,12 +263,6 @@ const Discover: React.FC = () => {
 
                 <div className="discover-controls">
                     <div className="discover-tabs">
-                        <button
-                            className={`discover-tab ${filters.mediaType === 'all' ? 'active' : ''}`}
-                            onClick={() => handleMediaType('all')}
-                        >
-                            All
-                        </button>
                         <button
                             className={`discover-tab ${filters.mediaType === 'movie' ? 'active' : ''}`}
                             onClick={() => handleMediaType('movie')}

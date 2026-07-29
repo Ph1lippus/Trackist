@@ -25,7 +25,7 @@ export type SortBy =
     | 'original_title.asc'
     | 'original_title.desc'
 
-export type MediaType = 'all' | 'movie' | 'tv' | 'person'
+export type MediaType = 'movie' | 'tv' | 'person'
 
 export interface DiscoverFilters {
     mediaType: MediaType
@@ -80,7 +80,7 @@ interface DiscoverState extends DiscoverFilters {
 let currentRequestId = 0
 
 const DEFAULT_FILTERS: DiscoverFilters = {
-    mediaType: 'all',
+    mediaType: 'movie',
     sortBy: 'popularity.desc',
     selectedGenre: null,
     selectedYear: null,
@@ -319,22 +319,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     return { ...r, media_type: r.media_type || (r.title ? 'movie' as const : 'tv' as const) }
                 })
 
-                if (mediaType === 'movie') {
-                    combined = combined.filter(r => r.media_type === 'movie')
-                } else if (mediaType === 'tv') {
-                    combined = combined.filter(r => r.media_type === 'tv')
-                } else if (mediaType === 'person') {
-                    const data = await getPopularPeople(pageNum)
-                    const raw = (data.results || []).map(r => ({ ...r, media_type: 'person' as const }))
-                    const seen2 = new Set<number>()
-                    newResults = raw.filter(item => {
-                        if (seen2.has(item.id)) return false
-                        seen2.add(item.id)
-                        return true
-                    })
-                    totalPages = (data as { total_pages?: number }).total_pages || 1
-                }
-
                 // If searching for people, also fetch their filmography
                 if (query.trim() && combined.some(r => r.media_type === 'person')) {
                     const personIds = combined.filter(r => r.media_type === 'person').map(r => r.id)
@@ -355,6 +339,15 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     combined = [...combined, ...uniqueFilms]
                 }
 
+                // Filter by active tab
+                if (mediaType === 'movie') {
+                    combined = combined.filter(r => r.media_type === 'movie')
+                } else if (mediaType === 'tv') {
+                    combined = combined.filter(r => r.media_type === 'tv')
+                } else if (mediaType === 'person') {
+                    combined = combined.filter(r => r.media_type === 'person')
+                }
+
                 newResults = combined
             }
             // PERSON MODE
@@ -362,52 +355,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 const data = await getPopularPeople(pageNum)
                 newResults = (data.results || []).map(r => ({ ...r, media_type: 'person' as const }))
                 totalPages = (data as { total_pages?: number }).total_pages || 1
-            }
-            // ALL MEDIA TYPE MODE
-            else if (mediaType === 'all') {
-                const movieCacheKey = `${query}-${pageNum}-${sortBy}-${selectedYear}-${selectedGenre}`
-                const tvCacheKey = `${query}-${pageNum}-${mapSortParamForTV(sortBy)}-${selectedYear}-${selectedGenre}`
-
-                const [moviesData, tvData] = await Promise.all([
-                    getCachedOrFetch(
-                        'discover-movie',
-                        movieCacheKey,
-                        () => discoverMovies({
-                            page: pageNum,
-                            sort_by: sortBy,
-                            primary_release_year: selectedYear ?? undefined,
-                            with_genres: selectedGenre ? String(selectedGenre) : undefined,
-                        }),
-                        { ttl: 6 * 60 * 60 * 1000 },
-                    ),
-                    getCachedOrFetch(
-                        'discover-tv',
-                        tvCacheKey,
-                        () => discoverTV({
-                            page: pageNum,
-                            sort_by: mapSortParamForTV(sortBy),
-                            first_air_date_year: selectedYear ?? undefined,
-                            with_genres: selectedGenre ? String(selectedGenre) : undefined,
-                        }),
-                        { ttl: 6 * 60 * 60 * 1000 },
-                    ),
-                ])
-
-                const movies = ((moviesData as { results: TMDBResult[] }).results || []).map(r => ({
-                    ...r,
-                    media_type: 'movie' as const,
-                }))
-                const tv = ((tvData as { results: TMDBResult[] }).results || []).map(r => ({
-                    ...r,
-                    media_type: 'tv' as const,
-                }))
-
-                const combined = sortMergedResults([...movies, ...tv], sortBy)
-                newResults = combined
-
-                const moviesTotal = (moviesData as { total_pages?: number }).total_pages || 1
-                const tvTotal = (tvData as { total_pages?: number }).total_pages || 1
-                totalPages = Math.max(moviesTotal, tvTotal)
             }
             // MOVIE MODE
             else if (mediaType === 'movie') {
