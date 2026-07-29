@@ -4,7 +4,7 @@ import useDiscoverStore, { useDiscoverResults, useDiscoverFilters, useDiscoverLo
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
-import { VirtuosoGrid } from 'react-virtuoso'
+import { Virtuoso } from 'react-virtuoso'
 
 
 const Discover: React.FC = () => {
@@ -225,22 +225,22 @@ const Discover: React.FC = () => {
                     </div>
                 ) : (
                         <div style={{ flex: 1, minHeight: 0, width: '100%' }}>
-                            <VirtuosoGrid
+                            <Virtuoso
                                 style={{ height: '100%', width: '100%' }}
                                 useWindowScroll={true}
                                 totalCount={filteredResults.length}
                                 initialItemCount={20}
+                                itemSize={290}
                                 endReached={() => {
                                     if (loading.hasMore && !loading.isLoadingMore) {
                                         actions.fetchData(store.page + 1)
                                     }
                                 }}
                                 overscan={400}
-                                listClassName="discover-grid"
                                 itemContent={(index) => {
                                     const item = filteredResults[index]
                                     return (
-                                        <div key={item.id} style={{}}>
+                                        <div key={item.id} style={{ padding: '0.5rem', height: '290px' }}>
                                             <MediaCard
                                                 item={item}
                                                 compact={item.media_type === 'person'}
@@ -251,6 +251,16 @@ const Discover: React.FC = () => {
                                     )
                                 }}
                                 components={{
+                                    // 👇 This List component preserves your grid layout
+                                    List: React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+                                        (props, ref) => (
+                                            <div
+                                                ref={ref}
+                                                className="discover-grid"
+                                                {...props}
+                                            />
+                                        )
+                                    ),
                                     Footer: () => {
                                         if (loading.isLoadingMore) {
                                             return (

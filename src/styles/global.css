@@ -852,7 +852,7 @@ html, body {
     width: 100%;
     margin: 0 auto;
     padding: 1rem 0;
-    grid-auto-rows: minmax(280px, auto);
+    grid-auto-rows: minmax(290px, auto);
 }
 
 
@@ -3306,7 +3306,7 @@ html, body {
 .more-grid {
     display: grid;
     gap: 1rem;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
 }
 
 .more-card {
@@ -3949,7 +3949,8 @@ button:focus-visible {
     cursor: pointer;
     display: flex;
     flex-direction: column;
-    min-height: 280px;
+    height: 100%;
+    min-height: 290px;
 }
 
 .media-card__poster {
