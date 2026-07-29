@@ -1,11 +1,11 @@
-import React from 'react'
+import React, { useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { imageUrl } from '../../services/tmdbService'
 import type { TMDBResult } from '../../types'
 
 type ResultItem = TMDBResult
 
-interface MediaCardProps {
+export interface MediaCardProps {
     item: ResultItem
     isInWatchlist?: boolean
     compact?: boolean
@@ -15,22 +15,45 @@ interface MediaCardProps {
     onAddToList?: (item: ResultItem) => void
 }
 
-const MediaCard: React.FC<MediaCardProps> = ({ 
-    item, 
-    isInWatchlist = false, 
-    compact = false, 
-    onAdd, 
-    onMarkWatched, 
+/**
+ * Stable, memoized media card.
+ *
+ * - Wrapped in React.memo so it only re-renders when its props change.
+ * - All internal callbacks are stable (useCallback) so parent re-renders
+ *   do not force child re-renders.
+ * - Image space is reserved via aspect-ratio so there is zero layout shift
+ *   when the poster loads.
+ */
+const MediaCard: React.FC<MediaCardProps> = ({
+    item,
+    isInWatchlist = false,
+    compact = false,
+    onAdd,
+    onMarkWatched,
     onMarkUnwatched,
-    onAddToList
+    onAddToList,
 }) => {
     const navigate = useNavigate()
     const isPerson = item.media_type === 'person'
-    const imgUrl = isPerson 
-        ? imageUrl(item.profile_path ?? null)
-        : imageUrl(item.poster_path ?? null)
 
-    const handleClick = () => {
+    const imgUrl = useMemo(
+        () => (isPerson ? imageUrl(item.profile_path ?? null) : imageUrl(item.poster_path ?? null)),
+        [isPerson, item.profile_path, item.poster_path],
+    )
+
+    const displayTitle = useMemo(
+        () => item.title || item.name || 'Untitled',
+        [item.title, item.name],
+    )
+
+    const displayType = useMemo(() => {
+        if (item.media_type === 'anime') return 'Anime'
+        if (item.media_type === 'movie') return 'Movie'
+        if (item.media_type === 'person') return 'Person'
+        return 'TV Show'
+    }, [item.media_type])
+
+    const handleClick = useCallback(() => {
         if (item.media_type === 'person') {
             navigate(`/person/${item.id}`)
         } else if (item.media_type === 'tv') {
@@ -38,24 +61,49 @@ const MediaCard: React.FC<MediaCardProps> = ({
         } else {
             navigate(`/movie/${item.id}`)
         }
-    }
+    }, [item.media_type, item.id, navigate])
 
-    const getItemTitle = (): string => {
-        const tmdbItem = item as TMDBResult
-        return tmdbItem.title || tmdbItem.name || 'Untitled'
-    }
+    const handleAddClick = useCallback(
+        (e: React.MouseEvent) => {
+            e.stopPropagation()
+            onAdd?.(item)
+        },
+        [onAdd, item],
+    )
 
-    const getDisplayType = (): string => {
-        if (item.media_type === 'anime') return 'Anime'
-        if (item.media_type === 'movie') return 'Movie'
-        if (item.media_type === 'person') return 'Person'
-        return 'TV Show'
-    }
+    const handleAddToListClick = useCallback(
+        (e: React.MouseEvent) => {
+            e.stopPropagation()
+            onAddToList?.(item)
+        },
+        [onAddToList, item],
+    )
 
-    const displayTitle = getItemTitle()
+    const handleMarkWatchedClick = useCallback(
+        (e: React.MouseEvent) => {
+            e.stopPropagation()
+            onMarkWatched?.(item)
+        },
+        [onMarkWatched, item],
+    )
+
+    const handleMarkUnwatchedClick = useCallback(
+        (e: React.MouseEvent) => {
+            e.stopPropagation()
+            onMarkUnwatched?.(item)
+        },
+        [onMarkUnwatched, item],
+    )
+
+    const showAddButton = !compact && onAdd && !(isInWatchlist && (onMarkWatched || onMarkUnwatched))
+    const showAddToListButton = !compact && onAddToList && !isPerson
+    const showMarkWatched = !compact && !isPerson && isInWatchlist && onMarkWatched && !onMarkUnwatched
+    const showMarkUnwatched = !compact && !isPerson && isInWatchlist && onMarkUnwatched && !onMarkWatched
+    const showInWatchlistIndicator =
+        !compact && !isPerson && isInWatchlist && !onMarkWatched && !onMarkUnwatched && !onAdd
 
     return (
-        <article className="media-card" key={`${item.media_type}-${item.id}`}>
+        <article className="media-card">
             <div className="media-card__poster" onClick={handleClick}>
                 {imgUrl ? (
                     <img src={imgUrl} alt={displayTitle} loading="lazy" />
@@ -64,12 +112,11 @@ const MediaCard: React.FC<MediaCardProps> = ({
                         <span>{displayTitle}</span>
                     </div>
                 )}
-                {/* Bookmark icon: shown when onAdd is provided and no watched/unwatched action is relevant */}
-                {!compact && onAdd && !(isInWatchlist && (onMarkWatched || onMarkUnwatched)) && (
+                {showAddButton && (
                     <button
                         className="media-card__icon-btn"
-                        onClick={(e) => { e.stopPropagation(); onAdd(item); }}
-                        title={isInWatchlist ? (isPerson ? "Following" : "In watchlist") : (isPerson ? "Follow" : "Add to watchlist")}
+                        onClick={handleAddClick}
+                        title={isInWatchlist ? (isPerson ? 'Following' : 'In watchlist') : (isPerson ? 'Follow' : 'Add to watchlist')}
                     >
                         {isInWatchlist ? (
                             <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
@@ -78,11 +125,10 @@ const MediaCard: React.FC<MediaCardProps> = ({
                         )}
                     </button>
                 )}
-                {/* Add to list icon: shown when onAddToList is provided and item is not a person */}
-                {!compact && onAddToList && !isPerson && (
+                {showAddToListButton && (
                     <button
                         className="media-card__list-icon"
-                        onClick={(e) => { e.stopPropagation(); onAddToList(item); }}
+                        onClick={handleAddToListClick}
                         title="Add to list"
                     >
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="16" height="16">
@@ -90,34 +136,25 @@ const MediaCard: React.FC<MediaCardProps> = ({
                         </svg>
                     </button>
                 )}
-                {/* Mark as watched: shown when item is in watchlist and onMarkWatched is provided */}
-                {!compact && !isPerson && isInWatchlist && onMarkWatched && !onMarkUnwatched && (
+                {showMarkWatched && (
                     <button
                         className="media-card__icon-btn"
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            onMarkWatched(item)
-                        }}
+                        onClick={handleMarkWatchedClick}
                         title="Mark as watched"
                     >
                         <i className="fa-solid fa-eye"></i>
                     </button>
                 )}
-                {/* Mark as unwatched: shown when item is in watchlist and onMarkUnwatched is provided */}
-                {!compact && !isPerson && isInWatchlist && onMarkUnwatched && !onMarkWatched && (
+                {showMarkUnwatched && (
                     <button
                         className="media-card__icon-btn"
-                        onClick={(e) => {
-                            e.stopPropagation()
-                            onMarkUnwatched(item)
-                        }}
+                        onClick={handleMarkUnwatchedClick}
                         title="Mark as unwatched"
                     >
                         <i className="fa-solid fa-eye-slash"></i>
                     </button>
                 )}
-                {/* In watchlist indicator (no action): shown when item is in watchlist but no watched/unwatched callback is provided */}
-                {!compact && !isPerson && isInWatchlist && !onMarkWatched && !onMarkUnwatched && !onAdd && (
+                {showInWatchlistIndicator && (
                     <div className="media-card__icon-btn" title="In watchlist">
                         <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
                     </div>
@@ -125,10 +162,23 @@ const MediaCard: React.FC<MediaCardProps> = ({
             </div>
             <div className="media-card__body">
                 <h3 onClick={handleClick}>{displayTitle}</h3>
-                <span className="media-card__type">{getDisplayType()}</span>
+                <span className="media-card__type">{displayType}</span>
             </div>
         </article>
     )
 }
 
-export default MediaCard
+// Custom comparison: only re-render when the item identity, watchlist state, or
+// action callbacks change. Because the store provides stable action references,
+// the card will not re-render during scroll.
+export default React.memo(MediaCard, (prev, next) => {
+    return (
+        prev.item === next.item &&
+        prev.isInWatchlist === next.isInWatchlist &&
+        prev.compact === next.compact &&
+        prev.onAdd === next.onAdd &&
+        prev.onMarkWatched === next.onMarkWatched &&
+        prev.onMarkUnwatched === next.onMarkUnwatched &&
+        prev.onAddToList === next.onAddToList
+    )
+})

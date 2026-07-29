@@ -1,120 +1,242 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
-import useDiscoverStore, { useDiscoverResults, useDiscoverFilters, useDiscoverLoading, useDiscoverActions, useDiscoverWatchlistIds } from '../stores/discoverStore'
+import {
+    useDiscoverResults,
+    useDiscoverFilters,
+    useDiscoverLoading,
+    useDiscoverActions,
+    useDiscoverWatchlistIds,
+    useDiscoverGenres,
+    useDiscoverVirtuosoState,
+    useDiscoverPage,
+} from '../stores/discoverStore'
+import type { MediaType, SortBy } from '../stores/discoverStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
-import { Virtuoso } from 'react-virtuoso'
+import { VirtuosoGrid } from 'react-virtuoso'
+import type { GridStateSnapshot, VirtuosoGridHandle } from 'react-virtuoso'
 
+// ─── Stable components for VirtuosoGrid ───────────────────────────────────────
+// These are defined outside the component so they never get recreated, which
+// prevents VirtuosoGrid from remounting its internal tree on every render.
+
+const GridList = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+    (props, ref) => <div ref={ref} className="discover-grid" {...props} />,
+)
+GridList.displayName = 'GridList'
+
+const GridItem: React.FC<React.HTMLAttributes<HTMLDivElement>> = (props) => (
+    <div className="discover-grid-item" {...props} />
+)
+GridItem.displayName = 'GridItem'
+
+const GridScroller: React.FC<React.HTMLAttributes<HTMLDivElement>> = (props) => (
+    <div className="discover-grid-scroller" {...props} />
+)
+GridScroller.displayName = 'GridScroller'
+
+const GridFooter: React.FC<{ isLoadingMore: boolean; hasMore: boolean; count: number }> = React.memo(
+    ({ isLoadingMore, hasMore, count }) => {
+        if (isLoadingMore) {
+            return (
+                <div className="discover-loading discover-grid-footer">
+                    <div className="discover-spinner" />
+                    <p>Loading more...</p>
+                </div>
+            )
+        }
+        if (!hasMore && count > 0) {
+            return (
+                <p className="discover-grid-end">
+                    You've reached the end
+                </p>
+            )
+        }
+        return null
+    },
+)
+GridFooter.displayName = 'GridFooter'
+
+// ─── Discover page ────────────────────────────────────────────────────────────
 
 const Discover: React.FC = () => {
     const location = useLocation()
     const isVisible = location.pathname === '/' || location.pathname === '/Discover'
-    
-    // Store selectors
+
+    // Store selectors (each returns a stable slice)
     const results = useDiscoverResults()
     const filters = useDiscoverFilters()
     const loading = useDiscoverLoading()
     const actions = useDiscoverActions()
     const watchlistIds = useDiscoverWatchlistIds()
-    const store = useDiscoverStore()
-    
-    // State for confirmation modal when removing from watchlist
+    const genres = useDiscoverGenres()
+    const virtuosoState = useDiscoverVirtuosoState()
+    const pageState = useDiscoverPage()
+
+    // Local UI state
     const [removeConfirmItem, setRemoveConfirmItem] = useState<TMDBResult | null>(null)
     const [searchInput, setSearchInput] = useState(filters.query)
 
+    // Refs
+    const virtuosoRef = useRef<VirtuosoGridHandle>(null)
+    const hasRestoredRef = useRef(false)
+    const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-    
-    // Memoized filtered results (currently no filtering, but ready for future use)
-    const filteredResults = useMemo(() => results, [results])
-    
-    // Fetch genres and watchlist IDs on mount
+    // ─── Data fetching ────────────────────────────────────────────────────────
+    // Fetch genres + watchlist ids once on mount.
     useEffect(() => {
-        store.fetchGenres()
-        store.fetchWatchlistIds()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        void actions.fetchGenres()
+        void actions.fetchWatchlistIds()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
-    
-    // Fetch data on mount and when filters change
-    useEffect(() => {
-        actions.fetchData(1)
-    }, [filters.mediaType, filters.sortBy, filters.selectedGenre, filters.selectedYear, actions])
-    
-    // Handle visibility changes for scroll restoration
-    useEffect(() => {
-        if (isVisible) {
-            store.setIsVisible(true)
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isVisible])
-    
 
+    // Fetch page 1 whenever the filter signature changes.
+    // We intentionally do NOT include `actions` (stable) or `results` here.
     useEffect(() => {
-        const handleScroll = () => {
-            store.saveScroll()
-        }
-        window.addEventListener('scroll', handleScroll)
-        return () => window.removeEventListener('scroll', handleScroll)
-    }, [store])
+        if (!isVisible) return
+        void actions.fetchData(1)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [filters.mediaType, filters.sortBy, filters.selectedGenre, filters.selectedYear, filters.query, isVisible])
 
+    // ─── Virtuoso state capture / restore ─────────────────────────────────────
+    // Capture grid state continuously so we can restore it exactly on return.
+    const handleStateChanged = useCallback(
+        (state: GridStateSnapshot) => {
+            actions.setVirtuosoState(state)
+        },
+        [actions],
+    )
+
+    // Restore saved state once after the data is loaded and the grid is mounted.
+    // We only do this the first time the page becomes visible with data.
     useEffect(() => {
-        if ('scrollRestoration' in history) {
-            history.scrollRestoration = 'manual'
-        }
-        return () => {
-            if ('scrollRestoration' in history) {
-                history.scrollRestoration = 'auto'
+        if (!isVisible || !loading.isDataLoaded || hasRestoredRef.current) return
+        hasRestoredRef.current = true
+        // restoreStateFrom is passed as a prop; nothing imperative needed here.
+    }, [isVisible, loading.isDataLoaded])
+
+    // Reset the "has restored" flag when the filter signature changes so that
+    // a fresh grid starts from the top.
+    useEffect(() => {
+        hasRestoredRef.current = false
+    }, [filters.mediaType, filters.sortBy, filters.selectedGenre, filters.selectedYear, filters.query])
+
+    // ─── Infinite scroll ──────────────────────────────────────────────────────
+    const handleEndReached = useCallback(
+        () => {
+            if (pageState.hasMore && !pageState.isLoadingMore && !pageState.isLoading) {
+                void actions.fetchData(pageState.page + 1)
             }
+        },
+        [actions, pageState.hasMore, pageState.isLoadingMore, pageState.isLoading, pageState.page],
+    )
+
+    // ─── Search ───────────────────────────────────────────────────────────────
+    // Debounced: update the store query 350ms after the user stops typing.
+    const handleSearchChange = useCallback(
+        (e: React.ChangeEvent<HTMLInputElement>) => {
+            const value = e.target.value
+            setSearchInput(value)
+            if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+            searchTimerRef.current = setTimeout(() => {
+                actions.setQuery(value.trim())
+            }, 350)
+        },
+        [actions],
+    )
+
+    // Cleanup search timer on unmount
+    useEffect(() => {
+        return () => {
+            if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
         }
     }, [])
-    
-    const handleSearch = async (e: React.FormEvent) => {
-        e.preventDefault()
-        const trimmed = searchInput.trim()
-        if (!trimmed) return
-        
-        // Only update store and fetch if query changed
-        if (trimmed !== filters.query) {
-            actions.setQuery(trimmed)
-            await actions.fetchData(1)
-        } else {
-            // If same query, just refetch (optional)
-            await actions.fetchData(1)
-        }
-    }
-    
-    const handleClearFilters = () => {
+
+    const handleSearchSubmit = useCallback(
+        (e: React.FormEvent) => {
+            e.preventDefault()
+            if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
+            actions.setQuery(searchInput.trim())
+        },
+        [actions, searchInput],
+    )
+
+    // ─── Filters ──────────────────────────────────────────────────────────────
+    const handleClearFilters = useCallback(() => {
+        if (searchTimerRef.current) clearTimeout(searchTimerRef.current)
         actions.resetFilters()
         setSearchInput('')
-        window.scrollTo(0, 0)
-    }
-    
-    const handleAddToWatchlist = (item: TMDBResult) => {
-        if (watchlistIds.has(item.id)) {
-            // Show confirmation before removing
-            setRemoveConfirmItem(item)
-        } else {
-            actions.addToWatchlist(item.id, item)
-        }
-    }
+    }, [actions])
 
-    const handleConfirmRemove = () => {
+    const handleMediaType = useCallback(
+        (mediaType: MediaType) => {
+            actions.setMediaType(mediaType)
+        },
+        [actions],
+    )
+
+    const handleSortBy = useCallback(
+        (e: React.ChangeEvent<HTMLSelectElement>) => {
+            actions.setSortBy(e.target.value as SortBy)
+        },
+        [actions],
+    )
+
+    const handleGenre = useCallback(
+        (e: React.ChangeEvent<HTMLSelectElement>) => {
+            actions.setSelectedGenre(e.target.value ? Number(e.target.value) : null)
+        },
+        [actions],
+    )
+
+    const handleYear = useCallback(
+        (e: React.ChangeEvent<HTMLSelectElement>) => {
+            actions.setSelectedYear(e.target.value ? Number(e.target.value) : null)
+        },
+        [actions],
+    )
+
+    // ─── Watchlist interactions ───────────────────────────────────────────────
+    const handleAddToWatchlist = useCallback(
+        (item: TMDBResult) => {
+            if (watchlistIds.has(item.id)) {
+                setRemoveConfirmItem(item)
+            } else {
+                void actions.addToWatchlist(item.id, item)
+            }
+        },
+        [actions, watchlistIds],
+    )
+
+    const handleConfirmRemove = useCallback(() => {
         if (removeConfirmItem) {
-            actions.removeFromWatchlist(removeConfirmItem.id)
+            void actions.removeFromWatchlist(removeConfirmItem.id)
             setRemoveConfirmItem(null)
         }
-    }
-    
-    // Determine if we should show the page
+    }, [actions, removeConfirmItem])
+
+    const handleCancelRemove = useCallback(() => setRemoveConfirmItem(null), [])
+
+    // ─── Memoized year options ────────────────────────────────────────────────
+    const yearOptions = useMemo(
+        () => Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i),
+        [],
+    )
+
+    // ─── Render ───────────────────────────────────────────────────────────────
     if (!isVisible) {
         return <div className="discover-page" style={{ display: 'none' }} />
     }
-    
+
+    const showInitialLoading = loading.isLoading && !loading.isDataLoaded
+    const showEmpty = loading.isDataLoaded && results.length === 0 && !loading.isLoading
+
     return (
-        <div className="discover-page" style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
-            <div className="discover-container" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div className="discover-page">
+            <div className="discover-container">
                 <div className="discover-search-wrap">
-                    <form onSubmit={handleSearch}>
+                    <form onSubmit={handleSearchSubmit}>
                         <div className="discover-search-box">
                             <svg
                                 className="discover-search-icon"
@@ -130,7 +252,7 @@ const Discover: React.FC = () => {
                                 className="discover-search"
                                 placeholder="Search movies, TV shows, actors, directors..."
                                 value={searchInput}
-                                onChange={(e) => setSearchInput(e.target.value)}
+                                onChange={handleSearchChange}
                             />
                         </div>
                     </form>
@@ -140,25 +262,25 @@ const Discover: React.FC = () => {
                     <div className="discover-tabs">
                         <button
                             className={`discover-tab ${filters.mediaType === 'all' ? 'active' : ''}`}
-                            onClick={() => actions.setMediaType('all')}
+                            onClick={() => handleMediaType('all')}
                         >
                             All
                         </button>
                         <button
                             className={`discover-tab ${filters.mediaType === 'movie' ? 'active' : ''}`}
-                            onClick={() => actions.setMediaType('movie')}
+                            onClick={() => handleMediaType('movie')}
                         >
                             Movies
                         </button>
                         <button
                             className={`discover-tab ${filters.mediaType === 'tv' ? 'active' : ''}`}
-                            onClick={() => actions.setMediaType('tv')}
+                            onClick={() => handleMediaType('tv')}
                         >
                             TV Shows
                         </button>
                         <button
                             className={`discover-tab ${filters.mediaType === 'person' ? 'active' : ''}`}
-                            onClick={() => actions.setMediaType('person')}
+                            onClick={() => handleMediaType('person')}
                         >
                             People
                         </button>
@@ -168,7 +290,7 @@ const Discover: React.FC = () => {
                             <select
                                 className="discover-filter-select"
                                 value={filters.sortBy}
-                                onChange={(e) => actions.setSortBy(e.target.value as typeof filters.sortBy)}
+                                onChange={handleSortBy}
                             >
                                 <option value="popularity.desc">Popularity (High to Low)</option>
                                 <option value="popularity.asc">Popularity (Low to High)</option>
@@ -182,10 +304,10 @@ const Discover: React.FC = () => {
                             <select
                                 className="discover-filter-select"
                                 value={filters.selectedGenre ?? ''}
-                                onChange={(e) => actions.setSelectedGenre(e.target.value ? Number(e.target.value) : null)}
+                                onChange={handleGenre}
                             >
                                 <option value="">All Genres</option>
-                                {store.genres.map((genre: { id: number; name: string }) => (
+                                {genres.map((genre) => (
                                     <option key={genre.id} value={genre.id}>
                                         {genre.name}
                                     </option>
@@ -194,10 +316,10 @@ const Discover: React.FC = () => {
                             <select
                                 className="discover-filter-select"
                                 value={filters.selectedYear ?? ''}
-                                onChange={(e) => actions.setSelectedYear(e.target.value ? Number(e.target.value) : null)}
+                                onChange={handleYear}
                             >
                                 <option value="">All Years</option>
-                                {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+                                {yearOptions.map((year) => (
                                     <option key={year} value={year}>
                                         {year}
                                     </option>
@@ -214,81 +336,49 @@ const Discover: React.FC = () => {
                     )}
                 </div>
 
-                {loading.isLoading || !store.isDataLoaded ? (
+                {showInitialLoading ? (
                     <div className="discover-loading">
                         <div className="discover-spinner" />
                         <p>Loading...</p>
                     </div>
-                ) : filteredResults.length === 0 ? (
+                ) : showEmpty ? (
                     <div className="discover-empty">
                         <p>{filters.query ? 'No results found' : 'Nothing to show'}</p>
                     </div>
                 ) : (
-                        <div style={{ flex: 1, minHeight: 0, width: '100%' }}>
-                            <Virtuoso
-                                style={{ height: '100%', width: '100%' }}
-                                useWindowScroll={true}
-                                totalCount={filteredResults.length}
-                                initialItemCount={20}
-                                itemSize={290}
-                                endReached={() => {
-                                    if (loading.hasMore && !loading.isLoadingMore) {
-                                        actions.fetchData(store.page + 1)
-                                    }
-                                }}
-                                overscan={400}
-                                itemContent={(index) => {
-                                    const item = filteredResults[index]
-                                    return (
-                                        <div key={item.id} style={{ padding: '0.5rem', height: '290px' }}>
-                                            <MediaCard
-                                                item={item}
-                                                compact={item.media_type === 'person'}
-                                                onAdd={handleAddToWatchlist}
-                                                isInWatchlist={watchlistIds.has(item.id)}
-                                            />
-                                        </div>
-                                    )
-                                }}
-                                components={{
-                                    // 👇 This List component preserves your grid layout
-                                    List: React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-                                        (props, ref) => (
-                                            <div
-                                                ref={ref}
-                                                className="discover-grid"
-                                                {...props}
-                                            />
-                                        )
-                                    ),
-                                    Footer: () => {
-                                        if (loading.isLoadingMore) {
-                                            return (
-                                                <div className="discover-loading" style={{ padding: '2rem' }}>
-                                                    <div className="discover-spinner" />
-                                                    <p>Loading more...</p>
-                                                </div>
-                                            )
-                                        }
-                                        if (!loading.hasMore && filteredResults.length > 0) {
-                                            return (
-                                                <p
-                                                    style={{
-                                                        textAlign: 'center',
-                                                        color: 'rgba(255,255,255,0.3)',
-                                                        fontSize: '0.85rem',
-                                                        padding: '1rem',
-                                                    }}
-                                                >
-                                                    You've reached the end
-                                                </p>
-                                            )
-                                        }
-                                        return null
-                                    }
-                                }}
-                            />
-                        </div>
+                    <div className="discover-grid-wrap">
+                        <VirtuosoGrid
+                            ref={virtuosoRef}
+                            className="discover-virtuoso"
+                            data={results}
+                            computeItemKey={(index, item) => `${item.media_type}-${item.id}-${index}`}
+                            itemContent={(index, item) => (
+                                <MediaCard
+                                    item={item}
+                                    compact={item.media_type === 'person'}
+                                    onAdd={handleAddToWatchlist}
+                                    isInWatchlist={watchlistIds.has(item.id)}
+                                />
+                            )}
+                            endReached={handleEndReached}
+                            overscan={800}
+                            increaseViewportBy={{ top: 800, bottom: 800 }}
+                            components={{
+                                List: GridList,
+                                Item: GridItem,
+                                Scroller: GridScroller,
+                                Footer: () => (
+                                    <GridFooter
+                                        isLoadingMore={loading.isLoadingMore}
+                                        hasMore={loading.hasMore}
+                                        count={results.length}
+                                    />
+                                ),
+                            }}
+                            stateChanged={handleStateChanged}
+                            restoreStateFrom={virtuosoState ?? undefined}
+                        />
+                    </div>
                 )}
             </div>
 
@@ -298,7 +388,7 @@ const Discover: React.FC = () => {
                     title="Remove from Watchlist"
                     message={`Are you sure you want to remove "${removeConfirmItem.title || removeConfirmItem.name}" from your watchlist?`}
                     onConfirm={handleConfirmRemove}
-                    onCancel={() => setRemoveConfirmItem(null)}
+                    onCancel={handleCancelRemove}
                     confirmText="Remove"
                     cancelText="Cancel"
                     confirmColor="danger"
