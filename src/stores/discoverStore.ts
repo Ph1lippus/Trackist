@@ -50,7 +50,7 @@ interface DiscoverState {
     setSelectedGenre: (genre: number | null) => void
     setSelectedYear: (year: number | null) => void
     setWatchlistIds: (ids: Set<number>) => void
-    addToWatchlist: (id: number) => void
+    addToWatchlist: (id: number, item?: TMDBResult) => void
     removeFromWatchlist: (id: number) => void
     saveScroll: () => void
     restoreScroll: () => void
@@ -93,21 +93,51 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     
     setWatchlistIds: (watchlistIds) => set({ watchlistIds }),
     
-    addToWatchlist: (id) => set((state) => ({
-        watchlistIds: new Set([...state.watchlistIds, id])
-    })),
+    addToWatchlist: async (id, item?) => {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { error } = await supabase.from('watchlist').insert({
+            user_id: user.id,
+            media_type: item?.media_type || 'movie',
+            tmdb_id: id,
+            title: item?.title || item?.name || '',
+            poster_path: item?.poster_path,
+            overview: item?.overview,
+            release_date: item?.release_date || item?.first_air_date,
+            vote_average: item?.vote_average,
+            status: 'watching'
+        })
+        if (error) {
+            console.error('Failed to add to watchlist:', error)
+            return
+        }
+        set((state) => ({
+            watchlistIds: new Set([...state.watchlistIds, id])
+        }))
+    },
     
-    removeFromWatchlist: (id) => set((state) => {
-        const newSet = new Set(state.watchlistIds)
-        newSet.delete(id)
-        return { watchlistIds: newSet }
-    }),
+    removeFromWatchlist: async (id) => {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        await supabase
+            .from('watchlist')
+            .delete()
+            .eq('user_id', user.id)
+            .eq('tmdb_id', id)
+        set((state) => {
+            const newSet = new Set(state.watchlistIds)
+            newSet.delete(id)
+            return { watchlistIds: newSet }
+        })
+    },
     
     saveScroll: () => set({ scrollY: window.scrollY }),
     
     restoreScroll: () => {
         const { scrollY } = get()
-        window.scrollTo(0, scrollY)
+        requestAnimationFrame(() => {
+            window.scrollTo(0, scrollY)
+        })
     },
     
     resetFilters: () => set({
@@ -120,6 +150,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         results: [],
         hasMore: true,
         scrollY: 0,
+        isDataLoaded: false,
     }),
     
     reset: () => set({

@@ -4,6 +4,8 @@ import useDiscoverStore, { useDiscoverResults, useDiscoverFilters, useDiscoverLo
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
+import { Virtuoso } from 'react-virtuoso'
+
 
 const Discover: React.FC = () => {
     const location = useLocation()
@@ -19,10 +21,28 @@ const Discover: React.FC = () => {
     
     // State for confirmation modal when removing from watchlist
     const [removeConfirmItem, setRemoveConfirmItem] = useState<TMDBResult | null>(null)
+    const [searchInput, setSearchInput] = useState(filters.query)
+
 
     // Refs
     const observerRef = useRef<IntersectionObserver | null>(null)
     const loadMoreRef = useRef<HTMLDivElement | null>(null)
+    const loadingRef = useRef(loading)
+    const actionsRef = useRef(actions)
+    const pageRef = useRef(store.page)
+
+    // Keep refs in sync with latest values
+    useEffect(() => {
+        loadingRef.current = loading
+    }, [loading])
+
+    useEffect(() => {
+        actionsRef.current = actions
+    }, [actions])
+
+    useEffect(() => {
+        pageRef.current = store.page
+    }, [store.page])
     
     // Memoized filtered results (currently no filtering, but ready for future use)
     const filteredResults = useMemo(() => results, [results])
@@ -37,7 +57,7 @@ const Discover: React.FC = () => {
     // Fetch data on mount and when filters change
     useEffect(() => {
         actions.fetchData(1)
-    }, [filters.mediaType, filters.sortBy, filters.selectedGenre, filters.selectedYear, filters.query, actions])
+    }, [filters.mediaType, filters.sortBy, filters.selectedGenre, filters.selectedYear, actions])
     
     // Handle visibility changes for scroll restoration
     useEffect(() => {
@@ -47,44 +67,81 @@ const Discover: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isVisible])
     
-    // Infinite scroll observer
+    // Callback ref for loadMore element
+    // Create the observer ONCE – never re‑created
     useEffect(() => {
         const observer = new IntersectionObserver(
             (entries) => {
-                if (entries[0].isIntersecting && loading.hasMore && !loading.isLoadingMore) {
-                    actions.fetchData(store.page + 1)
+                if (entries[0].isIntersecting) {
+                    const { hasMore, isLoadingMore } = loadingRef.current
+                    if (hasMore && !isLoadingMore) {
+                        actionsRef.current.fetchData(pageRef.current + 1)
+                    }
                 }
             },
             { threshold: 0.1, rootMargin: '200px' }
         )
-        
+
         observerRef.current = observer
-        
+
+        // If a sentinel is already attached, observe it
+        if (loadMoreRef.current) {
+            observer.observe(loadMoreRef.current)
+        }
+
         return () => {
             observer.disconnect()
+            observerRef.current = null
         }
-    }, [loading.hasMore, loading.isLoadingMore, store.page, actions])
-    
-    // Callback ref for loadMore element
+    }, []) // 👈 EMPTY – never re‑runs
+
+    // Simple callback ref – only updates the node
     const setLoadMoreRef = useCallback((node: HTMLDivElement | null) => {
-        if (loadMoreRef.current && observerRef.current) {
-            observerRef.current.unobserve(loadMoreRef.current)
-        }
         loadMoreRef.current = node
-        
-        if (node && observerRef.current) {
-            observerRef.current.observe(node)
+
+        if (observerRef.current) {
+            if (node) {
+                observerRef.current.observe(node)
+            }
+            // When node becomes null, we don't disconnect – we just wait
+            // for the next node. Disconnecting would require re‑creating.
+        }
+    }, []) // 👈 EMPTY – never re‑created
+
+    useEffect(() => {
+        return () => {
+            if (observerRef.current) {
+                observerRef.current.disconnect()
+            }
         }
     }, [])
+
+    useEffect(() => {
+        const handleScroll = () => {
+            store.saveScroll()
+        }
+        window.addEventListener('scroll', handleScroll)
+        return () => window.removeEventListener('scroll', handleScroll)
+    }, [store])
     
     const handleSearch = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!filters.query.trim()) return
-        await actions.fetchData(1)
+        const trimmed = searchInput.trim()
+        if (!trimmed) return
+        
+        // Only update store and fetch if query changed
+        if (trimmed !== filters.query) {
+            actions.setQuery(trimmed)
+            await actions.fetchData(1)
+        } else {
+            // If same query, just refetch (optional)
+            await actions.fetchData(1)
+        }
     }
     
     const handleClearFilters = () => {
         actions.resetFilters()
+        setSearchInput('')
         window.scrollTo(0, 0)
     }
     
@@ -93,7 +150,7 @@ const Discover: React.FC = () => {
             // Show confirmation before removing
             setRemoveConfirmItem(item)
         } else {
-            actions.addToWatchlist(item.id)
+            actions.addToWatchlist(item.id, item)
         }
     }
 
@@ -128,8 +185,8 @@ const Discover: React.FC = () => {
                             <input
                                 className="discover-search"
                                 placeholder="Search movies, TV shows, actors, directors..."
-                                value={filters.query}
-                                onChange={(e) => actions.setQuery(e.target.value)}
+                                value={searchInput}
+                                onChange={(e) => setSearchInput(e.target.value)}
                             />
                         </div>
                     </form>
@@ -223,10 +280,10 @@ const Discover: React.FC = () => {
                         <p>{filters.query ? 'No results found' : 'Nothing to show'}</p>
                     </div>
                 ) : (
-                    <div style={{ flex: 1, minHeight: '400px', width: '100%' }}>
+                    <div>
                         <div className="discover-grid">
                             {filteredResults.map((item) => (
-                                <div key={`${item.media_type}-${item.id}`} style={{ padding: '0.5rem' }}>
+                                <div key={`${item.media_type}-${item.id}`}>
                                     <MediaCard
                                         item={item}
                                         compact={item.media_type === 'person'}
