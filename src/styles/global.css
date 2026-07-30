@@ -550,7 +550,7 @@ body {
     width: 100%;
     border: 1px solid rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.05);
-    border-radius: 12px;
+    border-radius: 25px;
     padding: 0.85rem 1rem 0.85rem 2.8rem;
     color: var(--color-platinum);
     font-size: 0.95rem;
@@ -578,7 +578,7 @@ body {
     gap: 0.25rem;
     background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 10px;
+    border-radius:25px;
     padding: 0.25rem;
 }
 .discover-tab {
@@ -588,7 +588,7 @@ body {
     color: rgba(255, 255, 255, 0.5);
     font-size: 0.85rem;
     font-weight: 500;
-    border-radius: 8px;
+    border-radius: 20px;
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
@@ -603,10 +603,7 @@ body {
 }
 .discover-sorts {
     display: flex;
-    gap: 0.25rem;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 10px;
+    gap: 1rem;
     padding: 0.25rem;
 }
 
@@ -631,32 +628,52 @@ body {
     background: var(--color-primary);
 }
 .discover-filter-select {
-    padding: 0.5rem 0.85rem;
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    background: rgba(255, 255, 255, 0.04);
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.8rem;
+    padding: 0.6rem 2.5rem 0.6rem 1.2rem;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--color-platinum);
+    font-size: 0.9rem;
     font-weight: 500;
-    border-radius: 8px;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 25px;
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
     outline: none;
-}
-.discover-filter-select:hover {
-    color: var(--color-platinum);
-    background: rgba(255, 255, 255, 0.06);
-    border-color: rgba(255, 255, 255, 0.1);
+    height: 44px;
+    min-width: 130px;
+    text-align: center;
+    text-align-last: center;
+    -moz-text-align-last: center;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23e7e8ec' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.8rem center;
+    background-size: 12px;
+    padding-right: 2.5rem;
 }
 .discover-filter-select:focus {
-    border-color: rgba(133, 138, 227, 0.4);
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--color-platinum);
+    border-color: var(--color-primary);
+    background-color: rgba(255, 255, 255, 0.12);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23858AE3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.8rem center;
+    background-size: 12px;
 }
 .discover-filter-select option {
-    background: rgba(15, 15, 20, 0.98);
+    background: rgba(20, 20, 28, 0.98);
     color: var(--color-platinum);
+    padding: 1rem;
+    text-align: center;
+    text-align-last: center;
+    font-size: 0.9rem;
+    border: none;
 }
+
 
 /* Sections */
 .discover-section {
@@ -767,7 +784,7 @@ body {
 .discover-grid {
     display: grid;
     gap: 1rem;
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     width: 100%;
     margin: 0 auto;
     padding: 1rem 0;
@@ -3761,7 +3778,7 @@ button:focus-visible {
 .media-card {
     background: rgba(5, 5, 5, 0.5);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 12px;
+    border-radius: 25px;
     overflow: hidden;
     transition: transform 0.2s ease, border-color 0.2s ease,
         box-shadow 0.2s ease;
