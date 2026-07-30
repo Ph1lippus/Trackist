@@ -2,7 +2,6 @@ import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 import { supabase } from '../services/supabaseClient'
 import type { TMDBResult } from '../types'
-import type { GridStateSnapshot } from 'react-virtuoso'
 import {
     searchMulti,
     searchPerson,
@@ -15,106 +14,85 @@ import {
 } from '../services/tmdbService'
 import { getCachedOrFetch } from '../services/cacheService'
 
-export type SortBy =
-    | 'popularity.desc'
-    | 'popularity.asc'
-    | 'vote_average.desc'
-    | 'vote_average.asc'
-    | 'release_date.desc'
-    | 'release_date.asc'
-    | 'original_title.asc'
+type SortBy = 
+    | 'popularity.desc' 
+    | 'popularity.asc' 
+    | 'vote_average.desc' 
+    | 'vote_average.asc' 
+    | 'release_date.desc' 
+    | 'release_date.asc' 
+    | 'original_title.asc' 
     | 'original_title.desc'
 
-export type MediaType = 'movie' | 'tv' | 'person'
+type MediaType = 'all' | 'movie' | 'tv' | 'person'
 
-export interface DiscoverFilters {
+interface DiscoverState {
+    // State
+    results: TMDBResult[]
     mediaType: MediaType
     sortBy: SortBy
     selectedGenre: number | null
     selectedYear: number | null
     query: string
-}
-
-interface DiscoverState extends DiscoverFilters {
-    // Data
-    results: TMDBResult[]
     page: number
     hasMore: boolean
-    totalPages: number
-
-    // Tracks which filter signature the current data corresponds to.
-    // Prevents refetching when returning from a detail page.
-    loadedFilterKey: string
-
-    // Loading flags
+    scrollY: number
+    watchlistIds: Set<number>
     isLoading: boolean
     isLoadingMore: boolean
-    isDataLoaded: boolean
-
-    // Watchlist
-    watchlistIds: Set<number>
-
-    // Genres
     genres: { id: number; name: string }[]
-
-    // Virtuoso grid state for scroll restoration
-    virtuosoState: GridStateSnapshot | null
-
+    isDataLoaded: boolean
+    
     // Actions
     setQuery: (query: string) => void
     setMediaType: (mediaType: MediaType) => void
     setSortBy: (sortBy: SortBy) => void
     setSelectedGenre: (genre: number | null) => void
     setSelectedYear: (year: number | null) => void
-    setVirtuosoState: (state: GridStateSnapshot | null) => void
-    addToWatchlist: (id: number, item?: TMDBResult) => Promise<void>
-    removeFromWatchlist: (id: number) => Promise<void>
+    setWatchlistIds: (ids: Set<number>) => void
+    addToWatchlist: (id: number, item?: TMDBResult) => void
+    removeFromWatchlist: (id: number) => void
+    saveScroll: () => void
+    restoreScroll: () => void
     resetFilters: () => void
     reset: () => void
     fetchData: (pageNum?: number) => Promise<void>
     fetchGenres: () => Promise<void>
     fetchWatchlistIds: () => Promise<void>
-}
-
-// Module-level request tracking for race condition prevention
-let currentRequestId = 0
-
-const DEFAULT_FILTERS: DiscoverFilters = {
-    mediaType: 'movie',
-    sortBy: 'popularity.desc',
-    selectedGenre: null,
-    selectedYear: null,
-    query: '',
+    setIsVisible: (visible: boolean) => void
+    setFilters: (filters: Partial<DiscoverState>) => void
 }
 
 const useDiscoverStore = create<DiscoverState>((set, get) => ({
     // Initial state
-    ...DEFAULT_FILTERS,
     results: [],
+    mediaType: 'all',
+    sortBy: 'popularity.desc',
+    selectedGenre: null,
+    selectedYear: null,
+    query: '',
     page: 1,
     hasMore: true,
-    totalPages: 1,
-    loadedFilterKey: '',
+    scrollY: 0,
+    watchlistIds: new Set<number>(),
     isLoading: false,
     isLoadingMore: false,
-    isDataLoaded: false,
-    watchlistIds: new Set<number>(),
     genres: [],
-    virtuosoState: null,
+    isDataLoaded: false,
 
     // Actions
     setQuery: (query) => set({ query }),
-
+    
     setMediaType: (mediaType) => set({ mediaType }),
-
+    
     setSortBy: (sortBy) => set({ sortBy }),
-
+    
     setSelectedGenre: (selectedGenre) => set({ selectedGenre }),
-
+    
     setSelectedYear: (selectedYear) => set({ selectedYear }),
-
-    setVirtuosoState: (virtuosoState) => set({ virtuosoState }),
-
+    
+    setWatchlistIds: (watchlistIds) => set({ watchlistIds }),
+    
     addToWatchlist: async (id, item?) => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
@@ -127,17 +105,17 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             overview: item?.overview,
             release_date: item?.release_date || item?.first_air_date,
             vote_average: item?.vote_average,
-            status: 'watching',
+            status: 'watching'
         })
         if (error) {
             console.error('Failed to add to watchlist:', error)
             return
         }
         set((state) => ({
-            watchlistIds: new Set([...state.watchlistIds, id]),
+            watchlistIds: new Set([...state.watchlistIds, id])
         }))
     },
-
+    
     removeFromWatchlist: async (id) => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
@@ -152,31 +130,52 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             return { watchlistIds: newSet }
         })
     },
-
+    
+    saveScroll: () => set({ scrollY: window.scrollY }),
+    
+    restoreScroll: () => {
+        const { scrollY } = get()
+        requestAnimationFrame(() => {
+            window.scrollTo(0, scrollY)
+        })
+    },
+    
     resetFilters: () => set({
-        ...DEFAULT_FILTERS,
-        results: [],
+        mediaType: 'all',
+        sortBy: 'popularity.desc',
+        selectedGenre: null,
+        selectedYear: null,
+        query: '',
         page: 1,
+        results: [],
         hasMore: true,
-        totalPages: 1,
-        loadedFilterKey: '',
+        scrollY: 0,
         isDataLoaded: false,
-        virtuosoState: null,
     }),
-
+    
     reset: () => set({
-        ...DEFAULT_FILTERS,
         results: [],
+        mediaType: 'all',
+        sortBy: 'popularity.desc',
+        selectedGenre: null,
+        selectedYear: null,
+        query: '',
         page: 1,
         hasMore: true,
-        totalPages: 1,
-        loadedFilterKey: '',
+        scrollY: 0,
         watchlistIds: new Set<number>(),
         isLoading: true,
         isLoadingMore: false,
         isDataLoaded: false,
-        virtuosoState: null,
     }),
+
+    setIsVisible: (visible) => {
+        if (visible) {
+            get().restoreScroll()
+        }
+    },
+    
+    setFilters: (filters) => set(filters),
 
     fetchWatchlistIds: async () => {
         const { data: { user } } = await supabase.auth.getUser()
@@ -204,39 +203,25 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     },
 
     fetchData: async (pageNum = 1) => {
-        const state = get()
-        const {
-            mediaType,
-            sortBy,
-            query,
-            selectedGenre,
-            selectedYear,
+        const { 
+            mediaType, 
+            sortBy, 
+            query, 
+            selectedGenre, 
+            selectedYear, 
             isLoading,
-            isLoadingMore,
-        } = state
+            isLoadingMore 
+        } = get()
 
-        // Build a stable key from the current filter signature
-        const filterKey = `${mediaType}|${sortBy}|${selectedGenre ?? ''}|${selectedYear ?? ''}|${query.trim()}`
+        if (isLoading || isLoadingMore) return
 
-        // Guard: prevent refetching when returning from a detail page.
-        // If we already have data for this exact filter combination, skip.
-        if (pageNum === 1 && state.loadedFilterKey === filterKey && state.isDataLoaded) return
-
-        // Guard: prevent concurrent fetches for the same phase
-        if (pageNum === 1 && isLoading) return
-        if (pageNum > 1 && isLoadingMore) return
-
-        // Assign a unique ID to this request for race condition prevention
-        const requestId = ++currentRequestId
-
-        // Set loading flags WITHOUT clearing results (prevents layout shift / flash)
         if (pageNum === 1) {
-            set({ isLoading: true })
+            set({ isLoading: true, results: [], page: 1 })
         } else {
             set({ isLoadingMore: true })
         }
 
-        // Helper: map sort parameters for TV shows
+        // Helper function to map sort parameters for TV shows
         const mapSortParamForTV = (sortValue: string): string => {
             if (sortValue.includes('release_date')) {
                 return sortValue.replace('release_date', 'first_air_date')
@@ -244,7 +229,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             return sortValue
         }
 
-        // Helper: sort merged results client-side
+        // Helper function to sort merged results client-side
         const sortMergedResults = (items: TMDBResult[], sortValue: string): TMDBResult[] => {
             const [field, direction] = sortValue.split('.')
             const isAscending = direction === 'asc'
@@ -278,13 +263,9 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 }
 
                 if (typeof aValue === 'string') {
-                    return isAscending
-                        ? aValue.localeCompare(bValue as string)
-                        : (bValue as string).localeCompare(aValue)
+                    return isAscending ? aValue.localeCompare(bValue as string) : (bValue as string).localeCompare(aValue)
                 }
-                return isAscending
-                    ? (aValue as number) - (bValue as number)
-                    : (bValue as number) - (aValue as number)
+                return isAscending ? (aValue as number) - (bValue as number) : (bValue as number) - (aValue as number)
             })
         }
 
@@ -301,7 +282,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 let combined = [...(multiData.results || []), ...(personData.results || [])]
                 totalPages = Math.max(
                     (multiData as { total_pages?: number }).total_pages || 1,
-                    (personData as { total_pages?: number }).total_pages || 1,
+                    (personData as { total_pages?: number }).total_pages || 1
                 )
 
                 // Deduplicate by id
@@ -318,6 +299,22 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     }
                     return { ...r, media_type: r.media_type || (r.title ? 'movie' as const : 'tv' as const) }
                 })
+
+                if (mediaType === 'movie') {
+                    combined = combined.filter(r => r.media_type === 'movie')
+                } else if (mediaType === 'tv') {
+                    combined = combined.filter(r => r.media_type === 'tv')
+                } else if (mediaType === 'person') {
+                    const data = await getPopularPeople(pageNum)
+                    const raw = (data.results || []).map(r => ({ ...r, media_type: 'person' as const }))
+                    const seen2 = new Set<number>()
+                    newResults = raw.filter(item => {
+                        if (seen2.has(item.id)) return false
+                        seen2.add(item.id)
+                        return true
+                    })
+                    totalPages = (data as { total_pages?: number }).total_pages || 1
+                }
 
                 // If searching for people, also fetch their filmography
                 if (query.trim() && combined.some(r => r.media_type === 'person')) {
@@ -339,15 +336,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     combined = [...combined, ...uniqueFilms]
                 }
 
-                // Filter by active tab
-                if (mediaType === 'movie') {
-                    combined = combined.filter(r => r.media_type === 'movie')
-                } else if (mediaType === 'tv') {
-                    combined = combined.filter(r => r.media_type === 'tv')
-                } else if (mediaType === 'person') {
-                    combined = combined.filter(r => r.media_type === 'person')
-                }
-
                 newResults = combined
             }
             // PERSON MODE
@@ -355,6 +343,53 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 const data = await getPopularPeople(pageNum)
                 newResults = (data.results || []).map(r => ({ ...r, media_type: 'person' as const }))
                 totalPages = (data as { total_pages?: number }).total_pages || 1
+            }
+            // ALL MEDIA TYPE MODE
+            else if (mediaType === 'all') {
+                const movieCacheKey = `${query}-${pageNum}-${sortBy}-${selectedYear}-${selectedGenre}`
+                const tvCacheKey = `${query}-${pageNum}-${mapSortParamForTV(sortBy)}-${selectedYear}-${selectedGenre}`
+
+                const [moviesData, tvData] = await Promise.all([
+                    getCachedOrFetch(
+                        'discover-movie',
+                        movieCacheKey,
+                        () => discoverMovies({
+                            page: pageNum,
+                            sort_by: sortBy,
+                            primary_release_year: selectedYear ?? undefined,
+                            with_genres: selectedGenre ? String(selectedGenre) : undefined,
+                        }),
+                        { ttl: 6 * 60 * 60 * 1000 }
+                    ),
+                    getCachedOrFetch(
+                        'discover-tv',
+                        tvCacheKey,
+                        () => discoverTV({
+                            page: pageNum,
+                            sort_by: mapSortParamForTV(sortBy),
+                            first_air_date_year: selectedYear ?? undefined,
+                            with_genres: selectedGenre ? String(selectedGenre) : undefined,
+                        }),
+                        { ttl: 6 * 60 * 60 * 1000 }
+                    ),
+                ])
+
+                const movies = ((moviesData as { results: TMDBResult[] }).results || []).map(r => ({
+                    ...r,
+                    media_type: 'movie' as const,
+                }))
+                const tv = ((tvData as { results: TMDBResult[] }).results || []).map(r => ({
+                    ...r,
+                    media_type: 'tv' as const,
+                }))
+
+                let combined: TMDBResult[] = [...movies, ...tv]
+                combined = sortMergedResults(combined, sortBy)
+                newResults = combined
+
+                const moviesTotal = (moviesData as { total_pages?: number }).total_pages || 1
+                const tvTotal = (tvData as { total_pages?: number }).total_pages || 1
+                totalPages = Math.max(moviesTotal, tvTotal)
             }
             // MOVIE MODE
             else if (mediaType === 'movie') {
@@ -368,7 +403,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                         primary_release_year: selectedYear ?? undefined,
                         with_genres: selectedGenre ? String(selectedGenre) : undefined,
                     }),
-                    { ttl: 6 * 60 * 60 * 1000 },
+                    { ttl: 6 * 60 * 60 * 1000 }
                 )
                 newResults = ((data as { results: TMDBResult[] }).results || []).map(r => ({
                     ...r,
@@ -388,7 +423,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                         first_air_date_year: selectedYear ?? undefined,
                         with_genres: selectedGenre ? String(selectedGenre) : undefined,
                     }),
-                    { ttl: 6 * 60 * 60 * 1000 },
+                    { ttl: 6 * 60 * 60 * 1000 }
                 )
                 newResults = ((data as { results: TMDBResult[] }).results || []).map(r => ({
                     ...r,
@@ -397,17 +432,12 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 totalPages = (data as { total_pages?: number }).total_pages || 1
             }
 
-            // Race condition check: discard if a newer request was started
-            if (requestId !== currentRequestId) return
-
             set((state) => {
                 if (pageNum === 1) {
                     return {
                         results: newResults,
                         page: pageNum,
                         hasMore: pageNum < totalPages,
-                        totalPages,
-                        loadedFilterKey: filterKey,
                         isLoading: false,
                         isLoadingMore: false,
                         isDataLoaded: true,
@@ -420,29 +450,21 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     results: [...state.results, ...newUniqueItems],
                     page: pageNum,
                     hasMore: pageNum < totalPages,
-                    totalPages,
-                    loadedFilterKey: filterKey,
                     isLoading: false,
                     isLoadingMore: false,
                     isDataLoaded: true,
                 }
             })
         } catch (err) {
-            // Race condition check: only handle error if this is still the latest request
-            if (requestId !== currentRequestId) return
             console.error('Failed to load:', err)
             set({ isLoading: false, isLoadingMore: false })
         }
     },
 }))
 
-// ─── Selector hooks for optimized re-renders ──────────────────────────────────
-
+// Selector hooks for optimized re-renders
 export const useDiscoverResults = () => useDiscoverStore((state) => state.results)
 export const useDiscoverWatchlistIds = () => useDiscoverStore((state) => state.watchlistIds)
-export const useDiscoverGenres = () => useDiscoverStore((state) => state.genres)
-export const useDiscoverVirtuosoState = () => useDiscoverStore((state) => state.virtuosoState)
-
 export const useDiscoverFilters = () => {
     const selector = useShallow((state: DiscoverState) => ({
         mediaType: state.mediaType,
@@ -453,7 +475,6 @@ export const useDiscoverFilters = () => {
     }))
     return useDiscoverStore(selector)
 }
-
 export const useDiscoverLoading = () => {
     const selector = useShallow((state: DiscoverState) => ({
         isLoading: state.isLoading,
@@ -463,31 +484,18 @@ export const useDiscoverLoading = () => {
     }))
     return useDiscoverStore(selector)
 }
-
 export const useDiscoverActions = () => {
     const selector = useShallow((state: DiscoverState) => ({
         fetchData: state.fetchData,
-        fetchGenres: state.fetchGenres,
-        fetchWatchlistIds: state.fetchWatchlistIds,
         setQuery: state.setQuery,
         setMediaType: state.setMediaType,
         setSortBy: state.setSortBy,
         setSelectedGenre: state.setSelectedGenre,
         setSelectedYear: state.setSelectedYear,
-        setVirtuosoState: state.setVirtuosoState,
         resetFilters: state.resetFilters,
+        saveScroll: state.saveScroll,
         addToWatchlist: state.addToWatchlist,
         removeFromWatchlist: state.removeFromWatchlist,
-    }))
-    return useDiscoverStore(selector)
-}
-
-export const useDiscoverPage = () => {
-    const selector = useShallow((state: DiscoverState) => ({
-        page: state.page,
-        hasMore: state.hasMore,
-        isLoading: state.isLoading,
-        isLoadingMore: state.isLoadingMore,
     }))
     return useDiscoverStore(selector)
 }
