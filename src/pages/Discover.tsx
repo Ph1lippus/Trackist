@@ -7,56 +7,12 @@ import {
     useDiscoverActions,
     useDiscoverWatchlistIds,
     useDiscoverGenres,
-    useDiscoverVirtuosoState,
     useDiscoverPage,
 } from '../stores/discoverStore'
 import type { MediaType, SortBy } from '../stores/discoverStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
-import { VirtuosoGrid } from 'react-virtuoso'
-import type { GridStateSnapshot, VirtuosoGridHandle } from 'react-virtuoso'
-
-// ─── Stable components for VirtuosoGrid ───────────────────────────────────────
-// These are defined outside the component so they never get recreated, which
-// prevents VirtuosoGrid from remounting its internal tree on every render.
-
-const GridList = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-    (props, ref) => <div ref={ref} className="discover-grid" {...props} />,
-)
-GridList.displayName = 'GridList'
-
-const GridItem: React.FC<React.HTMLAttributes<HTMLDivElement>> = (props) => (
-    <div className="discover-grid-item" {...props} />
-)
-GridItem.displayName = 'GridItem'
-
-const GridScroller: React.FC<React.HTMLAttributes<HTMLDivElement>> = (props) => (
-    <div className="discover-grid-scroller" {...props} />
-)
-GridScroller.displayName = 'GridScroller'
-
-const GridFooter: React.FC<{ isLoadingMore: boolean; hasMore: boolean; count: number }> = React.memo(
-    ({ isLoadingMore, hasMore, count }) => {
-        if (isLoadingMore) {
-            return (
-                <div className="discover-loading discover-grid-footer">
-                    <div className="discover-spinner" />
-                    <p>Loading more...</p>
-                </div>
-            )
-        }
-        if (!hasMore && count > 0) {
-            return (
-                <p className="discover-grid-end">
-                    You've reached the end
-                </p>
-            )
-        }
-        return null
-    },
-)
-GridFooter.displayName = 'GridFooter'
 
 // ─── Discover page ────────────────────────────────────────────────────────────
 
@@ -71,19 +27,14 @@ const Discover: React.FC = () => {
     const actions = useDiscoverActions()
     const watchlistIds = useDiscoverWatchlistIds()
     const genres = useDiscoverGenres()
-    const virtuosoState = useDiscoverVirtuosoState()
     const pageState = useDiscoverPage()
-
-    // Debug logging
-    console.log('Discover render:', { resultsCount: results.length, loading, filters, isVisible })
 
     // Local UI state
     const [removeConfirmItem, setRemoveConfirmItem] = useState<TMDBResult | null>(null)
     const [searchInput, setSearchInput] = useState(filters.query)
 
     // Refs
-    const virtuosoRef = useRef<VirtuosoGridHandle>(null)
-    const hasRestoredRef = useRef(false)
+    const sentinelRef = useRef<HTMLDivElement>(null)
     const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     // ─── Data fetching ────────────────────────────────────────────────────────
@@ -102,38 +53,29 @@ const Discover: React.FC = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filters.mediaType, filters.sortBy, filters.selectedGenre, filters.selectedYear, filters.query, isVisible])
 
-    // ─── Virtuoso state capture / restore ─────────────────────────────────────
-    // Capture grid state continuously so we can restore it exactly on return.
-    const handleStateChanged = useCallback(
-        (state: GridStateSnapshot) => {
-            actions.setVirtuosoState(state)
-        },
-        [actions],
-    )
+    // ─── Infinite scroll via IntersectionObserver (page scroll) ────────────────
+    const handleEndReached = useCallback(() => {
+        if (pageState.hasMore && !pageState.isLoadingMore && !pageState.isLoading) {
+            void actions.fetchData(pageState.page + 1)
+        }
+    }, [actions, pageState.hasMore, pageState.isLoadingMore, pageState.isLoading, pageState.page])
 
-    // Restore saved state once after the data is loaded and the grid is mounted.
-    // We only do this the first time the page becomes visible with data.
     useEffect(() => {
-        if (!isVisible || !loading.isDataLoaded || hasRestoredRef.current) return
-        hasRestoredRef.current = true
-        // restoreStateFrom is passed as a prop; nothing imperative needed here.
-    }, [isVisible, loading.isDataLoaded])
+        const sentinel = sentinelRef.current
+        if (!sentinel) return
 
-    // Reset the "has restored" flag when the filter signature changes so that
-    // a fresh grid starts from the top.
-    useEffect(() => {
-        hasRestoredRef.current = false
-    }, [filters.mediaType, filters.sortBy, filters.selectedGenre, filters.selectedYear, filters.query])
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0]?.isIntersecting) {
+                    handleEndReached()
+                }
+            },
+            { rootMargin: '600px 0px' },
+        )
 
-    // ─── Infinite scroll ──────────────────────────────────────────────────────
-    const handleEndReached = useCallback(
-        () => {
-            if (pageState.hasMore && !pageState.isLoadingMore && !pageState.isLoading) {
-                void actions.fetchData(pageState.page + 1)
-            }
-        },
-        [actions, pageState.hasMore, pageState.isLoadingMore, pageState.isLoading, pageState.page],
-    )
+        observer.observe(sentinel)
+        return () => observer.disconnect()
+    }, [handleEndReached])
 
     // ─── Search ───────────────────────────────────────────────────────────────
     // Debounced: update the store query 350ms after the user stops typing.
@@ -343,39 +285,35 @@ const Discover: React.FC = () => {
                         <p>{filters.query ? 'No results found' : 'Nothing to show'}</p>
                     </div>
                 ) : (
-                    <div className="discover-grid-wrap">
-                        <VirtuosoGrid
-                            ref={virtuosoRef}
-                            className="discover-virtuoso"
-                            data={results}
-                            computeItemKey={(index, item) => `${item.media_type}-${item.id}-${index}`}
-                            itemContent={(index, item) => (
+                    <>
+                        <div className="discover-grid">
+                            {results.map((item) => (
                                 <MediaCard
+                                    key={`${item.media_type}-${item.id}`}
                                     item={item}
                                     compact={item.media_type === 'person'}
                                     onAdd={handleAddToWatchlist}
                                     isInWatchlist={watchlistIds.has(item.id)}
                                 />
-                            )}
-                            endReached={handleEndReached}
-                            overscan={800}
-                            increaseViewportBy={{ top: 800, bottom: 800 }}
-                            components={{
-                                List: GridList,
-                                Item: GridItem,
-                                Scroller: GridScroller,
-                                Footer: () => (
-                                    <GridFooter
-                                        isLoadingMore={loading.isLoadingMore}
-                                        hasMore={loading.hasMore}
-                                        count={results.length}
-                                    />
-                                ),
-                            }}
-                            stateChanged={handleStateChanged}
-                            restoreStateFrom={virtuosoState ?? undefined}
-                        />
-                    </div>
+                            ))}
+                        </div>
+
+                        {/* Sentinel for infinite scroll */}
+                        <div ref={sentinelRef} className="discover-grid-sentinel" />
+
+                        {/* Footer / loading-more / end indicator */}
+                        {loading.isLoadingMore && (
+                            <div className="discover-loading">
+                                <div className="discover-spinner" />
+                                <p>Loading more...</p>
+                            </div>
+                        )}
+                        {!loading.hasMore && results.length > 0 && !loading.isLoadingMore && (
+                            <p className="discover-grid-end">
+                                You've reached the end
+                            </p>
+                        )}
+                    </>
                 )}
             </div>
 

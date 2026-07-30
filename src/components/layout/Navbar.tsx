@@ -103,9 +103,6 @@ const Navbar: React.FC = () => {
                         />
                     )}
                 </div>
-                <div className="navbar-brand-centered">
-                    <NavLink className="navbar-brand" to="/">Track1st</NavLink>
-                </div>
                 <div className="navbar-actions">
                     {user ? (
                         <>

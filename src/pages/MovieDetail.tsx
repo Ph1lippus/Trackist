@@ -78,14 +78,34 @@ const MovieDetail: React.FC = () => {
         return `${mins}m`
     }
 
-    const getAgeRating = (): string => {
-        if (!details?.release_dates?.results) return ''
-        const usRelease = details.release_dates.results.find((r: { iso_3166_1: string }) => r.iso_3166_1 === 'US')
-        if (usRelease?.release_dates?.[0]?.certification) {
-            return usRelease.release_dates[0].certification
-        }
-        return ''
+const getAgeRating = (): string => {
+    if (!details?.release_dates?.results) return ''
+    const usRelease = details.release_dates.results.find((r: { iso_3166_1: string }) => r.iso_3166_1 === 'US')
+    if (usRelease?.release_dates?.[0]?.certification) {
+        return usRelease.release_dates[0].certification
     }
+    return ''
+}
+
+const getAgeRatingTooltip = (): string => {
+    const rating = getAgeRating()
+    const tooltips: { [key: string]: string } = {
+        'G': 'General Audiences - All ages admitted',
+        'PG': 'Parental Guidance Suggested - Some material may not be suitable for children',
+        'PG-13': 'Parents Strongly Cautioned - Some material may be inappropriate for children under 13',
+        'R': 'Restricted - Under 17 requires accompanying parent or adult guardian',
+        'NC-17': 'Adults Only - No one 17 and under admitted',
+        'NR': 'Not Rated - Film has not been rated by the MPAA',
+        'UR': 'Unrated - Film has not been rated',
+        'TV-Y': 'All Children - Suitable for all children',
+        'TV-Y7': 'Directed to Older Children - Suitable for children age 7 and up',
+        'TV-G': 'General Audience - Suitable for all ages',
+        'TV-PG': 'Parental Guidance Suggested - Some material may not be suitable for children',
+        'TV-14': 'Parents Strongly Cautioned - Some material may not be suitable for children under 14',
+        'TV-MA': 'Mature Audience Only - Specifically designed for adults',
+    }
+    return tooltips[rating] || rating
+}
 
     const getLogoUrl = (): string | null => {
     if (details?.images?.logos) {
@@ -110,20 +130,7 @@ const MovieDetail: React.FC = () => {
     }
 
     return null
-    }   
-
-    const getProviders = () => {
-        const watchProviders = details?.['watch/providers']
-        if (!watchProviders || !Array.isArray(watchProviders.results)) return []
-        const usProviders = watchProviders.results.find((r: { iso_3166_1: string }) => r.iso_3166_1 === 'US')
-        if (!usProviders) return []
-        const providers = []
-        if (usProviders.flatrate) providers.push(...usProviders.flatrate)
-        if (usProviders.buy) providers.push(...usProviders.buy)
-        if (usProviders.rent) providers.push(...usProviders.rent)
-        return providers.slice(0, 5)
     }
-
     const handleAddToWatchlist = async (status: string) => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user || !details) {
@@ -205,8 +212,6 @@ const MovieDetail: React.FC = () => {
             if (!a.profile_path && b.profile_path) return 1
             return 0
         })
-    const providers = getProviders()
-
     return (
         <div className="detail-page detail-page--no-scroll">
             {backdropUrl && (
@@ -229,24 +234,24 @@ const MovieDetail: React.FC = () => {
                         </div>
                         
                         <div className="detail-page__meta">
+                            
                             {year && <span className="detail-page__year">{year}</span>}
-                            {rating && <span className="detail-page__rating">★ {rating}</span>}
                             {runtime && <span className="detail-page__runtime">{runtime}</span>}
-                            {ageRating && <span className="detail-page__age-rating">{ageRating}</span>}
+                            {rating !== undefined && rating !== null && (
+                                <span className="detail-page__rating" aria-label={`Rating: ${rating} out of 10`}>
+                                    <span aria-hidden="true">★</span> {rating}
+                                </span>
+                            )}
+
+                            {ageRating && (
+                                <span className="detail-page__age-rating" data-tooltip={getAgeRatingTooltip()}>
+                                    {ageRating}
+                                </span>
+                            )}
                         </div>
 
-                        {providers.length > 0 && (
-                            <div className="detail-page__providers">
-                                {providers.map((p: { logo_path: string }, idx: number) => (
-                                    <img
-                                        key={idx}
-                                        src={`https://image.tmdb.org/t/p/w92${p.logo_path}`}
-                                        alt="Provider"
-                                        className="detail-page__provider-logo"
-                                    />
-                                ))}
-                            </div>
-                        )}
+                        
+                        
 
                         {genres.length > 0 && (
                             <div className="detail-page__genres">
@@ -255,6 +260,7 @@ const MovieDetail: React.FC = () => {
                                 ))}
                             </div>
                         )}
+                        
                     </div>
 
                     <div className="detail-page__overview-section">
@@ -342,6 +348,7 @@ const MovieDetail: React.FC = () => {
                                 </div>
                             </div>
                         )}
+
                     </div>
 
                     {showCast && cast.length > 0 && (

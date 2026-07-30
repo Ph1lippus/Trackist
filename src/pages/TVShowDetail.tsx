@@ -29,6 +29,7 @@ const TVShowDetail: React.FC = () => {
     const [fanartImages, setFanartImages] = useState<{ hdtvlogo?: Array<{ url: string }> } | null>(null)
     const [isInWatchlist, setIsInWatchlist] = useState(false)
     const [watchlistId, setWatchlistId] = useState<string | null>(null)
+    const [watchlistStatus, setWatchlistStatus] = useState<string | null>(null)
     const [adding, setAdding] = useState(false)
     const [seasons, setSeasons] = useState<number[]>([])
     const [episodes, setEpisodes] = useState<LocalEpisode[]>([])
@@ -117,13 +118,14 @@ const TVShowDetail: React.FC = () => {
                 if (user) {
                     const { data: watchlistData } = await supabase
                         .from('watchlist')
-                        .select('*')
+                        .select('id, status')
                         .eq('user_id', user.id)
                         .eq('tmdb_id', Number(id))
                         .single()
+                    setIsInWatchlist(!!watchlistData)
                     if (watchlistData) {
-                        setIsInWatchlist(true)
                         setWatchlistId(watchlistData.id)
+                        setWatchlistStatus(watchlistData.status)
                     }
                 }
             } catch (err) {
@@ -278,19 +280,13 @@ const TVShowDetail: React.FC = () => {
         } else {
             setIsInWatchlist(false)
             setWatchlistId(null)
+            setWatchlistStatus(null)
         }
         setRemoveWatchlistModal(null)
     }
-
     const handleSeasonChange = (season: number) => {
         hasUserSelectedSeason.current = true
         setSelectedSeason(season)
-    }
-
-    const areAllReleasedEpisodesWatched = (): boolean => {
-        const releasedEpisodes = episodes.filter(ep => isEpisodeReleased(ep))
-        if (releasedEpisodes.length === 0) return false
-        return releasedEpisodes.every(ep => ep.watched)
     }
 
     const hasUnwatchedEpisodesBefore = (episode: LocalEpisode): boolean => {
@@ -337,16 +333,22 @@ const TVShowDetail: React.FC = () => {
         return ''
     }
 
-    const getProviders = () => {
-        const watchProviders = details?.['watch/providers']
-        if (!watchProviders || !Array.isArray(watchProviders.results)) return []
-        const usProviders = watchProviders.results.find((r: { iso_3166_1: string }) => r.iso_3166_1 === 'US')
-        if (!usProviders) return []
-        const providers = []
-        if (usProviders.flatrate) providers.push(...usProviders.flatrate)
-        if (usProviders.buy) providers.push(...usProviders.buy)
-        if (usProviders.rent) providers.push(...usProviders.rent)
-        return providers.slice(0, 5)
+    const getAgeRatingTooltip = (): string => {
+        const rating = getAgeRating()
+        const tooltips: { [key: string]: string } = {
+            'G': 'General Audiences - All ages admitted',
+            'PG': 'Parental Guidance Suggested',
+            'PG-13': 'Parents Strongly Cautioned - Some material may be inappropriate for children under 13',
+            'R': 'Restricted - Under 17 requires accompanying parent or adult guardian',
+            'NC-17': 'Adults Only - No one 17 and under admitted',
+            'TV-Y': 'All Children',
+            'TV-Y7': 'Directed to Older Children - Ages 7+',
+            'TV-G': 'General Audience',
+            'TV-PG': 'Parental Guidance Suggested',
+            'TV-14': 'Parents Strongly Cautioned - Ages 14+',
+            'TV-MA': 'Mature Audience Only',
+        }
+        return tooltips[rating] || rating
     }
 
     const markEpisodeAsWatched = async (episode: LocalEpisode, markAll: boolean) => {
@@ -533,8 +535,6 @@ const TVShowDetail: React.FC = () => {
             if (!a.profile_path && b.profile_path) return 1
             return 0
         })
-    const providers = getProviders()
-
     // Count seasons that actually have episodes for display
     const displaySeasonCount = seasons.length
 
@@ -559,25 +559,24 @@ const TVShowDetail: React.FC = () => {
                                 )}
                             </div>
                             
+                            
                             <div className="detail-page__meta">
-                                {year && <span className="detail-page__year">{year}</span>}
-                                {rating && <span className="detail-page__rating">★ {rating}</span>}
-                                {displaySeasonCount > 0 && <span className="detail-page__seasons">{displaySeasonCount} Seasons</span>}
-                                {ageRating && <span className="detail-page__age-rating">{ageRating}</span>}
-                            </div>
-
-                            {providers.length > 0 && (
-                                <div className="detail-page__providers">
-                                    {providers.map((p: { logo_path: string }, idx: number) => (
-                                        <img
-                                            key={idx}
-                                            src={`https://image.tmdb.org/t/p/w92${p.logo_path}`}
-                                            alt="Provider"
-                                            className="detail-page__provider-logo"
-                                        />
-                                    ))}
-                                </div>
+                            
+                            {year && <span className="detail-page__year">{year}</span>}
+                            {displaySeasonCount > 0 && <span className="detail-page__seasons">{displaySeasonCount} Seasons</span>}
+                            {rating !== undefined && rating !== null && (
+                                <span className="detail-page__rating" aria-label={`Rating: ${rating} out of 10`}>
+                                    <span aria-hidden="true">★</span> {rating}
+                                </span>
                             )}
+
+                            {ageRating && (
+                                <span className="detail-page__age-rating" data-tooltip={getAgeRatingTooltip()}>
+                                    {ageRating}
+                                </span>
+                            )}
+
+                        </div>
 
                             {genres.length > 0 && (
                                 <div className="detail-page__genres">
@@ -664,12 +663,12 @@ const TVShowDetail: React.FC = () => {
                                             className="detail-page__icon-btn"
                                             onClick={() => {
                                                 if (!watchlistId) return
-                                                const markAsWatched = !areAllReleasedEpisodesWatched()
+                                                const markAsWatched = watchlistStatus !== 'completed'
                                                 setMarkWatchedModal({ isOpen: true, markAsWatched })
                                             }}
-                                            title={areAllReleasedEpisodesWatched() ? 'Mark as Unwatched' : 'Mark as Watched'}
+                                            title={watchlistStatus === 'completed' ? 'Mark as Unwatched' : 'Mark as Watched'}
                                         >
-                                            <i className={areAllReleasedEpisodesWatched() ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
+                                            <i className={watchlistStatus === 'completed' ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
                                         </button>
                                     </>
                                 )}
@@ -694,6 +693,7 @@ const TVShowDetail: React.FC = () => {
                                     </div>
                                 </div>
                             )}
+
                         </div>
 
                         {showCast && cast.length > 0 && (
@@ -793,11 +793,8 @@ const TVShowDetail: React.FC = () => {
                                                 }
                                             }
                                         }}>
-                                            <div className="detail-page__episode-number">
-                                                <span>Episode {ep.episode_number}</span>
-                                            </div>
                                             <div className="detail-page__episode-details">
-                                                <strong>{ep.title || `Episode ${ep.episode_number}`}</strong>
+                                                <strong>{ep.episode_number}. {ep.title || `Episode ${ep.episode_number}`}</strong>
                                                 <div className="detail-page__episode-meta">
                                                     {ep.air_date && <span>{ep.air_date}</span>}
                                                     {ep.runtime && <span>{ep.runtime} min</span>}

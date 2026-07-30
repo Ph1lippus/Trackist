@@ -222,6 +222,8 @@ const EpisodeDetail: React.FC = () => {
     const logoUrl = getLogoUrl()
     const title = tvDetails.name || 'Untitled'
     const episodeTitle = episodeData.name || `Episode ${episodeData.episode_number}`
+    const genres = tvDetails.genres || []
+
 
     return (
         <div className="detail-page detail-page--no-scroll">
@@ -245,12 +247,25 @@ const EpisodeDetail: React.FC = () => {
                             </div>
                             
                             <div className="detail-page__meta">
-                                <span className="detail-page__year">Season {season} Episode {episode}</span>
+                                {season != null && episode != null && (
+                                    <span className="detail-page__year">
+                                        S{season.toString().padStart(2, "0")}
+                                        E{episode.toString().padStart(2, "0")}
+                                    </span>
+                                    )}
                                 {episodeData.air_date && <span className="detail-page__year">{episodeData.air_date}</span>}
                                 {episodeData.runtime && <span className="detail-page__runtime">{episodeData.runtime} min</span>}
                                 {episodeData.vote_average && <span className="detail-page__rating">★ {episodeData.vote_average.toFixed(1)}</span>}
                             </div>
+                            {genres.length > 0 && (
+                                <div className="detail-page__genres">
+                                    {genres.map((g: { id: number; name: string }) => (
+                                        <span key={g.id} className="detail-page__genre">{g.name}</span>
+                                    ))}
+                                </div>
+                            )}
                         </div>
+                        
 
                         <div className="detail-page__overview-section">
                             <h2 className="detail-page__section-title">Overview</h2>
@@ -263,7 +278,7 @@ const EpisodeDetail: React.FC = () => {
                                         onClick={handleToggleWatched}
                                         title={watched ? 'Mark as Unwatched' : 'Mark as Watched'}
                                     >
-                                        <i className={watched ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'}></i>
+                                        <i className={watched ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash'}></i>
                                     </button>
                                 )}
                             </div>
