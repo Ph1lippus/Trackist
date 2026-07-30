@@ -46,12 +46,6 @@ const MediaCard: React.FC<MediaCardProps> = ({
         [item.title, item.name],
     )
 
-    const displayType = useMemo(() => {
-        if (item.media_type === 'anime') return 'Anime'
-        if (item.media_type === 'movie') return 'Movie'
-        if (item.media_type === 'person') return 'Person'
-        return 'TV Show'
-    }, [item.media_type])
 
     const handleClick = useCallback(() => {
         if (item.media_type === 'person') {
@@ -161,7 +155,6 @@ const MediaCard: React.FC<MediaCardProps> = ({
             </div>
             <div className="media-card__body">
                 <h3 onClick={handleClick}>{displayTitle}</h3>
-                <span className="media-card__type">{displayType}</span>
             </div>
         </article>
     )
