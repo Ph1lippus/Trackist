@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { getFollowingList, getUserLists, getProfile, followUser, unfollowUser, isFollowing } from '../services/profileService'
