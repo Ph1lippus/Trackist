@@ -603,7 +603,7 @@ const Lists: React.FC = () => {
                             lists.map(list => (
                                 <div
                                     key={list.id}
-                                    className={`lists-page__list-item ${selectedList?.id === list.id ? 'lists-page__list-item--active' : ''}`}
+                                    className={`lists-page__list-item ${selectedList ? 'lists-page__list-item--active' : ''}`}
                                     onClick={() => navigate(`/Lists/${list.id}`)}
                                 >
                                     <div className="lists-page__list-item-content">
