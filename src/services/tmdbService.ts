@@ -40,12 +40,13 @@ export const getPersonDetails = async (id: number): Promise<{
     return res.json()
 }
 
-export const getPopularMovies = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
+export const getPopularMovies = async (page: number = 1, vote_count_gte?: number): Promise<{ results: TMDBResult[] }> => {
     const url = new URL(`${BASE_URL}/movie/popular`)
     url.searchParams.append('api_key', API_KEY)
     url.searchParams.append('language', 'en-US')
     url.searchParams.append('region', 'US')
     url.searchParams.append('page', String(page))
+    if (vote_count_gte) url.searchParams.append('vote_count.gte', String(vote_count_gte))
     const res = await fetch(url.toString())
     return res.json()
 }
@@ -69,11 +70,12 @@ export const getTopRatedMovies = async (page: number = 1): Promise<{ results: TM
     return res.json()
 }
 
-export const getPopularTV = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
+export const getPopularTV = async (page: number = 1, vote_count_gte?: number): Promise<{ results: TMDBResult[] }> => {
     const url = new URL(`${BASE_URL}/tv/popular`)
     url.searchParams.append('api_key', API_KEY)
     url.searchParams.append('language', 'en-US')
     url.searchParams.append('page', String(page))
+    if (vote_count_gte) url.searchParams.append('vote_count.gte', String(vote_count_gte))
     const res = await fetch(url.toString())
     return res.json()
 }
@@ -221,6 +223,7 @@ export const discoverMovies = async (params: {
     with_genres?: string
     'release_date.lte'?: string
     'release_date.gte'?: string
+    'vote_count.gte'?: number
 }) => {
     const url = new URL(`${BASE_URL}/discover/movie`)
     url.searchParams.append('api_key', API_KEY)
@@ -232,6 +235,7 @@ export const discoverMovies = async (params: {
     if (params.with_genres) url.searchParams.append('with_genres', params.with_genres)
     if (params['release_date.lte']) url.searchParams.append('release_date.lte', params['release_date.lte'])
     if (params['release_date.gte']) url.searchParams.append('release_date.gte', params['release_date.gte'])
+    if (params['vote_count.gte']) url.searchParams.append('vote_count.gte', String(params['vote_count.gte']))
     const res = await fetch(url.toString())
     return res.json()
 }
@@ -243,6 +247,7 @@ export const discoverTV = async (params: {
     with_genres?: string
     'first_air_date.lte'?: string
     'first_air_date.gte'?: string
+    'vote_count.gte'?: number
 }) => {
     const url = new URL(`${BASE_URL}/discover/tv`)
     url.searchParams.append('api_key', API_KEY)
@@ -253,6 +258,7 @@ export const discoverTV = async (params: {
     if (params.with_genres) url.searchParams.append('with_genres', params.with_genres)
     if (params['first_air_date.lte']) url.searchParams.append('first_air_date.lte', params['first_air_date.lte'])
     if (params['first_air_date.gte']) url.searchParams.append('first_air_date.gte', params['first_air_date.gte'])
+    if (params['vote_count.gte']) url.searchParams.append('vote_count.gte', String(params['vote_count.gte']))
     const res = await fetch(url.toString())
     return res.json()
 }

@@ -346,8 +346,8 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             }
             // ALL MEDIA TYPE MODE
             else if (mediaType === 'all') {
-                const movieCacheKey = `${query}-${pageNum}-${sortBy}-${selectedYear}-${selectedGenre}`
-                const tvCacheKey = `${query}-${pageNum}-${mapSortParamForTV(sortBy)}-${selectedYear}-${selectedGenre}`
+                const movieCacheKey = `${query}-${pageNum}-${sortBy}-${selectedYear}-${selectedGenre}-min-100`
+                const tvCacheKey = `${query}-${pageNum}-${mapSortParamForTV(sortBy)}-${selectedYear}-${selectedGenre}-min-200`
 
                 const [moviesData, tvData] = await Promise.all([
                     getCachedOrFetch(
@@ -358,6 +358,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                             sort_by: sortBy,
                             primary_release_year: selectedYear ?? undefined,
                             with_genres: selectedGenre ? String(selectedGenre) : undefined,
+                            'vote_count.gte': 100,
                         }),
                         { ttl: 6 * 60 * 60 * 1000 }
                     ),
@@ -369,6 +370,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                             sort_by: mapSortParamForTV(sortBy),
                             first_air_date_year: selectedYear ?? undefined,
                             with_genres: selectedGenre ? String(selectedGenre) : undefined,
+                            'vote_count.gte': 200,
                         }),
                         { ttl: 6 * 60 * 60 * 1000 }
                     ),
@@ -393,7 +395,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             }
             // MOVIE MODE
             else if (mediaType === 'movie') {
-                const movieCacheKey = `${query}-${pageNum}-${sortBy}-${selectedYear}-${selectedGenre}`
+                const movieCacheKey = `${query}-${pageNum}-${sortBy}-${selectedYear}-${selectedGenre}-min-100`
                 const data = await getCachedOrFetch(
                     'discover-movie',
                     movieCacheKey,
@@ -402,6 +404,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                         sort_by: sortBy,
                         primary_release_year: selectedYear ?? undefined,
                         with_genres: selectedGenre ? String(selectedGenre) : undefined,
+                        'vote_count.gte': 100,
                     }),
                     { ttl: 6 * 60 * 60 * 1000 }
                 )
@@ -413,7 +416,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             }
             // TV MODE
             else if (mediaType === 'tv') {
-                const tvCacheKey = `${query}-${pageNum}-${mapSortParamForTV(sortBy)}-${selectedYear}-${selectedGenre}`
+                const tvCacheKey = `${query}-${pageNum}-${mapSortParamForTV(sortBy)}-${selectedYear}-${selectedGenre}-min-200`
                 const data = await getCachedOrFetch(
                     'discover-tv',
                     tvCacheKey,
@@ -422,6 +425,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                         sort_by: mapSortParamForTV(sortBy),
                         first_air_date_year: selectedYear ?? undefined,
                         with_genres: selectedGenre ? String(selectedGenre) : undefined,
+                        'vote_count.gte': 200,
                     }),
                     { ttl: 6 * 60 * 60 * 1000 }
                 )

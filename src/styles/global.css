@@ -5148,6 +5148,10 @@ i.fa-solid.fa-bookmark:hover {
     transition: all 0.2s ease;
 }
 
+.friend-card__name {
+    text-decoration: none;
+}
+
 .friend-card:hover {
     border-color: rgba(133, 138, 227, 0.25);
     background: rgba(255, 255, 255, 0.05);
