@@ -138,8 +138,10 @@ const Lists: React.FC = () => {
                 getGenres('tv')
             ])
             const allGenres = [...movieGenres, ...tvGenres]
+            // Filter out News genre (ID: 10769) from default list
+            const filteredGenres = allGenres.filter(g => g.id !== 10769)
             const uniqueGenres = Array.from(
-                new Map(allGenres.map(g => [g.id, g])).values()
+                new Map(filteredGenres.map(g => [g.id, g])).values()
             ).sort((a, b) => a.name.localeCompare(b.name))
             setGenres(uniqueGenres)
             
