@@ -66,7 +66,7 @@ interface DiscoverState {
 const useDiscoverStore = create<DiscoverState>((set, get) => ({
     // Initial state
     results: [],
-    mediaType: 'all',
+    mediaType: 'movie',
     sortBy: 'popularity.desc',
     selectedGenre: null,
     selectedYear: null,
@@ -105,7 +105,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             overview: item?.overview,
             release_date: item?.release_date || item?.first_air_date,
             vote_average: item?.vote_average,
-            status: 'watching'
+            status: 'planning'
         })
         if (error) {
             console.error('Failed to add to watchlist:', error)

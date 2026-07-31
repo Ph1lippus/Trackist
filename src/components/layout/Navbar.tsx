@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../services/supabaseClient';
+import { useSearch } from '../../hooks/useSearch';
 import ProgressFixModal from '../modals/ProgressFixModal';
 
 const Navbar: React.FC = () => {
@@ -13,10 +14,19 @@ const Navbar: React.FC = () => {
     const [showFixModal, setShowFixModal] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
+    const { setSearchQuery, clearSearch } = useSearch();
+    const [searchInputValue, setSearchInputValue] = useState('')
 
     const isDetailPage = location.pathname.match(/^\/(movie|tv|person)\/\d+$/) || 
                           location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/);
     const showBackButton = Boolean(isDetailPage);
+    
+    const showSearchBar = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/Friends', '/Finished'].includes(location.pathname);
+
+    // Clear search when page changes
+    useEffect(() => {
+        clearSearch()
+    }, [location.pathname, clearSearch])
 
     useEffect(() => {
         // Get initial session
@@ -79,6 +89,17 @@ const Navbar: React.FC = () => {
         || user?.email?.split('@')[0] 
         || 'Viewer';
 
+    const handleSearchSubmit = (e: React.FormEvent) => {
+        e.preventDefault()
+        // Update global search query when Enter is pressed
+        setSearchQuery(searchInputValue)
+    }
+
+    const handleSearchClear = () => {
+        setSearchQuery('')
+        setSearchInputValue('')
+    }
+
     return (
         <nav className="navbar-brand-row" aria-label="Main navigation">
             <div className="container navbar-inner">
@@ -103,6 +124,32 @@ const Navbar: React.FC = () => {
                         />
                     )}
                 </div>
+                
+                {showSearchBar && (
+                    <div className="navbar-search">
+                        <form onSubmit={handleSearchSubmit}>
+                            <div className="navbar-search-box">
+                                <svg className="navbar-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                    <circle cx="11" cy="11" r="8" />
+                                    <path d="M21 21l-4.35-4.35" />
+                                </svg>
+                                <input
+                                    type="text"
+                                    className="navbar-search-input"
+                                    placeholder="Search..."
+                                    value={searchInputValue}
+                                    onChange={(e) => setSearchInputValue(e.target.value)}
+                                />
+                                {searchInputValue && (
+                                    <button type="button" className="navbar-search-clear" onClick={handleSearchClear} aria-label="Clear search">
+                                        <i className="fa-solid fa-xmark"></i>
+                                    </button>
+                                )}
+                            </div>
+                        </form>
+                    </div>
+                )}
+                
                 <div className="navbar-actions">
                     {user ? (
                         <>

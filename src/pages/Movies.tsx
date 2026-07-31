@@ -1,14 +1,16 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../services/supabaseClient'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
+import { useSearch } from '../hooks/useSearch'
 
 
 
 const Movies: React.FC = () => {
     const { clearScrollPosition } = useScrollRestoration()
+    const { searchQuery } = useSearch()
     const [items, setItems] = useState<WatchlistItem[]>([])
     const [loading, setLoading] = useState(true)
     const [confirmModal, setConfirmModal] = useState<{
@@ -16,7 +18,6 @@ const Movies: React.FC = () => {
         action: 'watch' | 'unwatch' 
         item: TMDBResult
     } | null>(null)
-    const [searchQuery, setSearchQuery] = useState('')
     
 
     useEffect(() => {
@@ -73,7 +74,7 @@ const Movies: React.FC = () => {
     const markAsUnwatched = async (tmdbItem: TMDBResult) => {
         const watchlistItem = items.find(item => item.tmdb_id === tmdbItem.id)
         if (watchlistItem) {
-            await updateStatus(watchlistItem.id, 'watching')
+            await updateStatus(watchlistItem.id, 'planning')
         }
     }
 
@@ -89,23 +90,13 @@ const Movies: React.FC = () => {
         setConfirmModal(null)
     }
 
-    const [searchActive, setSearchActive] = useState(false)
+    // Filter items based on global search
+    const filteredItems = useMemo(() => {
+        if (!searchQuery) return items
+        return items.filter(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    }, [items, searchQuery])
 
-    const handleSearch = (e: React.FormEvent) => {
-        e.preventDefault()
-        setSearchActive(true)
-    }
-
-    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchQuery(e.target.value)
-        setSearchActive(false)
-    }
-
-    const filteredItems = searchActive
-        ? items.filter(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()))
-        : items
-
-    const watchlistItems = filteredItems.filter(item => item.status === 'watching')
+    const watchlistItems = filteredItems.filter(item => item.status === 'planning')
 
     const visibleWatchlistItems = watchlistItems
 
@@ -120,23 +111,6 @@ const Movies: React.FC = () => {
     return (
         <div className="discover-page">
             <div className="discover-container" style={{ width: '85%' }}>
-                <div className="discover-search-wrap">
-                    <form onSubmit={handleSearch}>
-                        <div className="discover-search-box">
-                            <svg className="discover-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <circle cx="11" cy="11" r="8" />
-                                <path d="M21 21l-4.35-4.35" />
-                            </svg>
-                            <input
-                                className="discover-search"
-                                placeholder="Search your movies..."
-                                value={searchQuery}
-                                onChange={handleSearchChange}
-                            />
-                        </div>
-                    </form>
-                </div>
-
                 <div className="watchlist-section">
                     <div className="watchlist-section__header">
                         <h3 className="watchlist-section__title">To Watch</h3>
@@ -163,7 +137,7 @@ const Movies: React.FC = () => {
                         </div>
                     ) : (
                         <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
-                            {searchQuery ? 'No movies match your search' : 'No movies to watch. Add some!'}
+                            No movies to watch. Add some!
                         </p>
                     )}
                 </div>

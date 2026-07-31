@@ -255,7 +255,7 @@ const TVShowDetail: React.FC = () => {
             current_season: 1,
             last_season_number: totalSeasons,
             last_season_check: new Date().toISOString(),
-            status: 'watching'
+            status: 'planning'
         }).select().single()
 
         if (error) {

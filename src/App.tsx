@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-route
 import { supabase } from './services/supabaseClient'
 import { updateLastActive } from './services/profileService'
 import type { User } from '@supabase/supabase-js'
+import { SearchProvider } from './contexts/SearchContext'
 import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 import SecondaryNavbar from './components/layout/SecondaryNavbar'
@@ -130,7 +131,9 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
     return (
         <BrowserRouter>
-            <AppContent />
+            <SearchProvider>
+                <AppContent />
+            </SearchProvider>
         </BrowserRouter>
     )
 }

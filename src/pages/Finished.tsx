@@ -1,15 +1,15 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../services/supabaseClient'
 import MediaCard from '../components/media/MediaCard'
 import type { WatchlistItem, TMDBResult } from '../types'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
+import { useSearch } from '../hooks/useSearch'
 
 const Finished: React.FC = () => {
     const { clearScrollPosition } = useScrollRestoration()
+    const { searchQuery } = useSearch()
     const [items, setItems] = useState<WatchlistItem[]>([])
     const [loading, setLoading] = useState(true)
-    const [searchQuery, setSearchQuery] = useState('')
-    const [searchActive, setSearchActive] = useState(false)
 
     useEffect(() => {
         const fetchFinished = async () => {
@@ -44,19 +44,11 @@ const Finished: React.FC = () => {
         return () => window.removeEventListener('beforeunload', handleNavigation)
     }, [clearScrollPosition])
 
-    const handleSearch = (e: React.FormEvent) => {
-        e.preventDefault()
-        setSearchActive(true)
-    }
-
-    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchQuery(e.target.value)
-        setSearchActive(false)
-    }
-
-    const filteredItems = searchActive
-        ? items.filter(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()))
-        : items
+    // Filter items based on global search
+    const filteredItems = useMemo(() => {
+        if (!searchQuery) return items
+        return items.filter(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    }, [items, searchQuery])
 
     const finishedMovies = filteredItems.filter(item => item.media_type === 'movie')
     const finishedTVShows = filteredItems.filter(item => item.media_type === 'tv' || item.media_type === 'anime')
@@ -79,23 +71,6 @@ const Finished: React.FC = () => {
     return (
         <div className="discover-page">
             <div className="discover-container" style={{ width: '85%' }}>
-                <div className="discover-search-wrap">
-                    <form onSubmit={handleSearch}>
-                        <div className="discover-search-box">
-                            <svg className="discover-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <circle cx="11" cy="11" r="8" />
-                                <path d="M21 21l-4.35-4.35" />
-                            </svg>
-                            <input
-                                className="discover-search"
-                                placeholder="Search finished movies and shows..."
-                                value={searchQuery}
-                                onChange={handleSearchChange}
-                            />
-                        </div>
-                    </form>
-                </div>
-
                 {/* Finished TV Shows */}
                 <div className="watchlist-section">
                     <div className="watchlist-section__header">
@@ -112,7 +87,7 @@ const Finished: React.FC = () => {
                         </div>
                     ) : (
                         <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
-                            {searchQuery ? 'No matching shows' : 'No finished TV shows yet'}
+                            No finished TV shows yet
                         </p>
                     )}
                 </div>
@@ -133,12 +108,12 @@ const Finished: React.FC = () => {
                         </div>
                     ) : (
                         <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
-                            {searchQuery ? 'No matching movies' : 'No finished movies yet'}
+                            No finished movies yet
                         </p>
                     )}
                 </div>
 
-                {items.length === 0 && !searchQuery && (
+                {items.length === 0 && (
                     <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>
                         No finished movies or TV shows yet. Complete some from your watchlist!
                     </p>

@@ -1,5 +1,11 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, {
+    useEffect,
+    useMemo,
+    useCallback,
+    useState,
+} from 'react'
 import { useLocation } from 'react-router-dom'
+import { useSearch } from '../hooks/useSearch'
 import useDiscoverStore, { useDiscoverResults, useDiscoverFilters, useDiscoverLoading, useDiscoverActions, useDiscoverWatchlistIds } from '../stores/discoverStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
@@ -18,13 +24,14 @@ const Discover: React.FC = () => {
     const actions = useDiscoverActions()
     const watchlistIds = useDiscoverWatchlistIds()
     const store = useDiscoverStore()
+    const { searchQuery } = useSearch()
     
     // State for confirmation modal when removing from watchlist
     const [removeConfirmItem, setRemoveConfirmItem] = useState<TMDBResult | null>(null)
-    const [searchInput, setSearchInput] = useState(filters.query)
 
+    // Search is now handled globally via navbar
+    // const [searchInput, setSearchInput] = useState(filters.query)
 
-    
     // Memoized filtered results (currently no filtering, but ready for future use)
     const filteredResults = useMemo(() => results, [results])
     
@@ -39,6 +46,14 @@ const Discover: React.FC = () => {
     useEffect(() => {
         actions.fetchData(1)
     }, [filters.mediaType, filters.sortBy, filters.selectedGenre, filters.selectedYear, actions])
+    
+    // Sync global search with discover store
+    useEffect(() => {
+        if (searchQuery !== filters.query) {
+            actions.setQuery(searchQuery)
+            actions.fetchData(1)
+        }
+    }, [searchQuery, filters.query, actions])
     
     // Handle visibility changes for scroll restoration
     useEffect(() => {
@@ -68,82 +83,74 @@ const Discover: React.FC = () => {
         }
     }, [])
     
-    const handleSearch = async (e: React.FormEvent) => {
-        e.preventDefault()
-        const trimmed = searchInput.trim()
-        if (!trimmed) return
-        
-        // Only update store and fetch if query changed
-        if (trimmed !== filters.query) {
-            actions.setQuery(trimmed)
-            await actions.fetchData(1)
-        } else {
-            // If same query, just refetch (optional)
-            await actions.fetchData(1)
-        }
-    }
+    const handleClearFilters = useCallback(() => {
+    actions.resetFilters();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+}, [actions]);  
     
-    const handleClearFilters = () => {
-        actions.resetFilters()
-        setSearchInput('')
-        window.scrollTo(0, 0)
-    }
-    
-    const handleAddToWatchlist = (item: TMDBResult) => {
+    const handleAddToWatchlist = useCallback(
+    (item: TMDBResult) => {
         if (watchlistIds.has(item.id)) {
-            // Show confirmation before removing
-            setRemoveConfirmItem(item)
+            setRemoveConfirmItem(item);
         } else {
-            actions.addToWatchlist(item.id, item)
+            actions.addToWatchlist(item.id, item);
         }
+    },
+    [actions, watchlistIds]
+);
+
+    const handleConfirmRemove = useCallback(() => {
+    if (!removeConfirmItem) return;
+
+    actions.removeFromWatchlist(removeConfirmItem.id);
+    setRemoveConfirmItem(null);
+}, [actions, removeConfirmItem]);
+
+// const isInWatchlist = useCallback(
+//     (id: number) => watchlistIds.has(id),
+//     [watchlistIds]
+// );
+    const Footer = useCallback(() => {
+    if (loading.isLoadingMore) {
+        return (
+            <div className="discover-loading" style={{ padding: "2rem" }}>
+                <div className="discover-spinner" />
+                <p>Loading more...</p>
+            </div>
+        );
     }
 
-    const handleConfirmRemove = () => {
-        if (removeConfirmItem) {
-            actions.removeFromWatchlist(removeConfirmItem.id)
-            setRemoveConfirmItem(null)
-        }
+    if (!loading.hasMore && filteredResults.length > 0) {
+        return (
+            <p
+                style={{
+                    textAlign: "center",
+                    color: "rgba(255,255,255,0.3)",
+                    fontSize: ".85rem",
+                    padding: "1rem",
+                }}
+            >
+                You've reached the end
+            </p>
+        );
     }
-    
+
+    return null;
+}, [
+    loading.isLoadingMore,
+    loading.hasMore,
+    filteredResults.length,
+]);
     // Determine if we should show the page
     if (!isVisible) {
         return <div className="discover-page" style={{ display: 'none' }} />
     }
-    
+    // style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}
     return (
-        <div className="discover-page" style={{ height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <div className="discover-page">
             <div className="discover-container" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <div className="discover-search-wrap">
-                    <form onSubmit={handleSearch}>
-                        <div className="discover-search-box">
-                            <svg
-                                className="discover-search-icon"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                            >
-                                <circle cx="11" cy="11" r="8" />
-                                <path d="M21 21l-4.35-4.35" />
-                            </svg>
-                            <input
-                                className="discover-search"
-                                placeholder="Search movies, TV shows, actors, directors..."
-                                value={searchInput}
-                                onChange={(e) => setSearchInput(e.target.value)}
-                            />
-                        </div>
-                    </form>
-                </div>
-
                 <div className="discover-controls">
                     <div className="discover-tabs">
-                        <button
-                            className={`discover-tab ${filters.mediaType === 'all' ? 'active' : ''}`}
-                            onClick={() => actions.setMediaType('all')}
-                        >
-                            All
-                        </button>
                         <button
                             className={`discover-tab ${filters.mediaType === 'movie' ? 'active' : ''}`}
                             onClick={() => actions.setMediaType('movie')}
@@ -226,57 +233,31 @@ const Discover: React.FC = () => {
                 ) : (
                         <div style={{ flex: 1, minHeight: 0, width: '100%' }}>
                             <VirtuosoGrid
+                                computeItemKey={(index) => filteredResults[index]?.id ?? index}
                                 style={{ height: '100%', width: '100%' }}
                                 useWindowScroll={true}
-                                totalCount={filteredResults.length}
-                                initialItemCount={20}
+                                data={filteredResults}
                                 endReached={() => {
                                     if (loading.hasMore && !loading.isLoadingMore) {
                                         actions.fetchData(store.page + 1)
                                     }
                                 }}
-                                overscan={400}
+                                overscan={800}
                                 listClassName="discover-grid"
                                 itemContent={(index) => {
-                                    const item = filteredResults[index]
+                                    const item = filteredResults[index];
+
                                     return (
-                                        <div key={item.id} style={{}}>
-                                            <MediaCard
-                                                item={item}
-                                                compact={item.media_type === 'person'}
-                                                onAdd={handleAddToWatchlist}
-                                                isInWatchlist={watchlistIds.has(item.id)}
-                                            />
-                                        </div>
-                                    )
+                                        <MediaCard
+                                            item={item}
+                                            compact={item.media_type === "person"}
+                                            onAdd={handleAddToWatchlist}
+                                            // isInWatchlist={isInWatchlist(item.id)}
+                                            isInWatchlist={watchlistIds.has(item.id)}
+                                        />
+                                    );
                                 }}
-                                components={{
-                                    Footer: () => {
-                                        if (loading.isLoadingMore) {
-                                            return (
-                                                <div className="discover-loading" style={{ padding: '2rem' }}>
-                                                    <div className="discover-spinner" />
-                                                    <p>Loading more...</p>
-                                                </div>
-                                            )
-                                        }
-                                        if (!loading.hasMore && filteredResults.length > 0) {
-                                            return (
-                                                <p
-                                                    style={{
-                                                        textAlign: 'center',
-                                                        color: 'rgba(255,255,255,0.3)',
-                                                        fontSize: '0.85rem',
-                                                        padding: '1rem',
-                                                    }}
-                                                >
-                                                    You've reached the end
-                                                </p>
-                                            )
-                                        }
-                                        return null
-                                    }
-                                }}
+                                components={{ Footer }}
                             />
                         </div>
                 )}

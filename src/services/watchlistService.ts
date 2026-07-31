@@ -224,6 +224,7 @@ export const checkAndUpdateCaughtUp = async (watchlistId: string, tmdbId: number
  * Check if all episodes across ALL seasons are watched.
  * If the show has ended on TMDB, mark as 'completed'.
  * If the show is still airing, mark as 'caught_up'.
+ * If no episodes are watched, reset to 'planning'.
  */
 export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: number): Promise<void> => {
     try {
@@ -243,6 +244,17 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
                 .update({
                     status: showEnded ? 'completed' : 'caught_up',
                     completed_at: showEnded ? new Date().toISOString() : null,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', watchlistId)
+        } else if (watchedCount === 0) {
+            // No episodes watched, reset to planning
+            await supabase
+                .from('watchlist')
+                .update({
+                    status: 'planning',
+                    current_episode: 0,
+                    current_season: 1,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', watchlistId)
@@ -355,7 +367,8 @@ export const recalculateProgress = async (showId: string): Promise<{ fixed: bool
                 newCurrentSeason = lastWatched.season_number
             }
         } else {
-            newStatus = 'watching'
+            // No episodes watched, set to planning
+            newStatus = 'planning'
             newCurrentEpisode = 0
             newCurrentSeason = 1
         }
@@ -569,7 +582,7 @@ export const updateLastSeasonNumbers = async (
 }
 
 /**
- * Fix all TV shows with missing or invalid progress data for a user
+ * Fix all TV shows and movies with missing or invalid progress data for a user
  */
 export const fixAllProgress = async (
     userId: string,
@@ -584,67 +597,99 @@ export const fixAllProgress = async (
     }
 
     try {
-        const { data: shows, error: fetchError } = await supabase
+        // Fetch all TV shows and movies for the user
+        const { data: allItems, error: fetchError } = await supabase
             .from('watchlist')
             .select('*')
             .eq('user_id', userId)
-            .eq('media_type', 'tv')
-            .or('total_episodes.eq.0,current_episode.eq.0,total_episodes.is.null,current_episode.is.null')
+            .in('media_type', ['tv', 'movie'])
 
         if (fetchError) {
             throw new Error(`Failed to fetch watchlist: ${fetchError.message}`)
         }
 
-        if (!shows || shows.length === 0) {
-            const { data: allShows } = await supabase
-                .from('watchlist')
-                .select('*')
-                .eq('user_id', userId)
-                .eq('media_type', 'tv')
-                .eq('status', 'completed')
+        if (!allItems || allItems.length === 0) {
+            onProgress?.({
+                ...progress,
+                total: 0,
+                currentShow: 'No items need fixing'
+            })
+            return progress
+        }
 
-            if (allShows) {
-                for (const show of allShows) {
-                    if (!shows) continue
-                    const alreadyIncluded = shows.some(s => s.id === show.id)
-                    if (!alreadyIncluded && (!show.total_episodes || show.total_episodes === 0 || !show.current_episode || show.current_episode === 0)) {
-                        shows.push(show)
-                    }
+        const itemsToFix: typeof allItems = []
+
+        for (const item of allItems) {
+            // For TV shows: fix if missing episode data or wrong status
+            if (item.media_type === 'tv' || item.media_type === 'anime') {
+                const hasMissingData = !item.total_episodes || item.total_episodes === 0 || 
+                                      !item.current_episode || item.current_episode === 0 ||
+                                      item.total_episodes === null || item.current_episode === null
+                
+                // Always include shows that need status fixing
+                if (hasMissingData || item.status === 'watching' || item.status === 'completed' || item.status === 'caught_up') {
+                    itemsToFix.push(item)
                 }
-            }
-
-            if (!shows || shows.length === 0) {
-                onProgress?.({
-                    ...progress,
-                    total: 0,
-                    currentShow: 'No shows need fixing'
-                })
-                return progress
+            } 
+            // For movies: fix if status is 'watching' (should be 'planning' or 'completed')
+            else if (item.media_type === 'movie') {
+                if (item.status === 'watching') {
+                    itemsToFix.push(item)
+                }
             }
         }
 
-        progress.total = shows.length
+        if (itemsToFix.length === 0) {
+            onProgress?.({
+                ...progress,
+                total: 0,
+                currentShow: 'No items need fixing'
+            })
+            return progress
+        }
+
+        progress.total = itemsToFix.length
         onProgress?.(progress)
 
-        for (const show of shows) {
+        for (const item of itemsToFix) {
             progress.processed++
-            progress.currentShow = show.title || 'Unknown Show'
+            progress.currentShow = item.title || 'Unknown Item'
             onProgress?.({ ...progress })
 
             try {
-                await cleanupDuplicateEpisodes(show.id)
-            } catch {
-                // Non-critical, continue
-            }
+                if (item.media_type === 'tv' || item.media_type === 'anime') {
+                    // For TV shows, recalculate progress
+                    await cleanupDuplicateEpisodes(item.id)
+                    const result = await recalculateProgress(item.id)
+                    if (result.fixed) {
+                        progress.fixed++
+                    } else {
+                        progress.errors++
+                        if (result.error) {
+                            progress.errorDetails.push(`${item.title}: ${result.error}`)
+                        }
+                    }
+                } else if (item.media_type === 'movie') {
+                    // For movies, change 'watching' to 'planning'
+                    const { error: updateError } = await supabase
+                        .from('watchlist')
+                        .update({
+                            status: 'planning',
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', item.id)
 
-            const result = await recalculateProgress(show.id)
-            if (result.fixed) {
-                progress.fixed++
-            } else {
-                progress.errors++
-                if (result.error) {
-                    progress.errorDetails.push(`${show.title}: ${result.error}`)
+                    if (updateError) {
+                        progress.errors++
+                        progress.errorDetails.push(`${item.title}: ${updateError.message}`)
+                    } else {
+                        progress.fixed++
+                    }
                 }
+            } catch (err) {
+                progress.errors++
+                const message = err instanceof Error ? err.message : 'Unknown error'
+                progress.errorDetails.push(`${item.title}: ${message}`)
             }
 
             onProgress?.({ ...progress })

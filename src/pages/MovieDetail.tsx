@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { getMovieDetails, imageUrl, imageUrlOriginal, getFanartImages } from '../services/tmdbService'
 import ConfirmModal from '../components/modals/ConfirmModal'
-import type { TMDBResult } from '../types'
+import type { TMDBResult, WatchlistItem } from '../types'
 
 const MovieDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>()
@@ -89,7 +89,7 @@ const getAgeRating = (): string => {
 
 const getAgeRatingTooltip = (): string => {
     const rating = getAgeRating()
-    const tooltips: { [key: string]: string } = {
+    const tooltips: Record<string, string> = {
         'G': 'General Audiences - All ages admitted',
         'PG': 'Parental Guidance Suggested - Some material may not be suitable for children',
         'PG-13': 'Parents Strongly Cautioned - Some material may be inappropriate for children under 13',
@@ -131,7 +131,7 @@ const getAgeRatingTooltip = (): string => {
 
     return null
     }
-    const handleAddToWatchlist = async (status: string) => {
+    const handleAddToWatchlist = async () => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user || !details) {
             alert('Please log in')
@@ -148,7 +148,7 @@ const getAgeRatingTooltip = (): string => {
             overview: details.overview,
             release_date: details.release_date,
             vote_average: details.vote_average,
-            status
+            status: 'planning'
         }).select().single()
 
         if (error) {
@@ -290,7 +290,7 @@ const getAgeRatingTooltip = (): string => {
                                 <>
                                     <button 
                                         className="detail-page__icon-btn"
-                                        onClick={() => handleAddToWatchlist('watching')}
+                                        onClick={handleAddToWatchlist}
                                         disabled={adding}
                                         title="Add to Watchlist"
                                     >
@@ -298,7 +298,22 @@ const getAgeRatingTooltip = (): string => {
                                     </button>
                                     <button 
                                         className="detail-page__icon-btn"
-                                        onClick={() => handleAddToWatchlist('completed')}
+                                        onClick={async () => {
+                                            await handleAddToWatchlist()
+                                            if (watchlistId) {
+                                                const { error } = await supabase
+                                                    .from('watchlist')
+                                                    .update({ 
+                                                        status: 'completed',
+                                                        completed_at: new Date().toISOString(),
+                                                        updated_at: new Date().toISOString()
+                                                    })
+                                                    .eq('id', watchlistId)
+                                                if (!error) {
+                                                    setWatchlistStatus('completed')
+                                                }
+                                            }
+                                        }}
                                         disabled={adding}
                                         title="Mark as Watched"
                                     >
@@ -418,7 +433,7 @@ const getAgeRatingTooltip = (): string => {
                             alert('Error: ' + error.message)
                         } else {
                             setWatchlistStatus(newStatus)
-                            setDetails(prev => prev ? { ...prev, status: newStatus as any } : null)
+                            setDetails(prev => prev ? { ...prev, status: newStatus as WatchlistItem['status'] } : null)
                         }
                         setMarkWatchedModal(null)
                     }}

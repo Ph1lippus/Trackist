@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
 import { getWatchedEpisodeCount, markEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
@@ -6,6 +6,7 @@ import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
+import { useSearch } from '../hooks/useSearch'
 
 interface TVShowWithProgress extends WatchlistItem {
     total_episodes_watched: number
@@ -13,9 +14,9 @@ interface TVShowWithProgress extends WatchlistItem {
 
 const TVShows: React.FC = () => {
     const { clearScrollPosition } = useScrollRestoration()
+    const { searchQuery } = useSearch()
     const [items, setItems] = useState<TVShowWithProgress[]>([])
     const [loading, setLoading] = useState(true)
-    const [searchQuery, setSearchQuery] = useState('')
     const [markAllModal, setMarkAllModal] = useState<WatchlistItem | null>(null)
     const [markingAllWatched, setMarkingAllWatched] = useState(false)
 
@@ -196,21 +197,11 @@ const TVShows: React.FC = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [loading, items.length])
 
-    const [searchActive, setSearchActive] = useState(false)
-
-    const handleSearch = (e: React.FormEvent) => {
-        e.preventDefault()
-        setSearchActive(true)
-    }
-
-    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setSearchQuery(e.target.value)
-        setSearchActive(false)
-    }
-
-    const filteredItems = searchActive
-        ? items.filter(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()))
-        : items
+    // Filter items based on global search
+    const filteredItems = useMemo(() => {
+        if (!searchQuery) return items
+        return items.filter(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    }, [items, searchQuery])
 
     // Container A: Currently Watching - some episodes watched, but total watched < total available
     const currentlyWatching = filteredItems.filter(
@@ -221,7 +212,7 @@ const TVShows: React.FC = () => {
 
     // Container B: Watchlist (Not Started) - in watchlist with 0 episodes watched
     const notStarted = filteredItems.filter(
-        item => (item.status === 'watching' || item.status === 'planning') &&
+        item => item.status === 'planning' &&
         item.total_episodes_watched === 0
     )
 
@@ -286,23 +277,6 @@ const TVShows: React.FC = () => {
     return (
         <div className="discover-page">
             <div className="discover-container" style={{ width: '85%' }}>
-                <div className="discover-search-wrap">
-                    <form onSubmit={handleSearch}>
-                        <div className="discover-search-box">
-                            <svg className="discover-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <circle cx="11" cy="11" r="8" />
-                                <path d="M21 21l-4.35-4.35" />
-                            </svg>
-                            <input
-                                className="discover-search"
-                                placeholder="Search your TV shows..."
-                                value={searchQuery}
-                                onChange={handleSearchChange}
-                            />
-                        </div>
-                    </form>
-                </div>
-
                 {/* Container A (Top): Currently Watching */}
                 <div className="watchlist-section">
                     <div className="watchlist-section__header">
@@ -322,7 +296,7 @@ const TVShows: React.FC = () => {
                         </div>
                     ) : (
                         <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
-                            {searchQuery ? 'No matching shows' : 'No shows currently in progress'}
+                            No shows currently in progress
                         </p>
                     )}
                 </div>
@@ -347,12 +321,12 @@ const TVShows: React.FC = () => {
                         </div>
                     ) : (
                         <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
-                            {searchQuery ? 'No matching shows' : 'No shows queued to start'}
+                            No shows queued to start
                         </p>
                     )}
                 </div>
 
-                {filteredItems.length === 0 && !searchQuery && (
+                {filteredItems.length === 0 && (
                     <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>
                         No TV shows or anime in your watchlist. Discover some!
                     </p>

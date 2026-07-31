@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { getTVDetails, getTVSeasonDetails, imageUrlOriginal, getFanartImages } from '../services/tmdbService'
+import { checkAndUpdateCompleted } from '../services/watchlistService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
 
@@ -193,6 +194,9 @@ const EpisodeDetail: React.FC = () => {
                 if (error) {
                     setWatched(true)
                     console.error('Failed to delete episode:', error)
+                } else {
+                    // Check if we need to reset status to planning (no episodes watched)
+                    await checkAndUpdateCompleted(watchlistId, Number(id))
                 }
             }
         } catch (err) {

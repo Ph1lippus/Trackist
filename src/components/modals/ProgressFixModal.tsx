@@ -65,19 +65,23 @@ const ProgressFixModal: React.FC<ProgressFixModalProps> = ({ isOpen, onClose, on
                         </div>
                         <h3 className="progress-fix-modal-title">Fix Progress</h3>
                         <p className="progress-fix-modal-message">
-                            This will scan your watchlist and fix any missing episode data for TV shows and anime.
+                            This will scan your watchlist and fix status issues for both TV shows and movies.
                             This may take a few moments. The operation cannot be undone once started.
                         </p>
                         <p className="progress-fix-modal-submessage">
-                            Shows with <strong>no episodes in watchlist_episodes table</strong> will have all episodes saved.
+                            <strong>For TV Shows & Anime:</strong>
                             <br />
-                            Shows with <strong>status="watching" but current_episode=0</strong> will be set to episode 1.
+                            • Shows with <strong>no episodes watched</strong> will be set to "Planning" status.
                             <br />
-                            Shows with <strong>status="completed" but missing progress</strong> will be recalculated.
+                            • Shows with <strong>missing episode data</strong> will be recalculated from TMDB.
                             <br />
-                            Shows with <strong>missing total_episodes</strong> will be updated from TMDB.
+                            • Shows with <strong>all episodes watched</strong> will be marked as completed or caught up.
                             <br />
-                            Episodes with <strong>missing TMDB episode ID</strong> will be backfilled automatically.
+                            • Episodes with <strong>missing TMDB episode ID</strong> will be backfilled.
+                            <br />
+                            <strong>For Movies:</strong>
+                            <br />
+                            • Movies with <strong>status="watching"</strong> will be changed to "Planning" (movies should only be planning or completed).
                         </p>
                         <div className="progress-fix-modal-actions">
                             <button
@@ -164,7 +168,7 @@ const ProgressFixModal: React.FC<ProgressFixModalProps> = ({ isOpen, onClose, on
                             <div className="progress-fix-modal-summary">
                                 <div className="progress-fix-modal-stats">
                                     <div className="progress-fix-stat">
-                                        <span className="progress-fix-stat-label">Shows Found</span>
+                                        <span className="progress-fix-stat-label">Items Found</span>
                                         <span className="progress-fix-stat-value">{progress.total}</span>
                                     </div>
                                     <div className="progress-fix-stat">

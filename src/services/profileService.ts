@@ -142,3 +142,46 @@ export const isFollowing = async (followerId: string, followedId: string) => {
     const { data } = await supabase.from('user_follows').select('id').eq('follower_id', followerId).eq('followed_id', followedId).single()
     return !!data
 }
+
+interface FollowItem {
+    followed_id: string
+    profiles: {
+        id: string
+        display_name: string | null
+        avatar_url: string | null
+    }[]
+}
+
+export const getFollowingList = async (followerId: string) => {
+    const { data, error } = await supabase
+        .from('user_follows')
+        .select('followed_id, profiles!followed_id(id, display_name, avatar_url)')
+        .eq('follower_id', followerId)
+    
+    if (error || !data) return { data: null, error }
+    
+    // Extract profile data from the nested structure (profiles is an array, take first element)
+    const following = data.map((item: FollowItem) => item.profiles[0])
+    return { data: following, error: null }
+}
+
+// List functions
+export const getUserLists = async (userId: string) => {
+    const { data, error } = await supabase
+        .from('lists')
+        .select('*')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+    
+    return { data, error }
+}
+
+export const getListItems = async (listId: string) => {
+    const { data, error } = await supabase
+        .from('list_items')
+        .select('*')
+        .eq('list_id', listId)
+        .order('added_at', { ascending: false })
+    
+    return { data, error }
+}
