@@ -77,7 +77,7 @@ body {
     align-items: center;
     justify-content: center;
     width: 100%;
-    padding: 2rem 0 0 0;
+    padding: 0 0 0 0;
 }
 .page-main--no-footer {
     padding-bottom: 6rem;
@@ -306,6 +306,66 @@ body {
 .navbar-hamburger.is-active span:nth-child(3) {
     transform: translateY(-5px) rotate(-45deg);
     background-color: var(--color-primary);
+}
+
+/* ===== NAVBAR SEARCH ===== */
+.navbar-search {
+    justify-self: center;
+    max-width: 500px;
+    width: 100%;
+}
+.navbar-search-box {
+    position: relative;
+    width: 100%;
+}
+.navbar-search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 18px;
+    height: 18px;
+    color: rgba(255, 255, 255, 0.4);
+    pointer-events: none;
+}
+.navbar-search-input {
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 25px;
+    padding: 0.65rem 2.5rem 0.65rem 2.8rem;
+    color: var(--color-platinum);
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+.navbar-search-input:focus {
+    border-color: rgba(133, 138, 227, 0.4);
+    background: rgba(255, 255, 255, 0.08);
+}
+.navbar-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+}
+.navbar-search-clear {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+}
+.navbar-search-clear:hover {
+    color: var(--color-primary);
+}
+.navbar-search-clear i {
+    font-size: 0.9rem;
 }
 
 /* ===== TOP NAVBAR DROPDOWN MENU ===== */
@@ -606,7 +666,6 @@ body {
     gap: 1rem;
     padding: 0.25rem;
 }
-
 .discover-sort-btn {
     padding: 0.5rem 0.85rem;
     border: none;
@@ -744,7 +803,6 @@ body {
     overflow: hidden;
     position: relative;
 }
-
 .watchlist-grid--collapsed::after {
     content: "";
     position: absolute;
@@ -762,19 +820,16 @@ body {
         max-height: calc(var(--collapsed-rows, 1) * 200px);
     }
 }
-
 @media (min-width: 481px) and (max-width: 768px) {
     .watchlist-grid--collapsed {
         max-height: calc(var(--collapsed-rows, 1) * 220px);
     }
 }
-
 @media (min-width: 769px) and (max-width: 1200px) {
     .watchlist-grid--collapsed {
         max-height: calc(var(--collapsed-rows, 1) * 240px);
     }
 }
-
 @media (min-width: 1201px) {
     .watchlist-grid--collapsed {
         max-height: calc(var(--collapsed-rows, 1) * 260px);
@@ -1018,7 +1073,6 @@ body {
     color: var(--color-primary);
     font-weight: 600;
 }
-
 @media (max-width: 480px) {
     .person-card {
         grid-template-columns: 1fr;
@@ -1028,6 +1082,7 @@ body {
         max-height: 260px;
     }
 }
+
 /* Skeleton Loading */
 .skeleton {
     background: linear-gradient(
@@ -1481,7 +1536,7 @@ body {
     inset: 0;
     background: linear-gradient(
         to bottom,
-        rgba(5, 5, 5, 0.35) 0%,
+        rgba(5, 5, 5, 0.35) 0%, 
         rgba(5, 5, 5, 0.48) 30%,
         rgba(5, 5, 5, 0.65) 60%,
         rgba(5, 5, 5, 0.78) 100%
@@ -1493,7 +1548,7 @@ body {
     padding: 0rem 0rem 0rem 4rem;
 }
 .detail-page__content--split {
-    height: calc(100vh - 10rem);
+    height: calc(100vh - 3.5rem);
     display: flex;
     flex-direction: column;
 }
@@ -1578,7 +1633,6 @@ body {
     cursor: help;
     position: relative;
 }
-
 .detail-page__age-rating:hover {
     transform: translateY(-1px);
 }
@@ -1606,7 +1660,6 @@ body {
     transition: all 0.2s ease;
     line-height: 1.4;
 }
-
 .detail-page__age-rating:hover::after {
     opacity: 1;
     visibility: visible;
@@ -2079,7 +2132,7 @@ body {
     opacity: 0.5;
 }
 .detail-page__episode-still {
-    width: 150px;
+    width: 140px;
     height: 100%;
     flex-shrink: 0;
     border-radius: 8px;
@@ -2181,7 +2234,6 @@ body {
     inset: 0;
     z-index: -1;
 }
-
 .detail-page__person-backdrop img {
     width: 100%;
     height: 100%;
@@ -2190,14 +2242,12 @@ body {
     filter: blur(20px);
     transform: scale(1.1);
 }
-
 .detail-page__person-header {
     display: flex;
     gap: 2rem;
     align-items: flex-start;
     padding-top: 2rem;
 }
-
 .detail-page__person-photo {
     width: 200px;
     flex-shrink: 0;
@@ -2206,13 +2256,11 @@ body {
     background: rgba(255, 255, 255, 0.1);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
-
 .detail-page__person-photo img {
     width: 100%;
     height: auto;
     display: block;
 }
-
 .detail-page__person-no-photo {
     width: 100%;
     aspect-ratio: 2 / 3;
@@ -2224,14 +2272,12 @@ body {
     font-size: 3rem;
     font-weight: 700;
 }
-
 .detail-page__person-info {
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
 }
-
 .detail-page__person-meta {
     display: flex;
     flex-wrap: wrap;
@@ -2239,27 +2285,22 @@ body {
     font-size: 1rem;
     color: rgba(255, 255, 255, 0.7);
 }
-
 .detail-page__person-location {
     font-size: 0.95rem;
     color: rgba(255, 255, 255, 0.6);
     margin: 0;
 }
-
 .detail-page__biography-section {
     margin-bottom: 2rem;
 }
-
 .detail-page__filmography-section {
     margin-bottom: 2rem;
 }
-
 .detail-page__filmography-list {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 1rem;
 }
-
 .detail-page__filmography-item {
     display: flex;
     flex-direction: column;
@@ -2271,13 +2312,11 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
 }
-
 .detail-page__filmography-item:hover {
     background: rgba(133, 138, 227, 0.15);
     border-color: rgba(133, 138, 227, 0.3);
     transform: translateY(-2px);
 }
-
 .detail-page__filmography-poster {
     width: 100%;
     aspect-ratio: 2 / 3;
@@ -2285,20 +2324,17 @@ body {
     object-fit: cover;
     background: rgba(255, 255, 255, 0.05);
 }
-
 .detail-page__filmography-info {
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
 }
-
 .detail-page__filmography-title {
     font-size: 0.85rem;
     font-weight: 600;
     color: var(--color-platinum);
     line-height: 1.3;
 }
-
 .detail-page__filmography-year {
     font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.5);
@@ -2314,7 +2350,6 @@ body {
     gap: 1rem;
     color: rgba(255, 255, 255, 0.5);
 }
-
 .detail-page-error {
     display: flex;
     align-items: center;
@@ -2323,7 +2358,6 @@ body {
     color: rgba(255, 255, 255, 0.5);
     font-size: 1.1rem;
 }
-
 /* Responsive */
 @media (max-width: 992px) {
     .detail-page__main--tv {
@@ -2338,7 +2372,6 @@ body {
         max-height: 600px;
     }
 }
-
 @media (max-width: 768px) {
     .detail-page__title {
         font-size: 2rem;
@@ -2350,7 +2383,6 @@ body {
     min-height: 100vh;
     padding: 2rem;
 }
-
 .lists-page__container {
     display: grid;
     grid-template-columns: 300px 1fr;
@@ -2358,7 +2390,6 @@ body {
     max-width: 1400px;
     margin: 0 auto;
 }
-
 .lists-page__sidebar {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -2366,21 +2397,18 @@ body {
     padding: 1.5rem;
     height: fit-content;
 }
-
 .lists-page__header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
 }
-
 .lists-page__header h1 {
     font-family: var(--font-display);
     font-size: 1.5rem;
     color: var(--color-platinum);
     margin: 0;
 }
-
 .lists-page__create-btn {
     background: var(--color-primary);
     color: white;
@@ -2391,18 +2419,15 @@ body {
     font-size: 0.9rem;
     transition: all 0.2s ease;
 }
-
 .lists-page__create-btn:hover {
     background: var(--color-primary-hover);
     transform: translateY(-2px);
 }
-
 .lists-page__list {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
 }
-
 .lists-page__list-item {
     display: flex;
     justify-content: space-between;
@@ -2414,23 +2439,19 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
 }
-
 .lists-page__list-item:hover {
     background: rgba(133, 138, 227, 0.1);
     border-color: rgba(133, 138, 227, 0.3);
 }
-
 .lists-page__list-item--active {
     background: rgba(133, 138, 227, 0.15);
     border-color: var(--color-primary);
 }
-
 .lists-page__list-item-content h3 {
     font-size: 1rem;
     color: var(--color-platinum);
     margin: 0 0 0.25rem 0;
 }
-
 .lists-page__list-item-content p {
     font-size: 0.85rem;
     color: rgba(255, 255, 255, 0.6);
@@ -2441,13 +2462,11 @@ body {
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
 }
-
 .lists-page__list-item-meta {
     font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.5);
     margin-top: 0.5rem;
 }
-
 .lists-page__delete-btn {
     background: transparent;
     border: none;
@@ -2458,11 +2477,9 @@ body {
     line-height: 1;
     transition: color 0.2s ease;
 }
-
 .lists-page__delete-btn:hover {
     color: #ff4757;
 }
-
 .lists-page__main {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.08);
@@ -2470,23 +2487,19 @@ body {
     padding: 2rem;
     min-height: 400px;
 }
-
 .lists-page__list-header {
     margin-bottom: 2rem;
 }
-
 .lists-page__list-header h2 {
     font-family: var(--font-display);
     font-size: 2rem;
     color: var(--color-platinum);
     margin: 0 0 0.5rem 0;
 }
-
 .lists-page__list-header p {
     color: rgba(255, 255, 255, 0.7);
     margin: 0 0 1rem 0;
 }
-
 .lists-page__visibility-badge {
     display: inline-block;
     padding: 0.25rem 0.75rem;
@@ -2494,25 +2507,21 @@ body {
     font-size: 0.8rem;
     font-weight: 500;
 }
-
 .lists-page__visibility-badge.public {
     background: rgba(104, 255, 174, 0.15);
     color: #68ffae;
     border: 1px solid rgba(104, 255, 174, 0.3);
 }
-
 .lists-page__visibility-badge.private {
     background: rgba(255, 255, 255, 0.1);
     color: rgba(255, 255, 255, 0.7);
     border: 1px solid rgba(255, 255, 255, 0.2);
 }
-
 .lists-page__empty {
     text-align: center;
     color: rgba(255, 255, 255, 0.5);
     padding: 3rem;
 }
-
 .lists-page__placeholder {
     display: flex;
     flex-direction: column;
@@ -2521,16 +2530,13 @@ body {
     height: 100%;
     color: rgba(255, 255, 255, 0.5);
 }
-
 .lists-page__placeholder h2 {
     font-size: 1.5rem;
     margin: 0 0 0.5rem 0;
 }
-
 .lists-page__item-wrapper {
     position: relative;
 }
-
 .lists-page__remove-item-btn {
     position: absolute;
     top: 8px;
@@ -2545,7 +2551,6 @@ body {
     z-index: 10;
     transition: all 0.2s ease;
 }
-
 .lists-page__remove-item-btn:hover {
     background: #ff4757;
 }
@@ -2558,7 +2563,6 @@ body {
     max-height: 400px;
     overflow-y: auto;
 }
-
 .list-selector-item {
     display: flex;
     justify-content: space-between;
@@ -2571,27 +2575,22 @@ body {
     transition: all 0.2s ease;
     text-align: left;
 }
-
 .list-selector-item:hover:not(:disabled) {
     background: rgba(133, 138, 227, 0.1);
     border-color: rgba(133, 138, 227, 0.3);
 }
-
 .list-selector-item:disabled {
     opacity: 0.6;
     cursor: not-allowed;
 }
-
 .list-selector-item--loading {
     opacity: 0.6;
 }
-
 .list-selector-item-content h3 {
     font-size: 0.95rem;
     color: var(--color-platinum);
     margin: 0 0 0.25rem 0;
 }
-
 .list-selector-item-content p {
     font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.6);
@@ -2600,30 +2599,24 @@ body {
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-
 .list-selector-item span {
     font-size: 1.2rem;
     color: var(--color-primary);
     font-weight: bold;
 }
-
 @media (max-width: 768px) {
     .lists-page__container {
         grid-template-columns: 1fr;
     }
-
     .lists-page__sidebar {
         margin-bottom: 1rem;
     }
-
     .detail-page__person-meta {
         justify-content: center;
     }
-
     .detail-page__cast-list {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
-
     .detail-page__filmography-list {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
@@ -3930,11 +3923,11 @@ button:focus-visible {
 
 i.fa-solid.fa-bookmark {
     transition: color 0.2s ease, transform 0.15s ease;
-    color: var(--color-primary) !important;
+    color: var(--color-platinum) !important;
 }
 i.fa-solid.fa-bookmark:hover {
     transition: color 0.2s ease, transform 0.15s ease;
-    color: var(--color-platinum ) !important;
+    color: var(--color-primary) !important;
 }
 
 .media-card__check-icon {
