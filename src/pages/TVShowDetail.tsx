@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
-import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getFanartImages } from '../services/tmdbService'
+import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getFanartImages, getBestBackdropPath } from '../services/tmdbService'
 import { markEpisodeWatched, unmarkEpisodeWatched, getWatchedEpisodes, checkAndUpdateCaughtUp, checkAndUpdateCompleted, updateStatusToWatching } from '../services/watchlistService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import EpisodeChoiceModal from '../components/modals/EpisodeChoiceModal'
@@ -514,13 +514,13 @@ const TVShowDetail: React.FC = () => {
         return <div className="detail-page-error">TV Show not found</div>
     }
 
-    const backdropUrl = details.backdrop_path ? `https://image.tmdb.org/t/p/original${details.backdrop_path}` : null
+    const backdropUrl = imageUrlOriginal(getBestBackdropPath(details.images?.backdrops) ?? details.backdrop_path ?? null)
     const logoUrl = getLogoUrl()
     const title = details.name || 'Untitled'
     const firstYear = details.first_air_date?.slice(0, 4) || ''
     const lastYear = details.last_air_date?.slice(0, 4) || ''
     const year = firstYear
-    ? (details.status === 'Ended'
+    ? (details.status === 'Ended' || details.status === 'Canceled'
         ? (lastYear && lastYear !== firstYear ? `${firstYear}-${lastYear}` : firstYear)
         : `${firstYear}-`)
     : ''
@@ -794,7 +794,7 @@ const TVShowDetail: React.FC = () => {
                                             }
                                         }}>
                                             <div className="detail-page__episode-details">
-                                                <strong>{ep.episode_number}. {ep.title || `Episode ${ep.episode_number}`}</strong>
+                                                <strong>{ep.title || `Episode ${ep.episode_number}`}</strong>
                                                 <div className="detail-page__episode-meta">
                                                     {ep.air_date && <span>{ep.air_date}</span>}
                                                     {ep.runtime && <span>{ep.runtime} min</span>}

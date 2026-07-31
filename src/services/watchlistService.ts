@@ -192,8 +192,16 @@ export const checkAndUpdateCaughtUp = async (watchlistId: string, tmdbId: number
 
         const watchedInLatestSeason = count || 0
 
-        // If all episodes of the latest season are watched, set to caught_up
-        if (watchedInLatestSeason >= totalEpisodesInLatestSeason) {
+        // Check if there are any unreleased episodes (air_date > today)
+        const unreleasedEpisodes = seasonData.episodes?.filter((ep: { air_date?: string }) => {
+            if (!ep.air_date) return false // If no air date, assume released
+            return new Date(ep.air_date) > new Date()
+        }) || []
+
+        const releasedEpisodesCount = totalEpisodesInLatestSeason - unreleasedEpisodes.length
+
+        // If all released episodes are watched OR there are no released episodes yet, set to caught_up
+        if ((watchedInLatestSeason >= releasedEpisodesCount && releasedEpisodesCount > 0) || releasedEpisodesCount === 0) {
             await supabase
                 .from('watchlist')
                 .update({
@@ -204,7 +212,7 @@ export const checkAndUpdateCaughtUp = async (watchlistId: string, tmdbId: number
                 })
                 .eq('id', watchlistId)
         } else {
-            // Still watching
+            // Still watching - there are released episodes that haven't been watched
             await supabase
                 .from('watchlist')
                 .update({
@@ -229,13 +237,28 @@ export const checkAndUpdateCaughtUp = async (watchlistId: string, tmdbId: number
 export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: number): Promise<void> => {
     try {
         const details = await getTVDetails(tmdbId)
-        const totalEpisodes = details.number_of_episodes || 0
+        
+        // Count only released episodes across all seasons
+        let totalReleasedEpisodes = 0
+        const seasonNumbers = (details.seasons || [])
+            .filter((s: { season_number: number }) => s.season_number > 0)
+            .map((s: { season_number: number }) => s.season_number)
 
-        if (totalEpisodes === 0) return
+        for (const seasonNum of seasonNumbers) {
+            const seasonData = await getTVSeasonDetails(tmdbId, seasonNum)
+            const unreleasedInSeason = seasonData.episodes?.filter((ep: { air_date?: string }) => {
+                if (!ep.air_date) return false
+                return new Date(ep.air_date) > new Date()
+            }).length || 0
+            
+            totalReleasedEpisodes += (seasonData.episodes?.length || 0) - unreleasedInSeason
+        }
+
+        if (totalReleasedEpisodes === 0) return
 
         const watchedCount = await getWatchedEpisodeCount(watchlistId)
 
-        if (watchedCount >= totalEpisodes) {
+        if (watchedCount >= totalReleasedEpisodes) {
             // Check TMDB show status to determine if truly completed or just caught up
             const showEnded = details.status === 'Ended'
 
@@ -332,11 +355,26 @@ export const recalculateProgress = async (showId: string): Promise<{ fixed: bool
         }
 
         const details = await getTVDetails(show.tmdb_id)
-        const totalEpisodes = details.number_of_episodes || 0
         const totalSeasons = details.number_of_seasons || 1
 
         // Backfill tmdb_episode_id for episodes that are missing it
         await backfillTmdbEpisodeIds(show.tmdb_id, showId)
+
+        // Count only released episodes across all seasons
+        let totalReleasedEpisodes = 0
+        const seasonNumbers = (details.seasons || [])
+            .filter((s: { season_number: number }) => s.season_number > 0)
+            .map((s: { season_number: number }) => s.season_number)
+
+        for (const seasonNum of seasonNumbers) {
+            const seasonData = await getTVSeasonDetails(show.tmdb_id, seasonNum)
+            const unreleasedInSeason = seasonData.episodes?.filter((ep: { air_date?: string }) => {
+                if (!ep.air_date) return false
+                return new Date(ep.air_date) > new Date()
+            }).length || 0
+            
+            totalReleasedEpisodes += (seasonData.episodes?.length || 0) - unreleasedInSeason
+        }
 
         // Count watched episodes
         const watchedCount = await getWatchedEpisodeCount(showId)
@@ -346,9 +384,11 @@ export const recalculateProgress = async (showId: string): Promise<{ fixed: bool
         let newCurrentEpisode = show.current_episode || 0
         let newCurrentSeason = show.current_season || 1
 
-        if (totalEpisodes > 0 && watchedCount >= totalEpisodes) {
-            newStatus = 'completed'
-            newCurrentEpisode = totalEpisodes
+        if (totalReleasedEpisodes > 0 && watchedCount >= totalReleasedEpisodes) {
+            // Check TMDB show status to determine if truly completed or just caught up
+            const showEnded = details.status === 'Ended'
+            newStatus = showEnded ? 'completed' : 'caught_up'
+            newCurrentEpisode = totalReleasedEpisodes
             const watchedEps = await getWatchedEpisodes(showId)
             if (watchedEps.length > 0) {
                 const lastWatched = watchedEps.reduce((max, ep) =>
@@ -374,7 +414,7 @@ export const recalculateProgress = async (showId: string): Promise<{ fixed: bool
         }
 
         const updates: Partial<WatchlistItem> = {
-            total_episodes: totalEpisodes,
+            total_episodes: totalReleasedEpisodes,
             total_seasons: totalSeasons,
             current_episode: newCurrentEpisode,
             current_season: newCurrentSeason,

@@ -145,23 +145,36 @@ const TVShows: React.FC = () => {
                     const storedTotalEpisodes = show.total_episodes || 0
 
                     if (currentTotalEpisodes > storedTotalEpisodes) {
-                        const index = updatedItems.findIndex(item => item.id === show.id)
-                        if (index !== -1) {
-                            updatedItems[index] = {
-                                ...updatedItems[index],
+                        // Check if any new episodes have been released (air_date <= today)
+                        const latestSeasonNumber = details.number_of_seasons || 1
+                        const seasonData = await getTVSeasonDetails(show.tmdb_id, latestSeasonNumber)
+                        const newEpisodes = seasonData.episodes?.filter((ep: { episode_number: number; air_date?: string }) => ep.episode_number > storedTotalEpisodes) || []
+                        
+                        // Only update if at least one new episode has been released
+                        const hasReleasedEpisodes = newEpisodes.some((ep: { episode_number: number; air_date?: string }) => {
+                            if (!ep.air_date) return true // If no air date, assume released
+                            return new Date(ep.air_date) <= new Date()
+                        })
+
+                        if (hasReleasedEpisodes) {
+                            const index = updatedItems.findIndex(item => item.id === show.id)
+                            if (index !== -1) {
+                                updatedItems[index] = {
+                                    ...updatedItems[index],
+                                    status: 'watching',
+                                    total_episodes: currentTotalEpisodes,
+                                    total_seasons: details.number_of_seasons || show.total_seasons
+                                }
+                            }
+                            hasChanges = true
+
+                            await supabase.from('watchlist').update({
                                 status: 'watching',
                                 total_episodes: currentTotalEpisodes,
-                                total_seasons: details.number_of_seasons || show.total_seasons
-                            }
+                                total_seasons: details.number_of_seasons || show.total_seasons,
+                                updated_at: new Date().toISOString()
+                            }).eq('id', show.id)
                         }
-                        hasChanges = true
-
-                        await supabase.from('watchlist').update({
-                            status: 'watching',
-                            total_episodes: currentTotalEpisodes,
-                            total_seasons: details.number_of_seasons || show.total_seasons,
-                            updated_at: new Date().toISOString()
-                        }).eq('id', show.id)
                     }
                 } catch (err) {
                     console.error(`Failed to check for new episodes for ${show.title}:`, err)
@@ -203,18 +216,22 @@ const TVShows: React.FC = () => {
         return items.filter(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()))
     }, [items, searchQuery])
 
-    // Container A: Currently Watching - some episodes watched, but total watched < total available
+    // Container A: Currently Watching - only shows with 'watching' status
     const currentlyWatching = filteredItems.filter(
         item => item.status === 'watching' &&
-        item.total_episodes_watched > 0 &&
-        (item.total_episodes === undefined || item.total_episodes_watched < item.total_episodes)
+        item.total_episodes_watched > 0
     )
 
     // Container B: Watchlist (Not Started) - in watchlist with 0 episodes watched
     const notStarted = filteredItems.filter(
         item => item.status === 'planning' &&
         item.total_episodes_watched === 0
-    )
+    ).sort((a, b) => {
+        // Sort by added date (oldest first)
+        const dateA = new Date(a.added_at || 0)
+        const dateB = new Date(b.added_at || 0)
+        return dateA.getTime() - dateB.getTime()
+    })
 
     const visibleCurrentlyWatching = currentlyWatching
     const visibleNotStarted = notStarted
@@ -301,11 +318,10 @@ const TVShows: React.FC = () => {
                     )}
                 </div>
 
-                {/* Container B (Middle): Watchlist (Not Started) */}
+                {/* Container B (Bottom): Watchlist (Not Started) */}
                 <div className="watchlist-section">
                     <div className="watchlist-section__header">
                         <h3 className="watchlist-section__title">Watchlist (Not Started)</h3>
-
                     </div>
                     {notStarted.length > 0 ? (
                         <div className={`discover-grid`}>

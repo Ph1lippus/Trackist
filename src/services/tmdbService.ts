@@ -97,7 +97,9 @@ export const getTopRatedTV = async (page: number = 1): Promise<{ results: TMDBRe
 }
 
 export const getMovieDetails = async (id: number) => {
-    const res = await fetch(`${BASE_URL}/movie/${id}?api_key=${API_KEY}&append_to_response=credits,videos,images,release_dates,watch/providers`)
+    const res = await fetch(
+        `${BASE_URL}/movie/${id}?api_key=${API_KEY}&append_to_response=credits,videos,images,release_dates,watch/providers&include_image_language=en,null`
+    )
     return res.json()
 }
 
@@ -106,11 +108,48 @@ export const getTVDetails = async (id: number) => {
         'tv-details',
         id,
         async () => {
-            const res = await fetch(`${BASE_URL}/tv/${id}?api_key=${API_KEY}&append_to_response=credits,videos,aggregate_credits,images,watch/providers,content_ratings`)
+            const res = await fetch(
+                `${BASE_URL}/tv/${id}?api_key=${API_KEY}&append_to_response=credits,videos,aggregate_credits,images,watch/providers,content_ratings&include_image_language=en,null`
+            )
             return res.json()
         },
-        { ttl: 6 * 60 * 60 * 1000 } // 6 hours
+        { ttl: 6 * 60 * 60 * 1000 }
     )
+}
+
+export const getBestBackdropPath = (
+    backdrops: Array<{
+        file_path: string
+        width: number
+        height: number
+        iso_639_1?: string | null
+        vote_average?: number
+        vote_count?: number
+    }> = []
+): string | null => {
+    if (!backdrops.length) return null
+
+    const candidates = backdrops.filter(
+        b => b.iso_639_1 === null
+    )
+
+    const list = candidates.length ? candidates : backdrops
+
+    const best = [...list].sort((a, b) => {
+        // Highest resolution first
+        const areaA = a.width * a.height
+        const areaB = b.width * b.height
+        if (areaA !== areaB) return areaB - areaA
+
+        // Then community preference
+        if ((a.vote_average ?? 0) !== (b.vote_average ?? 0)) {
+            return (b.vote_average ?? 0) - (a.vote_average ?? 0)
+        }
+
+        return (b.vote_count ?? 0) - (a.vote_count ?? 0)
+    })[0]
+
+    return best?.file_path ?? null
 }
 
 export const getTVSeasonDetails = async (tvId: number, seasonNumber: number) => {

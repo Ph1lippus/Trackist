@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
-import { getMovieDetails, imageUrl, imageUrlOriginal, getFanartImages } from '../services/tmdbService'
+import { getMovieDetails, imageUrl, imageUrlOriginal, getFanartImages, getBestBackdropPath } from '../services/tmdbService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult, WatchlistItem } from '../types'
 
@@ -108,29 +108,32 @@ const getAgeRatingTooltip = (): string => {
 }
 
     const getLogoUrl = (): string | null => {
-    if (details?.images?.logos) {
-        const englishLogo = details.images.logos.find(
-            (logo: any) => logo.iso_639_1 === 'en'
-        )
-        if (englishLogo) {
-            return imageUrlOriginal(englishLogo.file_path)
-        }
-        const noLanguageLogo = details.images.logos.find(
-            (logo: any) => logo.iso_639_1 === null || logo.iso_639_1 === ''
-        )
-        if (noLanguageLogo) {
-            return imageUrlOriginal(noLanguageLogo.file_path)
-        }
-        if (details.images.logos.length > 0) {
-            return imageUrlOriginal(details.images.logos[0].file_path)
-        }
-    }
-    if (fanartImages?.hdmovielogo?.[0]?.url) {
-        return fanartImages.hdmovielogo[0].url
-    }
+            if (details?.images?.logos) {
+                const logos = details.images.logos as Array<{ file_path: string; iso_639_1?: string | null }>
+                const englishLogo = logos.find(
+                    (logo) => logo.iso_639_1 === 'en'
+                )
+                if (englishLogo) {
+                    return imageUrlOriginal(englishLogo.file_path)
+                }
+                const noLanguageLogo = logos.find(
+                    (logo) => logo.iso_639_1 === null || logo.iso_639_1 === ''
+                )
+                if (noLanguageLogo) {
+                    return imageUrlOriginal(noLanguageLogo.file_path)
+                }
+                if (logos.length > 0) {
+                    return imageUrlOriginal(logos[0].file_path)
+                }
+            }
+            if (fanartImages?.hdmovielogo?.[0]?.url) {
+                return fanartImages.hdmovielogo[0].url
+            }
+        
+            return null
+        } 
 
-    return null
-    }
+        
     const handleAddToWatchlist = async () => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user || !details) {
@@ -196,7 +199,7 @@ const getAgeRatingTooltip = (): string => {
         return <div className="detail-page-error">Movie not found</div>
     }
 
-    const backdropUrl = details.backdrop_path ? `https://image.tmdb.org/t/p/original${details.backdrop_path}` : null
+    const backdropUrl = imageUrlOriginal(getBestBackdropPath(details.images?.backdrops) ?? details.backdrop_path ?? null)    
     const logoUrl = getLogoUrl()
     const title = details.title || 'Untitled'
     const year = details.release_date?.slice(0, 4) || ''
