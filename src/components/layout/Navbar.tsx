@@ -21,7 +21,7 @@ const Navbar: React.FC = () => {
                           location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/);
     const showBackButton = Boolean(isDetailPage);
     
-    const showSearchBar = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/Friends', '/Finished'].includes(location.pathname);
+    const showSearchBar = ['/Discover', '/Movies', '/TVShows', '/', '/Finished', '/Friends', '/Lists', '/Lists/new'].includes(location.pathname) || location.pathname.startsWith('/Lists/');
 
     // Clear search when page changes
     useEffect(() => {

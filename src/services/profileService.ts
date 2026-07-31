@@ -143,26 +143,30 @@ export const isFollowing = async (followerId: string, followedId: string) => {
     return !!data
 }
 
-interface FollowItem {
-    followed_id: string
-    profiles: {
-        id: string
-        display_name: string | null
-        avatar_url: string | null
-    }[]
-}
-
 export const getFollowingList = async (followerId: string) => {
-    const { data, error } = await supabase
+    // Step 1: Fetch the followed user IDs
+    const { data: follows, error } = await supabase
         .from('user_follows')
-        .select('followed_id, profiles!followed_id(id, display_name, avatar_url)')
+        .select('followed_id')
         .eq('follower_id', followerId)
-    
-    if (error || !data) return { data: null, error }
-    
-    // Extract profile data from the nested structure (profiles is an array, take first element)
-    const following = data.map((item: FollowItem) => item.profiles[0])
-    return { data: following, error: null }
+
+    if (error || !follows) return { data: null, error }
+
+    const followedIds = follows.map(f => f.followed_id)
+    if (followedIds.length === 0) return { data: [], error: null }
+
+    // Step 2: Fetch the profiles for those IDs.
+    // Note: We query profiles directly instead of joining through user_follows,
+    // because user_follows.followed_id -> auth.users is a cross-schema FK and
+    // PostgREST cannot reliably resolve an indirect profiles relationship.
+    const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, display_name, avatar_url')
+        .in('id', followedIds)
+
+    if (profilesError) return { data: null, error: profilesError }
+
+    return { data: profiles || [], error: null }
 }
 
 // List functions
@@ -184,4 +188,55 @@ export const getListItems = async (listId: string) => {
         .order('added_at', { ascending: false })
     
     return { data, error }
+}
+
+export const createList = async (userId: string, title: string, description?: string) => {
+    return supabase
+        .from('lists')
+        .insert({
+            user_id: userId,
+            title,
+            description,
+            is_public: false
+        })
+        .select()
+        .single()
+}
+
+export const deleteList = async (listId: string) => {
+    return supabase
+        .from('lists')
+        .delete()
+        .eq('id', listId)
+}
+
+export const updateList = async (listId: string, updates: { title?: string; description?: string }) => {
+    return supabase
+        .from('lists')
+        .update(updates)
+        .eq('id', listId)
+}
+
+export const addToList = async (listId: string, item: {
+    media_type: 'movie' | 'tv' | 'anime'
+    tmdb_id: number
+    title: string
+    poster_path?: string
+    overview?: string
+    vote_average?: number
+}) => {
+    return supabase
+        .from('list_items')
+        .insert({
+            list_id: listId,
+            ...item
+        })
+}
+
+export const removeFromList = async (listId: string, tmdbId: number) => {
+    return supabase
+        .from('list_items')
+        .delete()
+        .eq('list_id', listId)
+        .eq('tmdb_id', tmdbId)
 }

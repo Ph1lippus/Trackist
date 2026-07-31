@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
-import { getFollowingList, getUserLists, getProfile, followUser, unfollowUser, isFollowing } from '../services/profileService'
+import { getFollowingList, getProfile, followUser, unfollowUser, isFollowing } from '../services/profileService'
 import { useSearch } from '../hooks/useSearch'
 
 const FriendsPage = () => {
     const [currentUser, setCurrentUser] = useState<any>(null)
     const [following, setFollowing] = useState<any[]>([])
-    const [lists, setLists] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [searchResults, setSearchResults] = useState<any[]>([])
     const [isSearching, setIsSearching] = useState(false)
@@ -24,12 +23,6 @@ const FriendsPage = () => {
             const { data: followingData } = await getFollowingList(user.id)
             if (followingData) {
                 setFollowing(followingData)
-            }
-            
-            // Load user's lists
-            const { data: listsData } = await getUserLists(user.id)
-            if (listsData) {
-                setLists(listsData)
             }
         } catch (error) {
             console.error('Error loading data:', error)
@@ -114,6 +107,62 @@ const FriendsPage = () => {
     return (
         <section className="friends-page">
             <div className="friends-container">
+                {/* Search Results (shown when searching) */}
+                {isSearching && (
+                    <div className="discover-section" style={{ marginBottom: '2rem' }}>
+                        <div className="discover-section__head">
+                            <h2>Search Results</h2>
+                        </div>
+                        <div className="discover-loading">
+                            <div className="discover-spinner"></div>
+                            <p>Searching...</p>
+                        </div>
+                    </div>
+                )}
+
+                {!isSearching && searchResults.length > 0 && (
+                    <div className="discover-section" style={{ marginBottom: '2rem' }}>
+                        <div className="discover-section__head">
+                            <h2>Search Results</h2>
+                            <span>{searchResults.length} {searchResults.length === 1 ? 'user' : 'users'}</span>
+                        </div>
+                        <div className="friends-results">
+                            {searchResults.map((user) => (
+                                <div key={user.id} className="friend-card">
+                                    <Link 
+                                        to={`/Profile/${user.display_name}`} 
+                                        className="friend-card__avatar"
+                                    >
+                                        {user.avatar_url ? (
+                                            <img src={user.avatar_url} alt={user.display_name || 'User'} />
+                                        ) : (
+                                            <div className="friend-card__avatar-placeholder">
+                                                {(user.display_name || 'U')[0].toUpperCase()}
+                                            </div>
+                                        )}
+                                    </Link>
+                                    
+                                    <div className="friend-card__info">
+                                        <Link 
+                                            to={`/Profile/${user.display_name}`} 
+                                            className="friend-card__name"
+                                        >
+                                            {user.display_name || 'Anonymous'}
+                                        </Link>
+                                    </div>
+
+                                    <button
+                                        className={`friend-card__follow-btn ${user.is_following ? 'friend-card__follow-btn--following' : ''}`}
+                                        onClick={() => handleFollow(user.id)}
+                                    >
+                                        {user.is_following ? 'Following' : 'Follow'}
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
                 {/* Following Section */}
                 <div className="discover-section">
                     <div className="discover-section__head">
@@ -158,111 +207,11 @@ const FriendsPage = () => {
                         </div>
                     ) : (
                         <div className="discover-empty">
+                            <i className="fa-solid fa-users-slash" style={{ fontSize: '2rem', opacity: 0.3, marginBottom: '1rem' }}></i>
                             <p>You're not following anyone yet. Use the search bar to find users.</p>
                         </div>
                     )}
                 </div>
-
-                {/* Lists Section */}
-                <div className="discover-section" style={{ marginTop: '2rem' }}>
-                    <div className="discover-section__head">
-                        <h2>Your Lists</h2>
-                        <span>{lists.length} {lists.length === 1 ? 'list' : 'lists'}</span>
-                    </div>
-                    
-                    {lists.length > 0 ? (
-                        <div className="friends-results">
-                            {lists.map((list) => (
-                                <Link 
-                                    key={list.id} 
-                                    to={`/Lists/${list.id}`}
-                                    className="friend-card"
-                                >
-                                    <div className="friend-card__info" style={{ flex: 1 }}>
-                                        <div className="friend-card__name">{list.title}</div>
-                                        {list.description && (
-                                            <div style={{ 
-                                                fontSize: '0.85rem', 
-                                                color: 'rgba(255, 255, 255, 0.5)',
-                                                marginTop: '0.25rem'
-                                            }}>
-                                                {list.description}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <div style={{ 
-                                        fontSize: '0.75rem',
-                                        color: 'rgba(255, 255, 255, 0.4)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.5rem'
-                                    }}>
-                                        <i className="fa-solid fa-chevron-right"></i>
-                                    </div>
-                                </Link>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="discover-empty">
-                            <p>You don't have any lists yet. Create lists to organize your media.</p>
-                        </div>
-                    )}
-                </div>
-
-                {/* Search Results (shown when searching) */}
-                {isSearching && (
-                    <div className="discover-section" style={{ marginTop: '2rem' }}>
-                        <div className="discover-section__head">
-                            <h2>Search Results</h2>
-                        </div>
-                        <div className="discover-loading">
-                            <div className="discover-spinner"></div>
-                            <p>Searching...</p>
-                        </div>
-                    </div>
-                )}
-
-                {!isSearching && searchResults.length > 0 && (
-                    <div className="discover-section" style={{ marginTop: '2rem' }}>
-                        <div className="discover-section__head">
-                            <h2>Search Results</h2>
-                        </div>
-                        <div className="friends-results">
-                            {searchResults.map((user) => (
-                                <div key={user.id} className="friend-card">
-                                    <Link 
-                                        to={`/Profile/${user.display_name}`} 
-                                        className="friend-card__avatar"
-                                    >
-                                        {user.avatar_url ? (
-                                            <img src={user.avatar_url} alt={user.display_name || 'User'} />
-                                        ) : (
-                                            <div className="friend-card__avatar-placeholder">
-                                                {(user.display_name || 'U')[0].toUpperCase()}
-                                            </div>
-                                        )}
-                                    </Link>
-                                    
-                                    <div className="friend-card__info">
-                                        <Link 
-                                            to={`/Profile/${user.display_name}`} 
-                                            className="friend-card__name"
-                                        >
-                                            {user.display_name || 'Anonymous'}
-                                        </Link>
-                                    </div>
-
-                                    <button
-                                        className={`friend-card__follow-btn ${user.is_following ? 'friend-card__follow-btn--following' : ''}`}
-                                        onClick={() => handleFollow(user.id)}
-                                    >
-                                        {user.is_following ? 'Following' : 'Follow'}
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                )}
             </div>
         </section>
     )

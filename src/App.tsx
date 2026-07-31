@@ -88,8 +88,8 @@ const AppContent: React.FC = () => {
         )
     }
 
-    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/Friends', '/Statistics', '/Finished']
-    const hideFooter = Boolean(user) && mediaPages.includes(location.pathname)
+    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/Friends', '/Statistics', '/Finished', '/Lists']
+    const hideFooter = Boolean(user) && (mediaPages.includes(location.pathname) || location.pathname.startsWith('/Lists/'))
 
     return (
         <div className="d-flex flex-column min-vh-100">
@@ -117,7 +117,9 @@ const AppContent: React.FC = () => {
                     <Route path="/tv/:id/season/:season/episode/:episode" element={<EpisodeDetail />} />
                     </Route>
                     <Route path="/person/:id" element={<PersonDetail />} />
-                    <Route path="/lists" element={user ? <Lists /> : <Navigate to="/login" replace />} />
+                    <Route path="/Lists" element={user ? <Lists /> : <Navigate to="/login" replace />} />
+                    <Route path="/Lists/new" element={user ? <Lists /> : <Navigate to="/login" replace />} />
+                    <Route path="/Lists/:id" element={user ? <Lists /> : <Navigate to="/login" replace />} />
                     <Route path="/Finished" element={user ? <Finished /> : <Navigate to="/login" replace />} />
                     <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />
                 </Routes>

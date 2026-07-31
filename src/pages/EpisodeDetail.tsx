@@ -85,7 +85,7 @@ const EpisodeDetail: React.FC = () => {
     const getLogoUrl = (): string | null => {
         if (tvDetails?.images?.logos) {
             const englishLogo = tvDetails.images.logos.find(
-                (logo: { iso_639_1?: string; file_path: string }) => logo.iso_639_1 === 'en'
+                (logo: { iso_639_1?: string | null; file_path: string }) => logo.iso_639_1 === 'en'
             )
             if (englishLogo) {
                 return imageUrlOriginal(englishLogo.file_path)

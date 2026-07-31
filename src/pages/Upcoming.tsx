@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
+import { loadCalendar, type CalendarItem } from '../services/calendarService'
 import type { WatchlistItem } from '../types'
 
 interface UpcomingItem {
@@ -19,6 +20,31 @@ interface UpcomingItem {
         still_path?: string
     }
 }
+
+const mapCalendarItem = (item: CalendarItem): UpcomingItem => ({
+    id: item.id,
+    title: item.title,
+    poster_path: item.poster_path,
+    type: item.media_type === 'tv' ? 'episode' : 'movie',
+    date: item.media_type === 'tv' ? item.air_date : item.release_date,
+    item: {
+        id: item.watchlist_id,
+        user_id: '',
+        media_type: item.media_type,
+        tmdb_id: item.tmdb_id,
+        title: item.title,
+        poster_path: item.poster_path || undefined,
+        status: item.media_type === 'tv' ? 'watching' : 'planning',
+        added_at: '',
+        updated_at: ''
+    },
+    episode: item.media_type === 'tv' ? {
+        season_number: item.season_number,
+        episode_number: item.episode_number,
+        title: item.episode_title,
+        still_path: item.still_path || undefined
+    } : undefined
+})
 
 const Upcoming: React.FC = () => {
     const navigate = useNavigate()
@@ -69,114 +95,15 @@ const Upcoming: React.FC = () => {
                 }
             }
 
-            const today = new Date()
-            today.setHours(0, 0, 0, 0)
-            const todayStr = today.toISOString().split('T')[0]
+            // Stale-while-revalidate calendar loading
+            loadCalendar(user.id, (freshItems) => {
+                setUpcomingItems(freshItems.map(mapCalendarItem))
+            }).then((items) => {
+                setUpcomingItems(items.map(mapCalendarItem))
+                setLoading(false)
+            })
+            return
 
-            const items: UpcomingItem[] = []
-
-            // Fetch upcoming movies from watchlist
-            const { data: movies, error: movieError } = await supabase
-                .from('watchlist')
-                .select('*')
-                .eq('user_id', user.id)
-                .eq('media_type', 'movie')
-                .gte('release_date', todayStr)
-
-            if (!movieError && movies) {
-                movies.forEach(item => {
-                    if (item.release_date) {
-                        items.push({
-                            id: item.id,
-                            title: item.title,
-                            poster_path: item.poster_path || null,
-                            type: 'movie',
-                            date: item.release_date,
-                            item
-                        })
-                    }
-                })
-            }
-
-            // Fetch all TV shows for the user to get their latest season info
-            const { data: tvShows, error: tvError } = await supabase
-                .from('watchlist')
-                .select('*')
-                .eq('user_id', user.id)
-                .eq('media_type', 'tv')
-
-            if (!tvError && tvShows) {
-                // Process each show to find upcoming (unwatched, future) episodes
-                for (const show of tvShows) {
-                    if (!show.tmdb_id || !show.last_season_number) continue
-
-                    // Get the latest season number
-                    const latestSeason = show.last_season_number
-
-                    // Fetch season details from TMDB to get all episodes
-                    try {
-                        const response = await fetch(
-                            `https://api.themoviedb.org/3/tv/${show.tmdb_id}/season/${latestSeason}?api_key=${import.meta.env.VITE_TMDB_API_KEY}`
-                        )
-
-                        if (!response.ok) continue
-
-                        const seasonData = await response.json()
-                        const episodes = seasonData.episodes || []
-
-                        for (const ep of episodes) {
-                            // Only consider episodes with a future air date
-                            if (!ep.air_date || ep.air_date < todayStr) continue
-
-                            // Check if this episode is already watched (exists in watchlist_episodes)
-                            const { data: watchedEp } = await supabase
-                                .from('watchlist_episodes')
-                                .select('id')
-                                .eq('watchlist_id', show.id)
-                                .eq('season_number', latestSeason)
-                                .eq('episode_number', ep.episode_number)
-                                .maybeSingle()
-
-                            // If NOT watched (not in watchlist_episodes), it's upcoming
-                            if (!watchedEp) {
-                                items.push({
-                                    id: `${show.id}-${latestSeason}-${ep.episode_number}`,
-                                    title: show.title,
-                                    poster_path: show.poster_path || null,
-                                    type: 'episode',
-                                    date: ep.air_date,
-                                    item: {
-                                        id: show.id,
-                                        user_id: show.user_id,
-                                        media_type: 'tv',
-                                        tmdb_id: show.tmdb_id,
-                                        title: show.title,
-                                        poster_path: show.poster_path,
-                                        added_at: show.added_at,
-                                        updated_at: show.updated_at,
-                                        status: 'watching'
-                                    },
-                                    episode: {
-                                        season_number: latestSeason,
-                                        episode_number: ep.episode_number,
-                                        tmdb_episode_id: ep.id,
-                                        title: ep.name,
-                                        still_path: ep.still_path
-                                    }
-                                })
-                            }
-                        }
-                    } catch (err) {
-                        console.error(`Failed to fetch season details for ${show.title}:`, err)
-                    }
-                }
-            }
-
-            // Sort items by date (ascending - closest first)
-            items.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-
-            setUpcomingItems(items)
-            setLoading(false)
         }
         fetchUpcoming()
     }, [])

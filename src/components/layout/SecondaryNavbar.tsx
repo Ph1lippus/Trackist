@@ -15,6 +15,7 @@ const SecondaryNavbar: React.FC = () => {
         { to: '/Tvshows', label: 'TV Shows' },
         { to: '/Upcoming', label: 'Upcoming' },
         { to: '/Finished', label: 'Finished' },
+        { to: '/Lists', label: 'Lists' },
         { to: '/Friends', label: 'Friends' },
         { to: '/Statistics', label: 'Statistics' },
     ];
@@ -22,7 +23,12 @@ const SecondaryNavbar: React.FC = () => {
     // Map pathname to nav item - handle root route redirecting to discover
     const getActiveTabIndex = useCallback(() => {
         const path = location.pathname === '/' ? '/Discover' : location.pathname;
-        const index = navItems.findIndex(item => item.to === path);
+        // Check for exact match first
+        let index = navItems.findIndex(item => item.to === path);
+        // If no exact match, check if path starts with a nav item (e.g., /Lists/123 matches /Lists)
+        if (index === -1) {
+            index = navItems.findIndex(item => path.startsWith(item.to + '/') || path === item.to);
+        }
         return index === -1 ? -1 : index;
     }, [location.pathname]);
 

@@ -13,6 +13,7 @@ export interface MediaCardProps {
     onMarkWatched?: (item: ResultItem) => void
     onMarkUnwatched?: (item: ResultItem) => void
     onAddToList?: (item: ResultItem) => void
+    listMode?: boolean
 }
 
 /**
@@ -32,6 +33,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
     onMarkWatched,
     onMarkUnwatched,
     onAddToList,
+    listMode = false,
 }) => {
     const navigate = useNavigate()
     const isPerson = item.media_type === 'person'
@@ -91,7 +93,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
 
     const showAddButton = !compact && onAdd && !(isInWatchlist && (onMarkWatched || onMarkUnwatched))
     const showAddToListButton = !compact && onAddToList && !isPerson
-    const showMarkWatched = !compact && !isPerson && isInWatchlist && onMarkWatched && !onMarkUnwatched
+    const showMarkWatched = !compact && !isPerson && ((listMode && onMarkWatched) || (isInWatchlist && onMarkWatched && !onMarkUnwatched))
     const showMarkUnwatched = !compact && !isPerson && isInWatchlist && onMarkUnwatched && !onMarkWatched
     const showInWatchlistIndicator =
         !compact && !isPerson && isInWatchlist && !onMarkWatched && !onMarkUnwatched && !onAdd
@@ -171,6 +173,7 @@ export default React.memo(MediaCard, (prev, next) => {
         prev.onAdd === next.onAdd &&
         prev.onMarkWatched === next.onMarkWatched &&
         prev.onMarkUnwatched === next.onMarkUnwatched &&
-        prev.onAddToList === next.onAddToList
+        prev.onAddToList === next.onAddToList &&
+        prev.listMode === next.listMode
     )
 })

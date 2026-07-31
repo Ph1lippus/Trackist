@@ -80,17 +80,6 @@ CREATE TABLE public.list_items (
   CONSTRAINT list_items_pkey PRIMARY KEY (id),
   CONSTRAINT list_items_list_id_fkey FOREIGN KEY (list_id) REFERENCES public.lists(id)
 );
-CREATE TABLE public.badges (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  name text NOT NULL,
-  description text,
-  icon text,
-  category text CHECK (category = ANY (ARRAY['streak'::text, 'watch_count'::text, 'list_completion'::text, 'social'::text, 'list_streak'::text])),
-  requirement_type text CHECK (requirement_type = ANY (ARRAY['streak_days'::text, 'total_watches'::text, 'list_count'::text, 'list_completed'::text, 'followers'::text, 'list_streak_days'::text])),
-  requirement_value integer NOT NULL,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT badges_pkey PRIMARY KEY (id)
-);
 CREATE TABLE public.list_follows (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,

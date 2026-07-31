@@ -2608,12 +2608,339 @@ body {
     color: var(--color-primary);
     font-weight: bold;
 }
+/* Lists Page - Split Layout (Create/Edit) */
+.lists-page--split {
+    display: flex;
+    min-height: calc(100vh - var(--navbar-height) - 60px);
+    width: 100%;
+    max-width: 100%;
+}
+
+.lists-page__form-section {
+    width: 380px;
+    min-width: 380px;
+    padding: 2rem;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    overflow-y: auto;
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.lists-page__form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.lists-page__form-header h1 {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    color: var(--color-platinum);
+}
+
+.lists-page__form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.lists-page__form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.lists-page__form .form-group label {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.7);
+    font-weight: 500;
+}
+
+.lists-page__form .form-group input[type="text"],
+.lists-page__form .form-group textarea {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    color: var(--color-platinum);
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    outline: none;
+    width: 100%;
+}
+
+.lists-page__form .form-group input[type="text"]:focus,
+.lists-page__form .form-group textarea:focus {
+    border-color: var(--color-primary);
+    background: rgba(133, 138, 227, 0.08);
+    box-shadow: 0 0 0 3px rgba(133, 138, 227, 0.15);
+}
+
+.lists-page__form .form-group input[type="text"]::placeholder,
+.lists-page__form .form-group textarea::placeholder {
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.lists-page__form .form-group textarea {
+    resize: vertical;
+    min-height: 80px;
+    font-family: inherit;
+}
+
+.lists-page__form .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.lists-page__form .checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-primary);
+    cursor: pointer;
+}
+
+.lists-page__form-actions {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.lists-page__action-btn {
+    padding: 0.6rem 1.2rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: transparent;
+    color: var(--color-platinum);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.lists-page__action-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.lists-page__action-btn--primary {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+    font-weight: 500;
+}
+
+.lists-page__action-btn--primary:hover {
+    background: var(--color-primary-hover, #6b70d0);
+    border-color: var(--color-primary-hover, #6b70d0);
+}
+
+.lists-page__action-btn--primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.lists-page__action-btn--danger {
+    border-color: rgba(255, 71, 87, 0.3);
+    color: #ff4757;
+}
+
+.lists-page__action-btn--danger:hover {
+    background: rgba(255, 71, 87, 0.1);
+    border-color: #ff4757;
+}
+
+.lists-page__items-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lists-page__items-header {
+    margin-bottom: 1rem;
+}
+
+.lists-page__items-header h2 {
+    font-size: 1.1rem;
+    color: var(--color-platinum);
+    margin-bottom: 0.75rem;
+}
+
+.lists-page__items-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.lists-page__tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.lists-page__tab {
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.lists-page__tab:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--color-platinum);
+}
+
+.lists-page__tab--active {
+    background: rgba(133, 138, 227, 0.15);
+    border-color: rgba(133, 138, 227, 0.3);
+    color: var(--color-primary);
+}
+
+.lists-page__empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.lists-page__empty-state i {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    opacity: 0.3;
+}
+
+.lists-page__empty-state p {
+    font-size: 0.9rem;
+}
+
+.lists-page__discover-section {
+    flex: 1;
+    padding: 2rem;
+    overflow-y: auto;
+}
+
+.lists-page__discover-header {
+    margin-bottom: 1.5rem;
+}
+
+.lists-page__discover-header h2 {
+    font-size: 1.3rem;
+    color: var(--color-platinum);
+    margin-bottom: 0.5rem;
+}
+
+.lists-page__discover-header p {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.lists-page__add-item-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.8);
+    color: var(--color-primary);
+    border: 1px solid rgba(133, 138, 227, 0.3);
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    z-index: 10;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+.lists-page__add-item-btn:hover {
+    background: rgba(133, 138, 227, 0.2);
+    border-color: var(--color-primary);
+}
+
+.lists-page__load-more {
+    display: flex;
+    justify-content: center;
+    padding: 2rem;
+}
+
+.lists-page__load-more-btn {
+    padding: 0.6rem 2rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: transparent;
+    color: var(--color-platinum);
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.lists-page__load-more-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.lists-page__load-more-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.lists-page__browse-tabs {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.lists-page__browse-tab {
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: transparent;
+    color: rgba(255, 255, 255, 0.6);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.lists-page__browse-tab:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--color-platinum);
+}
+
+.lists-page__browse-tab--active {
+    background: rgba(133, 138, 227, 0.15);
+    border-color: rgba(133, 138, 227, 0.3);
+    color: var(--color-primary);
+}
+
 @media (max-width: 768px) {
     .lists-page__container {
         grid-template-columns: 1fr;
     }
     .lists-page__sidebar {
         margin-bottom: 1rem;
+    }
+    .lists-page--split {
+        flex-direction: column;
+    }
+    .lists-page__form-section {
+        width: 100%;
+        min-width: 100%;
+        border-right: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
     .detail-page__person-meta {
         justify-content: center;
@@ -4830,8 +5157,14 @@ i.fa-solid.fa-bookmark:hover {
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    object-fit: cover;
     flex-shrink: 0;
+    overflow: hidden;
+}
+
+.friend-card__avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 .friend-card__avatar-placeholder {
