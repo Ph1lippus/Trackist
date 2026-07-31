@@ -1,6 +1,7 @@
 :root {
     --color-black: #050505;
     --color-primary: #858ae3;
+    --color-primary-lighter:#a9ace4;;
     --color-mint: #68ffae;
     --color-green: #307351;
     --color-platinum: #e7e8ec;
@@ -1625,10 +1626,9 @@ body {
     transition: all 0.2s ease;
 }
 .detail-page__age-rating {
+    backdrop-filter: blur(12px);
     background: rgba(133, 138, 227, 0.15);
-    border: 1px solid rgba(133, 138, 227, 0.3);
     border-radius: 20px;
-    color: var(--color-primary);
     font-weight: 600;
     cursor: help;
     position: relative;
@@ -1674,12 +1674,13 @@ body {
     gap: 0.5rem;
 }
 .detail-page__genre {
+    backdrop-filter: blur(8px);
     padding: 0.4rem 0.8rem;
     background: rgba(133, 138, 227, 0.15);
     border: 1px solid rgba(133, 138, 227, 0.3);
     border-radius: 20px;
     font-size: 0.85rem;
-    color: var(--color-primary);
+    color:#a9ace4;
     font-weight: 500;
 }
 .detail-page__providers {
