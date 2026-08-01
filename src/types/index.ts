@@ -11,6 +11,7 @@ export interface TMDBResult {
     first_air_date?: string
     last_air_date?: string
     vote_average?: number
+    vote_count?: number
     genres?: Array<{ id: number; name: string }>
     credits?: {
         cast?: Array<{ id: number; name: string; profile_path?: string; character?: string }>

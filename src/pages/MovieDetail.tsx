@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
-import { getMovieDetails, imageUrl, imageUrlOriginal, getFanartImages, getBestBackdropPath } from '../services/tmdbService'
+import { getMovieDetails, imageUrlOriginal, getFanartImages, getBestBackdropPath } from '../services/tmdbService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult, WatchlistItem } from '../types'
 
@@ -379,13 +379,6 @@ const getAgeRatingTooltip = (): string => {
                                             className="detail-page__cast-item"
                                             onClick={() => navigate(`/person/${c.id}`)}
                                         >
-                                            {c.profile_path && (
-                                                <img 
-                                                    src={imageUrl(c.profile_path) || ''} 
-                                                    alt={c.name} 
-                                                    className="detail-page__cast-photo"
-                                                />
-                                            )}
                                             <div className="detail-page__cast-info">
                                                 <span className="detail-page__cast-name">{c.name}</span>
                                                 {c.character && (

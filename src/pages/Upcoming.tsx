@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
@@ -46,12 +46,15 @@ const mapCalendarItem = (item: CalendarItem): UpcomingItem => ({
     } : undefined
 })
 
-const Upcoming: React.FC = () => {
+interface UpcomingProps {
+    currentMonth: Date;
+}
+
+const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
     const navigate = useNavigate()
     const [upcomingItems, setUpcomingItems] = useState<UpcomingItem[]>([])
     const [loading, setLoading] = useState(true)
-    const [currentMonth, setCurrentMonth] = useState(new Date())
-    const [showAllEpisodes, setShowAllEpisodes] = useState<{dateKey: string, items: UpcomingItem[]} | null>(null)
+    const [selectedDate, setSelectedDate] = useState<{dateKey: string, items: UpcomingItem[]} | null>(null)
 
     useEffect(() => {
         const fetchUpcoming = async () => {
@@ -142,29 +145,7 @@ const Upcoming: React.FC = () => {
         return days
     }
 
-    const navigateMonth = (direction: number) => {
-        setCurrentMonth(prev => {
-            const year = prev.getFullYear()
-            const month = prev.getMonth()
-            const newDate = new Date(year, month + direction, 1)
-            const now = new Date()
-            // Don't allow navigating to months before current month
-            if (newDate.getFullYear() < now.getFullYear() || 
-                (newDate.getFullYear() === now.getFullYear() && newDate.getMonth() < now.getMonth())) {
-                return prev
-            }
-            return newDate
-        })
-    }
-
-    const canGoBack = () => {
-        const now = new Date()
-        return currentMonth.getFullYear() > now.getFullYear() || 
-               (currentMonth.getFullYear() === now.getFullYear() && currentMonth.getMonth() > now.getMonth())
-    }
-
     const calendarDays = getDaysInMonth(currentMonth)
-    const monthName = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 
     if (loading) return (
         <section className="dashboard-page">
@@ -177,30 +158,10 @@ const Upcoming: React.FC = () => {
     const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
     return (
-        <section className="dashboard-page">
-            <div className="dashboard-shell">
-                <div className="calendar-header">
-                    <button 
-                        className="calendar-nav-btn-inline"
-                        onClick={() => navigateMonth(-1)}
-                        title="Previous month"
-                        disabled={!canGoBack()}
-                        style={{ opacity: canGoBack() ? 1 : 0.3, cursor: canGoBack() ? 'pointer' : 'not-allowed' }}
-                    >
-                        <i className="fas fa-chevron-left"></i>
-                    </button>
-                    <h2 className="calendar-title">{monthName}</h2>
-                    <button 
-                        className="calendar-nav-btn-inline"
-                        onClick={() => navigateMonth(1)}
-                        title="Next month"
-                    >
-                        <i className="fas fa-chevron-right"></i>
-                    </button>
-                </div>
-                
-                <div className="upcoming-layout">
-                    <main className="upcoming-main">
+        <section className="dashboard-page" style={{ height: '100vh', overflow: 'hidden' }}>
+            <div className="dashboard-shell" style={{ height: '100%', overflow: 'hidden' }}>
+                <div className="upcoming-layout" style={{ height: '100%' }}>
+                    <main className="upcoming-main" style={{ overflowY: 'auto' }}>
                         <div className="calendar-grid">
                         {weekDays.map(day => (
                             <div key={day} className="calendar-weekday">{day}</div>
@@ -212,8 +173,8 @@ const Upcoming: React.FC = () => {
                             const dayItems = groupedItems[dateKey] || []
                             const isToday = new Date().toDateString() === day.toDateString()
 
-                            // Show max 4 episodes, rest go into "+" button
-                            const maxVisible = 4
+                            // Show max 2 episodes, rest go into "+" button
+                            const maxVisible = 3
                             const visibleItems = dayItems.slice(0, maxVisible)
                             const hasMore = dayItems.length > maxVisible
 
@@ -263,7 +224,7 @@ const Upcoming: React.FC = () => {
                                                 className="calendar-episode-more"
                                                 onClick={(e) => {
                                                     e.stopPropagation()
-                                                    setShowAllEpisodes({ dateKey, items: dayItems })
+                                                    setSelectedDate({ dateKey, items: dayItems })
                                                 }}
                                                 style={{ 
                                                     marginLeft: '-32px',
@@ -282,114 +243,63 @@ const Upcoming: React.FC = () => {
                     </main>
                 </div>
 
-                {showAllEpisodes && (
-                    <div className="modal-overlay" onClick={() => setShowAllEpisodes(null)}>
-                        <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                            <button 
-                                className="modal-close"
-                                onClick={() => setShowAllEpisodes(null)}
-                            >
-                                <i className="fas fa-times"></i>
-                            </button>
-                            <h2 className="modal-title">
-                                {new Date(showAllEpisodes.dateKey).toLocaleDateString('en-US', { 
+                {selectedDate && (
+                    <div className="upcoming-side-panel">
+                        <div className="upcoming-side-panel-header">
+                            <h3 className="upcoming-side-panel-title">
+                                {new Date(selectedDate.dateKey).toLocaleDateString('en-US', { 
                                     weekday: 'long',
                                     month: 'long', 
                                     day: 'numeric' 
                                 })}
-                            </h2>
-                            <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-                                {showAllEpisodes.items.length} episode{showAllEpisodes.items.length !== 1 ? 's' : ''} scheduled
-                            </p>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                {showAllEpisodes.items.map((item) => (
-                                    <div
-                                        key={item.id}
-                                        style={{
-                                            display: 'flex',
-                                            gap: '1rem',
-                                            padding: '1rem',
-                                            background: 'rgba(255,255,255,0.03)',
-                                            border: '1px solid rgba(255,255,255,0.06)',
-                                            borderRadius: '10px',
-                                            cursor: 'pointer',
-                                            transition: 'all 0.2s ease'
-                                        }}
-                                        onClick={() => {
-                                            if (item.type === 'movie') {
-                                                navigate(`/movie/${item.item.tmdb_id}`)
-                                            } else {
-                                                navigate(`/tv/${item.item.tmdb_id}`)
-                                            }
-                                            setShowAllEpisodes(null)
-                                        }}
-                                        onMouseEnter={(e) => {
-                                            e.currentTarget.style.background = 'rgba(133,138,227,0.1)'
-                                            e.currentTarget.style.borderColor = 'rgba(133,138,227,0.3)'
-                                        }}
-                                        onMouseLeave={(e) => {
-                                            e.currentTarget.style.background = 'rgba(255,255,255,0.03)'
-                                            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
-                                        }}
-                                    >
-                                        <div style={{
-                                            width: '48px',
-                                            height: '72px',
-                                            flexShrink: 0,
-                                            borderRadius: '4px',
-                                            overflow: 'hidden',
-                                            background: 'linear-gradient(135deg, rgba(133,138,227,0.3), rgba(255,255,255,0.05))'
-                                        }}>
-                                            {item.item.poster_path ? (
-                                                <img 
-                                                    src={item.item.media_type === 'anime' 
-                                                        ? item.item.poster_path 
-                                                        : (imageUrl as (path: string) => string)(item.item.poster_path)} 
-                                                    alt={item.item.title}
-                                                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                />
-                                            ) : (
-                                                <div style={{
-                                                    width: '100%',
-                                                    height: '100%',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    color: 'rgba(255,255,255,0.4)',
-                                                    fontSize: '0.6rem',
-                                                    fontWeight: 600,
-                                                    textAlign: 'center',
-                                                    padding: '0.3rem'
-                                                }}>
-                                                    <span>{item.item.title}</span>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.3rem', justifyContent: 'center' }}>
-                                            <div style={{ 
-                                                fontSize: '0.9rem', 
-                                                fontWeight: 600, 
-                                                color: 'var(--color-platinum)',
-                                                whiteSpace: 'nowrap',
-                                                overflow: 'hidden',
-                                                textOverflow: 'ellipsis'
-                                            }}>
-                                                {item.title}
+                            </h3>
+                            <button 
+                                className="upcoming-side-panel-close"
+                                onClick={() => setSelectedDate(null)}
+                            >
+                                <i className="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div className="upcoming-side-panel-content">
+                            {selectedDate.items.map((item) => (
+                                <div
+                                    key={item.id}
+                                    className="upcoming-episode-card"
+                                    onClick={() => {
+                                        if (item.type === 'movie') {
+                                            navigate(`/movie/${item.item.tmdb_id}`)
+                                        } else {
+                                            navigate(`/tv/${item.item.tmdb_id}`)
+                                        }
+                                    }}
+                                >
+                                    <div className="upcoming-episode-card-poster">
+                                        {item.item.poster_path ? (
+                                            <img 
+                                                src={item.item.media_type === 'anime' 
+                                                    ? item.item.poster_path 
+                                                    : (imageUrl as (path: string) => string)(item.item.poster_path)} 
+                                                alt={item.item.title}
+                                            />
+                                        ) : (
+                                            <div className="upcoming-episode-card-no-poster">
+                                                <span>{item.item.title}</span>
                                             </div>
-                                            {item.episode && (
-                                                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
-                                                    Season {item.episode.season_number}, Episode {item.episode.episode_number}
-                                                </div>
-                                            )}
-                                            {item.type === 'movie' && (
-                                                <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)' }}>
-                                                    Movie Release
-                                                </div>
-                                            )}
-                                        </div>
+                                        )}
                                     </div>
-                                ))}
-                            </div>
+                                    <div className="upcoming-episode-card-info">
+                                        <h4>{item.title}</h4>
+                                        {item.episode && (
+                                            <p className="upcoming-episode-details">
+                                                S{item.episode.season_number} E{item.episode.episode_number}
+                                            </p>
+                                        )}
+                                        {item.type === 'movie' && (
+                                            <p className="upcoming-episode-details">Movie Release</p>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 )}

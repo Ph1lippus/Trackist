@@ -196,15 +196,15 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             getGenres('tv'),
         ])
         const allGenres = [...movieGenres, ...tvGenres]
-        // Filter out News genre (ID: 10769) from default list
-        const filteredGenres = allGenres.filter(g => g.id !== 10769)
+        // Filter out News (10763) and Talk (10767) genres from default list
+        const filteredGenres = allGenres.filter(g => g.id !== 10763 && g.id !== 10767)
         const uniqueGenres = Array.from(
             new Map(filteredGenres.map(g => [g.id, g])).values()
         ).sort((a, b) => a.name.localeCompare(b.name))
         set({ genres: uniqueGenres })
     },
 
-    fetchData: async (pageNum = 1) => {
+     fetchData: async (pageNum = 1) => {
         const { 
             mediaType, 
             sortBy, 
@@ -222,6 +222,16 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         } else {
             set({ isLoadingMore: true })
         }
+
+        // Helper to check if result has excluded genres (News: 10763, Talk: 10767)
+        const hasExcludedGenre = (item: TMDBResult & { genre_ids?: number[] }): boolean => {
+            const excludedGenres = [10763, 10767] // News, Talk
+            return (item.genres?.some(g => excludedGenres.includes(g.id)) ?? false) ||
+                   (item.genre_ids?.some(id => excludedGenres.includes(id)) ?? false)
+        }
+
+        // Minimum vote count threshold
+        const MIN_VOTES = mediaType === 'tv' ? 200 : 100
 
         // Helper function to map sort parameters for TV shows
         const mapSortParamForTV = (sortValue: string): string => {
@@ -388,6 +398,17 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 }))
 
                 let combined: TMDBResult[] = [...movies, ...tv]
+                
+                // Filter out News and Talk genres and low-vote content when not searching and not using genre filter
+                const shouldFilterGenres = !query.trim() && !selectedGenre
+                if (shouldFilterGenres) {
+                    combined = combined.filter(item => {
+                        if (hasExcludedGenre(item)) return false
+                        if ((item.vote_count || 0) < MIN_VOTES) return false
+                        return true
+                    })
+                }
+                
                 combined = sortMergedResults(combined, sortBy)
                 newResults = combined
 
@@ -410,10 +431,23 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     }),
                     { ttl: 6 * 60 * 60 * 1000 }
                 )
-                newResults = ((data as { results: TMDBResult[] }).results || []).map(r => ({
+                const movieResults = ((data as { results: TMDBResult[] }).results || []).map(r => ({
                     ...r,
                     media_type: 'movie' as const,
                 }))
+                
+                // Filter out News and Talk genres and low-vote content when not searching and not using genre filter
+                const shouldFilterGenres = !query.trim() && !selectedGenre
+                if (shouldFilterGenres) {
+                    newResults = movieResults.filter(item => {
+                        if (hasExcludedGenre(item)) return false
+                        if ((item.vote_count || 0) < MIN_VOTES) return false
+                        return true
+                    })
+                } else {
+                    newResults = movieResults
+                }
+                
                 totalPages = (data as { total_pages?: number }).total_pages || 1
             }
             // TV MODE
@@ -431,17 +465,42 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     }),
                     { ttl: 6 * 60 * 60 * 1000 }
                 )
-                newResults = ((data as { results: TMDBResult[] }).results || []).map(r => ({
+                const tvResults = ((data as { results: TMDBResult[] }).results || []).map(r => ({
                     ...r,
                     media_type: 'tv' as const,
                 }))
+                
+                // Filter out News and Talk genres and low-vote content when not searching and not using genre filter
+                const shouldFilterGenres = !query.trim() && !selectedGenre
+                if (shouldFilterGenres) {
+                    newResults = tvResults.filter(item => {
+                        if (hasExcludedGenre(item)) return false
+                        if ((item.vote_count || 0) < MIN_VOTES) return false
+                        return true
+                    })
+                } else {
+                    newResults = tvResults
+                }
+                
                 totalPages = (data as { total_pages?: number }).total_pages || 1
             }
 
             set((state) => {
+                // Filter out News and Talk genres and low-vote content when not searching and not using genre filter
+                // These should only appear when users explicitly search or select them via genre options
+                const shouldFilterGenres = !query.trim() && !selectedGenre
+                let finalResults = newResults
+                if (shouldFilterGenres) {
+                    finalResults = newResults.filter(item => {
+                        if (hasExcludedGenre(item)) return false
+                        if ((item.vote_count || 0) < MIN_VOTES) return false
+                        return true
+                    })
+                }
+
                 if (pageNum === 1) {
                     return {
-                        results: newResults,
+                        results: finalResults,
                         page: pageNum,
                         hasMore: pageNum < totalPages,
                         isLoading: false,
@@ -451,7 +510,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 }
                 // Deduplicate when appending new results
                 const existingIds = new Set(state.results.map(item => item.id))
-                const newUniqueItems = newResults.filter(item => !existingIds.has(item.id))
+                const newUniqueItems = finalResults.filter(item => !existingIds.has(item.id))
                 return {
                     results: [...state.results, ...newUniqueItems],
                     page: pageNum,

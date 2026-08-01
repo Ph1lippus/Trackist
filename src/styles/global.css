@@ -160,8 +160,7 @@ body {
     position: relative;
     min-width: 98%;
     gap: 0.5rem;
-    padding: 1rem 0;
-    min-height: 48px;
+    min-height: 50px;
 }
 .navbar-left {
     display: flex;
@@ -314,6 +313,7 @@ body {
     justify-self: center;
     max-width: 500px;
     width: 100%;
+    height: 44px;
 }
 .navbar-search-box {
     position: relative;
@@ -332,17 +332,13 @@ body {
 .navbar-search-input {
     width: 100%;
     border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 25px;
+    background-color: transparent;
+    border-radius: 0px 0px 25px 25px;
     padding: 0.65rem 2.5rem 0.65rem 2.8rem;
     color: var(--color-platinum);
-    font-size: 0.9rem;
+    font-size: 1rem;
     outline: none;
     transition: border-color 0.2s ease, background 0.2s ease;
-}
-.navbar-search-input:focus {
-    border-color: rgba(133, 138, 227, 0.4);
-    background: rgba(255, 255, 255, 0.08);
 }
 .navbar-search-input::placeholder {
     color: rgba(255, 255, 255, 0.35);
@@ -507,10 +503,9 @@ body {
 .dashboard-page {
     width: 100%;
     min-height: 100%;
-    padding: 1rem 1rem 7rem;
 }
 .dashboard-shell {
-    max-width: 980px;
+    max-width: 80%;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
@@ -1839,7 +1834,6 @@ body {
     font-size: 1rem;
     line-height: 1.7;
     margin: 0 0 1.5rem 0;
-    width: 60%;
     padding: 0rem 1rem;
 }
 .detail-page__actions {
@@ -1985,9 +1979,8 @@ body {
     justify-content: center;
     gap: 0.5rem;
     padding: 0.75rem;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
+    backdrop-filter: blur(12px);
+    border-radius: 25px;
     cursor: pointer;
     transition: all 0.2s ease;
     height: 100%;
@@ -2008,7 +2001,6 @@ body {
 .detail-page__cast-info {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
 }
 .detail-page__cast-name {
     font-size: 0.8rem;
@@ -2984,40 +2976,6 @@ body {
     text-align: center;
 }
 
-.calendar-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.75rem;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 12px;
-    min-height: 48px;
-}
-
-.calendar-nav-btn-inline {
-    width: 36px;
-    height: 36px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--color-platinum);
-    border-radius: 10px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    padding: 0;
-    font-size: 0.85rem;
-    flex-shrink: 0;
-}
-
-.calendar-nav-btn-inline:hover {
-    border-color: var(--color-primary);
-    background: rgba(133, 138, 227, 0.1);
-    color: var(--color-primary);
-}
-
 .calendar-nav-btn {
     width: 28px;
     height: 28px;
@@ -3113,8 +3071,8 @@ body {
     cursor: pointer;
     transition: all 0.2s ease;
     overflow: hidden;
-    width: 48px;
-    height: 72px;
+    width: 72px;
+    height: 96px;
     flex-shrink: 0;
     position: relative;
 }
@@ -3143,8 +3101,8 @@ body {
 }
 
 .calendar-episode-poster img {
-    width: 48px;
-    height: 72px;
+    width: 72px;
+    height: 96px;
     object-fit: cover;
     display: block;
 }
@@ -3208,8 +3166,8 @@ body {
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
-    width: 48px;
-    height: 72px;
+    width: 72px;
+    height: 96px;
 }
 
 .calendar-episode-more:hover {
@@ -3245,11 +3203,6 @@ body {
     padding: 0.15rem 0.35rem;
     border-radius: 4px;
     z-index: 2;
-}
-
-.upcoming-main {
-    flex: 1;
-    min-width: 0;
 }
 
 .watchlist-tabs {
@@ -6992,3 +6945,235 @@ i.fa-solid.fa-bookmark:hover {
         justify-content: center;
     }
     }
+
+/* ===== UPCOMING PAGE SIDE PANEL ===== */
+.upcoming-layout {
+    display: flex;
+    gap: 1.5rem;
+    position: relative;
+}
+
+.upcoming-main {
+    flex: 1;
+    min-width: 0;
+    margin-top: 20px;
+}
+
+.upcoming-side-panel {
+    position: fixed;
+    right: 0;
+    top: var(--navbar-height);
+    bottom: 0;
+    width: 400px;
+    max-width: 90vw;
+    background: rgba(10, 10, 15, 0.98);
+    backdrop-filter: blur(20px);
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.upcoming-side-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.upcoming-side-panel-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--color-platinum);
+    margin: 0;
+}
+
+.upcoming-side-panel-close {
+    background: transparent;
+    border: none;
+    color: var(--color-platinum);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    border-radius: 8px;
+}
+
+.upcoming-side-panel-close:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--color-primary);
+}
+
+.upcoming-side-panel-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.upcoming-episode-card {
+    display: flex;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.upcoming-episode-card:hover {
+    background: rgba(133, 138, 227, 0.08);
+    border-color: rgba(133, 138, 227, 0.25);
+    transform: translateX(-4px);
+}
+
+.upcoming-episode-card-poster {
+    width: 60px;
+    height: 90px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(133, 138, 227, 0.3), rgba(255, 255, 255, 0.05));
+}
+
+.upcoming-episode-card-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.upcoming-episode-card-no-poster {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 0.5rem;
+}
+
+.upcoming-episode-card-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    justify-content: center;
+}
+
+.upcoming-episode-card-info h4 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-platinum);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.upcoming-episode-details {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+}
+
+/* ===== NAVBAR CALENDAR HEADER ===== */
+.navbar-center {
+    grid-column: 2;
+    justify-self: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+}
+
+.calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    height: 44px;
+    padding: 0 1rem;
+    background: transparent;
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0px 0px 25px 25px ;
+    transition: all 0.2s ease;
+    justify-self: center;
+    max-width: 500px;
+    width: 100%;
+    min-height: 48px;
+}
+
+.calendar-nav-btn-inline {
+    width: 36px;
+    height: 36px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--color-platinum);
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    padding: 0;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    background: transparent;
+    border: none;
+    color: var(--color-platinum);
+    cursor: pointer;
+    padding: 0.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    width: 28px;
+    height: 28px;
+}
+.calendar-nav-btn-inline:hover {
+    color: var(--color-primary);
+}
+.calendar-nav-btn-inline:hover:not(:disabled) {
+    color: var(--color-primary);
+}
+
+.calendar-nav-btn-inline:disabled {
+    opacity: 0 !important;
+    cursor: not-allowed;
+}
+
+.calendar-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-platinum);
+    margin: 0;
+    min-width: 160px;
+    text-align: center;
+}

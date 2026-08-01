@@ -5,7 +5,13 @@ import { supabase } from '../../services/supabaseClient';
 import { useSearch } from '../../hooks/useSearch';
 import ProgressFixModal from '../modals/ProgressFixModal';
 
-const Navbar: React.FC = () => {
+interface NavbarProps {
+    currentMonth?: Date;
+    navigateMonth?: (direction: number) => void;
+    canGoBack?: () => boolean;
+}
+
+const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const [user, setUser] = useState<User | null>(null);
@@ -21,7 +27,11 @@ const Navbar: React.FC = () => {
                           location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/);
     const showBackButton = Boolean(isDetailPage);
     
-    const showSearchBar = ['/Discover', '/Movies', '/TVShows', '/', '/Finished', '/Friends', '/Lists', '/Lists/new'].includes(location.pathname) || location.pathname.startsWith('/Lists/');
+    const showSearchBar = ['/Discover', '/Movies', '/Tvshows', '/', '/Finished', '/Friends', '/Lists', '/Lists/new'].includes(location.pathname) || location.pathname.startsWith('/Lists/');
+    
+    const showCalendarHeader = location.pathname === '/Upcoming' && currentMonth && navigateMonth && canGoBack;
+    
+    const monthName = currentMonth?.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) || '';
 
     // Clear search when page changes
     useEffect(() => {
@@ -124,6 +134,28 @@ const Navbar: React.FC = () => {
                         />
                     )}
                 </div>
+                
+                {showCalendarHeader && (
+                    <div className="calendar-header">
+                        <button 
+                            className="calendar-nav-btn-inline"
+                            onClick={() => navigateMonth(-1)}
+                            title="Previous month"
+                            disabled={!canGoBack()}
+                            style={{ opacity: canGoBack() ? 1 : 0.3, cursor: canGoBack() ? 'pointer' : 'not-allowed' }}
+                        >
+                            <i className="fas fa-chevron-left"></i>
+                        </button>
+                        <h2 className="calendar-title">{monthName}</h2>
+                        <button 
+                            className="calendar-nav-btn-inline"
+                            onClick={() => navigateMonth(1)}
+                            title="Next month"
+                        >
+                            <i className="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                )}
                 
                 {showSearchBar && (
                     <div className="navbar-search">

@@ -33,6 +33,7 @@ const AppContent: React.FC = () => {
     const location = useLocation()
     const [user, setUser] = useState<User | null>(null)
     const [loading, setLoading] = useState(true)
+    const [currentMonth, setCurrentMonth] = useState(new Date())
 
     const isDetailPage = location.pathname.match(/^\/(movie|tv|person)\/\d+$/) || location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/)
 
@@ -90,17 +91,41 @@ const AppContent: React.FC = () => {
 
     const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/Friends', '/Statistics', '/Finished', '/Lists']
     const hideFooter = Boolean(user) && (mediaPages.includes(location.pathname) || location.pathname.startsWith('/Lists/'))
+    
+    const navigateMonth = (direction: number) => {
+        setCurrentMonth(prev => {
+            const year = prev.getFullYear()
+            const month = prev.getMonth()
+            const newDate = new Date(year, month + direction, 1)
+            const now = new Date()
+            // Don't allow navigating to months before current month
+            if (newDate.getFullYear() < now.getFullYear() || 
+                (newDate.getFullYear() === now.getFullYear() && newDate.getMonth() < now.getMonth())) {
+                return prev
+            }
+            return newDate
+        })
+    }
+
+    const canGoBack = () => {
+        const now = new Date()
+        return currentMonth.getFullYear() > now.getFullYear() || 
+               (currentMonth.getFullYear() === now.getFullYear() && currentMonth.getMonth() > now.getMonth())
+    }
 
     return (
         <div className="d-flex flex-column min-vh-100">
-            <Navbar />
+            <Navbar 
+                currentMonth={currentMonth}
+                navigateMonth={navigateMonth}
+                canGoBack={canGoBack}
+            />
             <main className={`page-main flex-grow-1 ${hideFooter ? 'page-main--no-footer' : ''}`}>
                 <Routes>
                     <Route path="/" element={user ? <Discover key="discover" /> : <Home />} />
                     <Route path="/Discover" element={user ? <Discover key="discover" /> : <Navigate to="/login" replace />} />
                     <Route path="/Movies" element={user ? <Movies /> : <Navigate to="/login" replace />} />
                     <Route path="/Tvshows" element={user ? <TVShows /> : <Navigate to="/login" replace />} />
-                    <Route path="/Upcoming" element={user ? <Upcoming /> : <Navigate to="/login" replace />} />
                     <Route path="/Friends" element={user ? <Friends /> : <Navigate to="/login" replace />} />
                     <Route path="/Statistics" element={user ? <Statistics /> : <Navigate to="/login" replace />} />
                     <Route path="/Settings" element={user ? <Settings /> : <Navigate to="/login" replace />} />
@@ -112,9 +137,10 @@ const AppContent: React.FC = () => {
                     <Route path="/Profile/:username" element={user ? <Profile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile" element={user ? <Profile /> : <Navigate to="/login" replace />} />
                     <Route element={<DetailLayout />}>
-                    <Route path="/movie/:id" element={<MovieDetail />} />
-                    <Route path="/tv/:id" element={<TVShowDetail />} />
-                    <Route path="/tv/:id/season/:season/episode/:episode" element={<EpisodeDetail />} />
+                        <Route path="/movie/:id" element={<MovieDetail />} />
+                        <Route path="/tv/:id" element={<TVShowDetail />} />
+                        <Route path="/tv/:id/season/:season/episode/:episode" element={<EpisodeDetail />} />
+                        <Route path="/Upcoming" element={user ? <Upcoming currentMonth={currentMonth} /> : <Navigate to="/login" replace />} />
                     </Route>
                     <Route path="/person/:id" element={<PersonDetail />} />
                     <Route path="/Lists" element={user ? <Lists /> : <Navigate to="/login" replace />} />
