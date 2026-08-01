@@ -6,13 +6,14 @@
     <title>Trackist</title>
     <script>
         // Redirect all paths to index.html for SPA routing
-        const path = window.location.pathname;
+        // This ensures client-side routing works on page refresh
         const search = window.location.search;
         const hash = window.location.hash;
         
-        // Only redirect if we're not already on index.html
-        if (!path.includes('index.html')) {
-            window.location.replace('/index.html' + path + search + hash);
+        // Redirect to index.html (React Router will handle the actual route)
+        // Don't append the path to avoid creating invalid URLs like /index.html/Page
+        if (!window.location.pathname.includes('index.html')) {
+            window.location.replace('/index.html' + search + hash);
         }
     </script>
 </head>
