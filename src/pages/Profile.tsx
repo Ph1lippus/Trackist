@@ -12,6 +12,7 @@ import {
 } from '../services/profileService'
 import type { User } from '@supabase/supabase-js'
 import type { WatchlistItem } from '../types'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface ProfileData {
     id: string
@@ -53,6 +54,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 const ProfilePage: React.FC = () => {
     const { username } = useParams<{ username: string }>()
+    usePageTitle('Trackist - Profile')
     const [currentUser, setCurrentUser] = useState<User | null>(null)
     const [profile, setProfile] = useState<ProfileData | null>(null)
     const [followersCount, setFollowersCount] = useState(0)

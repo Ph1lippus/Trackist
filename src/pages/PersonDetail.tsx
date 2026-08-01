@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getPersonDetails, getPersonMovies, getPersonTV, imageUrl } from '../services/tmdbService'
 import type { TMDBResult } from '../types'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface PersonDetails {
     id: number
@@ -21,6 +22,7 @@ interface FilmographyItem extends TMDBResult {
 
 const PersonDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>()
+    usePageTitle('Trackist - Person Detail')
     const navigate = useNavigate()
     const [details, setDetails] = useState<PersonDetails | null>(null)
     const [loading, setLoading] = useState(true)

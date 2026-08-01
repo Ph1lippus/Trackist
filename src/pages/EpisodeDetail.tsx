@@ -5,6 +5,7 @@ import { getTVDetails, getTVSeasonDetails, imageUrlOriginal, getFanartImages } f
 import { checkAndUpdateCompleted } from '../services/watchlistService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface EpisodeData {
     id: number
@@ -19,6 +20,7 @@ interface EpisodeData {
 
 const EpisodeDetail: React.FC = () => {
     const { id, season, episode } = useParams<{ id: string; season: string; episode: string }>()
+    usePageTitle('Trackist - Episode Detail')
     const [tvDetails, setTvDetails] = useState<TMDBResult | null>(null)
     const [episodeData, setEpisodeData] = useState<EpisodeData | null>(null)
     const [loading, setLoading] = useState(true)

@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { useCache } from '../hooks/useCache'
+import { usePageTitle } from '../hooks/usePageTitle'
 import type { WatchlistItem } from '../types'
 
 interface Stats {
@@ -35,6 +36,7 @@ const formatMinutes = (minutes: number): string => {
 }
 
 const Statistics: React.FC = () => {
+    usePageTitle('Trackist - Statistics')
     const [stats, setStats] = useState<Stats | null>(null)
     const [loading, setLoading] = useState(true)
     const { stats: cacheStats, clearCache, isClearing } = useCache()

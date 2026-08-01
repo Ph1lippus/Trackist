@@ -4,8 +4,10 @@ import { supabase } from '../services/supabaseClient'
 import { getMovieDetails, imageUrlOriginal, getFanartImages, getBestBackdropPath } from '../services/tmdbService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult, WatchlistItem } from '../types'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const MovieDetail: React.FC = () => {
+    usePageTitle('Trackist - Movie Detail')
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const [details, setDetails] = useState<TMDBResult | null>(null)

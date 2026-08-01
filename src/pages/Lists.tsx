@@ -5,11 +5,13 @@ import type { UserList, ListItem, TMDBResult } from '../types'
 import MediaCard from '../components/media/MediaCard'
 import { discoverMovies, discoverTV, getGenres } from '../services/tmdbService'
 import { addToList, removeFromList, updateList, createList } from '../services/profileService'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 type TabType = 'all' | 'movie' | 'tv'
 type BrowseMediaType = 'movie' | 'tv'
 
 const Lists: React.FC = () => {
+    usePageTitle('Trackist - Lists')
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const location = useLocation()

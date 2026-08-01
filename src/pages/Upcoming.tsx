@@ -4,6 +4,7 @@ import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
 import { loadCalendar, type CalendarItem } from '../services/calendarService'
 import type { WatchlistItem } from '../types'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface UpcomingItem {
     id: string
@@ -52,6 +53,7 @@ interface UpcomingProps {
 
 const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
     const navigate = useNavigate()
+    usePageTitle('Trackist - Upcoming')
     const [upcomingItems, setUpcomingItems] = useState<UpcomingItem[]>([])
     const [loading, setLoading] = useState(true)
     const [selectedDate, setSelectedDate] = useState<{dateKey: string, items: UpcomingItem[]} | null>(null)

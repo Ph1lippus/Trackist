@@ -6,6 +6,7 @@ import React, {
 } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useSearch } from '../hooks/useSearch'
+import { usePageTitle } from '../hooks/usePageTitle'
 import useDiscoverStore, { useDiscoverResults, useDiscoverFilters, useDiscoverLoading, useDiscoverActions, useDiscoverWatchlistIds } from '../stores/discoverStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
@@ -15,6 +16,7 @@ import { VirtuosoGrid } from 'react-virtuoso'
 
 const Discover: React.FC = () => {
     const location = useLocation()
+    usePageTitle('Trackist - Discover')
     const isVisible = location.pathname === '/' || location.pathname === '/Discover'
     
     // Store selectors

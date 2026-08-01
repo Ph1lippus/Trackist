@@ -6,6 +6,7 @@ import { validateDisplayName } from '../utils/validation'
 import type { User } from '@supabase/supabase-js'
 import Cropper from 'react-easy-crop'
 import { getCroppedImg } from '../utils/cropUtils'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface Point {
     x: number
@@ -14,6 +15,7 @@ interface Point {
 
 const EditProfile: React.FC = () => {
     const navigate = useNavigate()
+    usePageTitle('Trackist - Edit Profile')
     const [currentUser, setCurrentUser] = useState<User | null>(null)
     const [username, setUsername] = useState('')
     const [bio, setBio] = useState('')

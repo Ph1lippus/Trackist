@@ -5,10 +5,10 @@ import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
 import { useSearch } from '../hooks/useSearch'
-
-
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const Movies: React.FC = () => {
+    usePageTitle('Trackist - Movies')
     const { clearScrollPosition } = useScrollRestoration()
     const { searchQuery } = useSearch()
     const [items, setItems] = useState<WatchlistItem[]>([])

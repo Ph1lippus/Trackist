@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { requestPasswordReset, updateUserEmail, getProfile, updateProfile } from '../services/profileService'
 import { useCache } from '../hooks/useCache'
+import { usePageTitle } from '../hooks/usePageTitle'
 import { validateDisplayName, validateEmail } from '../utils/validation'
 import type { User } from '@supabase/supabase-js'
 
 type SettingsSection = 'account' | 'profile' | 'privacy' | 'notifications' | 'data' | 'danger'
 
 const Settings: React.FC = () => {
+    usePageTitle('Trackist - Settings')
     const navigate = useNavigate()
     const [currentUser, setCurrentUser] = useState<User | null>(null)
     const [activeSection, setActiveSection] = useState<SettingsSection>('account')

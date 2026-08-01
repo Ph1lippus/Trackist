@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { requestPasswordReset } from '../services/profileService'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const ForgotPassword: React.FC = () => {
+    usePageTitle('Trackist - Forgot Password')
     const [email, setEmail] = useState('')
     const [error, setError] = useState('')
     const [message, setMessage] = useState('')

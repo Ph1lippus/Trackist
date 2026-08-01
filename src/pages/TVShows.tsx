@@ -7,6 +7,7 @@ import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
 import { useSearch } from '../hooks/useSearch'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface TVShowWithProgress extends WatchlistItem {
     total_episodes_watched: number
@@ -14,6 +15,7 @@ interface TVShowWithProgress extends WatchlistItem {
 
 const TVShows: React.FC = () => {
     const { clearScrollPosition } = useScrollRestoration()
+    usePageTitle('Trackist - TV Shows')
     const { searchQuery } = useSearch()
     const [items, setItems] = useState<TVShowWithProgress[]>([])
     const [loading, setLoading] = useState(true)

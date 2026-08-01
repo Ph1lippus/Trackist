@@ -4,8 +4,10 @@ import MediaCard from '../components/media/MediaCard'
 import type { WatchlistItem, TMDBResult } from '../types'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
 import { useSearch } from '../hooks/useSearch'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const Finished: React.FC = () => {
+    usePageTitle('Trackist - Finished')
     const { clearScrollPosition } = useScrollRestoration()
     const { searchQuery } = useSearch()
     const [items, setItems] = useState<WatchlistItem[]>([])

@@ -1,6 +1,7 @@
 import React from 'react'
 import tmdbLogo from '../assets/TMDBLOGO.svg'
 import supaBaseLogo from '../assets/supabase-logo-icon.png'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const credits = [
     {
@@ -42,6 +43,7 @@ const credits = [
 ]
 
 const Credits: React.FC = () => {
+    usePageTitle('Trackist - Credits')
     return (
         <section className="credits-page">
             <div className="dashboard-section">

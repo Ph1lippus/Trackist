@@ -1,7 +1,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 const Home: React.FC = () => {
+    usePageTitle('Trackist - Home')
+    
     return (
         <main className="main">
             <section className="hero">

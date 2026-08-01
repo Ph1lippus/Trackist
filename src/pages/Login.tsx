@@ -1,8 +1,10 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { signInWithEmail } from '../services/profileService'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const Login: React.FC = () => {
+    usePageTitle('Trackist - Login')
     const navigate = useNavigate()
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')

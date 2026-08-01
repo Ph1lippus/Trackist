@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trackist</title>
+    <script>
+        // Redirect all paths to index.html for SPA routing
+        const path = window.location.pathname;
+        const search = window.location.search;
+        const hash = window.location.hash;
+        
+        // Only redirect if we're not already on index.html
+        if (!path.includes('index.html')) {
+            window.location.replace('/index.html' + path + search + hash);
+        }
+    </script>
+</head>
+<body>
+    <div id="root"></div>
+</body>
+</html>

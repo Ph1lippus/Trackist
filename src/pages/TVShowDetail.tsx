@@ -6,6 +6,7 @@ import { markEpisodeWatched, unmarkEpisodeWatched, getWatchedEpisodes, checkAndU
 import ConfirmModal from '../components/modals/ConfirmModal'
 import EpisodeChoiceModal from '../components/modals/EpisodeChoiceModal'
 import type { TMDBResult } from '../types'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 interface LocalEpisode {
     id: string
@@ -23,6 +24,7 @@ interface LocalEpisode {
 
 const TVShowDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>()
+    usePageTitle('Trackist - TV Show Detail')
     const navigate = useNavigate()
     const [details, setDetails] = useState<TMDBResult | null>(null)
     const [loading, setLoading] = useState(true)

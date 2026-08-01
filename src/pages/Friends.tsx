@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { getFollowingList, getProfile, followUser, unfollowUser, isFollowing } from '../services/profileService'
 import { useSearch } from '../hooks/useSearch'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const FriendsPage = () => {
+    usePageTitle('Trackist - Friends')
     const [currentUser, setCurrentUser] = useState<any>(null)
     const [following, setFollowing] = useState<any[]>([])
     const [loading, setLoading] = useState(true)

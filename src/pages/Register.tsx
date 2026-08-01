@@ -3,8 +3,10 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { checkDisplayNameExists } from '../services/profileService'
 import { validateUsername, validateEmail, validatePassword } from '../utils/validation'
+import { usePageTitle } from '../hooks/usePageTitle'
 
 const Register: React.FC = () => {
+    usePageTitle('Trackist - Register')
     const navigate = useNavigate()
     const [username, setUsername] = useState('')
     const [email, setEmail] = useState('')
