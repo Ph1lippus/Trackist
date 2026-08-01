@@ -5,12 +5,11 @@ import { useLibraryStore } from '../stores/useLibraryStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
-import { useScrollRestoration } from '../hooks/useScrollRestoration'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { VirtuosoGrid } from 'react-virtuoso'
 
 const TVShows: React.FC = () => {
-    const { clearScrollPosition } = useScrollRestoration()
     usePageTitle('Trackist - TV Shows')
     const { committedQuery } = useSearch()
     
@@ -36,25 +35,6 @@ const TVShows: React.FC = () => {
             total_episodes_watched: 0 // Will be calculated on demand
         }))
     }, [tvShows, isInitialized])
-
-    // Restore scroll position on mount
-    useEffect(() => {
-        const savedPosition = sessionStorage.getItem('scrollPosition')
-        if (savedPosition) {
-            window.scrollTo(0, parseInt(savedPosition))
-            sessionStorage.removeItem('scrollPosition')
-        }
-    }, [])
-
-    // Clear scroll position when navigating to detail page
-    useEffect(() => {
-        const handleNavigation = () => {
-            clearScrollPosition()
-        }
-
-        window.addEventListener('beforeunload', handleNavigation)
-        return () => window.removeEventListener('beforeunload', handleNavigation)
-    }, [clearScrollPosition])
 
     // Listen for watchlist-refresh event from the Fix Progress modal
     useEffect(() => {
@@ -162,9 +142,6 @@ const TVShows: React.FC = () => {
         return dateA.getTime() - dateB.getTime()
     })
 
-    const visibleCurrentlyWatching = currentlyWatching
-    const visibleNotStarted = notStarted
-
     const buildTmdbItem = (item: WatchlistItem): TMDBResult => ({
         id: item.tmdb_id as number,
         title: item.title,
@@ -222,17 +199,25 @@ const TVShows: React.FC = () => {
                         <h3 className="watchlist-section__title">Currently Watching</h3>
                     </div>
                     {currentlyWatching.length > 0 ? (
-                        <div className={`discover-grid`} >
-                            {visibleCurrentlyWatching.map((item) => (
-                                <MediaCard
-                                    key={item.id}
-                                    item={buildTmdbItem(item)}
-                                    isInWatchlist={true}
-                                    onAdd={() => {}}
-                                    onMarkWatched={() => setMarkAllModal(item)}
-                                />
-                            ))}
-                        </div>
+                        <VirtuosoGrid
+                            computeItemKey={(index) => currentlyWatching[index]?.id ?? index}
+                            style={{ height: '100%', width: '100%' }}
+                            useWindowScroll={true}
+                            data={currentlyWatching}
+                            overscan={800}
+                            listClassName="discover-grid"
+                            itemContent={(index) => {
+                                const item = currentlyWatching[index]
+                                return (
+                                    <MediaCard
+                                        item={buildTmdbItem(item)}
+                                        isInWatchlist={true}
+                                        onAdd={() => {}}
+                                        onMarkWatched={() => setMarkAllModal(item)}
+                                    />
+                                )
+                            }}
+                        />
                     ) : (
                         <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
                             No shows currently in progress
@@ -246,17 +231,25 @@ const TVShows: React.FC = () => {
                         <h3 className="watchlist-section__title">Watchlist (Not Started)</h3>
                     </div>
                     {notStarted.length > 0 ? (
-                        <div className={`discover-grid`}>
-                            {visibleNotStarted.map((item) => (
-                                <MediaCard
-                                    key={item.id}
-                                    item={buildTmdbItem(item)}
-                                    isInWatchlist={true}
-                                    onAdd={() => {}}
-                                    onMarkWatched={() => setMarkAllModal(item)}
-                                />
-                            ))}
-                        </div>
+                        <VirtuosoGrid
+                            computeItemKey={(index) => notStarted[index]?.id ?? index}
+                            style={{ height: '100%', width: '100%' }}
+                            useWindowScroll={true}
+                            data={notStarted}
+                            overscan={800}
+                            listClassName="discover-grid"
+                            itemContent={(index) => {
+                                const item = notStarted[index]
+                                return (
+                                    <MediaCard
+                                        item={buildTmdbItem(item)}
+                                        isInWatchlist={true}
+                                        onAdd={() => {}}
+                                        onMarkWatched={() => setMarkAllModal(item)}
+                                    />
+                                )
+                            }}
+                        />
                     ) : (
                         <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
                             No shows queued to start

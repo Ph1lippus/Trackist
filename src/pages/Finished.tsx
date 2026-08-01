@@ -2,13 +2,12 @@ import React, { useEffect, useMemo } from 'react'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import MediaCard from '../components/media/MediaCard'
 import type { WatchlistItem, TMDBResult } from '../types'
-import { useScrollRestoration } from '../hooks/useScrollRestoration'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { VirtuosoGrid } from 'react-virtuoso'
 
 const Finished: React.FC = () => {
     usePageTitle('Trackist - Finished')
-    const { clearScrollPosition } = useScrollRestoration()
     const { committedQuery } = useSearch()
     
     // Use global store
@@ -19,16 +18,6 @@ const Finished: React.FC = () => {
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
-
-    // Clear scroll position when navigating to detail page
-    useEffect(() => {
-        const handleNavigation = () => {
-            clearScrollPosition()
-        }
-        
-        window.addEventListener('beforeunload', handleNavigation)
-        return () => window.removeEventListener('beforeunload', handleNavigation)
-    }, [clearScrollPosition])
 
     // Filter items based on global search (both movie + tv types)
     const filteredItems = useMemo(() => {
@@ -55,14 +44,22 @@ const Finished: React.FC = () => {
                         <h3 className="watchlist-section__title">Finished TV Shows</h3>
                     </div>
                     {finishedTVShows.length > 0 ? (
-                        <div className="discover-grid">
-                            {finishedTVShows.map((item) => (
-                                <MediaCard
-                                    key={item.id}
-                                    item={buildTmdbItem(item)}
-                                />
-                            ))}
-                        </div>
+                        <VirtuosoGrid
+                            computeItemKey={(index) => finishedTVShows[index]?.id ?? index}
+                            style={{ height: '100%', width: '100%' }}
+                            useWindowScroll={true}
+                            data={finishedTVShows}
+                            overscan={800}
+                            listClassName="discover-grid"
+                            itemContent={(index) => {
+                                const item = finishedTVShows[index]
+                                return (
+                                    <MediaCard
+                                        item={buildTmdbItem(item)}
+                                    />
+                                )
+                            }}
+                        />
                     ) : (
                         <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
                             No finished TV shows yet
@@ -76,14 +73,22 @@ const Finished: React.FC = () => {
                         <h3 className="watchlist-section__title">Finished Movies</h3>
                     </div>
                     {finishedMovies.length > 0 ? (
-                        <div className="discover-grid">
-                            {finishedMovies.map((item) => (
-                                <MediaCard
-                                    key={item.id}
-                                    item={buildTmdbItem(item)}
-                                />
-                            ))}
-                        </div>
+                        <VirtuosoGrid
+                            computeItemKey={(index) => finishedMovies[index]?.id ?? index}
+                            style={{ height: '100%', width: '100%' }}
+                            useWindowScroll={true}
+                            data={finishedMovies}
+                            overscan={800}
+                            listClassName="discover-grid"
+                            itemContent={(index) => {
+                                const item = finishedMovies[index]
+                                return (
+                                    <MediaCard
+                                        item={buildTmdbItem(item)}
+                                    />
+                                )
+                            }}
+                        />
                     ) : (
                         <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
                             No finished movies yet

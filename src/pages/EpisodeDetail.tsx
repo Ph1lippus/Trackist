@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails, imageUrlOriginal, getFanartImages } from '../services/tmdbService'
 import { markEpisodeWatched, unmarkEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
+import { supabase } from '../services/supabaseClient'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -118,9 +119,9 @@ const EpisodeDetail: React.FC = () => {
 
         try {
             const success = await markEpisodeWatched(watchlistId, Number(season), Number(episode), {
-                tmdb_episode_id: episodeData.id,
+                tmdb_episode_id: episodeData.id || undefined,
                 title: episodeData.name,
-                still_path: episodeData.still_path,
+                still_path: episodeData.still_path || undefined,
                 overview: episodeData.overview,
                 vote_average: episodeData.vote_average,
                 air_date: episodeData.air_date,
