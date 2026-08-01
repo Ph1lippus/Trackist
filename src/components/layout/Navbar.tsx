@@ -3,6 +3,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../services/supabaseClient';
 import { useSearch } from '../../hooks/useSearch';
+import SearchDropdown from '../search/SearchDropdown';
 import ProgressFixModal from '../modals/ProgressFixModal';
 
 interface NavbarProps {
@@ -20,8 +21,24 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack 
     const [showFixModal, setShowFixModal] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
-    const { setSearchQuery, clearSearch } = useSearch();
-    const [searchInputValue, setSearchInputValue] = useState('')
+    const searchBoxRef = useRef<HTMLDivElement>(null);
+
+    // Unified search engine
+    const {
+        inputValue,
+        setInputValue,
+        isLoading,
+        results,
+        groupedResults,
+        context,
+        query,
+        belowMinChars,
+        error,
+        isDropdownOpen,
+        closeDropdown,
+        clear,
+        commitQuery,
+    } = useSearch();
 
     const isDetailPage = location.pathname.match(/^\/(movie|tv|person)\/\d+$/) || 
                           location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/);
@@ -32,11 +49,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack 
     const showCalendarHeader = location.pathname === '/Upcoming' && currentMonth && navigateMonth && canGoBack;
     
     const monthName = currentMonth?.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) || '';
-
-    // Clear search when page changes
-    useEffect(() => {
-        clearSearch()
-    }, [location.pathname, clearSearch])
 
     useEffect(() => {
         // Get initial session
@@ -100,15 +112,27 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack 
         || 'Viewer';
 
     const handleSearchSubmit = (e: React.FormEvent) => {
-        e.preventDefault()
-        // Update global search query when Enter is pressed
-        setSearchQuery(searchInputValue)
+        e.preventDefault();
+        // Commit the query for full-page results
+        commitQuery();
     }
 
     const handleSearchClear = () => {
-        setSearchQuery('')
-        setSearchInputValue('')
+        clear();
     }
+
+    // Context-aware placeholder text
+    const searchPlaceholder = (() => {
+        switch (context) {
+            case 'discover': return 'Search movies, TV, people, lists…';
+            case 'movies': return 'Search movies…';
+            case 'tvshows': return 'Search TV shows…';
+            case 'finished': return 'Search finished movies & TV…';
+            case 'friends': return 'Search users…';
+            case 'lists': return 'Search lists…';
+            default: return 'Search…';
+        }
+    })();
 
     return (
         <nav className="navbar-brand-row" aria-label="Main navigation">
@@ -158,7 +182,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack 
                 )}
                 
                 {showSearchBar && (
-                    <div className="navbar-search">
+                    <div className="navbar-search" ref={searchBoxRef}>
                         <form onSubmit={handleSearchSubmit}>
                             <div className="navbar-search-box">
                                 <svg className="navbar-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -168,17 +192,36 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack 
                                 <input
                                     type="text"
                                     className="navbar-search-input"
-                                    placeholder="Search..."
-                                    value={searchInputValue}
-                                    onChange={(e) => setSearchInputValue(e.target.value)}
+                                    placeholder={searchPlaceholder}
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                    autoComplete="off"
+                                    spellCheck="false"
                                 />
-                                {searchInputValue && (
+                                {isLoading && (
+                                    <div className="navbar-search-spinner" aria-label="Searching">
+                                        <div className="discover-spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }} />
+                                    </div>
+                                )}
+                                {inputValue && !isLoading && (
                                     <button type="button" className="navbar-search-clear" onClick={handleSearchClear} aria-label="Clear search">
                                         <i className="fa-solid fa-xmark"></i>
                                     </button>
                                 )}
                             </div>
                         </form>
+                        <SearchDropdown
+                            isOpen={isDropdownOpen}
+                            isLoading={isLoading}
+                            results={results}
+                            groupedResults={groupedResults}
+                            context={context}
+                            query={query}
+                            belowMinChars={belowMinChars}
+                            error={error}
+                            onClose={closeDropdown}
+                            onCommit={commitQuery}
+                        />
                     </div>
                 )}
                 

@@ -1,11 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { supabase } from '../services/supabaseClient'
 import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getFanartImages, getBestBackdropPath } from '../services/tmdbService'
 import { markEpisodeWatched, unmarkEpisodeWatched, getWatchedEpisodes, checkAndUpdateCaughtUp, checkAndUpdateCompleted, updateStatusToWatching } from '../services/watchlistService'
+import { useLibraryStore } from '../stores/useLibraryStore'
+import { supabase } from '../services/supabaseClient'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import EpisodeChoiceModal from '../components/modals/EpisodeChoiceModal'
-import type { TMDBResult } from '../types'
+import type { TMDBResult, WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 interface LocalEpisode {
@@ -33,6 +34,9 @@ const TVShowDetail: React.FC = () => {
     const [watchlistId, setWatchlistId] = useState<string | null>(null)
     const [watchlistStatus, setWatchlistStatus] = useState<string | null>(null)
     const [adding, setAdding] = useState(false)
+    
+    // Use global store
+    const libraryStore = useLibraryStore()
     const [seasons, setSeasons] = useState<number[]>([])
     const [episodes, setEpisodes] = useState<LocalEpisode[]>([])
     const [selectedSeason, setSelectedSeason] = useState(1)
@@ -115,20 +119,12 @@ const TVShowDetail: React.FC = () => {
                     if (trailer) setTrailerKey(trailer.key)
                 }
 
-                // Check if in watchlist
-                const { data: { user } } = await supabase.auth.getUser()
-                if (user) {
-                    const { data: watchlistData } = await supabase
-                        .from('watchlist')
-                        .select('id, status')
-                        .eq('user_id', user.id)
-                        .eq('tmdb_id', Number(id))
-                        .single()
-                    setIsInWatchlist(!!watchlistData)
-                    if (watchlistData) {
-                        setWatchlistId(watchlistData.id)
-                        setWatchlistStatus(watchlistData.status)
-                    }
+                // Check if in watchlist using global store
+                const watchlistItem = libraryStore.allItems.find(item => item.tmdb_id === Number(id))
+                setIsInWatchlist(!!watchlistItem)
+                if (watchlistItem) {
+                    setWatchlistId(watchlistItem.id)
+                    setWatchlistStatus(watchlistItem.status)
                 }
             } catch (err) {
                 console.error('Failed to load TV show details:', err)
@@ -242,12 +238,13 @@ const TVShowDetail: React.FC = () => {
         const totalEpisodes = details.number_of_episodes || 0
         const totalSeasons = details.number_of_seasons || 1
 
-        const { data, error } = await supabase.from('watchlist').insert({
+        const newItem: WatchlistItem = {
+            id: crypto.randomUUID(),
             user_id: user.id,
             media_type: 'tv',
             tmdb_id: details.id,
             title: details.name || '',
-            poster_path: details.poster_path,
+            poster_path: details.poster_path || undefined,
             overview: details.overview,
             release_date: details.first_air_date,
             vote_average: details.vote_average,
@@ -257,33 +254,28 @@ const TVShowDetail: React.FC = () => {
             current_season: 1,
             last_season_number: totalSeasons,
             last_season_check: new Date().toISOString(),
-            status: 'planning'
-        }).select().single()
-
-        if (error) {
-            alert('Error: ' + error.message)
-        } else if (data) {
-            setIsInWatchlist(true)
-            setWatchlistId(data.id)
+            status: 'planning',
+            added_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
         }
+
+        // Optimistic update
+        await libraryStore.addItem(newItem)
+        
+        setWatchlistId(newItem.id)
+        setWatchlistStatus('planning')
         setAdding(false)
     }
 
     const handleRemoveFromWatchlist = async () => {
         if (!watchlistId) return
 
-        const { error } = await supabase
-            .from('watchlist')
-            .delete()
-            .eq('id', watchlistId)
-
-        if (error) {
-            alert('Error: ' + error.message)
-        } else {
-            setIsInWatchlist(false)
-            setWatchlistId(null)
-            setWatchlistStatus(null)
-        }
+        // Optimistic update via store
+        await libraryStore.removeItem(watchlistId)
+        
+        setIsInWatchlist(false)
+        setWatchlistId(null)
+        setWatchlistStatus(null)
         setRemoveWatchlistModal(null)
     }
     const handleSeasonChange = (season: number) => {
@@ -395,8 +387,10 @@ const TVShowDetail: React.FC = () => {
                 await Promise.all(markPromises)
                 // Update status from 'planning' to 'watching' if needed
                 await updateStatusToWatching(watchlistId)
-                await checkAndUpdateCaughtUp(watchlistId, details.id)
+                // Run completed check FIRST to ensure ended shows are marked correctly
                 await checkAndUpdateCompleted(watchlistId, details.id)
+                // Then run caught up check (it will skip ended shows due to early return)
+                await checkAndUpdateCaughtUp(watchlistId, details.id)
             } catch (err) {
                 console.error('Failed to mark episodes:', err)
                 // Revert on error
@@ -455,8 +449,10 @@ const TVShowDetail: React.FC = () => {
 
                 // Update status from 'planning' to 'watching' if needed
                 await updateStatusToWatching(watchlistId)
-                await checkAndUpdateCaughtUp(watchlistId, details.id)
+                // Run completed check FIRST to ensure ended shows are marked correctly
                 await checkAndUpdateCompleted(watchlistId, details.id)
+                // Then run caught up check (it will skip ended shows due to early return)
+                await checkAndUpdateCaughtUp(watchlistId, details.id)
             } catch (err) {
                 setEpisodes(prev => prev.map(ep => 
                     ep.id === episode.id ? { ...ep, watched: !newWatchedState } : ep
@@ -485,8 +481,10 @@ const TVShowDetail: React.FC = () => {
                 return
             }
 
-            await checkAndUpdateCaughtUp(watchlistId, details.id)
+            // Run completed check FIRST to ensure ended shows are marked correctly
             await checkAndUpdateCompleted(watchlistId, details.id)
+            // Then run caught up check (it will skip ended shows due to early return)
+            await checkAndUpdateCaughtUp(watchlistId, details.id)
         } catch (err) {
             setEpisodes(prev => prev.map(ep => 
                 ep.id === episode.id ? { ...ep, watched: true } : ep
@@ -644,6 +642,13 @@ const TVShowDetail: React.FC = () => {
                                                     await checkAndUpdateCompleted(watchlistId, details.id)
                                                     // Refresh episodes
                                                     setEpisodes(prev => prev.map(ep => ({ ...ep, watched: true })))
+                                                    // Refresh watchlist status from store
+                                                    if (watchlistId) {
+                                                        const updatedItem = libraryStore.allItems.find(item => item.id === watchlistId)
+                                                        if (updatedItem) {
+                                                            setWatchlistStatus(updatedItem.status)
+                                                        }
+                                                    }
                                                 }
                                             }}
                                             disabled={adding}
@@ -893,8 +898,10 @@ const TVShowDetail: React.FC = () => {
                         
                         // Update status from 'planning' to 'watching' if needed
                         await updateStatusToWatching(watchlistId)
-                        await checkAndUpdateCaughtUp(watchlistId, details.id)
+                        // Run completed check FIRST to ensure ended shows are marked correctly
                         await checkAndUpdateCompleted(watchlistId, details.id)
+                        // Then run caught up check (it will skip ended shows due to early return)
+                        await checkAndUpdateCaughtUp(watchlistId, details.id)
                         
                         // Refresh episodes
                         setEpisodes(prev => prev.map(ep => 

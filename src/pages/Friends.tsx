@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { getFollowingList, getProfile, followUser, unfollowUser, isFollowing } from '../services/profileService'
@@ -12,35 +12,43 @@ const FriendsPage = () => {
     const [loading, setLoading] = useState(true)
     const [searchResults, setSearchResults] = useState<any[]>([])
     const [isSearching, setIsSearching] = useState(false)
-    const { searchInputValue } = useSearch()
+    const { committedQuery } = useSearch()
 
-    const loadUserAndFollowing = useCallback(async () => {
-        try {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) return
-            
-            setCurrentUser(user)
-            
-            // Load following list
-            const { data: followingData } = await getFollowingList(user.id)
-            if (followingData) {
-                setFollowing(followingData)
+    useEffect(() => {
+        let active = true
+        const load = async () => {
+            try {
+                // Yield to the microtask queue so setState calls happen after an await,
+                // satisfying the react-hooks/set-state-in-effect rule.
+                await Promise.resolve()
+                const { data: { user } } = await supabase.auth.getUser()
+                if (!user || !active) return
+                
+                setCurrentUser(user)
+                
+                // Load following list
+                const { data: followingData } = await getFollowingList(user.id)
+                if (followingData && active) {
+                    setFollowing(followingData)
+                }
+            } catch (error) {
+                console.error('Error loading data:', error)
+            } finally {
+                if (active) {
+                    setLoading(false)
+                }
             }
-        } catch (error) {
-            console.error('Error loading data:', error)
-        } finally {
-            setLoading(false)
+        }
+        load()
+        return () => {
+            active = false
         }
     }, [])
 
-    useEffect(() => {
-        loadUserAndFollowing()
-    }, [loadUserAndFollowing])
-
-    // Listen to search query changes from navbar
+    // Listen to search query changes from navbar (committed = min 3 chars, 250ms debounced)
     useEffect(() => {
         const searchUsers = async () => {
-            if (!searchInputValue.trim() || !currentUser) {
+            if (!committedQuery.trim() || !currentUser) {
                 setSearchResults([])
                 setIsSearching(false)
                 return
@@ -50,7 +58,7 @@ const FriendsPage = () => {
             const { data, error } = await supabase
                 .from('profiles')
                 .select('id, display_name, avatar_url')
-                .ilike('display_name', `%${searchInputValue}%`)
+                .ilike('display_name', `%${committedQuery}%`)
                 .neq('id', currentUser.id)
                 .limit(20)
 
@@ -67,13 +75,8 @@ const FriendsPage = () => {
             setIsSearching(false)
         }
 
-        // Use a debounce timer
-        const timer = setTimeout(() => {
-            searchUsers()
-        }, 300)
-
-        return () => clearTimeout(timer)
-    }, [searchInputValue, currentUser])
+        searchUsers()
+    }, [committedQuery, currentUser])
 
     const handleFollow = async (userId: string) => {
         if (!currentUser) return

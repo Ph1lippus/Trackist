@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react'
-import { supabase } from '../services/supabaseClient'
+import React, { useEffect, useState, useMemo } from 'react'
 import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
-import { getWatchedEpisodeCount, markEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
+import { markEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
+import { useLibraryStore } from '../stores/useLibraryStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
@@ -9,87 +9,33 @@ import { useScrollRestoration } from '../hooks/useScrollRestoration'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
 
-interface TVShowWithProgress extends WatchlistItem {
-    total_episodes_watched: number
-}
-
 const TVShows: React.FC = () => {
     const { clearScrollPosition } = useScrollRestoration()
     usePageTitle('Trackist - TV Shows')
-    const { searchQuery } = useSearch()
-    const [items, setItems] = useState<TVShowWithProgress[]>([])
-    const [loading, setLoading] = useState(true)
+    const { committedQuery } = useSearch()
+    
+    // Use global store
+    const store = useLibraryStore()
+    const tvShows = store.tvShows
+    const isInitialized = store.isInitialized
+    
     const [markAllModal, setMarkAllModal] = useState<WatchlistItem | null>(null)
     const [markingAllWatched, setMarkingAllWatched] = useState(false)
 
-    const fetchWatchlist = useCallback(async () => {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) {
-            setLoading(false)
-            return
-        }
-
-        const { data, error } = await supabase
-            .from('watchlist')
-            .select('*')
-            .eq('user_id', user.id)
-            .in('media_type', ['tv', 'anime'])
-            .order('updated_at', { ascending: false })
-
-        if (!error && data) {
-            // Fetch episode progress for each TV show
-            const itemsWithProgress: TVShowWithProgress[] = await Promise.all(
-                (data || []).map(async (item: WatchlistItem) => {
-                    const totalEpisodesWatched = await getWatchedEpisodeCount(item.id)
-
-                    // For shows that appear completed, verify total_episodes from TMDB
-                    if (item.tmdb_id && (
-                        item.status === 'completed' || item.status === 'caught_up' ||
-                        (item.total_episodes !== undefined &&
-                         item.total_episodes > 0 &&
-                         totalEpisodesWatched >= item.total_episodes)
-                    )) {
-                        try {
-                            const details = await getTVDetails(item.tmdb_id)
-                            const currentTotalEpisodes = details.number_of_episodes || 0
-                            const storedTotalEpisodes = item.total_episodes || 0
-
-                            if (currentTotalEpisodes !== storedTotalEpisodes) {
-                                await supabase.from('watchlist').update({
-                                    total_episodes: currentTotalEpisodes,
-                                    total_seasons: details.number_of_seasons || item.total_seasons,
-                                    updated_at: new Date().toISOString()
-                                }).eq('id', item.id)
-
-                                return {
-                                    ...item,
-                                    total_episodes: currentTotalEpisodes,
-                                    total_seasons: details.number_of_seasons || item.total_seasons,
-                                    total_episodes_watched: totalEpisodesWatched
-                                }
-                            }
-                        } catch (err) {
-                            console.error(`Failed to verify total_episodes for ${item.title}:`, err)
-                        }
-                    }
-
-                    return {
-                        ...item,
-                        total_episodes_watched: totalEpisodesWatched
-                    }
-                })
-            )
-            setItems(itemsWithProgress)
-        }
-        setLoading(false)
+    // Scroll to top when page loads
+    useEffect(() => {
+        window.scrollTo(0, 0)
     }, [])
 
-    useEffect(() => {
-        const load = async () => {
-            await fetchWatchlist()
-        }
-        load().catch(() => {})
-    }, [fetchWatchlist])
+    // Calculate episode progress for TV shows
+    const tvShowsWithProgress = useMemo(() => {
+        if (!isInitialized) return []
+        
+        return tvShows.map(show => ({
+            ...show,
+            total_episodes_watched: 0 // Will be calculated on demand
+        }))
+    }, [tvShows, isInitialized])
 
     // Restore scroll position on mount
     useEffect(() => {
@@ -113,16 +59,21 @@ const TVShows: React.FC = () => {
     // Listen for watchlist-refresh event from the Fix Progress modal
     useEffect(() => {
         const handleRefresh = () => {
-            fetchWatchlist().catch(() => {})
+            // Refresh is handled by the store, but we can trigger a re-fetch if needed
+            if (store.allItems.length > 0) {
+                // The store already has the data, no need to refetch
+            }
         }
         window.addEventListener('watchlist-refresh', handleRefresh)
         return () => window.removeEventListener('watchlist-refresh', handleRefresh)
-    }, [fetchWatchlist])
+    }, [store])
 
     // Reset trigger: check if completed shows now have new episodes/seasons
     useEffect(() => {
         const checkForNewEpisodes = async () => {
-            const completedShows = items.filter(
+            if (!isInitialized || tvShows.length === 0) return
+
+            const completedShows = tvShows.filter(
                 item => (item.status === 'completed' || item.status === 'caught_up' || (
                     item.status === 'watching' &&
                     item.total_episodes !== undefined &&
@@ -134,9 +85,6 @@ const TVShows: React.FC = () => {
             )
 
             if (completedShows.length === 0) return
-
-            const updatedItems = [...items]
-            let hasChanges = false
 
             for (const show of completedShows) {
                 if (!show.tmdb_id) continue
@@ -159,47 +107,29 @@ const TVShows: React.FC = () => {
                         })
 
                         if (hasReleasedEpisodes) {
-                            const index = updatedItems.findIndex(item => item.id === show.id)
-                            if (index !== -1) {
-                                updatedItems[index] = {
-                                    ...updatedItems[index],
-                                    status: 'watching',
-                                    total_episodes: currentTotalEpisodes,
-                                    total_seasons: details.number_of_seasons || show.total_seasons
-                                }
-                            }
-                            hasChanges = true
-
-                            await supabase.from('watchlist').update({
+                            await store.updateItem(show.id, {
                                 status: 'watching',
                                 total_episodes: currentTotalEpisodes,
-                                total_seasons: details.number_of_seasons || show.total_seasons,
-                                updated_at: new Date().toISOString()
-                            }).eq('id', show.id)
+                                total_seasons: details.number_of_seasons || show.total_seasons
+                            })
                         }
                     }
                 } catch (err) {
                     console.error(`Failed to check for new episodes for ${show.title}:`, err)
                 }
             }
-
-            if (hasChanges) {
-                setItems(updatedItems)
-            }
         }
 
-        if (!loading && items.length > 0) {
-            checkForNewEpisodes()
-        }
+        checkForNewEpisodes()
 
         const interval = setInterval(() => {
-            if (items.length > 0) {
+            if (tvShows.length > 0) {
                 checkForNewEpisodes()
             }
         }, 5 * 60 * 1000)
 
         const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible' && items.length > 0) {
+            if (document.visibilityState === 'visible' && tvShows.length > 0) {
                 checkForNewEpisodes()
             }
         }
@@ -209,25 +139,22 @@ const TVShows: React.FC = () => {
             clearInterval(interval)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [loading, items.length])
+    }, [isInitialized, tvShows.length, store])
 
-    // Filter items based on global search
+    // Filter items based on global search (strict TV-type lock)
     const filteredItems = useMemo(() => {
-        if (!searchQuery) return items
-        return items.filter(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()))
-    }, [items, searchQuery])
+        if (!committedQuery) return tvShowsWithProgress
+        return tvShowsWithProgress.filter(item => item.title.toLowerCase().includes(committedQuery.toLowerCase()))
+    }, [tvShowsWithProgress, committedQuery])
 
     // Container A: Currently Watching - only shows with 'watching' status
     const currentlyWatching = filteredItems.filter(
-        item => item.status === 'watching' &&
-        item.total_episodes_watched > 0
+        item => item.status === 'watching'
     )
 
     // Container B: Watchlist (Not Started) - in watchlist with 0 episodes watched
     const notStarted = filteredItems.filter(
-        item => item.status === 'planning' &&
-        item.total_episodes_watched === 0
+        item => item.status === 'planning'
     ).sort((a, b) => {
         // Sort by added date (oldest first)
         const dateA = new Date(a.added_at || 0)
@@ -276,7 +203,8 @@ const TVShows: React.FC = () => {
             await checkAndUpdateCompleted(item.id, item.tmdb_id)
 
             setMarkAllModal(null)
-            fetchWatchlist()
+            // Refresh the store
+            await store.refreshItem(item.id)
         } catch (err) {
             console.error('Failed to mark all episodes as watched:', err)
             alert('Failed to mark all episodes as watched. Please try again.')
@@ -284,14 +212,6 @@ const TVShows: React.FC = () => {
             setMarkingAllWatched(false)
         }
     }
-
-    if (loading) return (
-        <section className="dashboard-page">
-            <div className="dashboard-shell">
-                <div className="discover-loading"><div className="discover-spinner" /><p>Loading...</p></div>
-            </div>
-        </section>
-    )
 
     return (
         <div className="discover-page">

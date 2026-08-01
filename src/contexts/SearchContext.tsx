@@ -1,35 +1,15 @@
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, { createContext } from 'react'
+import { useUnifiedSearch } from '../hooks/useUnifiedSearch'
+import type { UseUnifiedSearchReturn } from '../hooks/useUnifiedSearch'
 
-interface SearchContextType {
-  searchQuery: string
-  setSearchQuery: (query: string) => void
-  searchInputValue: string
-  setSearchInputValue: (query: string) => void
-  clearSearch: () => void
-}
-
-export const SearchContext = createContext<SearchContextType | undefined>(undefined)
+export const SearchContext = createContext<UseUnifiedSearchReturn | undefined>(undefined)
 
 export const SearchProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [searchQuery, setSearchQuery] = useState('')
-    const [searchInputValue, setSearchInputValue] = useState('')
-
-    const clearSearch = useCallback(() => {
-        setSearchQuery('')
-        setSearchInputValue('')
-    }, [])
+    const search = useUnifiedSearch()
 
     return (
-        <SearchContext.Provider value={{ searchQuery, setSearchQuery, searchInputValue, setSearchInputValue, clearSearch }}>
+        <SearchContext.Provider value={search}>
             {children}
         </SearchContext.Provider>
     )
-}
-
-export const useSearch = () => {
-  const context = useContext(SearchContext)
-  if (!context) {
-    throw new Error('useSearch must be used within SearchProvider')
-  }
-  return context
 }

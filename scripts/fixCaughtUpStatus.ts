@@ -7,8 +7,36 @@
  * Run with: npx tsx scripts/fixCaughtUpStatus.ts
  */
 
-import { supabase } from '../src/services/supabaseClient'
-import { getTVDetails } from '../src/services/tmdbService'
+// Load environment variables from .env file FIRST, before any other imports
+import dotenv from 'dotenv'
+import { createClient } from '@supabase/supabase-js'
+
+dotenv.config({ path: '.env' })
+
+const supabaseUrl = process.env.VITE_SUPABASE_URL
+const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY
+const tmdbApiKey = process.env.VITE_TMDB_API_KEY
+
+if (!supabaseUrl || !supabaseKey) {
+    console.error('❌ Missing Supabase credentials in .env file')
+    process.exit(1)
+}
+
+if (!tmdbApiKey) {
+    console.error('❌ Missing TMDB API key in .env file')
+    process.exit(1)
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey)
+
+// TMDB API function (inline to avoid import.meta.env issues)
+async function getTVDetails(tmdbId: number) {
+    const response = await fetch(`https://api.themoviedb.org/3/tv/${tmdbId}?api_key=${tmdbApiKey}`)
+    if (!response.ok) {
+        throw new Error(`TMDB API error: ${response.statusText}`)
+    }
+    return response.json()
+}
 
 declare const process: {
     exit(code: number): never
@@ -89,6 +117,27 @@ async function fixCaughtUpStatus() {
             // If show ended but marked as caught_up, fix it
             else if (showEnded && show.status === 'caught_up') {
                 console.log(`  🔄 Updating to 'completed' (show has ended)`)
+
+                const { error: updateError } = await supabase
+                    .from('watchlist')
+                    .update({
+                        status: 'completed',
+                        completed_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', show.id)
+
+                if (updateError) {
+                    console.error(`  ❌ Error updating:`, updateError)
+                    errors++
+                } else {
+                    console.log(`  ✅ Fixed!\n`)
+                    fixed++
+                }
+            }
+            // If show ended but marked as watching, fix it
+            else if (showEnded && show.status === 'watching') {
+                console.log(`  🔄 Updating to 'completed' (show has ended and all episodes watched)`)
 
                 const { error: updateError } = await supabase
                     .from('watchlist')

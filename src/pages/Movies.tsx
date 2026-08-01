@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react'
-import { supabase } from '../services/supabaseClient'
+import { useLibraryStore } from '../stores/useLibraryStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
@@ -10,37 +10,21 @@ import { usePageTitle } from '../hooks/usePageTitle'
 const Movies: React.FC = () => {
     usePageTitle('Trackist - Movies')
     const { clearScrollPosition } = useScrollRestoration()
-    const { searchQuery } = useSearch()
-    const [items, setItems] = useState<WatchlistItem[]>([])
-    const [loading, setLoading] = useState(true)
+    const { committedQuery } = useSearch()
+    
+    // Use global store
+    const store = useLibraryStore()
+    const movies = store.movies
+    
     const [confirmModal, setConfirmModal] = useState<{
         isOpen: boolean
         action: 'watch' | 'unwatch' 
         item: TMDBResult
     } | null>(null)
-    
 
+    // Scroll to top when page loads
     useEffect(() => {
-        const fetchWatchlist = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) {
-                setLoading(false)
-                return
-            }
-
-            const { data, error } = await supabase
-                .from('watchlist')
-                .select('*')
-                .eq('user_id', user.id)
-                .eq('media_type', 'movie')
-                .order('updated_at', { ascending: false })
-
-            if (!error) {
-                setItems(data || [])
-            }
-            setLoading(false)
-        }
-        fetchWatchlist()
+        window.scrollTo(0, 0)
     }, [])
 
     // Clear scroll position when navigating to detail page
@@ -54,25 +38,18 @@ const Movies: React.FC = () => {
     }, [clearScrollPosition])
 
     const updateStatus = async (id: string, status: string) => {
-        const updateData: Record<string, string> = { status, updated_at: new Date().toISOString() }
-        if (status === 'completed') {
-            updateData.completed_at = new Date().toISOString()
-        }
-        const { error } = await supabase.from('watchlist').update(updateData).eq('id', id)
-        if (!error) {
-            setItems(items.map(item => item.id === id ? { ...item, status: status as WatchlistItem['status'] } : item))
-        }
+        await store.updateStatus(id, status as WatchlistItem['status'])
     }
 
     const markAsWatched = async (tmdbItem: TMDBResult) => {
-        const watchlistItem = items.find(item => item.tmdb_id === tmdbItem.id)
+        const watchlistItem = movies.find(item => item.tmdb_id === tmdbItem.id)
         if (watchlistItem) {
             await updateStatus(watchlistItem.id, 'completed')
         }
     }
 
     const markAsUnwatched = async (tmdbItem: TMDBResult) => {
-        const watchlistItem = items.find(item => item.tmdb_id === tmdbItem.id)
+        const watchlistItem = movies.find(item => item.tmdb_id === tmdbItem.id)
         if (watchlistItem) {
             await updateStatus(watchlistItem.id, 'planning')
         }
@@ -90,23 +67,15 @@ const Movies: React.FC = () => {
         setConfirmModal(null)
     }
 
-    // Filter items based on global search
+    // Filter items based on global search (strict movie-type lock)
     const filteredItems = useMemo(() => {
-        if (!searchQuery) return items
-        return items.filter(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()))
-    }, [items, searchQuery])
+        if (!committedQuery) return movies
+        return movies.filter(item => item.title.toLowerCase().includes(committedQuery.toLowerCase()))
+    }, [movies, committedQuery])
 
     const watchlistItems = filteredItems.filter(item => item.status === 'planning')
 
     const visibleWatchlistItems = watchlistItems
-
-    if (loading) return (
-        <section className="dashboard-page">
-            <div className="dashboard-shell">
-                <div className="discover-loading"><div className="discover-spinner" /><p>Loading...</p></div>
-            </div>
-        </section>
-    )
 
     return (
         <div className="discover-page">

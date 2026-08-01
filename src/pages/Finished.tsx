@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useMemo } from 'react'
-import { supabase } from '../services/supabaseClient'
+import React, { useEffect, useMemo } from 'react'
+import { useLibraryStore } from '../stores/useLibraryStore'
 import MediaCard from '../components/media/MediaCard'
 import type { WatchlistItem, TMDBResult } from '../types'
 import { useScrollRestoration } from '../hooks/useScrollRestoration'
@@ -9,31 +9,15 @@ import { usePageTitle } from '../hooks/usePageTitle'
 const Finished: React.FC = () => {
     usePageTitle('Trackist - Finished')
     const { clearScrollPosition } = useScrollRestoration()
-    const { searchQuery } = useSearch()
-    const [items, setItems] = useState<WatchlistItem[]>([])
-    const [loading, setLoading] = useState(true)
+    const { committedQuery } = useSearch()
+    
+    // Use global store
+    const store = useLibraryStore()
+    const finished = store.finished
 
+    // Scroll to top when page loads
     useEffect(() => {
-        const fetchFinished = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) {
-                setLoading(false)
-                return
-            }
-
-            const { data, error } = await supabase
-                .from('watchlist')
-                .select('*')
-                .eq('user_id', user.id)
-                .in('status', ['completed', 'caught_up'])
-                .order('updated_at', { ascending: false })
-
-            if (!error) {
-                setItems(data || [])
-            }
-            setLoading(false)
-        }
-        fetchFinished()
+        window.scrollTo(0, 0)
     }, [])
 
     // Clear scroll position when navigating to detail page
@@ -46,11 +30,11 @@ const Finished: React.FC = () => {
         return () => window.removeEventListener('beforeunload', handleNavigation)
     }, [clearScrollPosition])
 
-    // Filter items based on global search
+    // Filter items based on global search (both movie + tv types)
     const filteredItems = useMemo(() => {
-        if (!searchQuery) return items
-        return items.filter(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()))
-    }, [items, searchQuery])
+        if (!committedQuery) return finished
+        return finished.filter(item => item.title.toLowerCase().includes(committedQuery.toLowerCase()))
+    }, [finished, committedQuery])
 
     const finishedMovies = filteredItems.filter(item => item.media_type === 'movie')
     const finishedTVShows = filteredItems.filter(item => item.media_type === 'tv' || item.media_type === 'anime')
@@ -61,14 +45,6 @@ const Finished: React.FC = () => {
         poster_path: item.poster_path,
         media_type: item.media_type === 'anime' ? 'tv' : item.media_type
     })
-
-    if (loading) return (
-        <section className="dashboard-page">
-            <div className="dashboard-shell">
-                <div className="discover-loading"><div className="discover-spinner" /><p>Loading...</p></div>
-            </div>
-        </section>
-    )
 
     return (
         <div className="discover-page">
@@ -115,7 +91,7 @@ const Finished: React.FC = () => {
                     )}
                 </div>
 
-                {items.length === 0 && (
+                {finished.length === 0 && (
                     <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>
                         No finished movies or TV shows yet. Complete some from your watchlist!
                     </p>

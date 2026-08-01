@@ -4,6 +4,7 @@ import { supabase } from './services/supabaseClient'
 import { updateLastActive } from './services/profileService'
 import type { User } from '@supabase/supabase-js'
 import { SearchProvider } from './contexts/SearchContext'
+import { useLibraryStore } from './stores/useLibraryStore'
 import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 import SecondaryNavbar from './components/layout/SecondaryNavbar'
@@ -51,6 +52,11 @@ const AppContent: React.FC = () => {
                 const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
                     if (!active) return
                     setUser(nextSession?.user || null)
+                    
+                    // Reset library store on logout
+                    if (!nextSession?.user) {
+                        useLibraryStore.getState().reset()
+                    }
                 })
 
                 subscription = authSubscription
@@ -76,6 +82,8 @@ const AppContent: React.FC = () => {
     useEffect(() => {
         if (!loading && user) {
             void updateLastActive()
+            // Initialize library store once at app startup
+            void useLibraryStore.getState().fetchInitialLibrary(user.id)
         }
     }, [loading, user])
 

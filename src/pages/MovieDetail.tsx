@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { supabase } from '../services/supabaseClient'
 import { getMovieDetails, imageUrlOriginal, getFanartImages, getBestBackdropPath } from '../services/tmdbService'
+import { useLibraryStore } from '../stores/useLibraryStore'
+import { supabase } from '../services/supabaseClient'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult, WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -22,6 +23,9 @@ const MovieDetail: React.FC = () => {
     const [showCast, setShowCast] = useState(false)
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean } | null>(null)
     const [markWatchedModal, setMarkWatchedModal] = useState<{ isOpen: boolean; markAsWatched: boolean } | null>(null)
+
+    // Use global store
+    const libraryStore = useLibraryStore()
 
     useEffect(() => {
         window.scrollTo(0, 0)
@@ -47,20 +51,12 @@ const MovieDetail: React.FC = () => {
                     if (trailer) setTrailerKey(trailer.key)
                 }
 
-                // Check if in watchlist
-                const { data: { user } } = await supabase.auth.getUser()
-                if (user) {
-                    const { data: watchlistData } = await supabase
-                        .from('watchlist')
-                        .select('id, status')
-                        .eq('user_id', user.id)
-                        .eq('tmdb_id', Number(id))
-                        .single()
-                    setIsInWatchlist(!!watchlistData)
-                    if (watchlistData) {
-                        setWatchlistId(watchlistData.id)
-                        setWatchlistStatus(watchlistData.status)
-                    }
+                // Check if in watchlist using global store
+                const watchlistItem = libraryStore.allItems.find(item => item.tmdb_id === Number(id))
+                setIsInWatchlist(!!watchlistItem)
+                if (watchlistItem) {
+                    setWatchlistId(watchlistItem.id)
+                    setWatchlistStatus(watchlistItem.status)
                 }
             } catch (err) {
                 console.error('Failed to load movie details:', err)
@@ -68,7 +64,7 @@ const MovieDetail: React.FC = () => {
             setLoading(false)
         }
         fetchDetails()
-    }, [id])
+    }, [id, libraryStore])
 
     const formatRuntime = (minutes?: number): string => {
         if (!minutes) return ''
@@ -80,62 +76,61 @@ const MovieDetail: React.FC = () => {
         return `${mins}m`
     }
 
-const getAgeRating = (): string => {
-    if (!details?.release_dates?.results) return ''
-    const usRelease = details.release_dates.results.find((r: { iso_3166_1: string }) => r.iso_3166_1 === 'US')
-    if (usRelease?.release_dates?.[0]?.certification) {
-        return usRelease.release_dates[0].certification
+    const getAgeRating = (): string => {
+        if (!details?.release_dates?.results) return ''
+        const usRelease = details.release_dates.results.find((r: { iso_3166_1: string }) => r.iso_3166_1 === 'US')
+        if (usRelease?.release_dates?.[0]?.certification) {
+            return usRelease.release_dates[0].certification
+        }
+        return ''
     }
-    return ''
-}
 
-const getAgeRatingTooltip = (): string => {
-    const rating = getAgeRating()
-    const tooltips: Record<string, string> = {
-        'G': 'General Audiences - All ages admitted',
-        'PG': 'Parental Guidance Suggested - Some material may not be suitable for children',
-        'PG-13': 'Parents Strongly Cautioned - Some material may be inappropriate for children under 13',
-        'R': 'Restricted - Under 17 requires accompanying parent or adult guardian',
-        'NC-17': 'Adults Only - No one 17 and under admitted',
-        'NR': 'Not Rated - Film has not been rated by the MPAA',
-        'UR': 'Unrated - Film has not been rated',
-        'TV-Y': 'All Children - Suitable for all children',
-        'TV-Y7': 'Directed to Older Children - Suitable for children age 7 and up',
-        'TV-G': 'General Audience - Suitable for all ages',
-        'TV-PG': 'Parental Guidance Suggested - Some material may not be suitable for children',
-        'TV-14': 'Parents Strongly Cautioned - Some material may not be suitable for children under 14',
-        'TV-MA': 'Mature Audience Only - Specifically designed for adults',
+    const getAgeRatingTooltip = (): string => {
+        const rating = getAgeRating()
+        const tooltips: Record<string, string> = {
+            'G': 'General Audiences - All ages admitted',
+            'PG': 'Parental Guidance Suggested - Some material may not be suitable for children',
+            'PG-13': 'Parents Strongly Cautioned - Some material may be inappropriate for children under 13',
+            'R': 'Restricted - Under 17 requires accompanying parent or adult guardian',
+            'NC-17': 'Adults Only - No one 17 and under admitted',
+            'NR': 'Not Rated - Film has not been rated by the MPAA',
+            'UR': 'Unrated - Film has not been rated',
+            'TV-Y': 'All Children - Suitable for all children',
+            'TV-Y7': 'Directed to Older Children - Suitable for children age 7 and up',
+            'TV-G': 'General Audience - Suitable for all ages',
+            'TV-PG': 'Parental Guidance Suggested - Some material may not be suitable for children',
+            'TV-14': 'Parents Strongly Cautioned - Some material may not be suitable for children under 14',
+            'TV-MA': 'Mature Audience Only - Specifically designed for adults',
+        }
+        return tooltips[rating] || rating
     }
-    return tooltips[rating] || rating
-}
 
     const getLogoUrl = (): string | null => {
-            if (details?.images?.logos) {
-                const logos = details.images.logos as Array<{ file_path: string; iso_639_1?: string | null }>
-                const englishLogo = logos.find(
-                    (logo) => logo.iso_639_1 === 'en'
-                )
-                if (englishLogo) {
-                    return imageUrlOriginal(englishLogo.file_path)
-                }
-                const noLanguageLogo = logos.find(
-                    (logo) => logo.iso_639_1 === null || logo.iso_639_1 === ''
-                )
-                if (noLanguageLogo) {
-                    return imageUrlOriginal(noLanguageLogo.file_path)
-                }
-                if (logos.length > 0) {
-                    return imageUrlOriginal(logos[0].file_path)
-                }
+        if (details?.images?.logos) {
+            const logos = details.images.logos as Array<{ file_path: string; iso_639_1?: string | null }>
+            const englishLogo = logos.find(
+                (logo) => logo.iso_639_1 === 'en'
+            )
+            if (englishLogo) {
+                return imageUrlOriginal(englishLogo.file_path)
             }
-            if (fanartImages?.hdmovielogo?.[0]?.url) {
-                return fanartImages.hdmovielogo[0].url
+            const noLanguageLogo = logos.find(
+                (logo) => logo.iso_639_1 === null || logo.iso_639_1 === ''
+            )
+            if (noLanguageLogo) {
+                return imageUrlOriginal(noLanguageLogo.file_path)
             }
-        
-            return null
-        } 
+            if (logos.length > 0) {
+                return imageUrlOriginal(logos[0].file_path)
+            }
+        }
+        if (fanartImages?.hdmovielogo?.[0]?.url) {
+            return fanartImages.hdmovielogo[0].url
+        }
+    
+        return null
+    } 
 
-        
     const handleAddToWatchlist = async () => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user || !details) {
@@ -144,43 +139,39 @@ const getAgeRatingTooltip = (): string => {
         }
 
         setAdding(true)
-        const { data, error } = await supabase.from('watchlist').insert({
+
+        const newItem: WatchlistItem = {
+            id: crypto.randomUUID(),
             user_id: user.id,
             media_type: 'movie',
             tmdb_id: details.id,
             title: details.title || '',
-            poster_path: details.poster_path,
+            poster_path: details.poster_path || undefined,
             overview: details.overview,
             release_date: details.release_date,
             vote_average: details.vote_average,
-            status: 'planning'
-        }).select().single()
-
-        if (error) {
-            alert('Error: ' + error.message)
-        } else if (data) {
-            setIsInWatchlist(true)
-            setWatchlistId(data.id)
-            setWatchlistStatus(data.status)
+            status: 'planning',
+            added_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
         }
+
+        // Optimistic update via store
+        await libraryStore.addItem(newItem)
+        
+        setWatchlistId(newItem.id)
+        setWatchlistStatus('planning')
         setAdding(false)
     }
 
     const handleRemoveFromWatchlist = async () => {
         if (!watchlistId) return
 
-        const { error } = await supabase
-            .from('watchlist')
-            .delete()
-            .eq('id', watchlistId)
-
-        if (error) {
-            alert('Error: ' + error.message)
-        } else {
-            setIsInWatchlist(false)
-            setWatchlistId(null)
-            setWatchlistStatus(null)
-        }
+        // Optimistic update via store
+        await libraryStore.removeItem(watchlistId)
+        
+        setIsInWatchlist(false)
+        setWatchlistId(null)
+        setWatchlistStatus(null)
         setConfirmModal(null)
     }
 
@@ -256,7 +247,7 @@ const getAgeRatingTooltip = (): string => {
                         </div>
 
                         
-                        
+
 
                         {genres.length > 0 && (
                             <div className="detail-page__genres">
@@ -306,17 +297,9 @@ const getAgeRatingTooltip = (): string => {
                                         onClick={async () => {
                                             await handleAddToWatchlist()
                                             if (watchlistId) {
-                                                const { error } = await supabase
-                                                    .from('watchlist')
-                                                    .update({ 
-                                                        status: 'completed',
-                                                        completed_at: new Date().toISOString(),
-                                                        updated_at: new Date().toISOString()
-                                                    })
-                                                    .eq('id', watchlistId)
-                                                if (!error) {
-                                                    setWatchlistStatus('completed')
-                                                }
+                                                // Update status to completed via store
+                                                await libraryStore.updateStatus(watchlistId, 'completed')
+                                                setWatchlistStatus('completed')
                                             }
                                         }}
                                         disabled={adding}
@@ -338,7 +321,7 @@ const getAgeRatingTooltip = (): string => {
                                         className="detail-page__icon-btn"
                                         onClick={() => {
                                             if (!watchlistId) return
-                                            const markAsWatched = details?.status !== 'completed'
+                                            const markAsWatched = watchlistStatus !== 'completed'
                                             setMarkWatchedModal({ isOpen: true, markAsWatched })
                                         }}
                                         title={watchlistStatus === 'completed' ? 'Mark as Unwatched' : 'Mark as Watched'}
@@ -418,21 +401,9 @@ const getAgeRatingTooltip = (): string => {
                     message={markWatchedModal.markAsWatched ? 'Are you sure you want to mark this movie as watched?' : 'Are you sure you want to mark this movie as unwatched?'}
                     onConfirm={async () => {
                         if (!watchlistId) return
-                        const newStatus = markWatchedModal.markAsWatched ? 'completed' : 'watching'
-                        const { error } = await supabase
-                            .from('watchlist')
-                            .update({ 
-                                status: newStatus,
-                                completed_at: newStatus === 'completed' ? new Date().toISOString() : null,
-                                updated_at: new Date().toISOString()
-                            })
-                            .eq('id', watchlistId)
-                        if (error) {
-                            alert('Error: ' + error.message)
-                        } else {
-                            setWatchlistStatus(newStatus)
-                            setDetails(prev => prev ? { ...prev, status: newStatus as WatchlistItem['status'] } : null)
-                        }
+                        const newStatus = markWatchedModal.markAsWatched ? 'completed' : 'planning'
+                        await libraryStore.updateStatus(watchlistId, newStatus)
+                        setWatchlistStatus(newStatus)
                         setMarkWatchedModal(null)
                     }}
                     onCancel={() => setMarkWatchedModal(null)}

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { supabase } from '../services/supabaseClient'
 import { getTVDetails, getTVSeasonDetails, imageUrlOriginal, getFanartImages } from '../services/tmdbService'
-import { checkAndUpdateCompleted } from '../services/watchlistService'
+import { markEpisodeWatched, unmarkEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
+import { useLibraryStore } from '../stores/useLibraryStore'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -30,6 +30,9 @@ const EpisodeDetail: React.FC = () => {
     const [watched, setWatched] = useState(false)
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean } | null>(null)
 
+    // Use global store
+    const libraryStore = useLibraryStore()
+
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [id, season, episode])
@@ -50,30 +53,23 @@ const EpisodeDetail: React.FC = () => {
                 const ep = seasonData.episodes?.find((e: EpisodeData) => e.episode_number === Number(episode))
                 setEpisodeData(ep)
 
-                // Check if in watchlist
-                const { data: { user } } = await supabase.auth.getUser()
-                if (user) {
-                    const { data: watchlistData } = await supabase
-                        .from('watchlist')
-                        .select('*')
-                        .eq('user_id', user.id)
-                        .eq('tmdb_id', Number(id))
-                        .single()
-                    if (watchlistData) {
-                        setIsInWatchlist(true)
-                        setWatchlistId(watchlistData.id)
+                // Check if in watchlist using global store
+                const watchlistItem = libraryStore.allItems.find(item => item.tmdb_id === Number(id))
+                if (watchlistItem) {
+                    setIsInWatchlist(true)
+                    setWatchlistId(watchlistItem.id)
 
-                        // Check if episode is watched
-                        const { data: episodeData } = await supabase
-                            .from('watchlist_episodes')
-                            .select('*')
-                            .eq('watchlist_id', watchlistData.id)
-                            .eq('season_number', Number(season))
-                            .eq('episode_number', Number(episode))
-                            .maybeSingle()
-                        if (episodeData) {
-                            setWatched(episodeData.watched)
-                        }
+                    // Check if episode is watched from the watchlist_episodes table
+                    // Note: We still need to check this from DB as it's not in the main watchlist cache
+                    const { data: episodeWatchData } = await supabase
+                        .from('watchlist_episodes')
+                        .select('*')
+                        .eq('watchlist_id', watchlistItem.id)
+                        .eq('season_number', Number(season))
+                        .eq('episode_number', Number(episode))
+                        .maybeSingle()
+                    if (episodeWatchData) {
+                        setWatched(true)
                     }
                 }
             } catch (err) {
@@ -82,7 +78,7 @@ const EpisodeDetail: React.FC = () => {
             setLoading(false)
         }
         fetchData()
-    }, [id, season, episode])
+    }, [id, season, episode, libraryStore])
 
     const getLogoUrl = (): string | null => {
         if (tvDetails?.images?.logos) {
@@ -109,7 +105,7 @@ const EpisodeDetail: React.FC = () => {
     }
 
     const handleToggleWatched = async () => {
-        if (!watchlistId || !id || !season || !episode) return
+        if (!watchlistId || !id || !season || !episode || !episodeData) return
 
         // If trying to unwatch, show confirmation modal
         if (watched) {
@@ -117,55 +113,28 @@ const EpisodeDetail: React.FC = () => {
             return
         }
 
-        // Mark as watched
+        // Mark as watched - optimistic update
         setWatched(true)
 
         try {
-            const { data: existingEp } = await supabase
-                .from('watchlist_episodes')
-                .select('*')
-                .eq('watchlist_id', watchlistId)
-                .eq('season_number', Number(season))
-                .eq('episode_number', Number(episode))
-                .maybeSingle()
+            const success = await markEpisodeWatched(watchlistId, Number(season), Number(episode), {
+                tmdb_episode_id: episodeData.id,
+                title: episodeData.name,
+                still_path: episodeData.still_path,
+                overview: episodeData.overview,
+                vote_average: episodeData.vote_average,
+                air_date: episodeData.air_date,
+                runtime: episodeData.runtime
+            })
 
-            if (existingEp) {
-                const { error } = await supabase
-                    .from('watchlist_episodes')
-                    .update({
-                        watched: true,
-                        watched_at: new Date().toISOString(),
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('id', existingEp.id)
-
-                if (error) {
-                    setWatched(false)
-                    console.error('Failed to update episode:', error)
-                }
-            } else {
-                const { error } = await supabase
-                    .from('watchlist_episodes')
-                    .insert({
-                        watchlist_id: watchlistId,
-                        season_number: Number(season),
-                        episode_number: Number(episode),
-                        tmdb_episode_id: episodeData?.id,
-                        title: episodeData?.name,
-                        still_path: episodeData?.still_path,
-                        overview: episodeData?.overview,
-                        vote_average: episodeData?.vote_average,
-                        air_date: episodeData?.air_date,
-                        runtime: episodeData?.runtime,
-                        watched: true,
-                        watched_at: new Date().toISOString()
-                    })
-
-                if (error) {
-                    setWatched(false)
-                    console.error('Failed to insert episode:', error)
-                }
+            if (!success) {
+                setWatched(false)
+                console.error('Failed to mark episode as watched')
+                return
             }
+
+            // Update watchlist status
+            await checkAndUpdateCompleted(watchlistId, Number(id))
         } catch (err) {
             setWatched(false)
             console.error('Failed to mark episode as watched:', err)
@@ -179,28 +148,15 @@ const EpisodeDetail: React.FC = () => {
         setConfirmModal(null)
 
         try {
-            const { data: existingEp } = await supabase
-                .from('watchlist_episodes')
-                .select('*')
-                .eq('watchlist_id', watchlistId)
-                .eq('season_number', Number(season))
-                .eq('episode_number', Number(episode))
-                .maybeSingle()
-
-            if (existingEp) {
-                const { error } = await supabase
-                    .from('watchlist_episodes')
-                    .delete()
-                    .eq('id', existingEp.id)
-
-                if (error) {
-                    setWatched(true)
-                    console.error('Failed to delete episode:', error)
-                } else {
-                    // Check if we need to reset status to planning (no episodes watched)
-                    await checkAndUpdateCompleted(watchlistId, Number(id))
-                }
+            const success = await unmarkEpisodeWatched(watchlistId, Number(season), Number(episode))
+            if (!success) {
+                setWatched(true)
+                console.error('Failed to unmark episode')
+                return
             }
+
+            // Check if we need to reset status to planning (no episodes watched)
+            await checkAndUpdateCompleted(watchlistId, Number(id))
         } catch (err) {
             setWatched(true)
             console.error('Failed to unwatch episode:', err)
@@ -258,7 +214,7 @@ const EpisodeDetail: React.FC = () => {
                                         S{season.toString().padStart(2, "0")}
                                         E{episode.toString().padStart(2, "0")}
                                     </span>
-                                    )}
+                                )}
                                 {episodeData.air_date && <span className="detail-page__year">{episodeData.air_date}</span>}
                                 {episodeData.runtime && <span className="detail-page__runtime">{episodeData.runtime} min</span>}
                                 {episodeData.vote_average && <span className="detail-page__rating">★ {episodeData.vote_average.toFixed(1)}</span>}

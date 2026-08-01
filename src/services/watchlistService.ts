@@ -168,11 +168,18 @@ export const updateStatusToWatching = async (watchlistId: string): Promise<void>
 
 /**
  * Check if the user has watched all episodes of the latest season.
- * If so, update status to 'caught_up'.
+ * If so, update status to 'caught_up' (only if show is still airing).
+ * If the show has ended, this function does nothing - checkAndUpdateCompleted handles that.
  */
 export const checkAndUpdateCaughtUp = async (watchlistId: string, tmdbId: number): Promise<void> => {
     try {
         const details = await getTVDetails(tmdbId)
+        
+        // Don't update to caught_up if the show has ended - let checkAndUpdateCompleted handle it
+        if (details.status === 'Ended' || details.status === 'Canceled') {
+            return
+        }
+        
         const latestSeasonNumber = details.number_of_seasons || 1
 
         // Get the latest season details from TMDB
@@ -260,7 +267,7 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
 
         if (watchedCount >= totalReleasedEpisodes) {
             // Check TMDB show status to determine if truly completed or just caught up
-            const showEnded = details.status === 'Ended'
+            const showEnded = details.status === 'Ended' || details.status === 'Canceled'
 
             await supabase
                 .from('watchlist')
@@ -278,6 +285,16 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
                     status: 'planning',
                     current_episode: 0,
                     current_season: 1,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', watchlistId)
+        } else {
+            // Some episodes watched but not all - set to watching
+            await supabase
+                .from('watchlist')
+                .update({
+                    status: 'watching',
+                    current_episode: watchedCount,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', watchlistId)
@@ -386,7 +403,7 @@ export const recalculateProgress = async (showId: string): Promise<{ fixed: bool
 
         if (totalReleasedEpisodes > 0 && watchedCount >= totalReleasedEpisodes) {
             // Check TMDB show status to determine if truly completed or just caught up
-            const showEnded = details.status === 'Ended'
+            const showEnded = details.status === 'Ended' || details.status === 'Canceled'
             newStatus = showEnded ? 'completed' : 'caught_up'
             newCurrentEpisode = totalReleasedEpisodes
             const watchedEps = await getWatchedEpisodes(showId)

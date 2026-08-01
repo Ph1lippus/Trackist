@@ -6,6 +6,7 @@ import MediaCard from '../components/media/MediaCard'
 import { discoverMovies, discoverTV, getGenres } from '../services/tmdbService'
 import { addToList, removeFromList, updateList, createList } from '../services/profileService'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useSearch } from '../hooks/useSearch'
 
 type TabType = 'all' | 'movie' | 'tv'
 type BrowseMediaType = 'movie' | 'tv'
@@ -15,6 +16,7 @@ const Lists: React.FC = () => {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const location = useLocation()
+    const { committedQuery } = useSearch()
     
     // List state
     const [lists, setLists] = useState<UserList[]>([])
@@ -115,6 +117,7 @@ const Lists: React.FC = () => {
     // Load list details if ID is provided
     useEffect(() => {
         if (id && id !== 'new') {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             loadListDetails(id)
         } else if (id === 'new' || location.pathname === '/Lists/new') {
             // Show create new list form
@@ -127,6 +130,7 @@ const Lists: React.FC = () => {
             setListItemIds(new Set())
             setLoading(false)
         } else {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             fetchLists()
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -207,6 +211,7 @@ const Lists: React.FC = () => {
     // Fetch browse data when on list page
     useEffect(() => {
         if (selectedList || isNewList) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             fetchBrowseData(1, true)
         }
     }, [selectedList, isNewList, browseMediaType, sortBy, selectedGenre, fetchBrowseData])
@@ -333,6 +338,16 @@ const Lists: React.FC = () => {
             setWatchlistIds(prev => new Set([...prev, item.id]))
         }
     }, [watchlistIds])
+
+    // Filter lists based on global search (public + user's own lists)
+    const filteredLists = useMemo(() => {
+        if (!committedQuery) return lists
+        const q = committedQuery.toLowerCase()
+        return lists.filter(list =>
+            list.title.toLowerCase().includes(q) ||
+            (list.description || '').toLowerCase().includes(q)
+        )
+    }, [lists, committedQuery])
 
     // Filter list items based on active tab
     const filteredListItems = useMemo(() => {
@@ -601,10 +616,12 @@ const Lists: React.FC = () => {
                     </div>
 
                     <div className="lists-page__list">
-                        {lists.length === 0 ? (
-                            <p className="lists-page__empty">No lists yet. Create your first list!</p>
+                        {filteredLists.length === 0 ? (
+                            <p className="lists-page__empty">
+                                {committedQuery ? 'No lists match your search' : 'No lists yet. Create your first list!'}
+                            </p>
                         ) : (
-                            lists.map(list => (
+                            filteredLists.map(list => (
                                 <div
                                     key={list.id}
                                     className={`lists-page__list-item ${selectedList ? 'lists-page__list-item--active' : ''}`}

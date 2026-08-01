@@ -4,7 +4,7 @@
 CREATE TABLE public.watchlist (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
-  media_type text NOT NULL CHECK (media_type = ANY (ARRAY['movie'::text, 'tv'::text, 'anime'::text])),
+  media_type text NOT NULL CHECK (media_type = ANY (ARRAY['movie'::text, 'tv'::text])),
   tmdb_id integer,
   title text NOT NULL,
   poster_path text,
@@ -67,9 +67,8 @@ CREATE TABLE public.lists (
 CREATE TABLE public.list_items (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   list_id uuid NOT NULL,
-  media_type text NOT NULL CHECK (media_type = ANY (ARRAY['movie'::text, 'tv'::text, 'anime'::text])),
+  media_type text NOT NULL CHECK (media_type = ANY (ARRAY['movie'::text, 'tv'::text])),
   tmdb_id integer NOT NULL,
-  anilist_id integer,
   title text NOT NULL,
   poster_path text,
   overview text,

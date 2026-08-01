@@ -26,7 +26,7 @@ const Discover: React.FC = () => {
     const actions = useDiscoverActions()
     const watchlistIds = useDiscoverWatchlistIds()
     const store = useDiscoverStore()
-    const { searchQuery } = useSearch()
+    const { committedQuery } = useSearch()
     
     // State for confirmation modal when removing from watchlist
     const [removeConfirmItem, setRemoveConfirmItem] = useState<TMDBResult | null>(null)
@@ -51,11 +51,11 @@ const Discover: React.FC = () => {
     
     // Sync global search with discover store
     useEffect(() => {
-        if (searchQuery !== filters.query) {
-            actions.setQuery(searchQuery)
+        if (committedQuery !== filters.query) {
+            actions.setQuery(committedQuery)
             actions.fetchData(1)
         }
-    }, [searchQuery, filters.query, actions])
+    }, [committedQuery, filters.query, actions])
     
     // Handle visibility changes for scroll restoration
     useEffect(() => {
