@@ -266,7 +266,7 @@ const Discover: React.FC = () => {
                                         actions.fetchData(store.page + 1)
                                     }
                                 }}
-                                overscan={800}
+                                overscan={1200}
                                 listClassName="discover-grid"
                                 itemContent={(index) => {
                                     const item = filteredResults[index];
