@@ -795,11 +795,11 @@ const TVShowDetail: React.FC = () => {
                                         }}>
                                             <div className="detail-page__episode-details">
                                                 <strong>{ep.title || `Episode ${ep.episode_number}`}</strong>
-                                                <div className="detail-page__episode-meta">
-                                                    {ep.air_date && <span>{ep.air_date}</span>}
-                                                    {ep.runtime && <span>{ep.runtime} min</span>}
-                                                    {isEpisodeReleased(ep) && ep.vote_average && <span>★ {ep.vote_average.toFixed(1)}</span>}
-                                                </div>
+                                                    <div className="detail-page__episode-meta">
+                                                        {ep.air_date && <span>{ep.air_date}</span>}
+                                                        {ep.runtime && <span>{ep.runtime} min</span>}
+                                                        {isEpisodeReleased(ep) && ep.vote_average && ep.vote_average > 0 && <span>★ {ep.vote_average.toFixed(1)}</span>}
+                                                    </div>
                                             </div>
                                         </div>
                                         <button 

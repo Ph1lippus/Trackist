@@ -104,14 +104,7 @@ export function formatDateString(dateString: string, options?: Intl.DateTimeForm
     const [year, month, day] = dateString.split('-').map(Number)
     const date = new Date(Date.UTC(year, month - 1, day))
     
-    const defaultOptions: Intl.DateTimeFormatOptions = {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    }
-    
-    return date.toLocaleDateString('en-US', { ...defaultOptions, ...options })
+    return date.toLocaleDateString('en-US', options || {})
 }
 
 /**

@@ -29,50 +29,85 @@ html, body {
     height: 100%;
     margin: 0;
 }
+/* ✅ FIXED: Removed the class dot so it targets the native body element */
 body {
-    background-color: #000000;
+    background-color: #06060f;
     background-image: 
-        radial-gradient(ellipse at 20% 30%, rgba(133, 138, 227, 0.05) 0%, transparent 50%),
-        radial-gradient(ellipse at 80% 70%, rgba(133, 138, 227, 0.03) 0%, transparent 50%),
-        radial-gradient(1px 1px at 2% 8%, rgba(255, 255, 255, 0.9), transparent),
-        radial-gradient(1px 1px at 7% 23%, rgba(255, 255, 255, 0.6), transparent),
-        radial-gradient(1.5px 1.5px at 15% 42%, rgba(255, 255, 255, 0.8), transparent),
-        radial-gradient(1px 1px at 22% 67%, rgba(255, 255, 255, 0.5), transparent),
-        radial-gradient(1.5px 1.5px at 31% 12%, rgba(255, 255, 255, 0.9), transparent),
-        radial-gradient(1px 1px at 38% 85%, rgba(255, 255, 255, 0.4), transparent),
-        radial-gradient(1px 1px at 44% 34%, rgba(255, 255, 255, 0.7), transparent),
-        radial-gradient(2px 2px at 52% 56%, rgba(255, 255, 255, 0.8), transparent),
-        radial-gradient(1px 1px at 59% 18%, rgba(255, 255, 255, 0.6), transparent),
-        radial-gradient(1.5px 1.5px at 67% 73%, rgba(255, 255, 255, 0.9), transparent),
-        radial-gradient(1px 1px at 73% 41%, rgba(255, 255, 255, 0.5), transparent),
-        radial-gradient(1px 1px at 81% 94%, rgba(255, 255, 255, 0.4), transparent),
-        radial-gradient(1.5px 1.5px at 88% 29%, rgba(255, 255, 255, 0.7), transparent),
-        radial-gradient(1px 1px at 94% 63%, rgba(255, 255, 255, 0.8), transparent),
-        radial-gradient(1px 1px at 48% 48%, rgba(255, 255, 255, 0.3), transparent),
-        radial-gradient(1px 1px at 12% 91%, rgba(255, 255, 255, 0.6), transparent),
-        radial-gradient(1.5px 1.5px at 26% 55%, rgba(255, 255, 255, 0.9), transparent),
-        radial-gradient(1px 1px at 35% 78%, rgba(255, 255, 255, 0.5), transparent),
-        radial-gradient(1px 1px at 43% 15%, rgba(255, 255, 255, 0.7), transparent),
-        radial-gradient(2px 2px at 51% 89%, rgba(255, 255, 255, 0.8), transparent),
-        radial-gradient(1px 1px at 58% 44%, rgba(255, 255, 255, 0.4), transparent),
-        radial-gradient(1.5px 1.5px at 66% 61%, rgba(255, 255, 255, 0.9), transparent),
-        radial-gradient(1px 1px at 74% 82%, rgba(255, 255, 255, 0.6), transparent),
-        radial-gradient(1px 1px at 82% 37%, rgba(255, 255, 255, 0.5), transparent),
-        radial-gradient(1.5px 1.5px at 91% 72%, rgba(255, 255, 255, 0.7), transparent),
-        radial-gradient(1px 1px at 96% 19%, rgba(255, 255, 255, 0.8), transparent),
-        radial-gradient(1px 1px at 3% 50%, rgba(255, 255, 255, 0.4), transparent),
-        radial-gradient(1.5px 1.5px at 18% 33%, rgba(255, 255, 255, 0.9), transparent),
-        radial-gradient(1px 1px at 29% 96%, rgba(255, 255, 255, 0.6), transparent),
-        radial-gradient(1px 1px at 42% 27%, rgba(255, 255, 255, 0.5), transparent);
-    background-size: 100% 100%;
+        /* Aurora layer 1 – Purple */
+        radial-gradient(ellipse at 20% 40%, rgba(133, 138, 227, 0.12) 0%, transparent 50%),
+        /* Aurora layer 2 – Green */
+        radial-gradient(ellipse at 60% 70%, rgba(104, 255, 174, 0.06) 0%, transparent 45%),
+        /* Aurora layer 3 – Deep blue */
+        radial-gradient(ellipse at 80% 20%, rgba(30, 60, 180, 0.08) 0%, transparent 50%),
+        /* Aurora layer 4 – Warm accent */
+        radial-gradient(ellipse at 40% 85%, rgba(180, 100, 255, 0.04) 0%, transparent 40%);
+    background-size: 200% 200%, 200% 200%, 200% 200%, 200% 200%;
     background-repeat: no-repeat;
     background-attachment: fixed;
+    
+    /* 
+       PERFORMANCE OPTIMIZATION: Moving heavy background-positions loops can cause scrolling stutter. 
+       Adding will-change alerts the browser to optimize this rendering track.
+    */
+    will-change: background-position;
+    animation: auroraShift 25s ease-in-out infinite alternate;
+    
     color: var(--color-platinum);
     font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
 }
+
+@keyframes auroraShift {
+    0% { background-position: 0% 50%, 100% 50%, 50% 50%, 30% 80%; }
+    50% { background-position: 50% 30%, 30% 80%, 80% 20%, 60% 50%; }
+    100% { background-position: 0% 50%, 100% 50%, 50% 50%, 30% 80%; }
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: -1;
+    background-image: 
+        /* Brighter stars */
+        radial-gradient(2px 2px at 5% 10%, rgba(255,255,255,0.9), transparent),
+        radial-gradient(2px 2px at 15% 45%, rgba(255,255,255,0.6), transparent),
+        radial-gradient(3px 3px at 25% 80%, rgba(255,255,255,0.8), transparent),
+        radial-gradient(2px 2px at 35% 20%, rgba(255,255,255,0.5), transparent),
+        radial-gradient(2px 2px at 48% 65%, rgba(255,255,255,0.7), transparent),
+        radial-gradient(3px 3px at 60% 35%, rgba(255,255,255,0.9), transparent),
+        radial-gradient(2px 2px at 72% 70%, rgba(255,255,255,0.4), transparent),
+        radial-gradient(2px 2px at 85% 25%, rgba(255,255,255,0.6), transparent),
+        radial-gradient(3px 3px at 92% 85%, rgba(255,255,255,0.8), transparent),
+        /* Dim background stars for depth */
+        radial-gradient(1px 1px at 8% 30%, rgba(255,255,255,0.2), transparent),
+        radial-gradient(1px 1px at 20% 60%, rgba(255,255,255,0.2), transparent),
+        radial-gradient(1px 1px at 42% 90%, rgba(255,255,255,0.2), transparent),
+        radial-gradient(1px 1px at 55% 15%, rgba(255,255,255,0.2), transparent),
+        radial-gradient(1px 1px at 78% 50%, rgba(255,255,255,0.2), transparent),
+        radial-gradient(1px 1px at 90% 45%, rgba(255,255,255,0.2), transparent);
+    
+    /* ✅ FIXED: Set size to cover to maintain crisp 1:1 circle aspect ratios on huge ultra-wide monitors */
+    background-size: cover;
+    background-repeat: repeat;
+    background-attachment: fixed;
+    
+    /* 
+       PERFORMANCE OPTIMIZATION: Using transform: translate3d(0,0,0) forces the browser 
+       to handle the star twinkle opacity on the device's GPU, preserving 60fps scrolling list speeds.
+    */
+    transform: translate3d(0, 0, 0);
+    animation: twinkle 6s ease-in-out infinite alternate;
+}
+
+@keyframes twinkle {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 0.8; } /* Lowered max opacity slightly so stars don't distract eyes from card details */
+}
+
 
 .page-main {
     align-items: center;
@@ -485,7 +520,7 @@ body {
     min-height: 100%;
 }
 .dashboard-shell {
-    max-width: 80%;
+    max-width: 90%;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
@@ -2996,7 +3031,7 @@ body {
 }
 
 .calendar-day {
-    min-height: 110px;
+    min-height: 130px;
     padding: 0.3rem;
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.06);
@@ -3012,9 +3047,9 @@ body {
 }
 
 .calendar-day--today {
-    border-color: var(--color-primary);
-    background: rgba(133, 138, 227, 0.08);
-    box-shadow: 0 0 12px rgba(133, 138, 227, 0.15);
+    border-color: var(--color-mint);
+    background: rgba(104, 255, 174, 0.08);
+    box-shadow: 0 0 12px rgba(104, 255, 174, 0.15);
 }
 
 .calendar-day--has-episodes {
@@ -3037,33 +3072,45 @@ body {
     opacity: 1;
 }
 
+.calendar-day, 
+.calendar-day div {
+    overflow: visible !important;
+}
+
+.calendar-episode {
+    position: relative;
+    z-index: 1;
+    cursor: pointer;
+    background: var(--color-black);
+    width: 72px;
+    height: 96px;
+    flex-shrink: 0;
+    border-radius: 12px !important;
+    overflow: hidden !important; 
+
+    /* Smooth, uniform transition for focus interactions */
+    transition: background 0.2s ease, filter 0.2s ease, border-color 0.2s ease;
+}
+
+.calendar-episode:hover {
+    filter: brightness(1.15); }
+
+/* Keep internal image compliance tight */
+.calendar-episode img {
+    border-radius: inherit !important;
+    transition: filter 0.2s ease;
+}
+
+
+
+
+
 .calendar-episodes {
     display: flex;
     flex-direction: row;
     gap: 0;
     position: relative;
     flex-wrap: nowrap;
-}
-
-.calendar-episode {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    overflow: hidden;
-    width: 72px;
-    height: 96px;
-    flex-shrink: 0;
-    position: relative;
-}
-
-.calendar-episode:hover {
-    background: rgba(133, 138, 227, 0.15);
-    border-color: var(--color-primary);
-    transform: translateX(2px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    z-index: 2;
 }
 
 .calendar-episode-poster {
@@ -4037,7 +4084,6 @@ button:focus-visible {
 
 /* ===== Media Card (unified replacement for discover-card) ===== */
 .media-card {
-    background: rgba(5, 5, 5, 0.5);
     overflow: hidden;
     transition: transform 0.2s ease, border-color 0.2s ease,
         box-shadow 0.2s ease;
@@ -6940,14 +6986,11 @@ i.fa-solid.fa-bookmark:hover {
     bottom: 0;
     width: 400px;
     max-width: 90vw;
-    background: rgba(10, 10, 15, 0.98);
-    backdrop-filter: blur(20px);
-    border-left: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: -8px 0 32px rgba(0, 0, 0, 0.5);
     z-index: 50;
     display: flex;
     flex-direction: column;
     animation: slideInRight 0.3s ease-out;
+    border-radius: 25px 0px 0px 0px ;
 }
 
 @keyframes slideInRight {
@@ -6966,7 +7009,9 @@ i.fa-solid.fa-bookmark:hover {
     justify-content: space-between;
     align-items: center;
     padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: transparent;
+    border-radius: 25px 0px 0px 25px;
+    backdrop-filter: blur(5px);
 }
 
 .upcoming-side-panel-title {
@@ -7008,8 +7053,8 @@ i.fa-solid.fa-bookmark:hover {
     display: flex;
     gap: 1rem;
     padding: 0.75rem;
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    background-color: transparent;
+    backdrop-filter: blur(12px);
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s ease;

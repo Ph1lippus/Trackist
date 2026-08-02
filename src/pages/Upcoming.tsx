@@ -210,7 +210,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                                     }
                                                 }}
                                                 style={{ 
-                                                    marginLeft: idx > 0 ? '-32px' : '0',
+                                                    marginLeft: idx > 0 ? '-20px' : '0',
                                                     position: 'relative',
                                                     zIndex: idx
                                                 }}
@@ -239,7 +239,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                                     setSelectedDate({ dateKey, items: dayItems })
                                                 }}
                                                 style={{ 
-                                                    marginLeft: '-32px',
+                                                    marginLeft: '-20px',
                                                     position: 'relative',
                                                     zIndex: 0
                                                 }}
@@ -260,9 +260,9 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                         <div className="upcoming-side-panel-header">
                             <h3 className="upcoming-side-panel-title">
                                 {formatDateString(selectedDate.dateKey, {
-                                    weekday: 'long',
                                     month: 'long', 
-                                    day: 'numeric' 
+                                    day: 'numeric',
+                                    year: 'numeric'
                                 })}
                             </h3>
                             <button 

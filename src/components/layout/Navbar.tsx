@@ -49,10 +49,10 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack 
     
     const showCalendarHeader = location.pathname === '/Upcoming' && currentMonth && navigateMonth && canGoBack;
     
-    const monthName = currentMonth ? formatDateString(
-        `${currentMonth.getUTCFullYear()}-${String(currentMonth.getUTCMonth() + 1).padStart(2, '0')}-01`,
-        { month: 'long', year: 'numeric' }
-    ) : '';
+    const monthName = currentMonth ? currentMonth.toLocaleDateString('en-US', { 
+        month: 'long', 
+        year: 'numeric' 
+    }) : '';
 
     useEffect(() => {
         // Get initial session
