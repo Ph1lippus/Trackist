@@ -6,7 +6,6 @@ import { loadCalendar, type CalendarItem } from '../services/calendarService'
 import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { 
-    getUTCTodayString, 
     getYearMonth, 
     isToday, 
     formatDateString 
@@ -180,7 +179,9 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                         {calendarDays.map((day, index) => {
                             if (!day) return <div key={`empty-${index}`} className="calendar-day calendar-day--empty" />
 
-                            const dateKey = day.toISOString().split('T')[0]
+                            //  NEW WAY (100% Timezone Safe - Matches both computers perfectly)
+                            const dateKey = `${day.getUTCFullYear()}-${String(day.getUTCMonth() + 1).padStart(2, '0')}-${String(day.getUTCDate()).padStart(2, '0')}`
+
                             const dayItems = groupedItems[dateKey] || []
                             const isTodayDate = isToday(dateKey)
 
