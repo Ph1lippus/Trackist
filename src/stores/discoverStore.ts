@@ -43,6 +43,7 @@ interface DiscoverState {
     isLoadingMore: boolean
     genres: { id: number; name: string }[]
     isDataLoaded: boolean
+    showAdded: boolean
 
     // Actions
     setQuery: (query: string) => void
@@ -51,6 +52,7 @@ interface DiscoverState {
     setSelectedGenre: (genre: number | null) => void
     setSelectedYear: (year: number | null) => void
     setWatchlistIds: (ids: Set<number>) => void
+    setShowAdded: (show: boolean) => void
     addToWatchlist: (id: number, item?: TMDBResult) => Promise<void>
     removeFromWatchlist: (id: number) => Promise<void>
     saveScroll: () => void
@@ -80,6 +82,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     isLoadingMore: false,
     genres: [],
     isDataLoaded: false,
+    showAdded: false,
 
     // Actions
     setQuery: (query) => set({ query }),
@@ -93,6 +96,8 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     setSelectedYear: (selectedYear) => set({ selectedYear }),
 
     setWatchlistIds: (watchlistIds) => set({ watchlistIds }),
+
+    setShowAdded: (showAdded) => set({ showAdded }),
 
     addToWatchlist: async (id, item?) => {
         const { data: { user } } = await supabase.auth.getUser()
@@ -167,6 +172,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         hasMore: true,
         scrollY: 0,
         isDataLoaded: false,
+        showAdded: false,
     }),
 
     reset: () => set({
@@ -566,6 +572,7 @@ useLibraryStore.subscribe((state) => {
 // Selector hooks for optimized re-renders
 export const useDiscoverResults = () => useDiscoverStore((state) => state.results)
 export const useDiscoverWatchlistIds = () => useDiscoverStore((state) => state.watchlistIds)
+export const useDiscoverShowAdded = () => useDiscoverStore((state) => state.showAdded)
 export const useDiscoverFilters = () => {
     const selector = useShallow((state: DiscoverState) => ({
         mediaType: state.mediaType,
@@ -573,6 +580,7 @@ export const useDiscoverFilters = () => {
         selectedGenre: state.selectedGenre,
         selectedYear: state.selectedYear,
         query: state.query,
+        showAdded: state.showAdded,
     }))
     return useDiscoverStore(selector)
 }
@@ -593,6 +601,7 @@ export const useDiscoverActions = () => {
         setSortBy: state.setSortBy,
         setSelectedGenre: state.setSelectedGenre,
         setSelectedYear: state.setSelectedYear,
+        setShowAdded: state.setShowAdded,
         resetFilters: state.resetFilters,
         saveScroll: state.saveScroll,
         addToWatchlist: state.addToWatchlist,

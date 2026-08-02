@@ -866,6 +866,7 @@ body::after {
     width: 100%;
     margin: 0 auto;
     padding: 1rem 0;
+    overflow-anchor: none;
 }
 
 /* Sentinel element for IntersectionObserver (invisible) */

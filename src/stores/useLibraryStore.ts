@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { supabase } from '../services/supabaseClient'
+import { invalidateUserCache } from '../services/cacheService'
+import { cacheService } from '../services/cacheService'
 import type { WatchlistItem } from '../types'
 
 // Extend WatchlistItem to include calculated progress field
@@ -55,13 +57,13 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
     // Fetch entire library once at boot
     fetchInitialLibrary: async (userId: string) => {
-        if (get().isInitialized) {
-            return // Already loaded
-        }
-
         if (!userId) {
             console.error('No userId provided to fetchInitialLibrary')
             return
+        }
+
+        if (get().isInitialized) {
+            return // Already loaded
         }
 
         set({ isLoading: true, error: null })
@@ -69,26 +71,40 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         try {
             console.log('Fetching library for user:', userId)
             
-            const { data, error } = await supabase
-                .from('watchlist')
-                .select(selectColumns)
-                .eq('user_id', userId)
-                .order('updated_at', { ascending: false })
+            // Try to get from cache first
+            const cachedData = await cacheService.get<WatchlistItem[]>('library', userId)
+            
+            let items: WatchlistItem[] = []
+            
+            if (cachedData) {
+                console.log('Using cached library data')
+                items = cachedData
+            } else {
+                console.log('Fetching fresh library data from database')
+                const { data, error } = await supabase
+                    .from('watchlist')
+                    .select(selectColumns)
+                    .eq('user_id', userId)
+                    .order('updated_at', { ascending: false })
 
-            if (error) {
-                console.error('Supabase error details:', {
-                    message: error.message,
-                    details: error.details,
-                    hint: error.hint,
-                    code: error.code,
-                    fullError: error
-                })
-                // Don't throw, just log and continue with empty array
-                // This prevents the 400 error from breaking the app
+                if (error) {
+                    console.error('Supabase error details:', {
+                        message: error.message,
+                        details: error.details,
+                        hint: error.hint,
+                        code: error.code,
+                        fullError: error
+                    })
+                    // Don't throw, just log and continue with empty array
+                    // This prevents the 400 error from breaking the app
+                } else {
+                    items = data || []
+                    // Cache the fresh data with short TTL (5 minutes) since users expect fresh data
+                    await cacheService.set('library', userId, items, 5 * 60 * 1000)
+                }
             }
 
-            console.log('Fetched items:', data?.length || 0)
-            const items = data || []
+            console.log('Fetched items:', items.length)
 
             // Categorize items by status and media type
             const tvShows: TVShowWithProgress[] = []
@@ -110,6 +126,13 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 } else if (item.media_type === 'movie') {
                     movies.push(item)
                 }
+            })
+
+            // Sort finished array by completed_at (most recent first)
+            finished.sort((a, b) => {
+                const dateA = new Date(a.completed_at || a.updated_at || 0)
+                const dateB = new Date(b.completed_at || b.updated_at || 0)
+                return dateB.getTime() - dateA.getTime()
             })
 
             set({
@@ -154,10 +177,24 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         const isFinishedStatus = nextStatus === 'completed' || nextStatus === 'caught_up'
         let newFinished = state.finished
         if (isFinishedStatus) {
-            // Add to finished if not already there
+            // Add to finished if not already there - add to beginning for most recent first
             const item = state.allItems.find(i => i.id === id)
             if (item && !state.finished.find(f => f.id === id)) {
-                newFinished = [...state.finished, { ...item, status: nextStatus }]
+                const completedItem = { 
+                    ...item, 
+                    status: nextStatus,
+                    completed_at: nextStatus === 'completed' ? new Date().toISOString() : item.completed_at
+                }
+                newFinished = [completedItem, ...state.finished]
+            } else if (item) {
+                // Update existing item in finished array to move it to top
+                const completedItem = { 
+                    ...item, 
+                    status: nextStatus,
+                    completed_at: nextStatus === 'completed' ? new Date().toISOString() : item.completed_at
+                }
+                newFinished = state.finished.filter(f => f.id !== id)
+                newFinished = [completedItem, ...newFinished]
             }
         } else {
             // Remove from finished if status changed away from completed/caught_up
@@ -190,6 +227,28 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
             if (error) {
                 throw error
+            }
+
+            // Invalidate cache when status changes to/from completed/caught_up to ensure Finished page shows updated data
+            const previousItem = previousAllItems.find(i => i.id === id)
+            const wasFinished = previousItem?.status === 'completed' || previousItem?.status === 'caught_up'
+            const isFinished = nextStatus === 'completed' || nextStatus === 'caught_up'
+            if (wasFinished !== isFinished) {
+                await invalidateUserCache()
+            }
+
+            // Update cache with new data
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                const newAllItems = [...previousAllItems]
+                const itemIndex = newAllItems.findIndex(i => i.id === id)
+                if (itemIndex !== -1) {
+                    newAllItems[itemIndex] = { ...newAllItems[itemIndex], status: nextStatus, updated_at: new Date().toISOString() }
+                    if (nextStatus === 'completed') {
+                        newAllItems[itemIndex].completed_at = new Date().toISOString()
+                    }
+                    await cacheService.set('library', user.id, newAllItems, 5 * 60 * 1000)
+                }
             }
         } catch (error) {
             // Rollback on error
@@ -287,7 +346,22 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         if (isFinishedStatus) {
             const item = state.allItems.find(i => i.id === id)
             if (item && !state.finished.find(f => f.id === id)) {
-                newFinished = [...state.finished, { ...item, ...updates }]
+                // Add to beginning for most recent first
+                const completedItem = { 
+                    ...item, 
+                    ...updates,
+                    completed_at: updates.status === 'completed' ? new Date().toISOString() : item.completed_at
+                }
+                newFinished = [completedItem, ...state.finished]
+            } else if (item) {
+                // Update existing item in finished array to move it to top
+                const completedItem = { 
+                    ...item, 
+                    ...updates,
+                    completed_at: updates.status === 'completed' ? new Date().toISOString() : item.completed_at
+                }
+                newFinished = state.finished.filter(f => f.id !== id)
+                newFinished = [completedItem, ...newFinished]
             }
         } else if (updates.status && !isFinishedStatus) {
             newFinished = state.finished.filter(item => item.id !== id)
@@ -313,6 +387,25 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
             if (error) {
                 throw error
+            }
+
+            // Invalidate cache when status changes to/from completed/caught_up to ensure Finished page shows updated data
+            const previousItem = previousAllItems.find(i => i.id === id)
+            const wasFinished = previousItem?.status === 'completed' || previousItem?.status === 'caught_up'
+            const isFinished = updates.status === 'completed' || updates.status === 'caught_up'
+            if (wasFinished !== isFinished) {
+                await invalidateUserCache()
+            }
+
+            // Update cache with new data
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                const newAllItems = [...previousAllItems]
+                const itemIndex = newAllItems.findIndex(i => i.id === id)
+                if (itemIndex !== -1) {
+                    newAllItems[itemIndex] = { ...newAllItems[itemIndex], ...updates, updated_at: new Date().toISOString() }
+                    await cacheService.set('library', user.id, newAllItems, 5 * 60 * 1000)
+                }
             }
         } catch (error) {
             // Rollback on error
@@ -361,6 +454,16 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
             if (error) {
                 throw error
+            }
+
+            // Invalidate cache when item is removed to ensure Finished page shows updated data immediately
+            await invalidateUserCache()
+
+            // Update cache with new data
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                const newAllItems = previousAllItems.filter(item => item.id !== id)
+                await cacheService.set('library', user.id, newAllItems, 5 * 60 * 1000)
             }
         } catch (error) {
             // Rollback on error
@@ -421,6 +524,13 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             if (error) {
                 throw error
             }
+
+            // Update cache with new data
+            const { data: { user } } = await supabase.auth.getUser()
+            if (user) {
+                const newAllItems = [item, ...previousAllItems]
+                await cacheService.set('library', user.id, newAllItems, 5 * 60 * 1000)
+            }
         } catch (error) {
             // Rollback on error
             console.error('Failed to add item, rolling back:', error)
@@ -450,14 +560,19 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
             const state = get()
             
-            // Update in all arrays
-            const updateInArray = (items: WatchlistItem[] | TVShowWithProgress[]) =>
-                items.map(item => item.id === id ? data : item)
+            // Re-categorize based on new status
+            const newAllItems = state.allItems.map(item => item.id === id ? data : item)
+            
+            const newTvShows = newAllItems.filter(item => item.media_type === 'tv' || item.media_type === 'anime') as TVShowWithProgress[]
+            const newMovies = newAllItems.filter(item => item.media_type === 'movie')
+            const newFinished = newAllItems.filter(item => item.status === 'completed' || item.status === 'caught_up')
 
-            const newAllItems = updateInArray(state.allItems) as WatchlistItem[]
-            const newTvShows = updateInArray(state.tvShows) as TVShowWithProgress[]
-            const newMovies = updateInArray(state.movies) as WatchlistItem[]
-            const newFinished = updateInArray(state.finished) as WatchlistItem[]
+            // Sort finished array by completed_at (most recent first)
+            newFinished.sort((a, b) => {
+                const dateA = new Date(a.completed_at || a.updated_at || 0)
+                const dateB = new Date(b.completed_at || b.updated_at || 0)
+                return dateB.getTime() - dateA.getTime()
+            })
 
             set({
                 allItems: newAllItems,
@@ -471,6 +586,13 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             set({
                 error: error instanceof Error ? error.message : 'Failed to refresh item'
             })
+        }
+
+        // Update cache with the refreshed data
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+            const state = get()
+            await cacheService.set('library', user.id, state.allItems, 5 * 60 * 1000)
         }
     },
 

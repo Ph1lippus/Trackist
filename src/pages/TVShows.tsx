@@ -29,13 +29,11 @@ const TVShows: React.FC = () => {
 
     // Calculate episode progress for TV shows
     const tvShowsWithProgress = useMemo(() => {
-        if (!isInitialized) return []
-        
         return tvShows.map(show => ({
             ...show,
             total_episodes_watched: 0 // Will be calculated on demand
         }))
-    }, [tvShows, isInitialized])
+    }, [tvShows])
 
     // Listen for watchlist-refresh event from the Fix Progress modal
     useEffect(() => {

@@ -1,5 +1,6 @@
 import { supabase } from './supabaseClient'
 import { getTVDetails, getTVSeasonDetails } from './tmdbService'
+import { invalidateUserCache } from './cacheService'
 import type { WatchlistItem } from '../types'
 
 export interface FixProgress {
@@ -218,6 +219,9 @@ export const checkAndUpdateCaughtUp = async (watchlistId: string, tmdbId: number
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', watchlistId)
+
+            // Invalidate cache when status changes to caught_up
+            await invalidateUserCache()
         } else {
             // Still watching - there are released episodes that haven't been watched
             await supabase
@@ -277,6 +281,9 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', watchlistId)
+
+            // Invalidate cache when status changes to completed/caught_up
+            await invalidateUserCache()
         } else if (watchedCount === 0) {
             // No episodes watched, reset to planning
             await supabase
@@ -288,6 +295,9 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', watchlistId)
+
+            // Invalidate cache when status changes away from completed/caught_up
+            await invalidateUserCache()
         } else {
             // Some episodes watched but not all - set to watching
             await supabase
@@ -298,6 +308,9 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', watchlistId)
+
+            // Invalidate cache when status changes away from completed/caught_up
+            await invalidateUserCache()
         }
     } catch (err) {
         console.error('Failed to check completed status:', err)

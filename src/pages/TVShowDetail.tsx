@@ -4,6 +4,7 @@ import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getFanart
 import { markEpisodeWatched, unmarkEpisodeWatched, getWatchedEpisodes, checkAndUpdateCaughtUp, checkAndUpdateCompleted, updateStatusToWatching } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { supabase } from '../services/supabaseClient'
+import { invalidateUserCache } from '../services/cacheService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import EpisodeChoiceModal from '../components/modals/EpisodeChoiceModal'
 import type { TMDBResult, WatchlistItem } from '../types'
@@ -35,6 +36,7 @@ const TVShowDetail: React.FC = () => {
     const [watchlistId, setWatchlistId] = useState<string | null>(null)
     const [watchlistStatus, setWatchlistStatus] = useState<string | null>(null)
     const [adding, setAdding] = useState(false)
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
     
     // Use global store
     const libraryStore = useLibraryStore()
@@ -126,6 +128,9 @@ const TVShowDetail: React.FC = () => {
                 if (watchlistItem) {
                     setWatchlistId(watchlistItem.id)
                     setWatchlistStatus(watchlistItem.status)
+                } else {
+                    setWatchlistId(null)
+                    setWatchlistStatus(null)
                 }
             } catch (err) {
                 console.error('Failed to load TV show details:', err)
@@ -133,7 +138,7 @@ const TVShowDetail: React.FC = () => {
             setLoading(false)
         }
         fetchDetails()
-    }, [id])
+    }, [id, libraryStore])
 
     useEffect(() => {
         const loadEpisodes = async () => {
@@ -231,7 +236,7 @@ const TVShowDetail: React.FC = () => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user || !details) {
             alert('Please log in')
-            return
+            return null
         }
 
         setAdding(true)
@@ -266,6 +271,7 @@ const TVShowDetail: React.FC = () => {
         setWatchlistId(newItem.id)
         setWatchlistStatus('planning')
         setAdding(false)
+        return newItem.id
     }
 
     const handleRemoveFromWatchlist = async () => {
@@ -273,6 +279,9 @@ const TVShowDetail: React.FC = () => {
 
         // Optimistic update via store
         await libraryStore.removeItem(watchlistId)
+        
+        // Invalidate cache to ensure Finished page shows updated data immediately
+        await invalidateUserCache()
         
         setIsInWatchlist(false)
         setWatchlistId(null)
@@ -516,6 +525,18 @@ const TVShowDetail: React.FC = () => {
             await checkAndUpdateCompleted(watchlistId, details.id)
             // Then run caught up check (it will skip ended shows due to early return)
             await checkAndUpdateCaughtUp(watchlistId, details.id)
+            
+            // Refresh the item from the store to get the updated status
+            await libraryStore.refreshItem(watchlistId)
+            
+            // Update local state with the new status from the store
+            const updatedItem = useLibraryStore.getState().allItems.find(item => item.id === watchlistId)
+            if (updatedItem) {
+                setWatchlistStatus(updatedItem.status)
+            }
+            
+            // Invalidate cache to ensure Finished page shows updated data immediately
+            await invalidateUserCache()
         } catch (err) {
             setEpisodes(prev => prev.map(ep => 
                 ep.id === episode.id ? { ...ep, watched: true } : ep
@@ -645,7 +666,9 @@ const TVShowDetail: React.FC = () => {
                                     <>
                                         <button 
                                             className="detail-page__icon-btn"
-                                            onClick={handleAddToWatchlist}
+                                            onClick={async () => {
+                                                await handleAddToWatchlist()
+                                            }}
                                             disabled={adding}
                                             title="Add to Watchlist"
                                         >
@@ -654,11 +677,12 @@ const TVShowDetail: React.FC = () => {
                                         <button 
                                             className="detail-page__icon-btn"
                                             onClick={async () => {
-                                                await handleAddToWatchlist()
-                                                if (watchlistId && details) {
+                                                setIsUpdatingStatus(true)
+                                                const newWatchlistId = await handleAddToWatchlist()
+                                                if (newWatchlistId && details) {
                                                     // Mark ALL episodes as watched (not just released) - parallel execution
                                                     const markPromises = episodes.map(ep => 
-                                                        markEpisodeWatched(watchlistId, ep.season_number, ep.episode_number, {
+                                                        markEpisodeWatched(newWatchlistId, ep.season_number, ep.episode_number, {
                                                             tmdb_episode_id: ep.tmdb_episode_id,
                                                             title: ep.title,
                                                             still_path: ep.still_path,
@@ -670,14 +694,15 @@ const TVShowDetail: React.FC = () => {
                                                     )
                                                     await Promise.all(markPromises)
                                                     // Check TMDB status: if ended -> completed, if still airing -> caught_up
-                                                    await checkAndUpdateCompleted(watchlistId, details.id)
+                                                    await checkAndUpdateCompleted(newWatchlistId, details.id)
                                                     // Check for milestone and celebrate
                                                     await checkMilestoneAndCelebrate(watchlistStatus)
                                                     // Refresh episodes
                                                     setEpisodes(prev => prev.map(ep => ({ ...ep, watched: true })))
                                                 }
+                                                setIsUpdatingStatus(false)
                                             }}
-                                            disabled={adding}
+                                            disabled={adding || isUpdatingStatus}
                                             title="Mark as Watched"
                                         >
                                             <i className="fa-solid fa-eye"></i>
@@ -699,6 +724,7 @@ const TVShowDetail: React.FC = () => {
                                                 const markAsWatched = watchlistStatus !== 'completed'
                                                 setMarkWatchedModal({ isOpen: true, markAsWatched })
                                             }}
+                                            disabled={isUpdatingStatus}
                                             title={watchlistStatus === 'completed' ? 'Mark as Unwatched' : 'Mark as Watched'}
                                         >
                                             <i className={watchlistStatus === 'completed' ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
@@ -901,6 +927,7 @@ const TVShowDetail: React.FC = () => {
                     message={markWatchedModal.markAsWatched ? 'Are you sure you want to mark all released episodes as watched?' : 'Are you sure you want to mark all episodes as unwatched?'}
                     onConfirm={async () => {
                         if (!watchlistId || !details) return
+                        setIsUpdatingStatus(true)
                         const newWatchedState = markWatchedModal.markAsWatched
                         
                         // Mark/unmark all released episodes in parallel
@@ -929,6 +956,20 @@ const TVShowDetail: React.FC = () => {
                         // Then run caught up check (it will skip ended shows due to early return)
                         await checkAndUpdateCaughtUp(watchlistId, details.id)
                         
+                        // Invalidate cache when marking as completed to ensure Finished page shows updated data immediately
+                        if (newWatchedState) {
+                            await invalidateUserCache()
+                        }
+                        
+                        // Refresh the item from the store to get the updated status
+                        await libraryStore.refreshItem(watchlistId)
+                        
+                        // Update local state with the new status from the store
+                        const updatedItem = useLibraryStore.getState().allItems.find(item => item.id === watchlistId)
+                        if (updatedItem) {
+                            setWatchlistStatus(updatedItem.status)
+                        }
+                        
                         // Check for milestone and celebrate (only when marking as watched)
                         if (newWatchedState) {
                             await checkMilestoneAndCelebrate(watchlistStatus)
@@ -938,6 +979,7 @@ const TVShowDetail: React.FC = () => {
                         setEpisodes(prev => prev.map(ep => 
                             isEpisodeReleased(ep) ? { ...ep, watched: newWatchedState } : ep
                         ))
+                        setIsUpdatingStatus(false)
                         setMarkWatchedModal(null)
                     }}
                     onCancel={() => setMarkWatchedModal(null)}

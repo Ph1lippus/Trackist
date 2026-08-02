@@ -7,7 +7,7 @@ import React, {
 import { useLocation } from 'react-router-dom'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
-import useDiscoverStore, { useDiscoverResults, useDiscoverFilters, useDiscoverLoading, useDiscoverActions, useDiscoverWatchlistIds } from '../stores/discoverStore'
+import useDiscoverStore, { useDiscoverResults, useDiscoverFilters, useDiscoverLoading, useDiscoverActions, useDiscoverWatchlistIds, useDiscoverShowAdded } from '../stores/discoverStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
@@ -25,17 +25,27 @@ const Discover: React.FC = () => {
     const loading = useDiscoverLoading()
     const actions = useDiscoverActions()
     const watchlistIds = useDiscoverWatchlistIds()
+    const showAdded = useDiscoverShowAdded()
     const store = useDiscoverStore()
     const { committedQuery } = useSearch()
     
     // State for confirmation modal when removing from watchlist
     const [removeConfirmItem, setRemoveConfirmItem] = useState<TMDBResult | null>(null)
+    
+    // State to track items added during current session (to keep them visible)
+    const [sessionAddedIds, setSessionAddedIds] = useState<Set<number>>(new Set())
 
     // Search is now handled globally via navbar
     // const [searchInput, setSearchInput] = useState(filters.query)
 
-    // Memoized filtered results (currently no filtering, but ready for future use)
-    const filteredResults = useMemo(() => results, [results])
+    // Memoized filtered results - filter out added items unless showAdded is true
+    // Items added during current session are always visible
+    const filteredResults = useMemo(() => {
+        if (showAdded) {
+            return results
+        }
+        return results.filter(item => !watchlistIds.has(item.id) || sessionAddedIds.has(item.id))
+    }, [results, showAdded, watchlistIds, sessionAddedIds])
     
     // Fetch genres and watchlist IDs on mount
     useEffect(() => {
@@ -47,6 +57,8 @@ const Discover: React.FC = () => {
     // Fetch data on mount and when filters change
     useEffect(() => {
         actions.fetchData(1)
+        // Clear session added IDs when media type changes
+        setSessionAddedIds(new Set())
     }, [filters.mediaType, filters.sortBy, filters.selectedGenre, filters.selectedYear, actions])
     
     // Sync global search with discover store
@@ -87,6 +99,7 @@ const Discover: React.FC = () => {
     
     const handleClearFilters = useCallback(() => {
     actions.resetFilters();
+    setSessionAddedIds(new Set());
     window.scrollTo({ top: 0, behavior: "smooth" });
 }, [actions]);  
     
@@ -96,6 +109,8 @@ const Discover: React.FC = () => {
             setRemoveConfirmItem(item);
         } else {
             actions.addToWatchlist(item.id, item);
+            // Add to session added IDs to keep it visible
+            setSessionAddedIds(prev => new Set(prev).add(item.id));
         }
     },
     [actions, watchlistIds]
@@ -212,6 +227,13 @@ const Discover: React.FC = () => {
                                     </option>
                                 ))}
                             </select>
+                            <button
+                                className={`discover-filter-select ${showAdded ? 'active' : ''}`}
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => actions.setShowAdded(!showAdded)}
+                            >
+                                {showAdded ? 'Hide Added' : 'Show Added'}
+                            </button>
                             <button
                                 className="discover-filter-select"
                                 style={{ cursor: 'pointer' }}

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { getMovieDetails, imageUrlOriginal, getFanartImages, getBestBackdropPath } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { supabase } from '../services/supabaseClient'
+import { invalidateUserCache } from '../services/cacheService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult, WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -19,6 +20,7 @@ const MovieDetail: React.FC = () => {
     const [watchlistStatus, setWatchlistStatus] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
+    const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
     const [showTrailer, setShowTrailer] = useState(false)
     const [trailerKey, setTrailerKey] = useState<string | null>(null)
     const [showCast, setShowCast] = useState(false)
@@ -58,6 +60,9 @@ const MovieDetail: React.FC = () => {
                 if (watchlistItem) {
                     setWatchlistId(watchlistItem.id)
                     setWatchlistStatus(watchlistItem.status)
+                } else {
+                    setWatchlistId(null)
+                    setWatchlistStatus(null)
                 }
             } catch (err) {
                 console.error('Failed to load movie details:', err)
@@ -136,7 +141,7 @@ const MovieDetail: React.FC = () => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user || !details) {
             alert('Please log in')
-            return
+            return null
         }
 
         setAdding(true)
@@ -162,6 +167,7 @@ const MovieDetail: React.FC = () => {
         setWatchlistId(newItem.id)
         setWatchlistStatus('planning')
         setAdding(false)
+        return newItem.id
     }
 
     const handleRemoveFromWatchlist = async () => {
@@ -169,6 +175,9 @@ const MovieDetail: React.FC = () => {
 
         // Optimistic update via store
         await libraryStore.removeItem(watchlistId)
+        
+        // Invalidate cache to ensure Finished page shows updated data immediately
+        await invalidateUserCache()
         
         setIsInWatchlist(false)
         setWatchlistId(null)
@@ -296,20 +305,24 @@ const MovieDetail: React.FC = () => {
                                     <button 
                                         className="detail-page__icon-btn"
                                         onClick={async () => {
-                                            await handleAddToWatchlist()
-                                            if (watchlistId) {
+                                            setIsUpdatingStatus(true)
+                                            const newWatchlistId = await handleAddToWatchlist()
+                                            if (newWatchlistId) {
                                                 // Capture previous status from store
-                                                const previousStatus = libraryStore.allItems.find(item => item.id === watchlistId)?.status
+                                                const previousStatus = libraryStore.allItems.find(item => item.id === newWatchlistId)?.status
                                                 // Update status to completed via store
-                                                await libraryStore.updateStatus(watchlistId, 'completed')
+                                                await libraryStore.updateStatus(newWatchlistId, 'completed')
                                                 setWatchlistStatus('completed')
                                                 // Trigger Cosmic Confetti when transitioning from 'planning' to 'completed'
                                                 if (previousStatus === 'planning') {
                                                     launchCosmicConfetti()
+                                                    // Invalidate cache to ensure Finished page shows updated data immediately
+                                                    await invalidateUserCache()
                                                 }
                                             }
+                                            setIsUpdatingStatus(false)
                                         }}
-                                        disabled={adding}
+                                        disabled={adding || isUpdatingStatus}
                                         title="Mark as Watched"
                                     >
                                         <i className="fa-solid fa-eye"></i>
@@ -331,6 +344,7 @@ const MovieDetail: React.FC = () => {
                                             const markAsWatched = watchlistStatus !== 'completed'
                                             setMarkWatchedModal({ isOpen: true, markAsWatched })
                                         }}
+                                        disabled={isUpdatingStatus}
                                         title={watchlistStatus === 'completed' ? 'Mark as Unwatched' : 'Mark as Watched'}
                                     >
                                         <i className={watchlistStatus === 'completed' ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
@@ -408,6 +422,7 @@ const MovieDetail: React.FC = () => {
                     message={markWatchedModal.markAsWatched ? 'Are you sure you want to mark this movie as watched?' : 'Are you sure you want to mark this movie as unwatched?'}
                     onConfirm={async () => {
                         if (!watchlistId) return
+                        setIsUpdatingStatus(true)
                         const newStatus = markWatchedModal.markAsWatched ? 'completed' : 'planning'
                         const previousStatus = watchlistStatus
                         await libraryStore.updateStatus(watchlistId, newStatus)
@@ -415,7 +430,10 @@ const MovieDetail: React.FC = () => {
                         // Trigger Cosmic Confetti when transitioning from 'planning' to 'completed'
                         if (markWatchedModal.markAsWatched && previousStatus === 'planning') {
                             launchCosmicConfetti()
+                            // Invalidate cache to ensure Finished page shows updated data immediately
+                            await invalidateUserCache()
                         }
+                        setIsUpdatingStatus(false)
                         setMarkWatchedModal(null)
                     }}
                     onCancel={() => setMarkWatchedModal(null)}

@@ -222,6 +222,42 @@ class CacheService {
         }
     }
 
+    async clearPattern(pattern: string): Promise<void> {
+        // Clear memory cache entries matching pattern
+        const keysToDelete: string[] = []
+        for (const key of this.memoryCache.keys()) {
+            if (key.includes(pattern)) {
+                keysToDelete.push(key)
+            }
+        }
+        keysToDelete.forEach(key => this.memoryCache.delete(key))
+
+        // Clear IndexedDB entries matching pattern
+        try {
+            const db = await this.ensureDB()
+            const transaction = db.transaction('cache', 'readwrite')
+            const store = transaction.objectStore('cache')
+            const request = store.getAllKeys()
+
+            const keys = await new Promise<string[]>((resolve, reject) => {
+                request.onsuccess = () => resolve(request.result as string[])
+                request.onerror = () => reject(request.error)
+            })
+
+            const keysToDeleteDB = keys.filter(key => key.includes(pattern))
+            
+            await Promise.all(keysToDeleteDB.map(key => {
+                return new Promise<void>((resolve, reject) => {
+                    const deleteRequest = store.delete(key)
+                    deleteRequest.onsuccess = () => resolve()
+                    deleteRequest.onerror = () => reject(deleteRequest.error)
+                })
+            }))
+        } catch (err) {
+            console.error('Cache pattern clear error:', err)
+        }
+    }
+
     async getStats(): Promise<{ memoryEntries: number; dbEntries: number }> {
         const memoryEntries = this.memoryCache.size
 
@@ -246,6 +282,13 @@ class CacheService {
 
 // Singleton instance
 export const cacheService = new CacheService()
+
+// Helper function to invalidate cache for user-specific data
+export async function invalidateUserCache(): Promise<void> {
+    await cacheService.clearPattern('watchlist')
+    await cacheService.clearPattern('library')
+    await cacheService.clearPattern('library') // Clear library cache specifically
+}
 
 // Helper function for cached fetching
 export async function getCachedOrFetch<T>(
