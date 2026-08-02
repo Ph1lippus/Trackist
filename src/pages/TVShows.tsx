@@ -120,7 +120,7 @@ const TVShows: React.FC = () => {
             clearInterval(interval)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
         }
-    }, [isInitialized, tvShows.length, store])
+    }, [isInitialized, tvShows, store])
 
     // Filter items based on global search (strict TV-type lock)
     const filteredItems = useMemo(() => {
@@ -131,7 +131,12 @@ const TVShows: React.FC = () => {
     // Container A: Currently Watching - only shows with 'watching' status
     const currentlyWatching = filteredItems.filter(
         item => item.status === 'watching'
-    )
+    ).sort((a, b) => {
+        // Sort by updated_at (most recent first)
+        const dateA = new Date(a.updated_at || 0)
+        const dateB = new Date(b.updated_at || 0)
+        return dateB.getTime() - dateA.getTime()
+    })
 
     // Container B: Watchlist (Not Started) - in watchlist with 0 episodes watched
     const notStarted = filteredItems.filter(

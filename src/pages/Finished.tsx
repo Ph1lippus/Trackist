@@ -25,8 +25,18 @@ const Finished: React.FC = () => {
         return finished.filter(item => item.title.toLowerCase().includes(committedQuery.toLowerCase()))
     }, [finished, committedQuery])
 
-    const finishedMovies = filteredItems.filter(item => item.media_type === 'movie')
-    const finishedTVShows = filteredItems.filter(item => item.media_type === 'tv' || item.media_type === 'anime')
+    const finishedMovies = filteredItems.filter(item => item.media_type === 'movie').sort((a, b) => {
+        // Sort by completed_at (most recent first)
+        const dateA = new Date(a.completed_at || 0)
+        const dateB = new Date(b.completed_at || 0)
+        return dateB.getTime() - dateA.getTime()
+    })
+    const finishedTVShows = filteredItems.filter(item => item.media_type === 'tv' || item.media_type === 'anime').sort((a, b) => {
+        // Sort by completed_at (most recent first)
+        const dateA = new Date(a.completed_at || 0)
+        const dateB = new Date(b.completed_at || 0)
+        return dateB.getTime() - dateA.getTime()
+    })
 
     const buildTmdbItem = (item: WatchlistItem): TMDBResult => ({
         id: item.tmdb_id as number,

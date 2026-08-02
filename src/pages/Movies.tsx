@@ -68,7 +68,33 @@ const Movies: React.FC = () => {
         return movies.filter(item => item.title.toLowerCase().includes(committedQuery.toLowerCase()))
     }, [movies, committedQuery])
 
-    const watchlistItems = filteredItems.filter(item => item.status === 'planning')
+    // Helper function to check if a movie is released
+    const isMovieReleased = (item: WatchlistItem): boolean => {
+        if (!item.release_date) return true // Assume released if no date
+        const releaseDate = new Date(item.release_date)
+        const today = new Date()
+        return releaseDate <= today
+    }
+
+    // Container A: To Watch (Released movies in planning status)
+    const watchlistItems = filteredItems.filter(item => 
+        item.status === 'planning' && isMovieReleased(item)
+    ).sort((a, b) => {
+        // Sort by added_at (oldest first to newest at the end)
+        const dateA = new Date(a.added_at || 0)
+        const dateB = new Date(b.added_at || 0)
+        return dateA.getTime() - dateB.getTime()
+    })
+
+    // Container B: Not Released (Movies that haven't been released yet)
+    const notReleasedItems = filteredItems.filter(item => 
+        item.status === 'planning' && !isMovieReleased(item)
+    ).sort((a, b) => {
+        // Sort by release date (soonest first)
+        const dateA = new Date(a.release_date || '9999-12-31')
+        const dateB = new Date(b.release_date || '9999-12-31')
+        return dateA.getTime() - dateB.getTime()
+    })
 
     return (
         <div className="discover-page">
@@ -106,6 +132,44 @@ const Movies: React.FC = () => {
                     ) : (
                         <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
                             No movies to watch. Add some!
+                        </p>
+                    )}
+                </div>
+
+                {/* Not Released Movies */}
+                <div className="watchlist-section">
+                    <div className="watchlist-section__header">
+                        <h3 className="watchlist-section__title">Not Released</h3>
+                    </div>
+                    {notReleasedItems.length > 0 ? (
+                        <VirtuosoGrid
+                            computeItemKey={(index) => notReleasedItems[index]?.id ?? index}
+                            style={{ height: '100%', width: '100%' }}
+                            useWindowScroll={true}
+                            data={notReleasedItems}
+                            overscan={800}
+                            listClassName="discover-grid"
+                            itemContent={(index) => {
+                                const item = notReleasedItems[index]
+                                const tmdbItem: TMDBResult = {
+                                    id: item.tmdb_id as number,
+                                    title: item.title,
+                                    poster_path: item.poster_path,
+                                    media_type: 'movie'
+                                }
+                                return (
+                                    <MediaCard
+                                        item={tmdbItem}
+                                        isInWatchlist={true}
+                                        onAdd={() => {}}
+                                        onMarkWatched={(item) => setConfirmModal({ isOpen: true, action: 'watch', item })}
+                                    />
+                                )
+                            }}
+                        />
+                    ) : (
+                        <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
+                            No upcoming movies
                         </p>
                     )}
                 </div>
