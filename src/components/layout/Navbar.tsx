@@ -5,7 +5,6 @@ import { supabase } from '../../services/supabaseClient';
 import { useSearch } from '../../hooks/useSearch';
 import SearchDropdown from '../search/SearchDropdown';
 import ProgressFixModal from '../modals/ProgressFixModal';
-import { formatDateString } from '../../utils/dateUtils';
 
 interface NavbarProps {
     currentMonth?: Date;

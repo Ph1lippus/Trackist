@@ -1,11 +1,10 @@
 import React, { useEffect, useState, useMemo, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
-import type { UserList, ListItem, TMDBResult, WatchlistItem } from '../types'
+import type { UserList, ListItem, TMDBResult } from '../types'
 import MediaCard from '../components/media/MediaCard'
 import { discoverMovies, discoverTV, getGenres } from '../services/tmdbService'
 import { addToList, removeFromList, updateList, createList } from '../services/profileService'
-import { useLibraryStore, useLibraryWatchlistIds } from '../stores/useLibraryStore'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useSearch } from '../hooks/useSearch'
 

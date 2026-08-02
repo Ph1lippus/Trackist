@@ -3098,13 +3098,14 @@ body::after {
     flex-shrink: 0;
     border-radius: 12px !important;
     overflow: hidden !important; 
-
+    opacity: 0.8;
     /* Smooth, uniform transition for focus interactions */
     transition: background 0.2s ease, filter 0.2s ease, border-color 0.2s ease;
 }
 
 .calendar-episode:hover {
-    filter: brightness(1.4); }
+    opacity: 1;
+    filter: brightness(1.1); }
 
 /* Keep internal image compliance tight */
 .calendar-episode img {
