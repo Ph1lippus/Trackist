@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 import { supabase } from '../services/supabaseClient'
-import type { TMDBResult } from '../types'
+import type { TMDBResult, WatchlistItem } from '../types'
+import { useLibraryStore } from './useLibraryStore'
 import {
     searchMulti,
     searchPerson,
@@ -14,14 +15,14 @@ import {
 } from '../services/tmdbService'
 import { getCachedOrFetch } from '../services/cacheService'
 
-type SortBy = 
-    | 'popularity.desc' 
-    | 'popularity.asc' 
-    | 'vote_average.desc' 
-    | 'vote_average.asc' 
-    | 'release_date.desc' 
-    | 'release_date.asc' 
-    | 'original_title.asc' 
+type SortBy =
+    | 'popularity.desc'
+    | 'popularity.asc'
+    | 'vote_average.desc'
+    | 'vote_average.asc'
+    | 'release_date.desc'
+    | 'release_date.asc'
+    | 'original_title.asc'
     | 'original_title.desc'
 
 type MediaType = 'all' | 'movie' | 'tv' | 'person'
@@ -42,7 +43,7 @@ interface DiscoverState {
     isLoadingMore: boolean
     genres: { id: number; name: string }[]
     isDataLoaded: boolean
-    
+
     // Actions
     setQuery: (query: string) => void
     setMediaType: (mediaType: MediaType) => void
@@ -50,8 +51,8 @@ interface DiscoverState {
     setSelectedGenre: (genre: number | null) => void
     setSelectedYear: (year: number | null) => void
     setWatchlistIds: (ids: Set<number>) => void
-    addToWatchlist: (id: number, item?: TMDBResult) => void
-    removeFromWatchlist: (id: number) => void
+    addToWatchlist: (id: number, item?: TMDBResult) => Promise<void>
+    removeFromWatchlist: (id: number) => Promise<void>
     saveScroll: () => void
     restoreScroll: () => void
     resetFilters: () => void
@@ -82,64 +83,79 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
 
     // Actions
     setQuery: (query) => set({ query }),
-    
+
     setMediaType: (mediaType) => set({ mediaType }),
-    
+
     setSortBy: (sortBy) => set({ sortBy }),
-    
+
     setSelectedGenre: (selectedGenre) => set({ selectedGenre }),
-    
+
     setSelectedYear: (selectedYear) => set({ selectedYear }),
-    
+
     setWatchlistIds: (watchlistIds) => set({ watchlistIds }),
-    
+
     addToWatchlist: async (id, item?) => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
-        const { error } = await supabase.from('watchlist').insert({
+
+        // Build a WatchlistItem to add via the library store (single source of truth)
+        const newItem: WatchlistItem = {
+            id: crypto.randomUUID(),
             user_id: user.id,
-            media_type: item?.media_type || 'movie',
+            media_type: (item?.media_type as 'movie' | 'tv' | 'anime') || 'movie',
             tmdb_id: id,
             title: item?.title || item?.name || '',
-            poster_path: item?.poster_path,
-            overview: item?.overview,
-            release_date: item?.release_date || item?.first_air_date,
-            vote_average: item?.vote_average,
-            status: 'planning'
-        })
-        if (error) {
-            console.error('Failed to add to watchlist:', error)
-            return
+            poster_path: item?.poster_path || undefined,
+            overview: item?.overview || undefined,
+            release_date: item?.release_date || item?.first_air_date || undefined,
+            vote_average: item?.vote_average || undefined,
+            status: 'planning',
+            added_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
         }
-        set((state) => ({
-            watchlistIds: new Set([...state.watchlistIds, id])
-        }))
+
+        // Use the library store which handles Supabase insert + optimistic update
+        // The subscription below will sync watchlistIds back to this store
+        await useLibraryStore.getState().addItem(newItem)
     },
-    
+
     removeFromWatchlist: async (id) => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
-        await supabase
-            .from('watchlist')
-            .delete()
-            .eq('user_id', user.id)
-            .eq('tmdb_id', id)
-        set((state) => {
-            const newSet = new Set(state.watchlistIds)
-            newSet.delete(id)
-            return { watchlistIds: newSet }
-        })
+
+        // Find the watchlist item by tmdb_id in the library store
+        const libraryItem = useLibraryStore.getState().allItems.find(
+            (item) => item.tmdb_id === id
+        )
+
+        if (libraryItem) {
+            // Use the library store which handles Supabase delete + optimistic update
+            // The subscription below will sync watchlistIds back to this store
+            await useLibraryStore.getState().removeItem(libraryItem.id)
+        } else {
+            // Fallback: direct Supabase delete if not in library store
+            await supabase
+                .from('watchlist')
+                .delete()
+                .eq('user_id', user.id)
+                .eq('tmdb_id', id)
+            set((state) => {
+                const newSet = new Set(state.watchlistIds)
+                newSet.delete(id)
+                return { watchlistIds: newSet }
+            })
+        }
     },
-    
+
     saveScroll: () => set({ scrollY: window.scrollY }),
-    
+
     restoreScroll: () => {
         const { scrollY } = get()
         requestAnimationFrame(() => {
             window.scrollTo(0, scrollY)
         })
     },
-    
+
     resetFilters: () => set({
         mediaType: 'all',
         sortBy: 'popularity.desc',
@@ -152,7 +168,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         scrollY: 0,
         isDataLoaded: false,
     }),
-    
+
     reset: () => set({
         results: [],
         mediaType: 'all',
@@ -174,7 +190,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             get().restoreScroll()
         }
     },
-    
+
     setFilters: (filters) => set(filters),
 
     fetchWatchlistIds: async () => {
@@ -204,15 +220,15 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         set({ genres: uniqueGenres })
     },
 
-     fetchData: async (pageNum = 1) => {
-        const { 
-            mediaType, 
-            sortBy, 
-            query, 
-            selectedGenre, 
-            selectedYear, 
+    fetchData: async (pageNum = 1) => {
+        const {
+            mediaType,
+            sortBy,
+            query,
+            selectedGenre,
+            selectedYear,
             isLoading,
-            isLoadingMore 
+            isLoadingMore
         } = get()
 
         if (isLoading || isLoadingMore) return
@@ -398,7 +414,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 }))
 
                 let combined: TMDBResult[] = [...movies, ...tv]
-                
+
                 // Filter out News and Talk genres and low-vote content when not searching and not using genre filter
                 const shouldFilterGenres = !query.trim() && !selectedGenre
                 if (shouldFilterGenres) {
@@ -408,7 +424,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                         return true
                     })
                 }
-                
+
                 combined = sortMergedResults(combined, sortBy)
                 newResults = combined
 
@@ -435,7 +451,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     ...r,
                     media_type: 'movie' as const,
                 }))
-                
+
                 // Filter out News and Talk genres and low-vote content when not searching and not using genre filter
                 const shouldFilterGenres = !query.trim() && !selectedGenre
                 if (shouldFilterGenres) {
@@ -447,7 +463,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 } else {
                     newResults = movieResults
                 }
-                
+
                 totalPages = (data as { total_pages?: number }).total_pages || 1
             }
             // TV MODE
@@ -469,7 +485,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     ...r,
                     media_type: 'tv' as const,
                 }))
-                
+
                 // Filter out News and Talk genres and low-vote content when not searching and not using genre filter
                 const shouldFilterGenres = !query.trim() && !selectedGenre
                 if (shouldFilterGenres) {
@@ -481,7 +497,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 } else {
                     newResults = tvResults
                 }
-                
+
                 totalPages = (data as { total_pages?: number }).total_pages || 1
             }
 
@@ -526,6 +542,26 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         }
     },
 }))
+
+// ---------------------------------------------------------------------------
+// Cross-store sync: keep discoverStore.watchlistIds in sync with
+// useLibraryStore.allItems so that actions performed on any page
+// (Discover, Movies, TVShows, MovieDetail, TVShowDetail, Lists) are
+// immediately reflected everywhere without a full page refresh.
+// ---------------------------------------------------------------------------
+let lastAllItems: WatchlistItem[] = []
+useLibraryStore.subscribe((state) => {
+    // Only sync when allItems reference changes (i.e. items were added/removed)
+    if (state.allItems !== lastAllItems) {
+        lastAllItems = state.allItems
+        const ids = new Set(
+            state.allItems
+                .map((item) => item.tmdb_id)
+                .filter((id): id is number => id != null)
+        )
+        useDiscoverStore.getState().setWatchlistIds(ids)
+    }
+})
 
 // Selector hooks for optimized re-renders
 export const useDiscoverResults = () => useDiscoverStore((state) => state.results)

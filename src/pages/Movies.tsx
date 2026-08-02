@@ -5,6 +5,7 @@ import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { VirtuosoGrid } from 'react-virtuoso'
 
 const Movies: React.FC = () => {
@@ -33,7 +34,12 @@ const Movies: React.FC = () => {
     const markAsWatched = async (tmdbItem: TMDBResult) => {
         const watchlistItem = movies.find(item => item.tmdb_id === tmdbItem.id)
         if (watchlistItem) {
+            const previousStatus = watchlistItem.status
             await updateStatus(watchlistItem.id, 'completed')
+            // Trigger Cosmic Confetti when transitioning from 'planning' to 'completed'
+            if (previousStatus === 'planning') {
+                launchCosmicConfetti()
+            }
         }
     }
 

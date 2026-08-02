@@ -7,6 +7,7 @@ import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { VirtuosoGrid } from 'react-virtuoso'
 
 const TVShows: React.FC = () => {
@@ -182,6 +183,20 @@ const TVShows: React.FC = () => {
             setMarkAllModal(null)
             // Refresh the store
             await store.refreshItem(item.id)
+            
+            // Check for milestone and celebrate
+            // Use getState() to read the FRESH store state (the `store`
+            // variable is a stale closure snapshot from the last render)
+            const updatedItem = useLibraryStore.getState().allItems.find(i => i.id === item.id)
+            if (updatedItem) {
+                const newStatus = updatedItem.status
+                if (
+                    (newStatus === 'completed' || newStatus === 'caught_up') &&
+                    item.status !== 'completed' && item.status !== 'caught_up'
+                ) {
+                    launchCosmicConfetti()
+                }
+            }
         } catch (err) {
             console.error('Failed to mark all episodes as watched:', err)
             alert('Failed to mark all episodes as watched. Please try again.')

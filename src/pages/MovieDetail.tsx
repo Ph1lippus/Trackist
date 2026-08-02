@@ -6,6 +6,7 @@ import { supabase } from '../services/supabaseClient'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult, WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 
 const MovieDetail: React.FC = () => {
     usePageTitle('Trackist - Movie Detail')
@@ -297,9 +298,15 @@ const MovieDetail: React.FC = () => {
                                         onClick={async () => {
                                             await handleAddToWatchlist()
                                             if (watchlistId) {
+                                                // Capture previous status from store
+                                                const previousStatus = libraryStore.allItems.find(item => item.id === watchlistId)?.status
                                                 // Update status to completed via store
                                                 await libraryStore.updateStatus(watchlistId, 'completed')
                                                 setWatchlistStatus('completed')
+                                                // Trigger Cosmic Confetti when transitioning from 'planning' to 'completed'
+                                                if (previousStatus === 'planning') {
+                                                    launchCosmicConfetti()
+                                                }
                                             }
                                         }}
                                         disabled={adding}
@@ -402,8 +409,13 @@ const MovieDetail: React.FC = () => {
                     onConfirm={async () => {
                         if (!watchlistId) return
                         const newStatus = markWatchedModal.markAsWatched ? 'completed' : 'planning'
+                        const previousStatus = watchlistStatus
                         await libraryStore.updateStatus(watchlistId, newStatus)
                         setWatchlistStatus(newStatus)
+                        // Trigger Cosmic Confetti when transitioning from 'planning' to 'completed'
+                        if (markWatchedModal.markAsWatched && previousStatus === 'planning') {
+                            launchCosmicConfetti()
+                        }
                         setMarkWatchedModal(null)
                     }}
                     onCancel={() => setMarkWatchedModal(null)}

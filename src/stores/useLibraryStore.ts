@@ -14,6 +14,9 @@ interface LibraryState {
     movies: WatchlistItem[]
     finished: WatchlistItem[]
     
+    // Derived set of tmdb_ids for quick membership checks
+    watchlistIds: Set<number>
+    
     // Loading states
     isLoading: boolean
     isInitialized: boolean
@@ -29,10 +32,15 @@ interface LibraryState {
     removeItem: (id: string) => Promise<void>
     addItem: (item: WatchlistItem) => Promise<void>
     refreshItem: (id: string) => Promise<void>
+    syncWatchlistIds: () => void
     reset: () => void
 }
 
 const selectColumns = '*'
+
+// Helper: compute a Set of tmdb_ids from an array of items
+const computeWatchlistIds = (items: WatchlistItem[]): Set<number> =>
+    new Set(items.map(item => item.tmdb_id).filter((id): id is number => id != null))
 
 export const useLibraryStore = create<LibraryState>((set, get) => ({
     // Initial state
@@ -40,6 +48,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     tvShows: [],
     movies: [],
     finished: [],
+    watchlistIds: new Set<number>(),
     isLoading: false,
     isInitialized: false,
     error: null,
@@ -108,6 +117,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 tvShows,
                 movies,
                 finished,
+                watchlistIds: computeWatchlistIds(items),
                 isLoading: false,
                 isInitialized: true
             })
@@ -338,7 +348,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             allItems: newAllItems,
             tvShows: newTvShows,
             movies: newMovies,
-            finished: newFinished
+            finished: newFinished,
+            watchlistIds: computeWatchlistIds(newAllItems)
         })
 
         // Silent background sync
@@ -359,6 +370,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 tvShows: previousTvShows,
                 movies: previousMovies,
                 finished: previousFinished,
+                watchlistIds: computeWatchlistIds(previousAllItems),
                 error: error instanceof Error ? error.message : 'Failed to remove item'
             })
         }
@@ -396,7 +408,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             allItems: newAllItems,
             tvShows: newTvShows,
             movies: newMovies,
-            finished: newFinished
+            finished: newFinished,
+            watchlistIds: computeWatchlistIds(newAllItems)
         })
 
         // Silent background sync
@@ -416,6 +429,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 tvShows: previousTvShows,
                 movies: previousMovies,
                 finished: previousFinished,
+                watchlistIds: computeWatchlistIds(previousAllItems),
                 error: error instanceof Error ? error.message : 'Failed to add item'
             })
         }
@@ -449,7 +463,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 allItems: newAllItems,
                 tvShows: newTvShows,
                 movies: newMovies,
-                finished: newFinished
+                finished: newFinished,
+                watchlistIds: computeWatchlistIds(newAllItems)
             })
         } catch (error) {
             console.error('Failed to refresh item:', error)
@@ -459,6 +474,12 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         }
     },
 
+    // Recompute watchlistIds from allItems (useful after external updates)
+    syncWatchlistIds: () => {
+        const state = get()
+        set({ watchlistIds: computeWatchlistIds(state.allItems) })
+    },
+
     // Reset store state (for logout)
     reset: () => {
         set({
@@ -466,9 +487,13 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             tvShows: [],
             movies: [],
             finished: [],
+            watchlistIds: new Set<number>(),
             isLoading: false,
             isInitialized: false,
             error: null
         })
     }
 }))
+
+// Selector hooks for optimized re-renders
+export const useLibraryWatchlistIds = () => useLibraryStore((state) => state.watchlistIds)

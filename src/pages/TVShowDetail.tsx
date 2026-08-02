@@ -8,6 +8,7 @@ import ConfirmModal from '../components/modals/ConfirmModal'
 import EpisodeChoiceModal from '../components/modals/EpisodeChoiceModal'
 import type { TMDBResult, WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 
 interface LocalEpisode {
     id: string
@@ -391,6 +392,8 @@ const TVShowDetail: React.FC = () => {
                 await checkAndUpdateCompleted(watchlistId, details.id)
                 // Then run caught up check (it will skip ended shows due to early return)
                 await checkAndUpdateCaughtUp(watchlistId, details.id)
+                // Check for milestone and celebrate
+                await checkMilestoneAndCelebrate(watchlistStatus)
             } catch (err) {
                 console.error('Failed to mark episodes:', err)
                 // Revert on error
@@ -453,12 +456,40 @@ const TVShowDetail: React.FC = () => {
                 await checkAndUpdateCompleted(watchlistId, details.id)
                 // Then run caught up check (it will skip ended shows due to early return)
                 await checkAndUpdateCaughtUp(watchlistId, details.id)
+                // Check for milestone and celebrate
+                await checkMilestoneAndCelebrate(watchlistStatus)
             } catch (err) {
                 setEpisodes(prev => prev.map(ep => 
                     ep.id === episode.id ? { ...ep, watched: !newWatchedState } : ep
                 ))
                 console.error('Failed to toggle episode:', err)
             }
+        }
+    }
+
+    /**
+     * Refresh the watchlist item from the store after a status check,
+     * then fire Cosmic Confetti if the show just hit 'completed' or 'caught_up'.
+     */
+    const checkMilestoneAndCelebrate = async (previousStatus: string | null) => {
+        if (!watchlistId || !details) return
+        try {
+            await libraryStore.refreshItem(watchlistId)
+            // Use getState() to read the FRESH store state (the `libraryStore`
+            // variable is a stale closure snapshot from the last render)
+            const updatedItem = useLibraryStore.getState().allItems.find(item => item.id === watchlistId)
+            if (updatedItem) {
+                const newStatus = updatedItem.status
+                if (
+                    (newStatus === 'completed' || newStatus === 'caught_up') &&
+                    previousStatus !== 'completed' && previousStatus !== 'caught_up'
+                ) {
+                    launchCosmicConfetti()
+                }
+                setWatchlistStatus(newStatus)
+            }
+        } catch (err) {
+            console.error('Failed to check milestone:', err)
         }
     }
 
@@ -640,15 +671,10 @@ const TVShowDetail: React.FC = () => {
                                                     await Promise.all(markPromises)
                                                     // Check TMDB status: if ended -> completed, if still airing -> caught_up
                                                     await checkAndUpdateCompleted(watchlistId, details.id)
+                                                    // Check for milestone and celebrate
+                                                    await checkMilestoneAndCelebrate(watchlistStatus)
                                                     // Refresh episodes
                                                     setEpisodes(prev => prev.map(ep => ({ ...ep, watched: true })))
-                                                    // Refresh watchlist status from store
-                                                    if (watchlistId) {
-                                                        const updatedItem = libraryStore.allItems.find(item => item.id === watchlistId)
-                                                        if (updatedItem) {
-                                                            setWatchlistStatus(updatedItem.status)
-                                                        }
-                                                    }
                                                 }
                                             }}
                                             disabled={adding}
@@ -902,6 +928,11 @@ const TVShowDetail: React.FC = () => {
                         await checkAndUpdateCompleted(watchlistId, details.id)
                         // Then run caught up check (it will skip ended shows due to early return)
                         await checkAndUpdateCaughtUp(watchlistId, details.id)
+                        
+                        // Check for milestone and celebrate (only when marking as watched)
+                        if (newWatchedState) {
+                            await checkMilestoneAndCelebrate(watchlistStatus)
+                        }
                         
                         // Refresh episodes
                         setEpisodes(prev => prev.map(ep => 
