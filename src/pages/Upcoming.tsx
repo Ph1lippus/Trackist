@@ -1,10 +1,16 @@
- import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
 import { loadCalendar, type CalendarItem } from '../services/calendarService'
 import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { 
+    getUTCTodayString, 
+    getYearMonth, 
+    isToday, 
+    formatDateString 
+} from '../utils/dateUtils'
 
 interface UpcomingItem {
     id: string
@@ -115,14 +121,17 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
 
     const groupedItems = upcomingItems.reduce((groups, upcoming) => {
         if (!upcoming.date) return groups
-        const date = new Date(upcoming.date)
-        const key = date.toISOString().split('T')[0]
+        const dateKey = upcoming.date // Already in YYYY-MM-DD format
+        const { year, month } = getYearMonth(dateKey)
+        const currentYear = currentMonth.getFullYear()
+        const currentMonthIndex = currentMonth.getMonth()
+        
         // Only include items in the current month being viewed
-        if (date.getMonth() === currentMonth.getMonth() && date.getFullYear() === currentMonth.getFullYear()) {
-            if (!groups[key]) {
-                groups[key] = []
+        if (year === currentYear && month === currentMonthIndex) {
+            if (!groups[dateKey]) {
+                groups[dateKey] = []
             }
-            groups[key].push(upcoming)
+            groups[dateKey].push(upcoming)
         }
         return groups
     }, {} as Record<string, UpcomingItem[]>)
@@ -130,11 +139,11 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
     const getDaysInMonth = (date: Date) => {
         const year = date.getFullYear()
         const month = date.getMonth()
-        const firstDay = new Date(year, month, 1)
-        const lastDay = new Date(year, month + 1, 0)
-        const daysInMonth = lastDay.getDate()
+        const firstDay = new Date(Date.UTC(year, month, 1))
+        const lastDay = new Date(Date.UTC(year, month + 1, 0))
+        const daysInMonth = lastDay.getUTCDate()
         // Adjust for Monday as first day (0 = Monday, 6 = Sunday)
-        let startDayOfWeek = firstDay.getDay()
+        let startDayOfWeek = firstDay.getUTCDay()
         startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1
         
         const days = []
@@ -142,7 +151,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
             days.push(null)
         }
         for (let i = 1; i <= daysInMonth; i++) {
-            days.push(new Date(year, month, i))
+            days.push(new Date(Date.UTC(year, month, i)))
         }
         return days
     }
@@ -173,7 +182,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
 
                             const dateKey = day.toISOString().split('T')[0]
                             const dayItems = groupedItems[dateKey] || []
-                            const isToday = new Date().toDateString() === day.toDateString()
+                            const isTodayDate = isToday(dateKey)
 
                             // Show max 2 episodes, rest go into "+" button
                             const maxVisible = 3
@@ -183,10 +192,10 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                             return (
                                 <div 
                                     key={dateKey} 
-                                    className={`calendar-day ${isToday ? 'calendar-day--today' : ''} ${dayItems.length > 0 ? 'calendar-day--has-episodes' : ''}`}
+                                    className={`calendar-day ${isTodayDate ? 'calendar-day--today' : ''} ${dayItems.length > 0 ? 'calendar-day--has-episodes' : ''}`}
                                     style={{ position: 'relative' }}
                                 >
-                                    <span className="calendar-day-number" style={{ position: 'absolute', top: '0.2rem', left: '0.2rem' }}>{day.getDate()}</span>
+                                    <span className="calendar-day-number" style={{ position: 'absolute', top: '0.2rem', left: '0.2rem' }}>{day.getUTCDate()}</span>
                                     <div style={{ display: 'flex', flexDirection: 'row', gap: '0', paddingTop: '1.2rem', position: 'relative', flexWrap: 'nowrap' }}>
                                         {visibleItems.map((item, idx) => (
                                             <div 
@@ -249,7 +258,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                     <div className="upcoming-side-panel">
                         <div className="upcoming-side-panel-header">
                             <h3 className="upcoming-side-panel-title">
-                                {new Date(selectedDate.dateKey).toLocaleDateString('en-US', { 
+                                {formatDateString(selectedDate.dateKey, {
                                     weekday: 'long',
                                     month: 'long', 
                                     day: 'numeric' 

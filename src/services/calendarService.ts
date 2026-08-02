@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient'
+import { shouldRevalidateByDate } from '../utils/dateUtils'
 
 export interface CalendarEpisodeItem {
     id: string
@@ -80,7 +81,14 @@ const writeCache = (userId: string, upcoming: CalendarItem[]): void => {
 
 const isCacheStale = (cache: CalendarCache | null): boolean => {
     if (!cache || !cache.last_fetched_timestamp) return true
-    return Date.now() - cache.last_fetched_timestamp > CACHE_TTL_MS
+    
+    // Check if cache is older than TTL
+    const isOlderThanTTL = Date.now() - cache.last_fetched_timestamp > CACHE_TTL_MS
+    
+    // Check if cache was created on a different calendar day (UTC)
+    const isDifferentDay = shouldRevalidateByDate(cache.last_fetched_timestamp)
+    
+    return isOlderThanTTL || isDifferentDay
 }
 
 /**

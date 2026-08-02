@@ -13,6 +13,7 @@ import {
 import type { User } from '@supabase/supabase-js'
 import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { formatDateString } from '../utils/dateUtils'
 
 interface ProfileData {
     id: string
@@ -221,8 +222,7 @@ const ProfilePage: React.FC = () => {
     }
 
     const formatDate = (dateString: string): string => {
-        const date = new Date(dateString)
-        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+        return formatDateString(dateString, { year: 'numeric', month: 'long', day: 'numeric' })
     }
 
     if (loading) {

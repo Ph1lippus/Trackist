@@ -5,6 +5,7 @@ import { requestPasswordReset, updateUserEmail, getProfile, updateProfile } from
 import { useCache } from '../hooks/useCache'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { validateDisplayName, validateEmail } from '../utils/validation'
+import { getUTCTodayString } from '../utils/dateUtils'
 import type { User } from '@supabase/supabase-js'
 
 type SettingsSection = 'account' | 'profile' | 'privacy' | 'notifications' | 'data' | 'danger'
@@ -205,7 +206,7 @@ const Settings: React.FC = () => {
             const url = URL.createObjectURL(blob)
             const a = document.createElement('a')
             a.href = url
-            a.download = `trackist-export-${new Date().toISOString().split('T')[0]}.json`
+            a.download = `trackist-export-${getUTCTodayString()}.json`
             a.click()
             URL.revokeObjectURL(url)
 

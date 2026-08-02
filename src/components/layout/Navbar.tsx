@@ -5,6 +5,7 @@ import { supabase } from '../../services/supabaseClient';
 import { useSearch } from '../../hooks/useSearch';
 import SearchDropdown from '../search/SearchDropdown';
 import ProgressFixModal from '../modals/ProgressFixModal';
+import { formatDateString } from '../../utils/dateUtils';
 
 interface NavbarProps {
     currentMonth?: Date;
@@ -48,7 +49,10 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack 
     
     const showCalendarHeader = location.pathname === '/Upcoming' && currentMonth && navigateMonth && canGoBack;
     
-    const monthName = currentMonth?.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) || '';
+    const monthName = currentMonth ? formatDateString(
+        `${currentMonth.getUTCFullYear()}-${String(currentMonth.getUTCMonth() + 1).padStart(2, '0')}-01`,
+        { month: 'long', year: 'numeric' }
+    ) : '';
 
     useEffect(() => {
         // Get initial session
