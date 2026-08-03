@@ -857,7 +857,7 @@ body::after {
 /* Card grid - responsive grid of media cards */
 .discover-grid {
     display: grid;
-    gap: 1rem 1rem;
+    gap: 1rem;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     width: 100%;
     margin: 0 auto;
@@ -2778,35 +2778,29 @@ body::after {
 }
 
 .lists-page__action-btn {
-    padding: 0.6rem 1.2rem;
-    border-radius: 8px;
+    padding: 0.6rem 2.5rem 0.6rem 1.2rem;
+    background: rgba(255, 255, 255, 0.08);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    background: transparent;
+    border-radius: 25px;
+    backdrop-filter: blur(5px);
     color: var(--color-platinum);
-    cursor: pointer;
     font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
     transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    height: 44px;
+    min-width: 130px;
+    text-align: center;
+    align-self: center;
 }
 
 .lists-page__action-btn:hover {
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(255, 255, 255, 0.25);
+    
 }
+«
 
-.lists-page__action-btn--primary {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: white;
-    font-weight: 500;
-}
 
-.lists-page__action-btn--primary:hover {
-    background: var(--color-primary-hover, #6b70d0);
-    border-color: var(--color-primary-hover, #6b70d0);
-}
 
 .lists-page__action-btn--primary:disabled {
     opacity: 0.5;
@@ -2816,11 +2810,6 @@ body::after {
 .lists-page__action-btn--danger {
     border-color: rgba(255, 71, 87, 0.3);
     color: #ff4757;
-}
-
-.lists-page__action-btn--danger:hover {
-    background: rgba(255, 71, 87, 0.1);
-    border-color: #ff4757;
 }
 
 .lists-page__items-section {
@@ -2842,7 +2831,7 @@ body::after {
 .lists-page__items-grid {
     display: grid;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 1rem;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
 }
 
@@ -4268,8 +4257,8 @@ button:focus-visible {
 .media-card__list-icon {
     position: absolute;
     top: 0.5rem;
-    right: 3rem;
-    background: rgba(0, 0, 0, 0.6);
+    right: 0.5rem;
+    background: transparent;
     border: none;
     color: #fff;
     width: 28px;
@@ -4279,13 +4268,12 @@ button:focus-visible {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    backdrop-filter: blur(4px);
     transition: background-color 0.2s ease, transform 0.15s ease;
 }
 
 .media-card__list-icon:hover {
-    background: #ffad38;
-    transform: scale(1.1);
+    color: var(--color-primary);
+    
 }
 
 .media-card__icon-btn {
@@ -5201,9 +5189,9 @@ i.fa-solid.fa-trash:hover {
 .friends-container {
     margin: 0 auto;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     gap: 1.5rem;
-    width: 85%;
+    width: 100%;
 }
 
 .friends-search-wrap {
