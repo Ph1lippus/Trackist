@@ -56,6 +56,7 @@ export const saveAllEpisodesForShow = async (tmdbId: number, watchlistId: string
 /**
  * Mark an episode as watched by INSERTING it into watchlist_episodes.
  * If it already exists (unique constraint), this is a no-op.
+ * Also updates the watchlist item's updated_at timestamp to reflect the change.
  */
 export const markEpisodeWatched = async (
     watchlistId: string,
@@ -92,11 +93,22 @@ export const markEpisodeWatched = async (
         console.error('Failed to mark episode as watched:', error)
         return false
     }
+
+    // Update the watchlist item's updated_at timestamp
+    await supabase
+        .from('watchlist')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', watchlistId)
+
+    // Invalidate cache to ensure the updated_at change is reflected
+    await invalidateUserCache()
+
     return true
 }
 
 /**
  * Unmark an episode as watched by DELETING it from watchlist_episodes.
+ * Also updates the watchlist item's updated_at timestamp to reflect the change.
  */
 export const unmarkEpisodeWatched = async (
     watchlistId: string,
@@ -114,6 +126,16 @@ export const unmarkEpisodeWatched = async (
         console.error('Failed to unmark episode:', error)
         return false
     }
+
+    // Update the watchlist item's updated_at timestamp
+    await supabase
+        .from('watchlist')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('id', watchlistId)
+
+    // Invalidate cache to ensure the updated_at change is reflected
+    await invalidateUserCache()
+
     return true
 }
 

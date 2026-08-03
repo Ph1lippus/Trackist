@@ -135,6 +135,20 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 return dateB.getTime() - dateA.getTime()
             })
 
+            // Sort tvShows array by updated_at (most recent first)
+            tvShows.sort((a, b) => {
+                const dateA = new Date(a.updated_at || 0)
+                const dateB = new Date(b.updated_at || 0)
+                return dateB.getTime() - dateA.getTime()
+            })
+
+            // Sort movies array by updated_at (most recent first)
+            movies.sort((a, b) => {
+                const dateA = new Date(a.updated_at || 0)
+                const dateB = new Date(b.updated_at || 0)
+                return dateB.getTime() - dateA.getTime()
+            })
+
             set({
                 allItems: items,
                 tvShows,
@@ -200,6 +214,25 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             // Remove from finished if status changed away from completed/caught_up
             newFinished = state.finished.filter(item => item.id !== id)
         }
+
+        // Sort arrays by updated_at (most recent first)
+        newTvShows.sort((a, b) => {
+            const dateA = new Date(a.updated_at || 0)
+            const dateB = new Date(b.updated_at || 0)
+            return dateB.getTime() - dateA.getTime()
+        })
+
+        newMovies.sort((a, b) => {
+            const dateA = new Date(a.updated_at || 0)
+            const dateB = new Date(b.updated_at || 0)
+            return dateB.getTime() - dateA.getTime()
+        })
+
+        newFinished.sort((a, b) => {
+            const dateA = new Date(a.completed_at || a.updated_at || 0)
+            const dateB = new Date(b.completed_at || b.updated_at || 0)
+            return dateB.getTime() - dateA.getTime()
+        })
 
         // Apply optimistic update
         set({
@@ -287,6 +320,13 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         const newAllItems = updateInArray(state.allItems) as WatchlistItem[]
         const newTvShows = updateInArray(state.tvShows) as TVShowWithProgress[]
 
+        // Sort tvShows by updated_at (most recent first)
+        newTvShows.sort((a, b) => {
+            const dateA = new Date(a.updated_at || 0)
+            const dateB = new Date(b.updated_at || 0)
+            return dateB.getTime() - dateA.getTime()
+        })
+
         // Apply optimistic update
         set({
             allItems: newAllItems,
@@ -367,6 +407,25 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             newFinished = state.finished.filter(item => item.id !== id)
         }
 
+        // Sort arrays by updated_at (most recent first)
+        newTvShows.sort((a, b) => {
+            const dateA = new Date(a.updated_at || 0)
+            const dateB = new Date(b.updated_at || 0)
+            return dateB.getTime() - dateA.getTime()
+        })
+
+        newMovies.sort((a, b) => {
+            const dateA = new Date(a.updated_at || 0)
+            const dateB = new Date(b.updated_at || 0)
+            return dateB.getTime() - dateA.getTime()
+        })
+
+        newFinished.sort((a, b) => {
+            const dateA = new Date(a.completed_at || a.updated_at || 0)
+            const dateB = new Date(b.completed_at || b.updated_at || 0)
+            return dateB.getTime() - dateA.getTime()
+        })
+
         // Apply optimistic update
         set({
             allItems: newAllItems,
@@ -435,6 +494,25 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         const newTvShows = state.tvShows.filter(item => item.id !== id)
         const newMovies = state.movies.filter(item => item.id !== id)
         const newFinished = state.finished.filter(item => item.id !== id)
+
+        // Sort arrays by updated_at (most recent first)
+        newTvShows.sort((a, b) => {
+            const dateA = new Date(a.updated_at || 0)
+            const dateB = new Date(b.updated_at || 0)
+            return dateB.getTime() - dateA.getTime()
+        })
+
+        newMovies.sort((a, b) => {
+            const dateA = new Date(a.updated_at || 0)
+            const dateB = new Date(b.updated_at || 0)
+            return dateB.getTime() - dateA.getTime()
+        })
+
+        newFinished.sort((a, b) => {
+            const dateA = new Date(a.completed_at || a.updated_at || 0)
+            const dateB = new Date(b.completed_at || b.updated_at || 0)
+            return dateB.getTime() - dateA.getTime()
+        })
 
         // Apply optimistic update
         set({
@@ -506,6 +584,25 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             newFinished = [item, ...state.finished]
         }
 
+        // Sort arrays by updated_at (most recent first)
+        newTvShows.sort((a, b) => {
+            const dateA = new Date(a.updated_at || 0)
+            const dateB = new Date(b.updated_at || 0)
+            return dateB.getTime() - dateA.getTime()
+        })
+
+        newMovies.sort((a, b) => {
+            const dateA = new Date(a.updated_at || 0)
+            const dateB = new Date(b.updated_at || 0)
+            return dateB.getTime() - dateA.getTime()
+        })
+
+        newFinished.sort((a, b) => {
+            const dateA = new Date(a.completed_at || a.updated_at || 0)
+            const dateB = new Date(b.completed_at || b.updated_at || 0)
+            return dateB.getTime() - dateA.getTime()
+        })
+
         // Apply optimistic update
         set({
             allItems: newAllItems,
@@ -571,6 +668,20 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             newFinished.sort((a, b) => {
                 const dateA = new Date(a.completed_at || a.updated_at || 0)
                 const dateB = new Date(b.completed_at || b.updated_at || 0)
+                return dateB.getTime() - dateA.getTime()
+            })
+
+            // Sort tvShows array by updated_at (most recent first)
+            newTvShows.sort((a, b) => {
+                const dateA = new Date(a.updated_at || 0)
+                const dateB = new Date(b.updated_at || 0)
+                return dateB.getTime() - dateA.getTime()
+            })
+
+            // Sort movies array by updated_at (most recent first)
+            newMovies.sort((a, b) => {
+                const dateA = new Date(a.updated_at || 0)
+                const dateB = new Date(b.updated_at || 0)
                 return dateB.getTime() - dateA.getTime()
             })
 
