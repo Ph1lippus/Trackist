@@ -3,10 +3,11 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import type { UserList, ListItem, TMDBResult } from '../types'
 import MediaCard from '../components/media/MediaCard'
-import { discoverMovies, discoverTV, getGenres } from '../services/tmdbService'
+import { discoverMovies, discoverTV, getGenres, searchMulti } from '../services/tmdbService'
 import { addToList, removeFromList, updateList, createList } from '../services/profileService'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useSearch } from '../hooks/useSearch'
+import { VirtuosoGrid } from 'react-virtuoso'
 
 
 type TabType = 'all' | 'movie' | 'tv'
@@ -46,6 +47,10 @@ const Lists: React.FC = () => {
     // Watchlist state
     const [watchlistIds, setWatchlistIds] = useState<Set<number>>(new Set())
     const [listItemIds, setListItemIds] = useState<Set<number>>(new Set())
+    
+    // View/Edit mode state
+    const [isEditMode, setIsEditMode] = useState(false)
+    const [reordering, setReordering] = useState<string | null>(null)
     
     const isFetchingRef = useRef(false)
 
@@ -106,6 +111,7 @@ const Lists: React.FC = () => {
                 setDescription(data.description || '')
                 setIsPublic(data.is_public || false)
                 setIsNewList(false)
+                setIsEditMode(false)
                 await fetchListItems(listId)
             }
         } catch (err) {
@@ -118,10 +124,8 @@ const Lists: React.FC = () => {
     // Load list details if ID is provided
     useEffect(() => {
         if (id && id !== 'new') {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
             loadListDetails(id)
         } else if (id === 'new' || location.pathname === '/Lists/new') {
-            // Show create new list form
             setIsNewList(true)
             setSelectedList(null)
             setTitle('')
@@ -131,7 +135,6 @@ const Lists: React.FC = () => {
             setListItemIds(new Set())
             setLoading(false)
         } else {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
             fetchLists()
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -145,7 +148,6 @@ const Lists: React.FC = () => {
                 getGenres('tv')
             ])
             const allGenres = [...movieGenres, ...tvGenres]
-            // Filter out News genre (ID: 10769) from default list
             const filteredGenres = allGenres.filter(g => g.id !== 10769)
             const uniqueGenres = Array.from(
                 new Map(filteredGenres.map(g => [g.id, g])).values()
@@ -164,31 +166,46 @@ const Lists: React.FC = () => {
         setBrowseLoading(true)
 
         try {
-            const params = {
-                page,
-                sort_by: sortBy,
-                with_genres: selectedGenre ? String(selectedGenre) : undefined,
-            }
-
             let data
-            if (browseMediaType === 'movie') {
-                data = await discoverMovies(params)
+            let totalPages = 1
+
+            if (committedQuery) {
+                data = await searchMulti(committedQuery, page)
+                totalPages = data.total_pages || 1
             } else {
-                const tvSortBy = sortBy.includes('release_date') 
-                    ? sortBy.replace('release_date', 'first_air_date') 
-                    : sortBy
-                data = await discoverTV({
-                    ...params,
-                    sort_by: tvSortBy,
-                })
+                const params = {
+                    page,
+                    sort_by: sortBy,
+                    with_genres: selectedGenre ? String(selectedGenre) : undefined,
+                }
+
+                if (browseMediaType === 'movie') {
+                    data = await discoverMovies(params)
+                } else {
+                    const tvSortBy = sortBy.includes('release_date') 
+                        ? sortBy.replace('release_date', 'first_air_date') 
+                        : sortBy
+                    data = await discoverTV({
+                        ...params,
+                        sort_by: tvSortBy,
+                    })
+                }
+                totalPages = (data as { total_pages?: number }).total_pages || 1
             }
 
-            const newResults: TMDBResult[] = ((data as { results: TMDBResult[] }).results || []).map(r => ({
-                ...r,
-                media_type: browseMediaType
-            }))
-
-            const totalPages = (data as { total_pages?: number }).total_pages || 1
+            const newResults: TMDBResult[] = ((data as { results: TMDBResult[] }).results || [])
+                .filter(r => {
+                    if (committedQuery) {
+                        return true
+                    }
+                    return r.media_type === browseMediaType || 
+                           (!r.media_type && browseMediaType === 'movie' && !r.first_air_date) ||
+                           (!r.media_type && browseMediaType === 'tv' && r.first_air_date)
+                })
+                .map(r => ({
+                    ...r,
+                    media_type: r.media_type || (r.first_air_date ? 'tv' : 'movie')
+                }))
 
             if (reset || page === 1) {
                 setBrowseResults(newResults)
@@ -207,15 +224,14 @@ const Lists: React.FC = () => {
             setBrowseLoading(false)
             isFetchingRef.current = false
         }
-    }, [browseMediaType, sortBy, selectedGenre])
+    }, [browseMediaType, sortBy, selectedGenre, committedQuery])
 
     // Fetch browse data when on list page
     useEffect(() => {
         if (selectedList || isNewList) {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
             fetchBrowseData(1, true)
         }
-    }, [selectedList, isNewList, browseMediaType, sortBy, selectedGenre, fetchBrowseData])
+    }, [selectedList, isNewList, browseMediaType, sortBy, selectedGenre, committedQuery, fetchBrowseData])
 
     // Handle save
     const handleSave = async () => {
@@ -227,7 +243,7 @@ const Lists: React.FC = () => {
         setSaving(true)
         try {
             if (isNewList) {
-                const { data, error } = await createList(user.id, title.trim(), description.trim() || undefined)
+                const { data, error } = await createList(user.id, title.trim(), description.trim() || undefined, isPublic)
                 if (error) {
                     alert('Error creating list: ' + error.message)
                     return
@@ -240,28 +256,20 @@ const Lists: React.FC = () => {
             } else if (selectedList) {
                 const { error } = await updateList(selectedList.id, {
                     title: title.trim(),
-                    description: description.trim() || undefined
+                    description: description.trim() || undefined,
+                    is_public: isPublic
                 })
                 if (error) {
                     alert('Error updating list: ' + error.message)
                     return
                 }
-                setSelectedList(prev => prev ? { ...prev, title: title.trim(), description: description.trim() } : null)
+                setSelectedList(prev => prev ? { ...prev, title: title.trim(), description: description.trim(), is_public: isPublic } : null)
             }
         } catch (err) {
             console.error('Failed to save list:', err)
             alert('Failed to save list. Please try again.')
         } finally {
             setSaving(false)
-        }
-    }
-
-    const handleDeleteList = async (listId: string) => {
-        if (!confirm('Are you sure you want to delete this list?')) return
-        const { error } = await supabase.from('lists').delete().eq('id', listId)
-        if (!error) {
-            navigate('/Lists')
-            fetchLists()
         }
     }
 
@@ -340,6 +348,51 @@ const Lists: React.FC = () => {
         }
     }, [watchlistIds])
 
+    // Reorder handlers
+    const handleMoveUp = useCallback(async (item: ListItem, currentIndex: number) => {
+        if (currentIndex === 0 || reordering) return
+        
+        const prevItem = listItems[currentIndex - 1]
+        if (!prevItem) return
+
+        setReordering(item.id)
+        try {
+            const prevTimestamp = new Date(prevItem.added_at)
+            
+            // Set this item's timestamp between the previous item and the one before it
+            const newTimestamp = new Date(prevTimestamp.getTime() - 1000).toISOString()
+            
+            const { error } = await reorderListItem(selectedList!.id, item.id, newTimestamp)
+            if (!error) {
+                await fetchListItems(selectedList!.id)
+            }
+        } finally {
+            setReordering(null)
+        }
+    }, [selectedList, listItems, reordering, fetchListItems])
+
+    const handleMoveDown = useCallback(async (item: ListItem, currentIndex: number) => {
+        if (currentIndex >= listItems.length - 1 || reordering) return
+        
+        const nextItem = listItems[currentIndex + 1]
+        if (!nextItem) return
+
+        setReordering(item.id)
+        try {
+            const nextTimestamp = new Date(nextItem.added_at)
+            
+            // Set this item's timestamp between the next item and the one after it
+            const newTimestamp = new Date(nextTimestamp.getTime() + 1000).toISOString()
+            
+            const { error } = await reorderListItem(selectedList!.id, item.id, newTimestamp)
+            if (!error) {
+                await fetchListItems(selectedList!.id)
+            }
+        } finally {
+            setReordering(null)
+        }
+    }, [selectedList, listItems, reordering, fetchListItems])
+
     // Filter lists based on global search (public + user's own lists)
     const filteredLists = useMemo(() => {
         if (!committedQuery) return lists
@@ -366,6 +419,35 @@ const Lists: React.FC = () => {
         return browseResults.filter((item: TMDBResult) => !listItemIds.has(item.id))
     }, [browseResults, listItemIds])
 
+    // Footer component for VirtuosoGrid
+    const Footer = useCallback(() => {
+        if (browseLoading && browsePage === 1) {
+            return (
+                <div className="discover-loading" style={{ padding: "2rem" }}>
+                    <div className="discover-spinner" />
+                    <p>Loading...</p>
+                </div>
+            );
+        }
+
+        if (!hasMore && filteredBrowseResults.length > 0) {
+            return (
+                <p
+                    style={{
+                        textAlign: "center",
+                        color: "rgba(255,255,255,0.3)",
+                        fontSize: ".85rem",
+                        padding: "1rem",
+                    }}
+                >
+                    You've reached the end
+                </p>
+            );
+        }
+
+        return null;
+    }, [browseLoading, browsePage, hasMore, filteredBrowseResults.length])
+
     if (loading) {
         return (
             <section className="lists-page">
@@ -377,23 +459,99 @@ const Lists: React.FC = () => {
         )
     }
 
-    // List detail/edit view with split layout
+    // View Mode - Full page like Movies/TVShows
+    if (selectedList && !isEditMode) {
+        return (
+            <div className="discover-page">
+                <div className="discover-container">
+                    <div className="lists-page__view-header">
+                        <div className="lists-page__view-header-content">
+                            <h1>{selectedList.title}</h1>
+                            <p className="lists-page__view-description">{selectedList.description || 'No description'}</p>
+                            <div className="lists-page__view-meta">
+                                <span>{selectedList.is_public ? '🌐 Public' : '🔒 Private'}</span>
+                                <span>•</span>
+                                <span>{listItems.length} {listItems.length === 1 ? 'item' : 'items'}</span>
+                            </div>
+                            <button
+                                className="lists-page__action-btn lists-page__action-btn--primary"
+                                onClick={() => setIsEditMode(true)}
+                            >
+                                <i className="fa-solid fa-pen"></i> Edit List
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="lists-page__view-content">
+                        <div className="lists-page__items-header">
+                            <div className="lists-page__tabs">
+                                <button 
+                                    className={`lists-page__tab ${activeTab === 'all' ? 'lists-page__tab--active' : ''}`}
+                                    onClick={() => setActiveTab('all')}
+                                >
+                                    All ({listItems.length})
+                                </button>
+                                <button 
+                                    className={`lists-page__tab ${activeTab === 'movie' ? 'lists-page__tab--active' : ''}`}
+                                    onClick={() => setActiveTab('movie')}
+                                >
+                                    <i className="fa-solid fa-film"></i> Movies ({listItems.filter(i => i.media_type === 'movie').length})
+                                </button>
+                                <button 
+                                    className={`lists-page__tab ${activeTab === 'tv' ? 'lists-page__tab--active' : ''}`}
+                                    onClick={() => setActiveTab('tv')}
+                                >
+                                    <i className="fa-solid fa-tv"></i> TV Shows ({listItems.filter(i => i.media_type === 'tv' || i.media_type === 'anime').length})
+                                </button>
+                            </div>
+                        </div>
+
+                        {filteredListItems.length === 0 ? (
+                            <div className="lists-page__empty-state">
+                                <i className="fa-solid fa-film"></i>
+                                <p>This list is empty. Click "Edit List" to add content!</p>
+                            </div>
+                        ) : (
+                            <VirtuosoGrid
+                                computeItemKey={(index) => filteredListItems[index]?.id ?? index}
+                                style={{ height: '100%', width: '100%' }}
+                                useWindowScroll={true}
+                                data={filteredListItems}
+                                overscan={800}
+                                listClassName="discover-grid"
+                                itemContent={(index) => {
+                                    const item = filteredListItems[index]
+                                    return (
+                                        <MediaCard
+                                            item={{
+                                                id: item.tmdb_id,
+                                                title: item.title,
+                                                poster_path: item.poster_path,
+                                                media_type: item.media_type
+                                            }}
+                                            isInWatchlist={watchlistIds.has(item.tmdb_id)}
+                                            listMode={true}
+                                            onMarkWatched={item.media_type === 'movie' ? handleMarkWatched : undefined}
+                                            onAdd={item.media_type === 'tv' || item.media_type === 'anime' ? handleAddToWatchlist : undefined}
+                                        />
+                                    )
+                                }}
+                            />
+                        )}
+                    </div>
+                </div>
+            </div>
+        )
+    }
+
+    // Edit Mode - Split layout
     if (selectedList || isNewList) {
         return (
             <div className="lists-page lists-page--split">
-                {/* Left side: Form */}
+                {/* Left side: Form + List Items */}
                 <div className="lists-page__form-section">
                     <div className="lists-page__form-header">
                         <h1>{isNewList ? 'Create New List' : 'Edit List'}</h1>
-                        {!isNewList && selectedList && (
-                            <button
-                                className="lists-page__action-btn lists-page__action-btn--danger"
-                                onClick={() => handleDeleteList(selectedList.id)}
-                                title="Delete list"
-                            >
-                                <i className="fa-solid fa-trash"></i>
-                            </button>
-                        )}
                     </div>
 
                     <div className="lists-page__form">
@@ -432,7 +590,14 @@ const Lists: React.FC = () => {
                         <div className="lists-page__form-actions">
                             <button
                                 className="lists-page__action-btn"
-                                onClick={() => navigate('/Lists')}
+                                onClick={() => {
+                                    setIsEditMode(false)
+                                    if (selectedList) {
+                                        setTitle(selectedList.title)
+                                        setDescription(selectedList.description || '')
+                                        setIsPublic(selectedList.is_public)
+                                    }
+                                }}
                             >
                                 Cancel
                             </button>
@@ -441,71 +606,80 @@ const Lists: React.FC = () => {
                                 onClick={handleSave}
                                 disabled={!title.trim() || saving}
                             >
-                                {saving ? 'Saving...' : isNewList ? 'Create List' : 'Save Changes'}
+                                {saving ? 'Saving...' : 'Save Changes'}
                             </button>
                         </div>
                     </div>
 
                     {/* List items section */}
-                    {!isNewList && selectedList && (
-                        <div className="lists-page__items-section">
-                            <div className="lists-page__items-header">
-                                <h2>Items in List</h2>
-                                <div className="lists-page__tabs">
-                                    <button 
-                                        className={`lists-page__tab ${activeTab === 'all' ? 'lists-page__tab--active' : ''}`}
-                                        onClick={() => setActiveTab('all')}
-                                    >
-                                        All ({listItems.length})
-                                    </button>
-                                    <button 
-                                        className={`lists-page__tab ${activeTab === 'movie' ? 'lists-page__tab--active' : ''}`}
-                                        onClick={() => setActiveTab('movie')}
-                                    >
-                                        <i className="fa-solid fa-film"></i> Movies ({listItems.filter(i => i.media_type === 'movie').length})
-                                    </button>
-                                    <button 
-                                        className={`lists-page__tab ${activeTab === 'tv' ? 'lists-page__tab--active' : ''}`}
-                                        onClick={() => setActiveTab('tv')}
-                                    >
-                                        <i className="fa-solid fa-tv"></i> TV Shows ({listItems.filter(i => i.media_type === 'tv' || i.media_type === 'anime').length})
-                                    </button>
-                                </div>
+                    <div className="lists-page__items-section">
+                        <div className="lists-page__items-header">
+                            <h2>Items in List</h2>
+                            <div className="lists-page__tabs">
+                                <button 
+                                    className={`lists-page__tab ${activeTab === 'all' ? 'lists-page__tab--active' : ''}`}
+                                    onClick={() => setActiveTab('all')}
+                                >
+                                    All ({listItems.length})
+                                </button>
+                                <button 
+                                    className={`lists-page__tab ${activeTab === 'movie' ? 'lists-page__tab--active' : ''}`}
+                                    onClick={() => setActiveTab('movie')}
+                                >
+                                    <i className="fa-solid fa-film"></i> Movies ({listItems.filter(i => i.media_type === 'movie').length})
+                                </button>
+                                <button 
+                                    className={`lists-page__tab ${activeTab === 'tv' ? 'lists-page__tab--active' : ''}`}
+                                    onClick={() => setActiveTab('tv')}
+                                >
+                                    <i className="fa-solid fa-tv"></i> TV Shows ({listItems.filter(i => i.media_type === 'tv' || i.media_type === 'anime').length})
+                                </button>
                             </div>
+                        </div>
 
-                            {filteredListItems.length === 0 ? (
-                                <div className="lists-page__empty-state">
-                                    <i className="fa-solid fa-film"></i>
-                                    <p>This list is empty. Use the search bar to find content to add!</p>
-                                </div>
-                            ) : (
-                                <div className="lists-page__items-grid">
-                                    {filteredListItems.map(item => (
-                                        <div key={item.id} className="lists-page__item-wrapper">
-                                            <MediaCard
-                                                item={{
-                                                    id: item.tmdb_id,
-                                                    title: item.title,
-                                                    poster_path: item.poster_path,
-                                                    media_type: item.media_type
-                                                }}
-                                                isInWatchlist={watchlistIds.has(item.tmdb_id)}
-                                                listMode={true}
-                                                onMarkWatched={item.media_type === 'movie' ? handleMarkWatched : undefined}
-                                                onAdd={item.media_type === 'tv' || item.media_type === 'anime' ? handleAddToWatchlist : undefined}
-                                            />
+                        {filteredListItems.length === 0 ? (
+                            <div className="lists-page__empty-state">
+                                <i className="fa-solid fa-film"></i>
+                                <p>This list is empty. Use the search bar to find content to add!</p>
+                            </div>
+                        ) : (
+                            <div className="lists-page__items-grid">
+                                {filteredListItems.map((item, index) => (
+                                    <div key={item.id} className="lists-page__item-wrapper">
+                                        <div className="lists-page__reorder-controls">
                                             <button
-                                                className="lists-page__remove-item-btn"
-                                                onClick={() => handleRemoveFromList(item)}
+                                                className="lists-page__reorder-btn"
+                                                onClick={() => handleMoveUp(item, index)}
+                                                disabled={index === 0 || reordering === item.id}
+                                                title="Move up"
                                             >
-                                                <i className="fa-solid fa-trash"></i> Remove
+                                                <i className="fa-solid fa-arrow-up"></i>
+                                            </button>
+                                            <button
+                                                className="lists-page__reorder-btn"
+                                                onClick={() => handleMoveDown(item, index)}
+                                                disabled={index === filteredListItems.length - 1 || reordering === item.id}
+                                                title="Move down"
+                                            >
+                                                <i className="fa-solid fa-arrow-down"></i>
                                             </button>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    )}
+                                        <MediaCard
+                                            item={{
+                                                id: item.tmdb_id,
+                                                title: item.title,
+                                                poster_path: item.poster_path,
+                                                media_type: item.media_type
+                                            }}
+                                            isInWatchlist={watchlistIds.has(item.tmdb_id)}
+                                            listMode={true}
+                                            onRemove={() => handleRemoveFromList(item)}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Right side: Browse grid for adding items */}
@@ -571,30 +745,31 @@ const Lists: React.FC = () => {
                             <p>No content to add</p>
                         </div>
                     ) : (
-                        <>
-                            <div className="discover-grid">
-                                {filteredBrowseResults.map(item => (
-                                    <div key={`${item.media_type}-${item.id}`} className="lists-page__item-wrapper">
+                        <div style={{ flex: 1, minHeight: 0, width: '100%' }}>
+                            <VirtuosoGrid
+                                computeItemKey={(index) => filteredBrowseResults[index]?.id ?? index}
+                                style={{ height: '100%', width: '100%' }}
+                                data={filteredBrowseResults}
+                                endReached={() => {
+                                    if (hasMore && !isFetchingRef.current) {
+                                        fetchBrowseData(browsePage + 1)
+                                    }
+                                }}
+                                components={{ Footer }}
+                                useWindowScroll={true}
+                                listClassName="discover-grid"
+                                itemContent={(index) => {
+                                    const item = filteredBrowseResults[index]
+                                    return (
                                         <MediaCard
                                             item={item}
                                             onAddToList={handleAddToList}
                                             isInWatchlist={watchlistIds.has(item.id)}
                                         />
-                                    </div>
-                                ))}
-                            </div>
-                            {hasMore && (
-                                <div className="lists-page__load-more">
-                                    <button
-                                        className="lists-page__load-more-btn"
-                                        onClick={() => fetchBrowseData(browsePage + 1)}
-                                        disabled={browseLoading}
-                                    >
-                                        {browseLoading ? 'Loading...' : 'Load More'}
-                                    </button>
-                                </div>
-                            )}
-                        </>
+                                    )
+                                }}
+                            />
+                        </div>
                     )}
                 </div>
             </div>
