@@ -190,14 +190,14 @@ export const getListItems = async (listId: string) => {
     return { data, error }
 }
 
-export const createList = async (userId: string, title: string, description?: string) => {
+export const createList = async (userId: string, title: string, description?: string, isPublic?: boolean) => {
     return supabase
         .from('lists')
         .insert({
             user_id: userId,
             title,
             description,
-            is_public: false
+            is_public: isPublic ?? false
         })
         .select()
         .single()
@@ -210,7 +210,42 @@ export const deleteList = async (listId: string) => {
         .eq('id', listId)
 }
 
-export const updateList = async (listId: string, updates: { title?: string; description?: string }) => {
+export const reorderListItem = async (listId: string, itemId: string, newPosition: number) => {
+    return supabase
+        .from('list_items')
+        .update({ position: newPosition })
+        .eq('id', itemId)
+        .eq('list_id', listId)
+}
+
+export const swapListItems = async (listId: string, itemId1: string, itemId2: string) => {
+    // Get both items
+    const { data: items } = await supabase
+        .from('list_items')
+        .select('id, position')
+        .in('id', [itemId1, itemId2])
+        .eq('list_id', listId)
+    
+    if (items && items.length === 2) {
+        const item1 = items.find(i => i.id === itemId1)
+        const item2 = items.find(i => i.id === itemId2)
+        
+        if (item1 && item2) {
+            // Swap positions
+            await supabase
+                .from('list_items')
+                .update({ position: item2.position })
+                .eq('id', itemId1)
+            
+            await supabase
+                .from('list_items')
+                .update({ position: item1.position })
+                .eq('id', itemId2)
+        }
+    }
+}
+
+export const updateList = async (listId: string, updates: { title?: string; description?: string; is_public?: boolean }) => {
     return supabase
         .from('lists')
         .update(updates)

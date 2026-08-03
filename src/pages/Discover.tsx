@@ -53,12 +53,15 @@ const Discover: React.FC = () => {
         store.fetchWatchlistIds()
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
-    
-    // Fetch data on mount and when filters change
+
     useEffect(() => {
-        actions.fetchData(1)
-        // Clear session added IDs when media type changes
-        setSessionAddedIds(new Set())
+        const loadInitialBatches = async () => {
+            // Clear session added IDs when media type changes
+            setSessionAddedIds(new Set())
+            await actions.fetchData(1) // Fetches items 1–20
+            actions.fetchData(2)       // Fetches items 21–40
+        }
+        loadInitialBatches()
     }, [filters.mediaType, filters.sortBy, filters.selectedGenre, filters.selectedYear, actions])
     
     // Sync global search with discover store
@@ -260,6 +263,7 @@ const Discover: React.FC = () => {
                                 computeItemKey={(index) => filteredResults[index]?.id ?? index}
                                 style={{ height: '100%', width: '100%' }}
                                 useWindowScroll={true}
+                                initialItemCount={40}   
                                 data={filteredResults}
                                 endReached={() => {
                                     if (loading.hasMore && !loading.isLoadingMore) {
@@ -270,6 +274,7 @@ const Discover: React.FC = () => {
                                 listClassName="discover-grid"
                                 itemContent={(index) => {
                                     const item = filteredResults[index];
+                                    if (!item) return null;
 
                                     return (
                                         <MediaCard

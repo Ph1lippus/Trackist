@@ -140,10 +140,10 @@ const TVShows: React.FC = () => {
     const notStarted = filteredItems.filter(
         item => item.status === 'planning'
     ).sort((a, b) => {
-        // Sort by added date (oldest first)
-        const dateA = new Date(a.added_at || 0)
-        const dateB = new Date(b.added_at || 0)
-        return dateA.getTime() - dateB.getTime()
+        // Sort by updated_at (most recent first)
+        const dateA = new Date(a.updated_at || 0)
+        const dateB = new Date(b.updated_at || 0)
+        return dateB.getTime() - dateA.getTime()
     })
 
     const buildTmdbItem = (item: WatchlistItem): TMDBResult => ({

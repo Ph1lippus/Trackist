@@ -861,7 +861,7 @@ body::after {
 /* Card grid - responsive grid of media cards */
 .discover-grid {
     display: grid;
-    gap: 0rem 1rem;
+    gap: 1rem 1rem;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     width: 100%;
     margin: 0 auto;
@@ -2483,6 +2483,7 @@ body::after {
     text-overflow: ellipsis;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
 }
 .lists-page__list-item-meta {
@@ -2841,6 +2842,26 @@ body::after {
 
 .lists-page__empty-state p {
     font-size: 0.9rem;
+}
+
+.lists-page__watched-section {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lists-page__watched-title {
+    font-family: var(--font-title);
+    font-size: 1.2rem;
+    color: var(--color-platinum);
+    margin: 0 0 1.5rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.lists-page__watched-title i {
+    color: #68ffae;
 }
 
 .lists-page__discover-section {
@@ -4254,6 +4275,15 @@ i.fa-solid.fa-bookmark:hover {
     color: var(--color-primary) !important;
 }
 
+i.fa-solid.fa-trash {
+    transition: color 0.2s ease, transform 0.15s ease;
+    color: var(--color-platinum) !important;
+}
+i.fa-solid.fa-trash:hover {
+    transition: color 0.2s ease, transform 0.15s ease;
+    color: var(--color-primary) !important;
+}
+
 .media-card__check-icon {
     background: rgba(104, 255, 174, 0.15);
     border: 1px solid rgba(104, 255, 174, 0.3);
@@ -4276,6 +4306,7 @@ i.fa-solid.fa-bookmark:hover {
     height: 2.6em; /* Ensure fixed height for 2 lines */
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
     color: var(--color-platinum);
@@ -4474,6 +4505,7 @@ i.fa-solid.fa-bookmark:hover {
     align-items: center;
     justify-content: center;
     padding: 1rem;
+    animation: confirmOverlayIn 0.15s ease-out;
 }
 
 .confirm-modal-content {
@@ -4484,6 +4516,7 @@ i.fa-solid.fa-bookmark:hover {
     max-width: 360px;
     width: 100%;
     text-align: center;
+    animation: confirmModalIn 0.15s ease-out;
 }
 
 .confirm-modal-title {
@@ -6410,6 +6443,26 @@ i.fa-solid.fa-bookmark:hover {
     }
 }
 
+@keyframes confirmOverlayOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes confirmModalOut {
+    from {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.95) translateY(10px);
+    }
+}
+
 /* ===== MODERN PROFILE PAGE ===== */
 .profile-page {
     padding-bottom: 7rem;
@@ -8055,8 +8108,6 @@ i.fa-solid.fa-bookmark:hover {
     opacity: 0.3;
     cursor: not-allowed;
 }
-
-.lists-page__reorder-btn:active:not(:disabled) {}
 
 /* View Mode - Full Page */
 .lists-page--view {

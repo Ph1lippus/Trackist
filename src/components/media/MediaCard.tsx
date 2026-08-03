@@ -13,6 +13,7 @@ export interface MediaCardProps {
     onMarkWatched?: (item: ResultItem) => void
     onMarkUnwatched?: (item: ResultItem) => void
     onAddToList?: (item: ResultItem) => void
+    onDelete?: (item: ResultItem) => void
     listMode?: boolean
     episodesLeft?: number
 }
@@ -34,6 +35,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
     onMarkWatched,
     onMarkUnwatched,
     onAddToList,
+    onDelete,
     listMode = false,
     episodesLeft,
 }) => {
@@ -93,12 +95,21 @@ const MediaCard: React.FC<MediaCardProps> = ({
         [onMarkUnwatched, item],
     )
 
-    const showAddButton = !compact && onAdd && !(isInWatchlist && (onMarkWatched || onMarkUnwatched))
-    const showAddToListButton = !compact && onAddToList && !isPerson
-    const showMarkWatched = !compact && !isPerson && ((listMode && onMarkWatched) || (isInWatchlist && onMarkWatched && !onMarkUnwatched))
-    const showMarkUnwatched = !compact && !isPerson && isInWatchlist && onMarkUnwatched && !onMarkWatched
+    const handleDeleteClick = useCallback(
+        (e: React.MouseEvent) => {
+            e.stopPropagation()
+            onDelete?.(item)
+        },
+        [onDelete, item],
+    )
+
+    const showAddButton = !compact && onAdd && !(isInWatchlist && (onMarkWatched || onMarkUnwatched)) && !listMode
+    const showAddToListButton = !compact && onAddToList && !isPerson && !listMode
+    const showMarkWatched = !compact && !isPerson && listMode && onMarkWatched && !onMarkUnwatched
+    const showMarkUnwatched = !compact && !isPerson && listMode && onMarkUnwatched && !onMarkWatched
+    const showDeleteButton = !compact && onDelete && !isPerson && listMode
     const showInWatchlistIndicator =
-        !compact && !isPerson && isInWatchlist && !onMarkWatched && !onMarkUnwatched && !onAdd
+        !compact && !isPerson && isInWatchlist && !onMarkWatched && !onMarkUnwatched && !onAdd && !onDelete && !listMode && !onAddToList
 
     return (
         <article className="media-card">
@@ -154,6 +165,16 @@ const MediaCard: React.FC<MediaCardProps> = ({
                         <i className="fa-solid fa-eye-slash"></i>
                     </button>
                 )}
+                {showDeleteButton && (
+                    <button
+                        className="media-card__icon-btn"
+                        onClick={handleDeleteClick}
+                        title="Remove from list"
+                        style={{ color: '#ff6b6b' }}
+                    >
+                        <i className="fa-solid fa-trash"></i>
+                    </button>
+                )}
                 {showInWatchlistIndicator && (
                     <div className="media-card__icon-btn" title="In watchlist">
                         <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
@@ -179,6 +200,7 @@ export default React.memo(MediaCard, (prev, next) => {
         prev.onMarkWatched === next.onMarkWatched &&
         prev.onMarkUnwatched === next.onMarkUnwatched &&
         prev.onAddToList === next.onAddToList &&
+        prev.onDelete === next.onDelete &&
         prev.listMode === next.listMode &&
         prev.episodesLeft === next.episodesLeft
     )

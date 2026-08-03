@@ -28,6 +28,7 @@ interface LibraryState {
     
     // Actions
     fetchInitialLibrary: (userId: string) => Promise<void>
+    initialize: () => Promise<void>
     updateStatus: (id: string, nextStatus: WatchlistItem['status']) => Promise<void>
     incrementProgress: (id: string) => Promise<void>
     updateItem: (id: string, updates: Partial<WatchlistItem>) => Promise<void>
@@ -173,6 +174,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     updateStatus: async (id: string, nextStatus: WatchlistItem['status']) => {
         const state = get()
         
+        // Invalidate cache for this status change
+        cacheService.clearPattern('library')
+        cacheService.clearPattern('watchlist')
+        
         // Store previous state for rollback
         const previousAllItems = [...state.allItems]
         const previousTvShows = [...state.tvShows]
@@ -300,6 +305,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     incrementProgress: async (id: string) => {
         const state = get()
         
+        // Invalidate cache for this progress change
+        cacheService.clearPattern('library')
+        cacheService.clearPattern('watchlist')
+        
         // Store previous state for rollback
         const previousAllItems = [...state.allItems]
         const previousTvShows = [...state.tvShows]
@@ -365,6 +374,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     // Generic update function for any field
     updateItem: async (id: string, updates: Partial<WatchlistItem>) => {
         const state = get()
+        
+        // Invalidate cache for this update
+        cacheService.clearPattern('library')
+        cacheService.clearPattern('watchlist')
         
         // Store previous state for rollback
         const previousAllItems = [...state.allItems]
@@ -482,6 +495,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     // Remove item from library
     removeItem: async (id: string) => {
         const state = get()
+        
+        // Invalidate cache for this removal
+        cacheService.clearPattern('library')
+        cacheService.clearPattern('watchlist')
         
         // Store previous state for rollback
         const previousAllItems = [...state.allItems]
@@ -711,6 +728,21 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     syncWatchlistIds: () => {
         const state = get()
         set({ watchlistIds: computeWatchlistIds(state.allItems) })
+    },
+
+    // Force refresh from database (ignores cache)
+    initialize: async () => {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        // Reset initialized state to force fresh fetch
+        set({ isInitialized: false })
+        
+        // Clear cache to ensure fresh data
+        await cacheService.clearPattern('library')
+        
+        // Fetch fresh data
+        await get().fetchInitialLibrary(user.id)
     },
 
     // Reset store state (for logout)
