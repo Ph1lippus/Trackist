@@ -226,12 +226,16 @@ const TVShows: React.FC = () => {
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = currentlyWatching[index]
+                                const episodesLeft = item.total_episodes && item.current_episode !== undefined
+                                    ? Math.max(0, item.total_episodes - (item.current_episode || 0))
+                                    : undefined
                                 return (
                                     <MediaCard
                                         item={buildTmdbItem(item)}
                                         isInWatchlist={true}
                                         onAdd={() => {}}
                                         onMarkWatched={() => setMarkAllModal(item)}
+                                        episodesLeft={episodesLeft}
                                     />
                                 )
                             }}

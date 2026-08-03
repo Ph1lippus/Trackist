@@ -14,6 +14,7 @@ export interface MediaCardProps {
     onMarkUnwatched?: (item: ResultItem) => void
     onAddToList?: (item: ResultItem) => void
     listMode?: boolean
+    episodesLeft?: number
 }
 
 /**
@@ -34,6 +35,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
     onMarkUnwatched,
     onAddToList,
     listMode = false,
+    episodesLeft,
 }) => {
     const navigate = useNavigate()
     const isPerson = item.media_type === 'person'
@@ -107,6 +109,9 @@ const MediaCard: React.FC<MediaCardProps> = ({
                         <span>{displayTitle}</span>
                     </div>
                 )}
+                {episodesLeft !== undefined && episodesLeft > 0 && (
+                    <span className="media-card__episodes-left">{episodesLeft} left</span>
+                )}
                 {showAddButton && (
                     <button
                         className="media-card__icon-btn"
@@ -174,6 +179,7 @@ export default React.memo(MediaCard, (prev, next) => {
         prev.onMarkWatched === next.onMarkWatched &&
         prev.onMarkUnwatched === next.onMarkUnwatched &&
         prev.onAddToList === next.onAddToList &&
-        prev.listMode === next.listMode
+        prev.listMode === next.listMode &&
+        prev.episodesLeft === next.episodesLeft
     )
 })

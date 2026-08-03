@@ -4289,6 +4289,22 @@ i.fa-solid.fa-bookmark:hover {
     color: var(--color-primary);
 }
 
+.media-card__episodes-left {
+    position: absolute;
+    bottom: 0.5rem;
+    right: 0.5rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    background: rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(133, 138, 227, 0.3);
+    padding: 0.2rem 0.5rem;
+    border-radius: 20px;
+    white-space: nowrap;
+    z-index: 5;
+    backdrop-filter: blur(4px);
+}
+
 .media-card__type {
     font-size: 0.7rem;
     color: rgba(255, 255, 255, 0.4);
@@ -5837,7 +5853,7 @@ i.fa-solid.fa-bookmark:hover {
 }
 
 .stats-rating__label {
-    width: 20px;
+    width: 40px;
     font-size: 0.8rem;
     font-weight: 600;
     color: rgba(255, 255, 255, 0.6);
