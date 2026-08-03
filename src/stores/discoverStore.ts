@@ -44,6 +44,11 @@ interface DiscoverState {
     genres: { id: number; name: string }[]
     isDataLoaded: boolean
     showAdded: boolean
+    sessionAddedIds: Set<number>
+    
+    // Computed
+    visibleResults: TMDBResult[]
+    visibleCount: number
 
     // Actions
     setQuery: (query: string) => void
@@ -53,6 +58,7 @@ interface DiscoverState {
     setSelectedYear: (year: number | null) => void
     setWatchlistIds: (ids: Set<number>) => void
     setShowAdded: (show: boolean) => void
+    setSessionAddedIds: (ids: Set<number>) => void
     addToWatchlist: (id: number, item?: TMDBResult) => Promise<void>
     removeFromWatchlist: (id: number) => Promise<void>
     saveScroll: () => void
@@ -60,6 +66,7 @@ interface DiscoverState {
     resetFilters: () => void
     reset: () => void
     fetchData: (pageNum?: number) => Promise<void>
+    loadInitialPages: (pagesToLoad?: number) => Promise<void>
     fetchGenres: () => Promise<void>
     fetchWatchlistIds: () => Promise<void>
     setIsVisible: (visible: boolean) => void
@@ -83,11 +90,24 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     genres: [],
     isDataLoaded: false,
     showAdded: false,
+    sessionAddedIds: new Set<number>(),
+    visibleResults: [],
+    visibleCount: 0,
 
     // Actions
     setQuery: (query) => set({ query }),
 
-    setMediaType: (mediaType) => set({ mediaType }),
+    setMediaType: (mediaType) => set((state) => {
+        // Recalculate visible results when media type changes
+        const visibleResults = state.showAdded || mediaType === 'person'
+            ? state.results 
+            : state.results.filter(item => !state.watchlistIds.has(item.id) || state.sessionAddedIds.has(item.id))
+        return { 
+            mediaType,
+            visibleResults,
+            visibleCount: visibleResults.length
+        }
+    }),
 
     setSortBy: (sortBy) => set({ sortBy }),
 
@@ -95,9 +115,41 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
 
     setSelectedYear: (selectedYear) => set({ selectedYear }),
 
-    setWatchlistIds: (watchlistIds) => set({ watchlistIds }),
+    setWatchlistIds: (watchlistIds) => set((state) => {
+        // People are never filtered by watchlist since they can't be added to watchlist
+        const visibleResults = state.showAdded || state.mediaType === 'person'
+            ? state.results 
+            : state.results.filter(item => !watchlistIds.has(item.id) || state.sessionAddedIds.has(item.id))
+        return { 
+            watchlistIds, 
+            visibleResults,
+            visibleCount: visibleResults.length
+        }
+    }),
 
-    setShowAdded: (showAdded) => set({ showAdded }),
+    setShowAdded: (showAdded) => set((state) => {
+        // People are never filtered by watchlist since they can't be added to watchlist
+        const visibleResults = showAdded || state.mediaType === 'person'
+            ? state.results 
+            : state.results.filter(item => !state.watchlistIds.has(item.id) || state.sessionAddedIds.has(item.id))
+        return { 
+            showAdded, 
+            visibleResults,
+            visibleCount: visibleResults.length
+        }
+    }),
+
+    setSessionAddedIds: (sessionAddedIds: Set<number>) => set((state) => {
+        // People are never filtered by watchlist since they can't be added to watchlist
+        const visibleResults = state.showAdded || state.mediaType === 'person'
+            ? state.results 
+            : state.results.filter(item => !state.watchlistIds.has(item.id) || sessionAddedIds.has(item.id))
+        return { 
+            sessionAddedIds, 
+            visibleResults,
+            visibleCount: visibleResults.length
+        }
+    }),
 
     addToWatchlist: async (id, item?) => {
         const { data: { user } } = await supabase.auth.getUser()
@@ -173,6 +225,8 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         scrollY: 0,
         isDataLoaded: false,
         showAdded: false,
+        visibleResults: [],
+        visibleCount: 0,
     }),
 
     reset: () => set({
@@ -189,6 +243,8 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         isLoading: true,
         isLoadingMore: false,
         isDataLoaded: false,
+        visibleResults: [],
+        visibleCount: 0,
     }),
 
     setIsVisible: (visible) => {
@@ -226,6 +282,25 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         set({ genres: uniqueGenres })
     },
 
+    loadInitialPages: async (pagesToLoad = 10) => {
+        const { fetchData } = get()
+        let currentPage = 1
+        
+        for (let i = 0; i < pagesToLoad; i++) {
+            await fetchData(currentPage)
+            
+            // Get current state
+            const state = get()
+            
+            // If no more data, stop
+            if (!state.hasMore) {
+                break
+            }
+            
+            currentPage++
+        }
+    },
+
     fetchData: async (pageNum = 1) => {
         const {
             mediaType,
@@ -234,7 +309,10 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             selectedGenre,
             selectedYear,
             isLoading,
-            isLoadingMore
+            isLoadingMore,
+            showAdded,
+            watchlistIds,
+            sessionAddedIds
         } = get()
 
         if (isLoading || isLoadingMore) return
@@ -510,7 +588,8 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             set((state) => {
                 // Filter out News and Talk genres and low-vote content when not searching and not using genre filter
                 // These should only appear when users explicitly search or select them via genre options
-                const shouldFilterGenres = !query.trim() && !selectedGenre
+                // People are never filtered by genre/vote count since they have different structure
+                const shouldFilterGenres = !query.trim() && !selectedGenre && mediaType !== 'person'
                 let finalResults = newResults
                 if (shouldFilterGenres) {
                     finalResults = newResults.filter(item => {
@@ -520,26 +599,35 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     })
                 }
 
+                let updatedResults: TMDBResult[]
                 if (pageNum === 1) {
-                    return {
-                        results: finalResults,
-                        page: pageNum,
-                        hasMore: pageNum < totalPages,
-                        isLoading: false,
-                        isLoadingMore: false,
-                        isDataLoaded: true,
-                    }
+                    updatedResults = finalResults
+                } else {
+                    // Deduplicate when appending new results
+                    const existingIds = new Set(state.results.map(item => item.id))
+                    const newUniqueItems = finalResults.filter(item => !existingIds.has(item.id))
+                    updatedResults = [...state.results, ...newUniqueItems]
                 }
-                // Deduplicate when appending new results
-                const existingIds = new Set(state.results.map(item => item.id))
-                const newUniqueItems = finalResults.filter(item => !existingIds.has(item.id))
+
+                // Calculate visible results based on watchlist filtering
+                // People are never filtered by watchlist since they can't be added to watchlist
+                const visibleResults = showAdded || mediaType === 'person'
+                    ? updatedResults 
+                    : updatedResults.filter(item => !watchlistIds.has(item.id) || sessionAddedIds.has(item.id))
+
+                // Update hasMore - only check if there are more pages available
+                const visibleCount = visibleResults.length
+                const hasMoreContent = pageNum < totalPages
+
                 return {
-                    results: [...state.results, ...newUniqueItems],
+                    results: updatedResults,
                     page: pageNum,
-                    hasMore: pageNum < totalPages,
+                    hasMore: hasMoreContent,
                     isLoading: false,
                     isLoadingMore: false,
                     isDataLoaded: true,
+                    visibleResults,
+                    visibleCount,
                 }
             })
         } catch (err) {
@@ -565,14 +653,27 @@ useLibraryStore.subscribe((state) => {
                 .map((item) => item.tmdb_id)
                 .filter((id): id is number => id != null)
         )
-        useDiscoverStore.getState().setWatchlistIds(ids)
+        const discoverState = useDiscoverStore.getState()
+        discoverState.setWatchlistIds(ids)
+        
+        // Recalculate visible results after watchlist sync
+        // People are never filtered by watchlist since they can't be added to watchlist
+        const visibleResults = discoverState.showAdded || discoverState.mediaType === 'person'
+            ? discoverState.results 
+            : discoverState.results.filter(item => !ids.has(item.id) || discoverState.sessionAddedIds.has(item.id))
+        useDiscoverStore.setState({
+            visibleResults,
+            visibleCount: visibleResults.length
+        })
     }
 })
 
 // Selector hooks for optimized re-renders
 export const useDiscoverResults = () => useDiscoverStore((state) => state.results)
+export const useDiscoverVisibleResults = () => useDiscoverStore((state) => state.visibleResults)
 export const useDiscoverWatchlistIds = () => useDiscoverStore((state) => state.watchlistIds)
 export const useDiscoverShowAdded = () => useDiscoverStore((state) => state.showAdded)
+export const useDiscoverSessionAddedIds = () => useDiscoverStore((state) => state.sessionAddedIds)
 export const useDiscoverFilters = () => {
     const selector = useShallow((state: DiscoverState) => ({
         mediaType: state.mediaType,
@@ -596,12 +697,14 @@ export const useDiscoverLoading = () => {
 export const useDiscoverActions = () => {
     const selector = useShallow((state: DiscoverState) => ({
         fetchData: state.fetchData,
+        loadInitialPages: state.loadInitialPages,
         setQuery: state.setQuery,
         setMediaType: state.setMediaType,
         setSortBy: state.setSortBy,
         setSelectedGenre: state.setSelectedGenre,
         setSelectedYear: state.setSelectedYear,
         setShowAdded: state.setShowAdded,
+        setSessionAddedIds: state.setSessionAddedIds,
         resetFilters: state.resetFilters,
         saveScroll: state.saveScroll,
         addToWatchlist: state.addToWatchlist,

@@ -1,13 +1,12 @@
 import React, {
     useEffect,
-    useMemo,
     useCallback,
     useState,
 } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
-import useDiscoverStore, { useDiscoverResults, useDiscoverFilters, useDiscoverLoading, useDiscoverActions, useDiscoverWatchlistIds, useDiscoverShowAdded } from '../stores/discoverStore'
+import useDiscoverStore, { useDiscoverVisibleResults, useDiscoverFilters, useDiscoverLoading, useDiscoverActions, useDiscoverWatchlistIds, useDiscoverShowAdded } from '../stores/discoverStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
@@ -20,7 +19,7 @@ const Discover: React.FC = () => {
     const isVisible = location.pathname === '/' || location.pathname === '/Discover'
     
     // Store selectors
-    const results = useDiscoverResults()
+    const visibleResults = useDiscoverVisibleResults()
     const filters = useDiscoverFilters()
     const loading = useDiscoverLoading()
     const actions = useDiscoverActions()
@@ -31,21 +30,9 @@ const Discover: React.FC = () => {
     
     // State for confirmation modal when removing from watchlist
     const [removeConfirmItem, setRemoveConfirmItem] = useState<TMDBResult | null>(null)
-    
-    // State to track items added during current session (to keep them visible)
-    const [sessionAddedIds, setSessionAddedIds] = useState<Set<number>>(new Set())
 
     // Search is now handled globally via navbar
     // const [searchInput, setSearchInput] = useState(filters.query)
-
-    // Memoized filtered results - filter out added items unless showAdded is true
-    // Items added during current session are always visible
-    const filteredResults = useMemo(() => {
-        if (showAdded) {
-            return results
-        }
-        return results.filter(item => !watchlistIds.has(item.id) || sessionAddedIds.has(item.id))
-    }, [results, showAdded, watchlistIds, sessionAddedIds])
     
     // Fetch genres and watchlist IDs on mount
     useEffect(() => {
@@ -55,13 +42,11 @@ const Discover: React.FC = () => {
     }, [])
 
     useEffect(() => {
-        const loadInitialBatches = async () => {
-            // Clear session added IDs when media type changes
-            setSessionAddedIds(new Set())
-            await actions.fetchData(1) // Fetches items 1–20
-            actions.fetchData(2)       // Fetches items 21–40
-        }
-        loadInitialBatches()
+        // Clear session added IDs when media type changes
+        actions.setSessionAddedIds(new Set())
+        // Load initial pages (10 pages = 200 items) to ensure sufficient content after watchlist filtering
+        // This ensures both Movies and TV shows have enough content since filtering removes many items
+        actions.loadInitialPages(10)
     }, [filters.mediaType, filters.sortBy, filters.selectedGenre, filters.selectedYear, actions])
     
     // Sync global search with discover store
@@ -102,7 +87,7 @@ const Discover: React.FC = () => {
     
     const handleClearFilters = useCallback(() => {
     actions.resetFilters();
-    setSessionAddedIds(new Set());
+    actions.setSessionAddedIds(new Set());
     window.scrollTo({ top: 0, behavior: "smooth" });
 }, [actions]);  
     
@@ -113,7 +98,8 @@ const Discover: React.FC = () => {
         } else {
             actions.addToWatchlist(item.id, item);
             // Add to session added IDs to keep it visible
-            setSessionAddedIds(prev => new Set(prev).add(item.id));
+            const currentSessionIds = useDiscoverStore.getState().sessionAddedIds
+            actions.setSessionAddedIds(new Set(currentSessionIds).add(item.id));
         }
     },
     [actions, watchlistIds]
@@ -140,7 +126,7 @@ const Discover: React.FC = () => {
         );
     }
 
-    if (!loading.hasMore && filteredResults.length > 0) {
+    if (!loading.hasMore && visibleResults.length > 0) {
         return (
             <p
                 style={{
@@ -159,7 +145,7 @@ const Discover: React.FC = () => {
 }, [
     loading.isLoadingMore,
     loading.hasMore,
-    filteredResults.length,
+    visibleResults.length,
 ]);
     // Determine if we should show the page
     if (!isVisible) {
@@ -253,27 +239,26 @@ const Discover: React.FC = () => {
                         <div className="discover-spinner" />
                         <p>Loading...</p>
                     </div>
-                ) : filteredResults.length === 0 ? (
+                ) : visibleResults.length === 0 ? (
                     <div className="discover-empty">
                         <p>{filters.query ? 'No results found' : 'Nothing to show'}</p>
                     </div>
                 ) : (
                         <div style={{ flex: 1, minHeight: 0, width: '100%' }}>
                             <VirtuosoGrid
-                                computeItemKey={(index) => filteredResults[index]?.id ?? index}
+                                computeItemKey={(index) => visibleResults[index]?.id ?? index}
                                 style={{ height: '100%', width: '100%' }}
                                 useWindowScroll={true}
-                                initialItemCount={40}   
-                                data={filteredResults}
+                                data={visibleResults}
                                 endReached={() => {
                                     if (loading.hasMore && !loading.isLoadingMore) {
-                                        actions.fetchData(store.page + 1)
+                                        actions.fetchData(store.page + 2)
                                     }
                                 }}
                                 overscan={1200}
                                 listClassName="discover-grid"
                                 itemContent={(index) => {
-                                    const item = filteredResults[index];
+                                    const item = visibleResults[index];
                                     if (!item) return null;
 
                                     return (

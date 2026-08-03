@@ -232,29 +232,47 @@ export const checkAndUpdateCaughtUp = async (watchlistId: string, tmdbId: number
 
         // If all released episodes are watched OR there are no released episodes yet, set to caught_up
         if ((watchedInLatestSeason >= releasedEpisodesCount && releasedEpisodesCount > 0) || releasedEpisodesCount === 0) {
-            await supabase
+            // Only update if status is actually changing
+            const { data: currentItem } = await supabase
                 .from('watchlist')
-                .update({
-                    status: 'caught_up',
-                    current_season: latestSeasonNumber,
-                    current_episode: totalEpisodesInLatestSeason,
-                    updated_at: new Date().toISOString()
-                })
+                .select('status')
                 .eq('id', watchlistId)
+                .single()
+            
+            if (currentItem?.status !== 'caught_up') {
+                await supabase
+                    .from('watchlist')
+                    .update({
+                        status: 'caught_up',
+                        current_season: latestSeasonNumber,
+                        current_episode: totalEpisodesInLatestSeason,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', watchlistId)
 
-            // Invalidate cache when status changes to caught_up
-            await invalidateUserCache()
+                // Invalidate cache when status changes to caught_up
+                await invalidateUserCache()
+            }
         } else {
             // Still watching - there are released episodes that haven't been watched
-            await supabase
+            // Only update if status is actually changing
+            const { data: currentItem } = await supabase
                 .from('watchlist')
-                .update({
-                    status: 'watching',
-                    current_season: latestSeasonNumber,
-                    current_episode: watchedInLatestSeason,
-                    updated_at: new Date().toISOString()
-                })
+                .select('status')
                 .eq('id', watchlistId)
+                .single()
+            
+            if (currentItem?.status !== 'watching') {
+                await supabase
+                    .from('watchlist')
+                    .update({
+                        status: 'watching',
+                        current_season: latestSeasonNumber,
+                        current_episode: watchedInLatestSeason,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', watchlistId)
+            }
         }
     } catch (err) {
         console.error('Failed to check caught_up status:', err)
@@ -291,48 +309,62 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
 
         const watchedCount = await getWatchedEpisodeCount(watchlistId)
 
+        // Only update if status is actually changing
+        const { data: currentItem } = await supabase
+            .from('watchlist')
+            .select('status')
+            .eq('id', watchlistId)
+            .single()
+
         if (watchedCount >= totalReleasedEpisodes) {
             // Check TMDB show status to determine if truly completed or just caught up
             const showEnded = details.status === 'Ended' || details.status === 'Canceled'
+            const newStatus = showEnded ? 'completed' : 'caught_up'
+            
+            if (currentItem?.status !== newStatus) {
+                await supabase
+                    .from('watchlist')
+                    .update({
+                        status: newStatus,
+                        completed_at: showEnded ? new Date().toISOString() : null,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', watchlistId)
 
-            await supabase
-                .from('watchlist')
-                .update({
-                    status: showEnded ? 'completed' : 'caught_up',
-                    completed_at: showEnded ? new Date().toISOString() : null,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', watchlistId)
-
-            // Invalidate cache when status changes to completed/caught_up
-            await invalidateUserCache()
+                // Invalidate cache when status changes to completed/caught_up
+                await invalidateUserCache()
+            }
         } else if (watchedCount === 0) {
             // No episodes watched, reset to planning
-            await supabase
-                .from('watchlist')
-                .update({
-                    status: 'planning',
-                    current_episode: 0,
-                    current_season: 1,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', watchlistId)
+            if (currentItem?.status !== 'planning') {
+                await supabase
+                    .from('watchlist')
+                    .update({
+                        status: 'planning',
+                        current_episode: 0,
+                        current_season: 1,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', watchlistId)
 
-            // Invalidate cache when status changes away from completed/caught_up
-            await invalidateUserCache()
+                // Invalidate cache when status changes away from completed/caught_up
+                await invalidateUserCache()
+            }
         } else {
             // Some episodes watched but not all - set to watching
-            await supabase
-                .from('watchlist')
-                .update({
-                    status: 'watching',
-                    current_episode: watchedCount,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', watchlistId)
+            if (currentItem?.status !== 'watching') {
+                await supabase
+                    .from('watchlist')
+                    .update({
+                        status: 'watching',
+                        current_episode: watchedCount,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', watchlistId)
 
-            // Invalidate cache when status changes away from completed/caught_up
-            await invalidateUserCache()
+                // Invalidate cache when status changes away from completed/caught_up
+                await invalidateUserCache()
+            }
         }
     } catch (err) {
         console.error('Failed to check completed status:', err)

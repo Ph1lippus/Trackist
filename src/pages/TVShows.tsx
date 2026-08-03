@@ -86,10 +86,33 @@ const TVShows: React.FC = () => {
                         })
 
                         if (hasReleasedEpisodes) {
-                            await store.updateItem(show.id, {
-                                status: 'watching',
-                                total_episodes: currentTotalEpisodes,
-                                total_seasons: details.number_of_seasons || show.total_seasons
+                            // Update status and episode count WITHOUT updating updated_at
+                            // This prevents background checks from affecting the "Currently Watching" sort order
+                            const { supabase } = await import('../services/supabaseClient')
+                            await supabase
+                                .from('watchlist')
+                                .update({
+                                    status: 'watching' as const,
+                                    total_episodes: currentTotalEpisodes,
+                                    total_seasons: details.number_of_seasons || show.total_seasons
+                                })
+                                .eq('id', show.id)
+                            
+                            // Update local store state without changing updated_at
+                            const currentState = useLibraryStore.getState()
+                            const updatedItems = currentState.allItems.map(item => 
+                                item.id === show.id 
+                                    ? { ...item, status: 'watching' as const, total_episodes: currentTotalEpisodes, total_seasons: details.number_of_seasons || show.total_seasons }
+                                    : item
+                            )
+                            const updatedTvShows = currentState.tvShows.map(item =>
+                                item.id === show.id
+                                    ? { ...item, status: 'watching' as const, total_episodes: currentTotalEpisodes, total_seasons: details.number_of_seasons || show.total_seasons }
+                                    : item
+                            )
+                            useLibraryStore.setState({
+                                allItems: updatedItems,
+                                tvShows: updatedTvShows
                             })
                         }
                     }
@@ -140,10 +163,10 @@ const TVShows: React.FC = () => {
     const notStarted = filteredItems.filter(
         item => item.status === 'planning'
     ).sort((a, b) => {
-        // Sort by updated_at (most recent first)
-        const dateA = new Date(a.updated_at || 0)
-        const dateB = new Date(b.updated_at || 0)
-        return dateB.getTime() - dateA.getTime()
+        // Sort by added_at (oldest first, newest last)
+        const dateA = new Date(a.added_at || 0)
+        const dateB = new Date(b.added_at || 0)
+        return dateA.getTime() - dateB.getTime()
     })
 
     const buildTmdbItem = (item: WatchlistItem): TMDBResult => ({
