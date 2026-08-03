@@ -8,9 +8,8 @@ Track your movies, TV shows, and anime — all in one place.
 - Search movies, TV shows, animes and even people.
 - Watchlists to either make public or private, public lets you share with others. 
 - Statistics and insights 
-- 8 languages supported -> These are the 8 languages I either speak or have been currently learning, if you want any added please ask for it! 
 - PWA (Progressive Web App)
-- Stremio addon integration -> To track automaticaly the episodes after they have been watched.
+- Addon integration.
 
 ## Tech Stack
 
