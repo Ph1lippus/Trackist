@@ -10,6 +10,7 @@ interface ConfirmModalProps {
     cancelText?: string
     confirmColor?: 'primary' | 'success' | 'danger'
     disabled?: boolean
+    confirmLoading?: boolean
 }
 
 const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -21,9 +22,12 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
     confirmText = 'Confirm',
     cancelText = 'Cancel',
     confirmColor = 'primary',
-    disabled = false
+    disabled = false,
+    confirmLoading = false
 }) => {
     if (!isOpen) return null
+
+    const isDisabled = disabled || confirmLoading
 
     const getConfirmColorStyle = () => {
         switch (confirmColor) {
@@ -57,43 +61,49 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
     const colorStyle = getConfirmColorStyle()
 
     return (
-        <div className="confirm-modal-overlay" onClick={onCancel}>
+        <div className="confirm-modal-overlay" onClick={confirmLoading ? undefined : onCancel}>
             <div className="confirm-modal-content" onClick={(e) => e.stopPropagation()}>
                 <h3 className="confirm-modal-title">{title}</h3>
                 <p className="confirm-modal-message">{message}</p>
                 <div className="confirm-modal-actions">
-                    <button 
-                        onClick={onCancel} 
+                    <button
+                        onClick={onCancel}
                         className="confirm-modal-btn confirm-modal-btn--cancel"
+                        disabled={isDisabled}
+                        style={{ opacity: isDisabled ? 0.5 : 1, cursor: isDisabled ? 'not-allowed' : 'pointer' }}
                     >
                         {cancelText}
                     </button>
-                    <button 
-                        onClick={onConfirm} 
+                    <button
+                        onClick={onConfirm}
                         className="confirm-modal-btn confirm-modal-btn--confirm"
-                        disabled={disabled}
+                        disabled={isDisabled}
                         style={{
                             borderColor: colorStyle.borderColor,
                             color: colorStyle.color,
-                            opacity: disabled ? 0.5 : 1,
-                            cursor: disabled ? 'not-allowed' : 'pointer'
+                            opacity: isDisabled ? 0.5 : 1,
+                            cursor: isDisabled ? 'not-allowed' : 'pointer'
                         }}
                         onMouseEnter={(e) => {
-                            if (!disabled) {
+                            if (!isDisabled) {
                                 e.currentTarget.style.background = colorStyle.hoverBg
                                 e.currentTarget.style.borderColor = colorStyle.hoverBorder
                                 e.currentTarget.style.boxShadow = `0 0 8px ${colorStyle.hoverShadow}`
                             }
                         }}
                         onMouseLeave={(e) => {
-                            if (!disabled) {
+                            if (!isDisabled) {
                                 e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
                                 e.currentTarget.style.borderColor = colorStyle.borderColor
                                 e.currentTarget.style.boxShadow = 'none'
                             }
                         }}
                     >
-                        {confirmText}
+                        {confirmLoading ? (
+                            <span className="modal-btn-spinner" style={{ borderTopColor: colorStyle.color }} />
+                        ) : (
+                            confirmText
+                        )}
                     </button>
                 </div>
             </div>

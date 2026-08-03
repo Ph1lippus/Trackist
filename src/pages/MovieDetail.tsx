@@ -26,6 +26,7 @@ const MovieDetail: React.FC = () => {
     const [showCast, setShowCast] = useState(false)
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean } | null>(null)
     const [markWatchedModal, setMarkWatchedModal] = useState<{ isOpen: boolean; markAsWatched: boolean } | null>(null)
+    const [modalLoading, setModalLoading] = useState(false)
 
     // Use global store
     const libraryStore = useLibraryStore()
@@ -55,7 +56,7 @@ const MovieDetail: React.FC = () => {
                 }
 
                 // Check if in watchlist using global store
-                const watchlistItem = libraryStore.allItems.find(item => item.tmdb_id === Number(id))
+                const watchlistItem = useLibraryStore.getState().allItems.find(item => item.tmdb_id === Number(id))
                 setIsInWatchlist(!!watchlistItem)
                 if (watchlistItem) {
                     setWatchlistId(watchlistItem.id)
@@ -70,7 +71,7 @@ const MovieDetail: React.FC = () => {
             setLoading(false)
         }
         fetchDetails()
-    }, [id, libraryStore])
+    }, [id])
 
     const formatRuntime = (minutes?: number): string => {
         if (!minutes) return ''
@@ -164,6 +165,7 @@ const MovieDetail: React.FC = () => {
         // Optimistic update via store
         await libraryStore.addItem(newItem)
         
+        setIsInWatchlist(true)
         setWatchlistId(newItem.id)
         setWatchlistStatus('planning')
         setAdding(false)
@@ -173,16 +175,21 @@ const MovieDetail: React.FC = () => {
     const handleRemoveFromWatchlist = async () => {
         if (!watchlistId) return
 
-        // Optimistic update via store
-        await libraryStore.removeItem(watchlistId)
-        
-        // Invalidate cache to ensure Finished page shows updated data immediately
-        await invalidateUserCache()
-        
-        setIsInWatchlist(false)
-        setWatchlistId(null)
-        setWatchlistStatus(null)
-        setConfirmModal(null)
+        setModalLoading(true)
+        try {
+            // Optimistic update via store
+            await libraryStore.removeItem(watchlistId)
+            
+            // Invalidate cache to ensure Finished page shows updated data immediately
+            await invalidateUserCache()
+            
+            setIsInWatchlist(false)
+            setWatchlistId(null)
+            setWatchlistStatus(null)
+            setConfirmModal(null)
+        } finally {
+            setModalLoading(false)
+        }
     }
 
     if (loading) {
@@ -309,7 +316,7 @@ const MovieDetail: React.FC = () => {
                                             const newWatchlistId = await handleAddToWatchlist()
                                             if (newWatchlistId) {
                                                 // Capture previous status from store
-                                                const previousStatus = libraryStore.allItems.find(item => item.id === newWatchlistId)?.status
+                                                const previousStatus = useLibraryStore.getState().allItems.find(item => item.id === newWatchlistId)?.status
                                                 // Update status to completed via store
                                                 await libraryStore.updateStatus(newWatchlistId, 'completed')
                                                 setWatchlistStatus('completed')
@@ -413,6 +420,7 @@ const MovieDetail: React.FC = () => {
                     confirmText="Remove"
                     cancelText="Cancel"
                     confirmColor="danger"
+                    confirmLoading={modalLoading}
                 />
             )}
             {markWatchedModal && (
@@ -422,24 +430,28 @@ const MovieDetail: React.FC = () => {
                     message={markWatchedModal.markAsWatched ? 'Are you sure you want to mark this movie as watched?' : 'Are you sure you want to mark this movie as unwatched?'}
                     onConfirm={async () => {
                         if (!watchlistId) return
-                        setIsUpdatingStatus(true)
-                        const newStatus = markWatchedModal.markAsWatched ? 'completed' : 'planning'
-                        const previousStatus = watchlistStatus
-                        await libraryStore.updateStatus(watchlistId, newStatus)
-                        setWatchlistStatus(newStatus)
-                        // Trigger Cosmic Confetti when transitioning from 'planning' to 'completed'
-                        if (markWatchedModal.markAsWatched && previousStatus === 'planning') {
-                            launchCosmicConfetti()
-                            // Invalidate cache to ensure Finished page shows updated data immediately
-                            await invalidateUserCache()
+                        setModalLoading(true)
+                        try {
+                            const newStatus = markWatchedModal.markAsWatched ? 'completed' : 'planning'
+                            const previousStatus = watchlistStatus
+                            await libraryStore.updateStatus(watchlistId, newStatus)
+                            setWatchlistStatus(newStatus)
+                            // Trigger Cosmic Confetti when transitioning from 'planning' to 'completed'
+                            if (markWatchedModal.markAsWatched && previousStatus === 'planning') {
+                                launchCosmicConfetti()
+                                // Invalidate cache to ensure Finished page shows updated data immediately
+                                await invalidateUserCache()
+                            }
+                            setMarkWatchedModal(null)
+                        } finally {
+                            setModalLoading(false)
                         }
-                        setIsUpdatingStatus(false)
-                        setMarkWatchedModal(null)
                     }}
                     onCancel={() => setMarkWatchedModal(null)}
                     confirmText={markWatchedModal.markAsWatched ? 'Mark as Watched' : 'Mark as Unwatched'}
                     cancelText="Cancel"
                     confirmColor="primary"
+                    confirmLoading={modalLoading}
                 />
             )}
         </div>
