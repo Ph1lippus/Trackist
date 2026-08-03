@@ -31,6 +31,8 @@ const Discover: React.FC = () => {
     // State for confirmation modal when removing from watchlist
     const [removeConfirmItem, setRemoveConfirmItem] = useState<TMDBResult | null>(null)
 
+    
+
     // Search is now handled globally via navbar
     // const [searchInput, setSearchInput] = useState(filters.query)
     
@@ -56,34 +58,6 @@ const Discover: React.FC = () => {
             actions.fetchData(1)
         }
     }, [committedQuery, filters.query, actions])
-    
-    // Handle visibility changes for scroll restoration
-    useEffect(() => {
-        if (isVisible) {
-            store.setIsVisible(true)
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isVisible])
-    
-
-    useEffect(() => {
-        const handleScroll = () => {
-            store.saveScroll()
-        }
-        window.addEventListener('scroll', handleScroll)
-        return () => window.removeEventListener('scroll', handleScroll)
-    }, [store])
-
-    useEffect(() => {
-        if ('scrollRestoration' in history) {
-            history.scrollRestoration = 'manual'
-        }
-        return () => {
-            if ('scrollRestoration' in history) {
-                history.scrollRestoration = 'auto'
-            }
-        }
-    }, [])
     
     const handleClearFilters = useCallback(() => {
     actions.resetFilters();
@@ -246,13 +220,17 @@ const Discover: React.FC = () => {
                 ) : (
                         <div style={{ flex: 1, minHeight: 0, width: '100%' }}>
                             <VirtuosoGrid
+                            increaseViewportBy={{
+                                    top: 1000,
+                                    bottom: 2500,
+                                }}
                                 computeItemKey={(index) => visibleResults[index]?.id ?? index}
                                 style={{ height: '100%', width: '100%' }}
                                 useWindowScroll={true}
                                 data={visibleResults}
                                 endReached={() => {
                                     if (loading.hasMore && !loading.isLoadingMore) {
-                                        actions.fetchData(store.page + 2)
+                                        actions.fetchData(store.page + 1)
                                     }
                                 }}
                                 overscan={1200}
