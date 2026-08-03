@@ -5,6 +5,7 @@ import { supabase } from '../../services/supabaseClient';
 import { useSearch } from '../../hooks/useSearch';
 import SearchDropdown from '../search/SearchDropdown';
 import ProgressFixModal from '../modals/ProgressFixModal';
+import { clearAllCache } from '../../services/cacheService';
 
 interface NavbarProps {
     currentMonth?: Date;
@@ -105,6 +106,16 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack 
         if (window.confirm('Are you sure you want to logout?')) {
             await supabase.auth.signOut();
             navigate('/login');
+        }
+    };
+
+    const handleClearCache = async () => {
+        closeMenu();
+        // Ask for confirmation before clearing cache
+        if (window.confirm('Are you sure you want to clear all cache? This will remove all cached data and may slow down the app temporarily.')) {
+            await clearAllCache();
+            // Reload the page to refresh all data
+            window.location.reload();
         }
     };
 
@@ -265,6 +276,10 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack 
                                     }}>
                                         <i className="fa-solid fa-wrench"></i>
                                         Fix Progress
+                                    </button>
+                                    <button className="t-dropdown-item" onClick={handleClearCache}>
+                                        <i className="fa-solid fa-trash"></i>
+                                        Clear Cache
                                     </button>
                                     <button className="t-dropdown-item" onClick={() => {
                                         closeMenu();

@@ -658,7 +658,7 @@ body::after {
 .discover-tabs {
     display: flex;
     gap: 0.25rem;
-    background: rgba(255, 255, 255, 0.04);
+    background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius:25px;
     padding: 0.25rem;
@@ -710,14 +710,14 @@ body::after {
 }
 .discover-filter-select {
     padding: 0.6rem 2.5rem 0.6rem 1.2rem;
-    background: rgba(255, 255, 255, 0.08);
+    background: transparent;
     color: var(--color-platinum);
     font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
     outline: none;
     transition: all 0.2s ease;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 25px;
     cursor: pointer;
     transition: all 0.2s ease;
