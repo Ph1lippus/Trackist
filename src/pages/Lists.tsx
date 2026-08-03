@@ -4,7 +4,7 @@ import { supabase } from '../services/supabaseClient'
 import type { UserList, ListItem, TMDBResult } from '../types'
 import MediaCard from '../components/media/MediaCard'
 import { discoverMovies, discoverTV, getGenres, searchMulti, getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
-import { addToList, updateList, createList, deleteList, removeFromList, reorderListItem, swapListItems } from '../services/profileService'
+import { addToList, updateList, createList, deleteList, removeFromList, swapListItems } from '../services/profileService'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useSearch } from '../hooks/useSearch'
 import { VirtuosoGrid } from 'react-virtuoso'
@@ -26,6 +26,7 @@ const Lists: React.FC = () => {
     
     // List state
     const [lists, setLists] = useState<UserList[]>([])
+    const [publicLists, setPublicLists] = useState<UserList[]>([])
     const [selectedList, setSelectedList] = useState<UserList | null>(null)
     const [listItems, setListItems] = useState<ListItem[]>([])
     const [loading, setLoading] = useState(true)
@@ -75,19 +76,34 @@ const Lists: React.FC = () => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
-        const { data, error } = await supabase
+        // Fetch user's own lists
+        const { data: userLists, error: userError } = await supabase
             .from('lists')
             .select('*')
             .eq('user_id', user.id)
             .order('updated_at', { ascending: false })
 
-        if (!error && data) {
-            setLists(data)
+        // Fetch public lists from other users
+        const { data: publicLists, error: publicError } = await supabase
+            .from('lists')
+            .select('*, profiles!inner(display_name, avatar_url)')
+            .eq('is_public', true)
+            .neq('user_id', user.id)
+            .order('updated_at', { ascending: false })
+
+        if (!userError && userLists) {
+            setLists(userLists)
         }
+        
+        if (!publicError && publicLists) {
+            // Store public lists separately
+            setPublicLists(publicLists)
+        }
+        
         setLoading(false)
     }
 
-    const fetchListItems = async (listId: string) => {
+    const fetchListItems = useCallback(async (listId: string) => {
         const { data, error } = await supabase
             .from('list_items')
             .select('*')
@@ -127,7 +143,7 @@ const Lists: React.FC = () => {
                 }
             }
         }
-    }
+    }, [])
 
     const fetchWatchlistIds = async () => {
         const { data: { user } } = await supabase.auth.getUser()
@@ -456,7 +472,7 @@ const Lists: React.FC = () => {
                                                 runtime: episode.runtime,
                                                 watched: true,
                                                 watched_at: new Date().toISOString()
-                                            }).onConflict().ignore()
+                                            })
                                         }
                                     }
                                 }
@@ -741,7 +757,7 @@ const Lists: React.FC = () => {
         // View Mode - Full page like Movies/TVShows
         mainContent = (
             <div className="discover-page">
-                <div className="discover-container">
+                <div className="friends-container">
                     <div className="lists-page__view-header">
                         <div className="lists-page__view-header-content">
                             <h1>{selectedList.title}</h1>
@@ -866,8 +882,9 @@ const Lists: React.FC = () => {
         // Edit Mode - Split layout (keep existing logic)
         mainContent = (
             <div className="lists-page lists-page--split">
-                {/* Left side: Form + List Items */}
-                <div className="lists-page__form-section">
+                <div className="friends-container">
+                    {/* Left side: Form + List Items */}
+                    <div className="lists-page__form-section">
                     <div className="lists-page__form-header">
                         <h1>{isNewList ? 'Create New List' : 'Edit List'}</h1>
                     </div>
@@ -1076,48 +1093,73 @@ const Lists: React.FC = () => {
                         </div>
                     )}
                 </div>
+                </div>
             </div>
         )
     } else {
         // Lists overview
         mainContent = (
             <div className="lists-page">
-                <div className="lists-page__container">
-                    <div className="lists-page__sidebar">
-                        <div className="lists-page__header">
-                            <h1>My Lists</h1>
-                            <button 
-                                className="lists-page__create-btn"
-                                onClick={() => navigate('/Lists/new')}
-                            >
-                                <i className="fa-solid fa-plus"></i> New List
-                            </button>
-                        </div>
+                <div className="friends-container">
+                    <div className="lists-page__overview-header">
+                        <h1>My Lists</h1>
+                        <button 
+                            className="lists-page__create-btn"
+                            onClick={() => navigate('/Lists/new')}
+                        >
+                            <i className="fa-solid fa-plus"></i> New List
+                        </button>
+                    </div>
 
-                        <div className="lists-page__list">
-                            {filteredLists.length === 0 ? (
-                                <p className="lists-page__empty">
-                                    {committedQuery ? 'No lists match your search' : 'No lists yet. Create your first list!'}
-                                </p>
-                            ) : (
-                                filteredLists.map(list => (
+                    {filteredLists.length === 0 ? (
+                        <p className="lists-page__empty">
+                            {committedQuery ? 'No lists match your search' : 'No lists yet. Create your first list!'}
+                        </p>
+                    ) : (
+                        <div className="lists-page__grid">
+                            {filteredLists.map(list => (
+                                <div
+                                    key={list.id}
+                                    className="lists-page__card"
+                                    onClick={() => navigate(`/Lists/${list.id}`)}
+                                >
+                                    <div className="lists-page__card-content">
+                                        <h3>{list.title}</h3>
+                                        {list.description && <p>{list.description}</p>}
+                                        <div className="lists-page__card-meta">
+                                            <span>{list.is_public ? '🌐 Public' : '🔒 Private'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {publicLists.length > 0 && (
+                        <>
+                            <div className="lists-page__overview-header" style={{ marginTop: '3rem' }}>
+                                <h1>Public Lists</h1>
+                            </div>
+                            <div className="lists-page__grid">
+                                {publicLists.map(list => (
                                     <div
                                         key={list.id}
-                                        className={`lists-page__list-item ${selectedList ? 'lists-page__list-item--active' : ''}`}
+                                        className="lists-page__card"
                                         onClick={() => navigate(`/Lists/${list.id}`)}
                                     >
-                                        <div className="lists-page__list-item-content">
+                                        <div className="lists-page__card-content">
                                             <h3>{list.title}</h3>
                                             {list.description && <p>{list.description}</p>}
-                                            <div className="lists-page__list-item-meta">
-                                                <span>{list.is_public ? '🌐 Public' : '🔒 Private'}</span>
+                                            <div className="lists-page__card-meta">
+                                                <span>🌐 Public</span>
+                                                <span>by {list.profiles?.display_name || 'Anonymous'}</span>
                                             </div>
                                         </div>
                                     </div>
-                                ))
-                            )}
-                        </div>
-                    </div>
+                                ))}
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         )

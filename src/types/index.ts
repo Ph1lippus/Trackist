@@ -125,6 +125,10 @@ export interface UserList {
     completed_at?: string
     created_at: string
     updated_at: string
+    profiles?: {
+        display_name: string
+        avatar_url?: string
+    }
 }
 
 export interface ListItem {
