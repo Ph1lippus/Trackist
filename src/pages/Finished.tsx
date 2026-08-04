@@ -26,15 +26,15 @@ const Finished: React.FC = () => {
     }, [finished, committedQuery])
 
     const finishedMovies = filteredItems.filter(item => item.media_type === 'movie').sort((a, b) => {
-        // Sort by completed_at (most recent first)
-        const dateA = new Date(a.completed_at || 0)
-        const dateB = new Date(b.completed_at || 0)
+        // Sort by completed_at, falling back to updated_at (most recent first)
+        const dateA = new Date(a.completed_at || a.updated_at || 0)
+        const dateB = new Date(b.completed_at || b.updated_at || 0)
         return dateB.getTime() - dateA.getTime()
     })
     const finishedTVShows = filteredItems.filter(item => item.media_type === 'tv' || item.media_type === 'anime').sort((a, b) => {
-        // Sort by completed_at (most recent first)
-        const dateA = new Date(a.completed_at || 0)
-        const dateB = new Date(b.completed_at || 0)
+        // Sort by completed_at, falling back to updated_at (most recent first)
+        const dateA = new Date(a.completed_at || a.updated_at || 0)
+        const dateB = new Date(b.completed_at || b.updated_at || 0)
         return dateB.getTime() - dateA.getTime()
     })
 
