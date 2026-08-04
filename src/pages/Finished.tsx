@@ -156,7 +156,7 @@ const Finished: React.FC = () => {
                     onCancel={() => setUnwatchModal(null)}
                     confirmText="Yes, Remove"
                     cancelText="Cancel"
-                    confirmColor="warning"
+                    confirmColor="danger"
                 />
             )}
         </div>
