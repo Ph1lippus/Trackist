@@ -63,6 +63,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
     const handleAddClick = useCallback(
         (e: React.MouseEvent) => {
             e.stopPropagation()
+            e.preventDefault()
             onAdd?.(item)
         },
         [onAdd, item],
@@ -71,6 +72,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
     const handleAddToListClick = useCallback(
         (e: React.MouseEvent) => {
             e.stopPropagation()
+            e.preventDefault()
             onAddToList?.(item)
         },
         [onAddToList, item],
@@ -79,6 +81,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
     const handleMarkWatchedClick = useCallback(
         (e: React.MouseEvent) => {
             e.stopPropagation()
+            e.preventDefault()
             onMarkWatched?.(item)
         },
         [onMarkWatched, item],
@@ -87,6 +90,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
     const handleMarkUnwatchedClick = useCallback(
         (e: React.MouseEvent) => {
             e.stopPropagation()
+            e.preventDefault()
             onMarkUnwatched?.(item)
         },
         [onMarkUnwatched, item],
@@ -95,6 +99,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
     const handleDeleteClick = useCallback(
         (e: React.MouseEvent) => {
             e.stopPropagation()
+            e.preventDefault()
             onDelete?.(item)
         },
         [onDelete, item],
@@ -102,8 +107,9 @@ const MediaCard: React.FC<MediaCardProps> = ({
 
     const showAddButton = !compact && onAdd && !(isInWatchlist && (onMarkWatched || onMarkUnwatched)) && !listMode
     const showAddToListButton = !compact && onAddToList && !isPerson && !listMode
-    const showMarkWatched = !compact && !isPerson && listMode && onMarkWatched && !onMarkUnwatched
-    const showMarkUnwatched = !compact && !isPerson && listMode && onMarkUnwatched && !onMarkWatched
+    // Show watch/unwatch icons for watchlist items regardless of listMode, but keep delete button only in listMode
+    const showMarkWatched = !compact && !isPerson && onMarkWatched && !onMarkUnwatched
+    const showMarkUnwatched = !compact && !isPerson && onMarkUnwatched && !onMarkWatched
     const showDeleteButton = !compact && onDelete && !isPerson && listMode
     const showInWatchlistIndicator =
         !compact && !isPerson && isInWatchlist && !onMarkWatched && !onMarkUnwatched && !onAdd && !onDelete && !listMode && !onAddToList

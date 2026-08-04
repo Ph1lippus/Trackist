@@ -1,10 +1,12 @@
-import React, { useEffect, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import MediaCard from '../components/media/MediaCard'
+import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { VirtuosoGrid } from 'react-virtuoso'
+import { removeAllWatchedEpisodes } from '../services/watchlistService'
 
 const Finished: React.FC = () => {
     usePageTitle('Trackist - Finished')
@@ -13,6 +15,12 @@ const Finished: React.FC = () => {
     // Use global store
     const store = useLibraryStore()
     const finished = store.finished
+
+    const [unwatchModal, setUnwatchModal] = useState<{
+        isOpen: boolean
+        item: WatchlistItem
+        isTV: boolean
+    } | null>(null)
 
     // Scroll to top when page loads
     useEffect(() => {
@@ -45,6 +53,26 @@ const Finished: React.FC = () => {
         media_type: item.media_type === 'anime' ? 'tv' : item.media_type
     })
 
+    const handleUnwatchMovie = async (item: WatchlistItem) => {
+        await store.updateStatus(item.id, 'planning')
+        setUnwatchModal(null)
+    }
+
+    const handleUnwatchTVShow = async (item: WatchlistItem) => {
+        await removeAllWatchedEpisodes(item.id)
+        setUnwatchModal(null)
+    }
+
+    const handleUnwatchConfirm = async () => {
+        if (!unwatchModal) return
+        
+        if (unwatchModal.isTV) {
+            await handleUnwatchTVShow(unwatchModal.item)
+        } else {
+            await handleUnwatchMovie(unwatchModal.item)
+        }
+    }
+
     return (
         <div className="discover-page">
             <div className="discover-container" style={{ width: '85%' }}>
@@ -66,6 +94,7 @@ const Finished: React.FC = () => {
                                 return (
                                     <MediaCard
                                         item={buildTmdbItem(item)}
+                                        onMarkUnwatched={() => setUnwatchModal({ isOpen: true, item, isTV: true })}
                                     />
                                 )
                             }}
@@ -95,6 +124,7 @@ const Finished: React.FC = () => {
                                 return (
                                     <MediaCard
                                         item={buildTmdbItem(item)}
+                                        onMarkUnwatched={() => setUnwatchModal({ isOpen: true, item, isTV: false })}
                                     />
                                 )
                             }}
@@ -112,6 +142,23 @@ const Finished: React.FC = () => {
                     </p>
                 )}
             </div>
+
+            {unwatchModal && (
+                <ConfirmModal
+                    isOpen={unwatchModal.isOpen}
+                    title={unwatchModal.isTV ? 'Remove All Episodes' : 'Move Back to Watchlist'}
+                    message={
+                        unwatchModal.isTV
+                            ? `Are you sure you want to remove all watched episodes from "${unwatchModal.item.title}" and move it back to your watchlist?`
+                            : `Are you sure you want to move "${unwatchModal.item.title}" back to your watchlist?`
+                    }
+                    onConfirm={handleUnwatchConfirm}
+                    onCancel={() => setUnwatchModal(null)}
+                    confirmText="Yes, Remove"
+                    cancelText="Cancel"
+                    confirmColor="warning"
+                />
+            )}
         </div>
     )
 }

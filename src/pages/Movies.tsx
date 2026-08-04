@@ -34,6 +34,12 @@ const Movies: React.FC = () => {
     const markAsWatched = async (tmdbItem: TMDBResult) => {
         const watchlistItem = movies.find(item => item.tmdb_id === tmdbItem.id)
         if (watchlistItem) {
+            // Check if movie is released
+            if (!isMovieReleased(watchlistItem)) {
+                alert('This movie has not been released yet. You cannot mark it as watched.')
+                return
+            }
+            
             const previousStatus = watchlistItem.status
             await updateStatus(watchlistItem.id, 'completed')
             // Trigger Cosmic Confetti when transitioning from 'planning' to 'completed'
@@ -124,7 +130,13 @@ const Movies: React.FC = () => {
                                         item={tmdbItem}
                                         isInWatchlist={true}
                                         onAdd={() => {}}
-                                        onMarkWatched={(item) => setConfirmModal({ isOpen: true, action: 'watch', item })}
+                                        onMarkWatched={(item) => {
+                                            if (!isMovieReleased(item)) {
+                                                alert('This movie has not been released yet. You cannot mark it as watched.')
+                                                return
+                                            }
+                                            setConfirmModal({ isOpen: true, action: 'watch', item })
+                                        }}
                                     />
                                 )
                             }}
@@ -166,7 +178,7 @@ const Movies: React.FC = () => {
                                         item={tmdbItem}
                                         isInWatchlist={true}
                                         onAdd={() => {}}
-                                        onMarkWatched={(item) => setConfirmModal({ isOpen: true, action: 'watch', item })}
+                                        // Don't show watch icon for unreleased movies
                                     />
                                 )
                             }}

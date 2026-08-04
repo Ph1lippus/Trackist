@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
 import { supabase } from './services/supabaseClient'
 import { updateLastActive } from './services/profileService'
@@ -43,6 +43,7 @@ const AppContent: React.FC = () => {
     const [user, setUser] = useState<User | null>(null)
     const [loading, setLoading] = useState(true)
     const [currentMonth, setCurrentMonth] = useState(new Date())
+    const hasUpdatedLastActive = useRef(false)
 
     const isDetailPage = location.pathname.match(/^\/(movie|tv|person)\/\d+$/) || location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/)
 
@@ -64,6 +65,7 @@ const AppContent: React.FC = () => {
                     // Reset library store on logout
                     if (!nextSession?.user) {
                         useLibraryStore.getState().reset()
+                        hasUpdatedLastActive.current = false
                     }
                 })
 
@@ -88,7 +90,8 @@ const AppContent: React.FC = () => {
     }, [])
 
     useEffect(() => {
-        if (!loading && user) {
+        if (!loading && user && !hasUpdatedLastActive.current) {
+            hasUpdatedLastActive.current = true
             void updateLastActive()
             // Initialize library store once at app startup
             void useLibraryStore.getState().fetchInitialLibrary(user.id)

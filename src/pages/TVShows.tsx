@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
-import { markEpisodeWatched, checkAndUpdateCompleted, getWatchedEpisodeCount } from '../services/watchlistService'
+import { markEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
@@ -21,62 +21,42 @@ const TVShows: React.FC = () => {
     
     const [markAllModal, setMarkAllModal] = useState<WatchlistItem | null>(null)
     const [markingAllWatched, setMarkingAllWatched] = useState(false)
-    const [watchedEpisodeCounts, setWatchedEpisodeCounts] = useState<Record<string, number>>({})
 
     // Scroll to top when page loads
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
 
-    // Fetch actual watched episode counts for accurate "episodes left" calculation
-    useEffect(() => {
-        const fetchWatchedCounts = async () => {
-            if (!isInitialized || tvShows.length === 0) return
-
-            const counts: Record<string, number> = {}
-            for (const show of tvShows) {
-                const count = await getWatchedEpisodeCount(show.id)
-                counts[show.id] = count
-            }
-            setWatchedEpisodeCounts(counts)
-        }
-
-        fetchWatchedCounts()
-    }, [isInitialized, tvShows])
+    // Use current_episode from store data instead of fetching from database
+    // This prevents infinite loops caused by repeated API calls
 
     // Calculate episode progress for TV shows
     const tvShowsWithProgress = useMemo(() => {
         return tvShows.map(show => ({
             ...show,
-            total_episodes_watched: 0 // Will be calculated on demand
+            total_episodes_watched: show.current_episode ?? 0
         }))
     }, [tvShows])
 
     // Listen for watchlist-refresh event from the Fix Progress modal
     useEffect(() => {
-        const handleRefresh = async () => {
-            // Refresh watched episode counts when progress is fixed
-            if (store.allItems.length > 0) {
-                const counts: Record<string, number> = {}
-                for (const item of store.allItems) {
-                    if (item.media_type === 'tv' || item.media_type === 'anime') {
-                        const count = await getWatchedEpisodeCount(item.id)
-                        counts[item.id] = count
-                    }
-                }
-                setWatchedEpisodeCounts(counts)
-            }
+        const handleRefresh = () => {
+            // Store will be updated by the refresh, so we don't need to do anything here
+            // The current_episode field will be updated by the watchlistService
         }
         window.addEventListener('watchlist-refresh', handleRefresh)
         return () => window.removeEventListener('watchlist-refresh', handleRefresh)
-    }, [store])
+    }, [])
 
     // Reset trigger: check if completed shows now have new episodes/seasons
     useEffect(() => {
         const checkForNewEpisodes = async () => {
-            if (!isInitialized || tvShows.length === 0) return
+            const currentStore = useLibraryStore.getState()
+            const currentTvShows = currentStore.tvShows
+            
+            if (!isInitialized || currentTvShows.length === 0) return
 
-            const completedShows = tvShows.filter(
+            const completedShows = currentTvShows.filter(
                 item => (item.status === 'completed' || item.status === 'caught_up' || (
                     item.status === 'watching' &&
                     item.total_episodes !== undefined &&
@@ -110,28 +90,28 @@ const TVShows: React.FC = () => {
                         })
 
                         if (hasReleasedEpisodes) {
-                            // Update status and episode count WITHOUT updating updated_at
-                            // This prevents background checks from affecting the "Currently Watching" sort order
+                            // Update status and episode count with updated_at to keep database in sync
                             const { supabase } = await import('../services/supabaseClient')
                             await supabase
                                 .from('watchlist')
                                 .update({
                                     status: 'watching' as const,
                                     total_episodes: currentTotalEpisodes,
-                                    total_seasons: details.number_of_seasons || show.total_seasons
+                                    total_seasons: details.number_of_seasons || show.total_seasons,
+                                    updated_at: new Date().toISOString()
                                 })
                                 .eq('id', show.id)
                             
-                            // Update local store state without changing updated_at
+                            // Update local store state with updated_at to stay in sync
                             const currentState = useLibraryStore.getState()
                             const updatedItems = currentState.allItems.map(item => 
                                 item.id === show.id 
-                                    ? { ...item, status: 'watching' as const, total_episodes: currentTotalEpisodes, total_seasons: details.number_of_seasons || show.total_seasons }
+                                    ? { ...item, status: 'watching' as const, total_episodes: currentTotalEpisodes, total_seasons: details.number_of_seasons || show.total_seasons, updated_at: new Date().toISOString() }
                                     : item
                             )
                             const updatedTvShows = currentState.tvShows.map(item =>
                                 item.id === show.id
-                                    ? { ...item, status: 'watching' as const, total_episodes: currentTotalEpisodes, total_seasons: details.number_of_seasons || show.total_seasons }
+                                    ? { ...item, status: 'watching' as const, total_episodes: currentTotalEpisodes, total_seasons: details.number_of_seasons || show.total_seasons, updated_at: new Date().toISOString() }
                                     : item
                             )
                             useLibraryStore.setState({
@@ -149,13 +129,11 @@ const TVShows: React.FC = () => {
         checkForNewEpisodes()
 
         const interval = setInterval(() => {
-            if (tvShows.length > 0) {
-                checkForNewEpisodes()
-            }
+            checkForNewEpisodes()
         }, 5 * 60 * 1000)
 
         const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible' && tvShows.length > 0) {
+            if (document.visibilityState === 'visible') {
                 checkForNewEpisodes()
             }
         }
@@ -165,7 +143,7 @@ const TVShows: React.FC = () => {
             clearInterval(interval)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
         }
-    }, [isInitialized, tvShows, store])
+    }, [isInitialized]) // Only depend on initialization
 
     // Filter items based on global search (strict TV-type lock)
     const filteredItems = useMemo(() => {
@@ -234,10 +212,6 @@ const TVShows: React.FC = () => {
             // Refresh the store
             await store.refreshItem(item.id)
             
-            // Refresh watched episode counts to ensure accurate display
-            const newCount = await getWatchedEpisodeCount(item.id)
-            setWatchedEpisodeCounts(prev => ({ ...prev, [item.id]: newCount }))
-            
             // Check for milestone and celebrate
             // Use getState() to read the FRESH store state (the `store`
             // variable is a stale closure snapshot from the last render)
@@ -281,9 +255,8 @@ const TVShows: React.FC = () => {
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = currentlyWatching[index]
-                                const watchedCount = watchedEpisodeCounts[item.id] || 0
                                 const episodesLeft = item.total_episodes !== undefined
-                                    ? Math.max(0, item.total_episodes - watchedCount)
+                                    ? Math.max(0, item.total_episodes - item.total_episodes_watched)
                                     : undefined
                                 return (
                                     <MediaCard

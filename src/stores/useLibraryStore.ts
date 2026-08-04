@@ -30,7 +30,6 @@ interface LibraryState {
     fetchInitialLibrary: (userId: string) => Promise<void>
     initialize: () => Promise<void>
     updateStatus: (id: string, nextStatus: WatchlistItem['status']) => Promise<void>
-    incrementProgress: (id: string) => Promise<void>
     updateItem: (id: string, updates: Partial<WatchlistItem>) => Promise<void>
     removeItem: (id: string) => Promise<void>
     addItem: (item: WatchlistItem) => Promise<void>
@@ -300,76 +299,6 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         }
     },
 
-    // Optimistic update for progress increment
-    incrementProgress: async (id: string) => {
-        const state = get()
-        
-        // Invalidate cache for this progress change
-        cacheService.clearPattern('library')
-        cacheService.clearPattern('watchlist')
-        
-        // Store previous state for rollback
-        const previousAllItems = [...state.allItems]
-        const previousTvShows = [...state.tvShows]
-
-        // Optimistic update
-        const updateInArray = (items: WatchlistItem[] | TVShowWithProgress[]) =>
-            items.map(item => {
-                if (item.id !== id) return item
-                
-                const newEpisode = (item.current_episode || 0) + 1
-                return {
-                    ...item,
-                    current_episode: newEpisode,
-                    updated_at: new Date().toISOString()
-                }
-            })
-
-        const newAllItems = updateInArray(state.allItems) as WatchlistItem[]
-        const newTvShows = updateInArray(state.tvShows) as TVShowWithProgress[]
-
-        // Sort tvShows by updated_at (most recent first)
-        newTvShows.sort((a, b) => {
-            const dateA = new Date(a.updated_at || 0)
-            const dateB = new Date(b.updated_at || 0)
-            return dateB.getTime() - dateA.getTime()
-        })
-
-        // Apply optimistic update
-        set({
-            allItems: newAllItems,
-            tvShows: newTvShows
-        })
-
-        // Silent background sync
-        try {
-            const item = state.allItems.find(i => i.id === id)
-            if (!item) return
-
-            const newEpisode = (item.current_episode || 0) + 1
-            
-            const { error } = await supabase
-                .from('watchlist')
-                .update({
-                    current_episode: newEpisode,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', id)
-
-            if (error) {
-                throw error
-            }
-        } catch (error) {
-            // Rollback on error
-            console.error('Failed to increment progress, rolling back:', error)
-            set({
-                allItems: previousAllItems,
-                tvShows: previousTvShows,
-                error: error instanceof Error ? error.message : 'Failed to update progress'
-            })
-        }
-    },
-
     // Generic update function for any field
     updateItem: async (id: string, updates: Partial<WatchlistItem>) => {
         const state = get()
@@ -384,9 +313,18 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         const previousMovies = [...state.movies]
         const previousFinished = [...state.finished]
 
+        // Only update timestamp for user-meaningful changes that should affect sorting
+        const shouldUpdateTimestamp = updates.status !== undefined || 
+                                      updates.current_episode !== undefined ||
+                                      updates.completed_at !== undefined
+
         // Optimistic update
         const updateInArray = (items: WatchlistItem[] | TVShowWithProgress[]) =>
-            items.map(item => item.id === id ? { ...item, ...updates, updated_at: new Date().toISOString() } : item)
+            items.map(item => item.id === id ? { 
+                ...item, 
+                ...updates, 
+                ...(shouldUpdateTimestamp ? { updated_at: new Date().toISOString() } : {})
+            } : item)
 
         const newAllItems = updateInArray(state.allItems) as WatchlistItem[]
         const newTvShows = updateInArray(state.tvShows) as TVShowWithProgress[]
@@ -452,7 +390,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 .from('watchlist')
                 .update({
                     ...updates,
-                    updated_at: new Date().toISOString()
+                    ...(shouldUpdateTimestamp ? { updated_at: new Date().toISOString() } : {})
                 })
                 .eq('id', id)
 
@@ -474,7 +412,11 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 const newAllItems = [...previousAllItems]
                 const itemIndex = newAllItems.findIndex(i => i.id === id)
                 if (itemIndex !== -1) {
-                    newAllItems[itemIndex] = { ...newAllItems[itemIndex], ...updates, updated_at: new Date().toISOString() }
+                    newAllItems[itemIndex] = { 
+                        ...newAllItems[itemIndex], 
+                        ...updates, 
+                        ...(shouldUpdateTimestamp ? { updated_at: new Date().toISOString() } : {})
+                    }
                     await cacheService.set('library', user.id, newAllItems, 5 * 60 * 1000)
                 }
             }

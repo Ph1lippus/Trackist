@@ -170,6 +170,39 @@ export const getWatchedEpisodes = async (watchlistId: string) => {
 }
 
 /**
+ * Remove all watched episodes for a TV show and reset to planning status
+ */
+export const removeAllWatchedEpisodes = async (watchlistId: string): Promise<boolean> => {
+    // Delete all watched episodes
+    const { error: deleteError } = await supabase
+        .from('watchlist_episodes')
+        .delete()
+        .eq('watchlist_id', watchlistId)
+
+    if (deleteError) {
+        console.error('Failed to delete all watched episodes:', deleteError)
+        return false
+    }
+
+    // Reset the watchlist item to planning status
+    await supabase
+        .from('watchlist')
+        .update({
+            status: 'planning',
+            current_episode: 0,
+            current_season: 1,
+            completed_at: null,
+            updated_at: new Date().toISOString()
+        })
+        .eq('id', watchlistId)
+
+    // Invalidate cache
+    await invalidateUserCache()
+
+    return true
+}
+
+/**
  * Get the count of watched episodes for a watchlist item.
  */
 export const getWatchedEpisodeCount = async (watchlistId: string): Promise<number> => {
@@ -511,6 +544,18 @@ export const recalculateProgress = async (showId: string): Promise<{ fixed: bool
             newCurrentSeason = 1
         }
 
+        // Check if anything actually changed
+        const statusChanged = newStatus !== show.status
+        const episodesChanged = newCurrentEpisode !== show.current_episode
+        const seasonsChanged = newCurrentSeason !== show.current_season
+        const totalEpisodesChanged = totalReleasedEpisodes !== show.total_episodes
+        const totalSeasonsChanged = totalSeasons !== show.total_seasons
+
+        // Only update if something actually changed
+        if (!statusChanged && !episodesChanged && !seasonsChanged && !totalEpisodesChanged && !totalSeasonsChanged) {
+            return { fixed: false, error: 'No changes needed' }
+        }
+
         const updates: Partial<WatchlistItem> = {
             total_episodes: totalReleasedEpisodes,
             total_seasons: totalSeasons,
@@ -694,15 +739,21 @@ export const updateLastSeasonNumbers = async (
 
                 const latestSeasonNumber = seasonNumbers.length > 0 ? Math.max(...seasonNumbers) : 1
 
-                const { error: updateError } = await supabase
-                    .from('watchlist')
-                    .update({ last_season_number: latestSeasonNumber, updated_at: new Date().toISOString() })
-                    .eq('id', show.id)
+                // Only update if the season number actually changed
+                if (latestSeasonNumber !== show.last_season_number) {
+                    const { error: updateError } = await supabase
+                        .from('watchlist')
+                        .update({ last_season_number: latestSeasonNumber, updated_at: new Date().toISOString() })
+                        .eq('id', show.id)
 
-                if (!updateError) {
-                    updated++
+                    if (!updateError) {
+                        updated++
+                    } else {
+                        errors++
+                    }
                 } else {
-                    errors++
+                    // No change needed, but count as processed
+                    updated++
                 }
 
                 await new Promise(resolve => setTimeout(resolve, 200))
@@ -764,8 +815,8 @@ export const fixAllProgress = async (
                                       !item.current_episode || item.current_episode === 0 ||
                                       item.total_episodes === null || item.current_episode === null
                 
-                // Always include shows that need status fixing
-                if (hasMissingData || item.status === 'watching' || item.status === 'completed' || item.status === 'caught_up') {
+                // Only include shows that actually need fixing (missing data)
+                if (hasMissingData) {
                     itemsToFix.push(item)
                 }
             } 
