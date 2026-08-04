@@ -129,7 +129,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 }
             })
 
-            // Sort finished array by completed_at (most recent first)
+            // Sort finished array by completed_at, falling back to updated_at (most recent first)
             finished.sort((a, b) => {
                 const dateA = new Date(a.completed_at || a.updated_at || 0)
                 const dateB = new Date(b.completed_at || b.updated_at || 0)
@@ -202,18 +202,17 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 const completedItem = { 
                     ...item, 
                     status: nextStatus,
-                    completed_at: nextStatus === 'completed' ? new Date().toISOString() : item.completed_at
+                    completed_at: item.completed_at
                 }
                 newFinished = [completedItem, ...state.finished]
             } else if (item) {
-                // Update existing item in finished array to move it to top
+                // Update existing item in finished array
                 const completedItem = { 
                     ...item, 
                     status: nextStatus,
-                    completed_at: nextStatus === 'completed' ? new Date().toISOString() : item.completed_at
+                    completed_at: item.completed_at
                 }
-                newFinished = state.finished.filter(f => f.id !== id)
-                newFinished = [completedItem, ...newFinished]
+                newFinished = state.finished.map(f => f.id === id ? completedItem : f)
             }
         } else {
             // Remove from finished if status changed away from completed/caught_up
@@ -681,7 +680,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             const newMovies = newAllItems.filter(item => item.media_type === 'movie')
             const newFinished = newAllItems.filter(item => item.status === 'completed' || item.status === 'caught_up')
 
-            // Sort finished array by completed_at (most recent first)
+            // Sort finished array by completed_at, falling back to updated_at (most recent first)
             newFinished.sort((a, b) => {
                 const dateA = new Date(a.completed_at || a.updated_at || 0)
                 const dateB = new Date(b.completed_at || b.updated_at || 0)

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
-import { markEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
+import { markEpisodeWatched, checkAndUpdateCompleted, getWatchedEpisodeCount } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
@@ -21,11 +21,28 @@ const TVShows: React.FC = () => {
     
     const [markAllModal, setMarkAllModal] = useState<WatchlistItem | null>(null)
     const [markingAllWatched, setMarkingAllWatched] = useState(false)
+    const [watchedEpisodeCounts, setWatchedEpisodeCounts] = useState<Record<string, number>>({})
 
     // Scroll to top when page loads
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
+
+    // Fetch actual watched episode counts for accurate "episodes left" calculation
+    useEffect(() => {
+        const fetchWatchedCounts = async () => {
+            if (!isInitialized || tvShows.length === 0) return
+
+            const counts: Record<string, number> = {}
+            for (const show of tvShows) {
+                const count = await getWatchedEpisodeCount(show.id)
+                counts[show.id] = count
+            }
+            setWatchedEpisodeCounts(counts)
+        }
+
+        fetchWatchedCounts()
+    }, [isInitialized, tvShows])
 
     // Calculate episode progress for TV shows
     const tvShowsWithProgress = useMemo(() => {
@@ -37,10 +54,17 @@ const TVShows: React.FC = () => {
 
     // Listen for watchlist-refresh event from the Fix Progress modal
     useEffect(() => {
-        const handleRefresh = () => {
-            // Refresh is handled by the store, but we can trigger a re-fetch if needed
+        const handleRefresh = async () => {
+            // Refresh watched episode counts when progress is fixed
             if (store.allItems.length > 0) {
-                // The store already has the data, no need to refetch
+                const counts: Record<string, number> = {}
+                for (const item of store.allItems) {
+                    if (item.media_type === 'tv' || item.media_type === 'anime') {
+                        const count = await getWatchedEpisodeCount(item.id)
+                        counts[item.id] = count
+                    }
+                }
+                setWatchedEpisodeCounts(counts)
             }
         }
         window.addEventListener('watchlist-refresh', handleRefresh)
@@ -210,6 +234,10 @@ const TVShows: React.FC = () => {
             // Refresh the store
             await store.refreshItem(item.id)
             
+            // Refresh watched episode counts to ensure accurate display
+            const newCount = await getWatchedEpisodeCount(item.id)
+            setWatchedEpisodeCounts(prev => ({ ...prev, [item.id]: newCount }))
+            
             // Check for milestone and celebrate
             // Use getState() to read the FRESH store state (the `store`
             // variable is a stale closure snapshot from the last render)
@@ -253,8 +281,9 @@ const TVShows: React.FC = () => {
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = currentlyWatching[index]
-                                const episodesLeft = item.total_episodes && item.current_episode !== undefined
-                                    ? Math.max(0, item.total_episodes - (item.current_episode || 0))
+                                const watchedCount = watchedEpisodeCounts[item.id] || 0
+                                const episodesLeft = item.total_episodes !== undefined
+                                    ? Math.max(0, item.total_episodes - watchedCount)
                                     : undefined
                                 return (
                                     <MediaCard

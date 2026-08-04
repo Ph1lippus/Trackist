@@ -435,8 +435,19 @@ export const useListsLogic = (): UseListsLogicResult => {
             // Mark as watched
             if (watchlistIds.has(pendingWatchItem.id)) {
                 // Update existing watchlist item
+                const isTv = pendingWatchItem.media_type === 'tv' || pendingWatchItem.media_type === 'anime'
+                let showEnded = true
+                if (isTv) {
+                    const details = await getTVDetails(pendingWatchItem.id)
+                    showEnded = details.status === 'Ended' || details.status === 'Canceled'
+                }
+
                 await supabase.from('watchlist')
-                    .update({ status: 'completed', completed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+                    .update({ 
+                        status: isTv ? (showEnded ? 'completed' : 'caught_up') : 'completed', 
+                        completed_at: showEnded ? new Date().toISOString() : null, 
+                        updated_at: new Date().toISOString() 
+                    })
                     .eq('user_id', user.id).eq('tmdb_id', pendingWatchItem.id)
 
                 // If it's a TV show, mark all episodes as watched

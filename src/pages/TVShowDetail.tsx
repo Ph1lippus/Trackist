@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getFanartImages, getBestBackdropPath } from '../services/tmdbService'
-import { markEpisodeWatched, unmarkEpisodeWatched, getWatchedEpisodes, checkAndUpdateCaughtUp, checkAndUpdateCompleted, updateStatusToWatching } from '../services/watchlistService'
+import { markEpisodeWatched, unmarkEpisodeWatched, getWatchedEpisodes, checkAndUpdateCompleted } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { supabase } from '../services/supabaseClient'
 import { invalidateUserCache } from '../services/cacheService'
@@ -412,12 +412,10 @@ const TVShowDetail: React.FC = () => {
                     })
                 )
                 await Promise.all(markPromises)
-                // Update status from 'planning' to 'watching' if needed
-                await updateStatusToWatching(watchlistId)
-                // Run completed check FIRST to ensure ended shows are marked correctly
-                await checkAndUpdateCompleted(watchlistId, details.id)
-                // Then run caught up check (it will skip ended shows due to early return)
-                await checkAndUpdateCaughtUp(watchlistId, details.id)
+                
+                // Recalculate progress to ensure current_episode and status are in sync
+                await libraryStore.refreshItem(watchlistId)
+                
                 // Check for milestone and celebrate
                 await checkMilestoneAndCelebrate(watchlistStatus)
             } catch (err) {
@@ -476,12 +474,9 @@ const TVShowDetail: React.FC = () => {
                     }
                 }
 
-                // Update status from 'planning' to 'watching' if needed
-                await updateStatusToWatching(watchlistId)
-                // Run completed check FIRST to ensure ended shows are marked correctly
-                await checkAndUpdateCompleted(watchlistId, details.id)
-                // Then run caught up check (it will skip ended shows due to early return)
-                await checkAndUpdateCaughtUp(watchlistId, details.id)
+                // Recalculate progress to ensure current_episode and status are in sync
+                await libraryStore.refreshItem(watchlistId)
+                
                 // Check for milestone and celebrate
                 await checkMilestoneAndCelebrate(watchlistStatus)
             } catch (err) {
@@ -540,12 +535,7 @@ const TVShowDetail: React.FC = () => {
                 return
             }
 
-            // Run completed check FIRST to ensure ended shows are marked correctly
-            await checkAndUpdateCompleted(watchlistId, details.id)
-            // Then run caught up check (it will skip ended shows due to early return)
-            await checkAndUpdateCaughtUp(watchlistId, details.id)
-            
-            // Refresh the item from the store to get the updated status
+            // Refresh the item from the store to get the updated status and recalculate progress
             await libraryStore.refreshItem(watchlistId)
             
             // Update local state with the new status from the store
@@ -972,20 +962,13 @@ const TVShowDetail: React.FC = () => {
                             })
                             await Promise.all(markPromises)
                             
-                            // Update status from 'planning' to 'watching' if needed
-                            await updateStatusToWatching(watchlistId)
-                            // Run completed check FIRST to ensure ended shows are marked correctly
-                            await checkAndUpdateCompleted(watchlistId, details.id)
-                            // Then run caught up check (it will skip ended shows due to early return)
-                            await checkAndUpdateCaughtUp(watchlistId, details.id)
+                            // Refresh the item from the store to get the updated status and recalculate progress
+                            await libraryStore.refreshItem(watchlistId)
                             
                             // Invalidate cache when marking as completed to ensure Finished page shows updated data immediately
                             if (newWatchedState) {
                                 await invalidateUserCache()
                             }
-                            
-                            // Refresh the item from the store to get the updated status
-                            await libraryStore.refreshItem(watchlistId)
                             
                             // Update local state with the new status from the store
                             const updatedItem = useLibraryStore.getState().allItems.find(item => item.id === watchlistId)

@@ -57,6 +57,7 @@ export const saveAllEpisodesForShow = async (tmdbId: number, watchlistId: string
  * Mark an episode as watched by INSERTING it into watchlist_episodes.
  * If it already exists (unique constraint), this is a no-op.
  * Also updates the watchlist item's updated_at timestamp to reflect the change.
+ * Recalculates current_episode based on actual watched count to ensure accuracy.
  */
 export const markEpisodeWatched = async (
     watchlistId: string,
@@ -94,10 +95,16 @@ export const markEpisodeWatched = async (
         return false
     }
 
-    // Update the watchlist item's updated_at timestamp
+    // Get the actual count of watched episodes after insertion
+    const watchedCount = await getWatchedEpisodeCount(watchlistId)
+
+    // Update the watchlist item's updated_at timestamp and current_episode
     await supabase
         .from('watchlist')
-        .update({ updated_at: new Date().toISOString() })
+        .update({ 
+            updated_at: new Date().toISOString(),
+            current_episode: watchedCount
+        })
         .eq('id', watchlistId)
 
     // Invalidate cache to ensure the updated_at change is reflected
@@ -109,6 +116,7 @@ export const markEpisodeWatched = async (
 /**
  * Unmark an episode as watched by DELETING it from watchlist_episodes.
  * Also updates the watchlist item's updated_at timestamp to reflect the change.
+ * Recalculates current_episode based on actual watched count to ensure accuracy.
  */
 export const unmarkEpisodeWatched = async (
     watchlistId: string,
@@ -127,10 +135,16 @@ export const unmarkEpisodeWatched = async (
         return false
     }
 
-    // Update the watchlist item's updated_at timestamp
+    // Get the actual count of watched episodes after deletion
+    const watchedCount = await getWatchedEpisodeCount(watchlistId)
+
+    // Update the watchlist item's updated_at timestamp and current_episode
     await supabase
         .from('watchlist')
-        .update({ updated_at: new Date().toISOString() })
+        .update({ 
+            updated_at: new Date().toISOString(),
+            current_episode: watchedCount
+        })
         .eq('id', watchlistId)
 
     // Invalidate cache to ensure the updated_at change is reflected
