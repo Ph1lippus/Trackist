@@ -5,7 +5,6 @@ import { useListsLogic } from '../hooks/useListsLogic'
 const Lists: React.FC = () => {
     usePageTitle('Trackist - Lists')
     const {
-        lists,
         publicLists,
         loading,
         filteredLists,

@@ -43,10 +43,11 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack 
 
     const isDetailPage = location.pathname.match(/^\/(movie|tv|person)\/\d+$/) || 
                           location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/);
-    const isListDetailPage = location.pathname.match(/^\/Lists\/[a-f0-9-]+$/);
-    const showBackButton = Boolean(isDetailPage || isListDetailPage);
+    const isListDetailPage = location.pathname.match(/^\/ListsDetail\/[a-f0-9-]+$/);
+    const isListEditPage = location.pathname.match(/^\/ListsEditPage\/(new|[a-f0-9-]+)$/);
+    const showBackButton = Boolean(isDetailPage || isListDetailPage || isListEditPage);
     
-    const showSearchBar = ['/Discover', '/Movies', '/Tvshows', '/', '/Finished', '/Friends', '/Lists', '/Lists/new'].includes(location.pathname) || location.pathname.startsWith('/Lists/');
+    const showSearchBar = ['/Discover', '/Movies', '/Tvshows', '/', '/Finished', '/Friends', '/Lists'].includes(location.pathname) || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/');
     
     const showCalendarHeader = location.pathname === '/Upcoming' && currentMonth && navigateMonth && canGoBack;
     
