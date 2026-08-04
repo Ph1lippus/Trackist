@@ -143,11 +143,15 @@ const Movies: React.FC = () => {
                     </div>
                     {notReleasedItems.length > 0 ? (
                         <VirtuosoGrid
+                            increaseViewportBy={{
+                                        top: 1000,
+                                        bottom: 2500,
+                                    }}
                             computeItemKey={(index) => notReleasedItems[index]?.id ?? index}
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={notReleasedItems}
-                            overscan={800}
+                            overscan={1200}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = notReleasedItems[index]

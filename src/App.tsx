@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
 import { supabase } from './services/supabaseClient'
 import { updateLastActive } from './services/profileService'
 import type { User } from '@supabase/supabase-js'
@@ -27,8 +27,16 @@ import TVShowDetail from './pages/TVShowDetail'
 import PersonDetail from './pages/PersonDetail'
 import EpisodeDetail from './pages/EpisodeDetail'
 import Lists from './pages/Lists'
+import ListsDetail from './pages/ListsDetail'
+import ListsEditPage from './pages/ListsEditPage'
 import Finished from './pages/Finished'
 import DetailLayout from './components/layout/DetailLayout'
+
+// Legacy redirect component for /Lists/:id -> /ListsDetail/:id
+const LegacyListRedirect: React.FC = () => {
+    const { id } = useParams<{ id: string }>()
+    return <Navigate to={`/ListsDetail/${id}`} replace />
+}
 
 const AppContent: React.FC = () => {
     const location = useLocation()
@@ -98,7 +106,7 @@ const AppContent: React.FC = () => {
     }
 
     const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/Friends', '/Statistics', '/Finished', '/Lists']
-    const hideFooter = Boolean(user) && (mediaPages.includes(location.pathname) || location.pathname.startsWith('/Lists/'))
+    const hideFooter = Boolean(user) && (mediaPages.includes(location.pathname) || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname.startsWith('/Lists/'))
     
     const navigateMonth = (direction: number) => {
         setCurrentMonth(prev => {
@@ -152,8 +160,12 @@ const AppContent: React.FC = () => {
                     </Route>
                     <Route path="/person/:id" element={<PersonDetail />} />
                     <Route path="/Lists" element={user ? <Lists /> : <Navigate to="/login" replace />} />
-                    <Route path="/Lists/new" element={user ? <Lists /> : <Navigate to="/login" replace />} />
-                    <Route path="/Lists/:id" element={user ? <Lists /> : <Navigate to="/login" replace />} />
+                    <Route path="/ListsDetail/:id" element={user ? <ListsDetail /> : <Navigate to="/login" replace />} />
+                    <Route path="/ListsEditPage/new" element={user ? <ListsEditPage /> : <Navigate to="/login" replace />} />
+                    <Route path="/ListsEditPage/:id" element={user ? <ListsEditPage /> : <Navigate to="/login" replace />} />
+                    {/* Legacy redirects for old URLs */}
+                    <Route path="/Lists/new" element={<Navigate to="/ListsEditPage/new" replace />} />
+                    <Route path="/Lists/:id" element={<LegacyListRedirect />} />
                     <Route path="/Finished" element={user ? <Finished /> : <Navigate to="/login" replace />} />
                     <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />
                 </Routes>

@@ -241,11 +241,15 @@ const TVShows: React.FC = () => {
                     </div>
                     {currentlyWatching.length > 0 ? (
                         <VirtuosoGrid
+                            increaseViewportBy={{
+                                        top: 1000,
+                                        bottom: 2500,
+                                    }}
                             computeItemKey={(index) => currentlyWatching[index]?.id ?? index}
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={currentlyWatching}
-                            overscan={800}
+                            overscan={1200}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = currentlyWatching[index]

@@ -220,10 +220,10 @@ const Discover: React.FC = () => {
                 ) : (
                         <div style={{ flex: 1, minHeight: 0, width: '100%' }}>
                             <VirtuosoGrid
-                            increaseViewportBy={{
-                                    top: 1000,
-                                    bottom: 2500,
-                                }}
+                                increaseViewportBy={{
+                                        top: 1000,
+                                        bottom: 2500,
+                                    }}
                                 computeItemKey={(index) => visibleResults[index]?.id ?? index}
                                 style={{ height: '100%', width: '100%' }}
                                 useWindowScroll={true}

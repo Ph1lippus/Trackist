@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { imageUrl } from '../../services/tmdbService'
 import type { TMDBResult } from '../../types'
+import { Link } from "react-router-dom"
 
 type ResultItem = TMDBResult
 
@@ -39,7 +39,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
     listMode = false,
     episodesLeft,
 }) => {
-    const navigate = useNavigate()
+    
     const isPerson = item.media_type === 'person'
 
     const imgUrl = useMemo(
@@ -53,15 +53,12 @@ const MediaCard: React.FC<MediaCardProps> = ({
     )
 
 
-    const handleClick = useCallback(() => {
-        if (item.media_type === 'person') {
-            navigate(`/person/${item.id}`)
-        } else if (item.media_type === 'tv') {
-            navigate(`/tv/${item.id}`)
-        } else {
-            navigate(`/movie/${item.id}`)
-        }
-    }, [item.media_type, item.id, navigate])
+    const href =
+    item.media_type === "person"
+        ? `/person/${item.id}`
+        : item.media_type === "tv"
+        ? `/tv/${item.id}`
+        : `/movie/${item.id}`
 
     const handleAddClick = useCallback(
         (e: React.MouseEvent) => {
@@ -113,7 +110,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
 
     return (
         <article className="media-card">
-            <div className="media-card__poster" onClick={handleClick}>
+            <Link to={href} className="media-card__poster">
                 {imgUrl && <img src={imgUrl} alt={displayTitle} loading="lazy" />}
                 {!imgUrl && (
                     <div className="media-card__no-poster">
@@ -180,9 +177,16 @@ const MediaCard: React.FC<MediaCardProps> = ({
                         <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
                     </div>
                 )}
-            </div>
+            </Link>
             <div className="media-card__body">
-                <h3 onClick={handleClick}>{displayTitle}</h3>
+                <h3>
+                    <Link
+                        to={href}
+                        style={{ textDecoration: "none", color: "inherit" }}
+                    >
+                        {displayTitle}
+                    </Link>
+                </h3>
             </div>
         </article>
     )

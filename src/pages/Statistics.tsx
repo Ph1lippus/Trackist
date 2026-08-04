@@ -43,7 +43,6 @@ const Statistics: React.FC = () => {
     const stats = useMemo(() => {
         const movies = items.filter(i => i.media_type === 'movie')
         const tvShows = items.filter(i => i.media_type === 'tv')
-        const anime = items.filter(i => i.media_type === 'anime')
 
         const totalCompleted = items.filter(i => i.status === 'completed').length
         const totalWatching = items.filter(i => i.status === 'watching').length
@@ -53,7 +52,6 @@ const Statistics: React.FC = () => {
 
         const moviesCompleted = movies.filter(i => i.status === 'completed').length
         const tvCompleted = tvShows.filter(i => i.status === 'completed').length
-        const animeCompleted = anime.filter(i => i.status === 'completed').length
 
         const scoredItems = items.filter(i => i.vote_average != null && i.vote_average > 0)
         const avgScore = scoredItems.length > 0
@@ -107,7 +105,6 @@ const Statistics: React.FC = () => {
 
         const movieCompletionRate = movies.length > 0 ? Math.round((moviesCompleted / movies.length) * 100) : 0
         const tvCompletionRate = tvShows.length > 0 ? Math.round((tvCompleted / tvShows.length) * 100) : 0
-        const animeCompletionRate = anime.length > 0 ? Math.round((animeCompleted / anime.length) * 100) : 0
 
         const avgWatchTimePerEpisode = episodeStats.totalEpisodesWatched > 0
             ? Math.round(episodeStats.totalWatchTimeMinutes / episodeStats.totalEpisodesWatched)
@@ -117,8 +114,7 @@ const Statistics: React.FC = () => {
         const totalDaysWatching = Math.round(episodeStats.totalWatchTimeMinutes / 1440)
 
         const mostAddedType = items.length > 0
-            ? (movies.length >= tvShows.length && movies.length >= anime.length ? 'Movies' :
-               tvShows.length >= anime.length ? 'TV Shows' : 'Anime')
+            ? (movies.length >= tvShows.length ? 'Movies' : 'TV Shows')
             : null
 
         const now = new Date()
@@ -129,7 +125,6 @@ const Statistics: React.FC = () => {
             totalItems: items.length,
             totalMovies: movies.length,
             totalTvShows: tvShows.length,
-            totalAnime: anime.length,
             totalCompleted,
             totalWatching,
             totalPlanning,
@@ -137,7 +132,6 @@ const Statistics: React.FC = () => {
             totalCaughtUp,
             moviesCompleted,
             tvCompleted,
-            animeCompleted,
             avgScore,
             highestScored,
             lowestScored,
@@ -148,7 +142,6 @@ const Statistics: React.FC = () => {
             avgProgressInWatching,
             movieCompletionRate,
             tvCompletionRate,
-            animeCompletionRate,
             avgWatchTimePerEpisode,
             totalWatchHours,
             totalDaysWatching,
@@ -254,11 +247,6 @@ const Statistics: React.FC = () => {
                                 <div className="stats-media__header"><span className="stats-media__label"><i className="fa-solid fa-tv"></i> TV Shows</span><span className="stats-media__count">{stats.totalTvShows}</span></div>
                                 <div className="stats-media__bar"><div className="stats-media__fill stats-media__fill--tv" style={{ width: `${stats.totalItems > 0 ? (stats.totalTvShows / stats.totalItems) * 100 : 0}%` }} /></div>
                                 <div className="stats-media__sub"><span>{stats.tvCompleted} completed</span><span className="stats-media__rate">{stats.tvCompletionRate}%</span></div>
-                            </div>
-                            <div className="stats-media__item">
-                                <div className="stats-media__header"><span className="stats-media__label"><i className="fa-solid fa-dragon"></i> Anime</span><span className="stats-media__count">{stats.totalAnime}</span></div>
-                                <div className="stats-media__bar"><div className="stats-media__fill stats-media__fill--anime" style={{ width: `${stats.totalItems > 0 ? (stats.totalAnime / stats.totalItems) * 100 : 0}%` }} /></div>
-                                <div className="stats-media__sub"><span>{stats.animeCompleted} completed</span><span className="stats-media__rate">{stats.animeCompletionRate}%</span></div>
                             </div>
                         </div>
                     </div>

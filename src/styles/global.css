@@ -2795,13 +2795,6 @@ body::after {
     align-self: center;
 }
 
-.lists-page__action-btn:hover {
-    
-}
-«
-
-
-
 .lists-page__action-btn--primary:disabled {
     opacity: 0.5;
     cursor: not-allowed;
