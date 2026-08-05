@@ -51,6 +51,9 @@
         padding-left: 0;
         padding-right: 0;
     }
+    .friend-card{
+        width: 100% !important;
+    }
 }
 
 :root {
@@ -924,6 +927,44 @@ body::after {
     margin: 0 auto;
     padding: 1rem 0;
     overflow-anchor: none;
+}
+
+/* Smaller cards on phones */
+@media (max-width: 480px) {
+    .discover-grid {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+        gap: 0.6rem;
+        padding: 0.5rem 0;
+    }
+    .media-card__poster {
+        border-radius: 12px;
+    }
+    .media-card__body h3 {
+        font-size: 0.7rem;
+        margin-top: 0.4rem;
+        padding: 0 0.25rem;
+    }
+    .media-card__rating {
+        font-size: 0.6rem;
+        padding: 0.15rem 0.35rem;
+    }
+    .media-card__add-icon,
+    .media-card__check-icon,
+    .media-card__unwatch-icon {
+        width: 22px;
+        height: 22px;
+        font-size: 0.7rem;
+    }
+    .media-card__episodes-left {
+        font-size: 0.6rem;
+        padding: 0.15rem 0.35rem;
+    }
+    .media-card__type {
+        font-size: 0.6rem;
+    }
+    .media-card__body {
+        padding: 0.4rem 0.3rem 0.5rem;
+    }
 }
 
 /* Sentinel element for IntersectionObserver (invisible) */
