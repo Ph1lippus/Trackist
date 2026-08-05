@@ -7,14 +7,14 @@ const MobileBottomNavbar: React.FC = () => {
     const { user } = useAuth();
 
     const navItems = [
-        { to: '/Discover', icon: 'fa-compass', label: 'Discover' },
-        { to: '/Movies', icon: 'fa-film', label: 'Movies' },
-        { to: '/Tvshows', icon: 'fa-tv', label: 'TV Shows' },
-        { to: '/Upcoming', icon: 'fa-calendar', label: 'Upcoming' },
-        { to: '/Finished', icon: 'fa-check-circle', label: 'Finished' },
-        { to: '/Lists', icon: 'fa-list', label: 'Lists' },
-        { to: '/Friends', icon: 'fa-users', label: 'Friends' },
-        { to: '/Statistics', icon: 'fa-chart-bar', label: 'Stats' },
+        { to: '/Discover', icon: 'fa-compass'},
+        { to: '/Movies', icon: 'fa-film'},
+        { to: '/Tvshows', icon: 'fa-tv'},
+        { to: '/Upcoming', icon: 'fa-calendar'},
+        { to: '/Finished', icon: 'fa-check-circle'},
+        { to: '/Lists', icon: 'fa-list'},
+        { to: '/Friends', icon: 'fa-users'},
+        { to: '/Statistics', icon: 'fa-chart-bar'},
     ];
 
     // Map pathname to nav item - handle root route redirecting to discover
@@ -44,10 +44,8 @@ const MobileBottomNavbar: React.FC = () => {
                         className={({ isActive }) =>
                             `mobile-bottom-navbar-link${isActive ? ' active' : ''}`
                         }
-                        title={item.label}
                     >
                         <i className={`fas ${item.icon}`}></i>
-                        <span className="mobile-bottom-navbar-label">{item.label}</span>
                     </NavLink>
                 ))}
             </div>

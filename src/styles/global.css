@@ -25,6 +25,7 @@
         margin: 0 auto;
     }
     .discover-sorts{
+        display: none !important;
         margin: 0 auto;
     }
     .discover-container{
@@ -38,6 +39,10 @@
     .auth-card{
         
     }
+    .lists-page__overview-header{
+        margin-top: 2rem;
+        margin-bottom: 0rem !important;
+    }
     .main{
         padding: 0!important;
         min-height: calc(100vh - 6rem)!important;
@@ -45,9 +50,6 @@
     .main .container {
         padding-left: 0;
         padding-right: 0;
-    }
-    .navbar-brand-row {
-        display: none;
     }
 }
 
@@ -2455,6 +2457,7 @@ body::after {
     .discover-tabs{
         margin: 0 auto;
     }
+}
 
 /* Lists Page Styles */
 .lists-page {
@@ -3940,10 +3943,6 @@ body::after {
 
     .footer__top {
         flex-direction: row;
-    }
-
-    .navbar-brand-row {
-        padding: 0.85rem 0 0.75rem;
     }
 
     .navbar-brand-row .navbar-brand {
@@ -8274,15 +8273,14 @@ i.fa-solid.fa-trash:hover {
     bottom: 0 !important;
     left: 0 !important;
     right: 0 !important;
-    background: rgba(10, 10, 15, 0.95);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    background: transparent;
+    backdrop-filter: blur(50px);
+    -webkit-backdrop-filter: blur(50px);
     z-index: 9999 !important;
     padding: 0.35rem 0;
-    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.3);
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
+    border-radius: 25px 25px 0px 0px;
 }
 
 .mobile-bottom-navbar-inner {
@@ -8301,8 +8299,8 @@ i.fa-solid.fa-trash:hover {
     align-items: center;
     justify-content: center;
     gap: 0.15rem;
-    padding: 0.25rem 0.3rem;
-    color: rgba(255, 255, 255, 0.5);
+    padding: 0.8rem 1rem;
+    color: var(--color-platinum);
     text-decoration: none;
     font-size: 0.6rem;
     font-weight: 500;
@@ -8352,5 +8350,4 @@ i.fa-solid.fa-trash:hover {
     .navbar-auth-link {
         display: none;
     }
-}
 }
