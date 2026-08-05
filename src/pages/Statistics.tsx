@@ -179,7 +179,6 @@ const Statistics: React.FC = () => {
             <div className="statistics-container">
                 <div className="stats-hero">
                     <div className="stats-hero__header">
-                        <h1 className="stats-hero__title">Your Library Stats</h1>
                         <p className="stats-hero__subtitle">Everything about your watching journey</p>
                     </div>
                     <div className="stats-hero__grid">

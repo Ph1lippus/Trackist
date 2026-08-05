@@ -18,6 +18,16 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .stats-hero {
+        background: transparent !important;
+        border: none !important;
+        padding: 1rem !important;
+    }
+    .stats-panel {
+        background-color: transparent !important;
+        border: none !important;
+        padding: 1rem !important;
+    }
     .lists-page__form-actions {
         margin: 0 auto;
     }
@@ -28,7 +38,6 @@
         margin: 0 auto ;
     }
     .detail-page__logo-section {
-        margin-bottom: ;
     }
     .detail-page__left {
         padding-top: 0 !important;
