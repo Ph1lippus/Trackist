@@ -4081,8 +4081,8 @@ button:focus-visible {
     right: 0.7rem;
     top: 50%;
     transform: translateY(-50%);
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: transparent;
+    border: none;
     color: var(--color-primary);
     cursor: pointer;
     font-size: 1rem;
@@ -4096,10 +4096,8 @@ button:focus-visible {
 }
 
 .password-toggle:hover {
-    background: rgba(133, 138, 227, 0.24);
     color: #f7f8ff;
-    transform: translateY(-50%) scale(1.04);
-    box-shadow: 0 0 0 3px rgba(133, 138, 227, 0.15);
+
 }
 
 .password-input-wrap .form-control {
