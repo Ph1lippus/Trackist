@@ -8,6 +8,7 @@ import { useLibraryStore } from './stores/useLibraryStore'
 import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 import SecondaryNavbar from './components/layout/SecondaryNavbar'
+import MobileBottomNavbar from './components/layout/MobileBottomNavbar'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -175,6 +176,7 @@ const AppContent: React.FC = () => {
                 </Routes>
             </main>
             <SecondaryNavbar />
+            <MobileBottomNavbar />
             {!hideFooter && !isDetailPage && <Footer />}
         </div>
     )

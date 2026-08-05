@@ -297,7 +297,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             isLoadingMore,
             showAdded,
             watchlistIds,
-            sessionAddedIds
         } = get()
 
         if (isLoading || isLoadingMore) return
