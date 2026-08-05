@@ -18,8 +18,24 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .lists-page__form-actions {
+        margin: 0 auto;
+    }
+    .lists-page--view{
+        padding: 2rem 0rem !important;
+    }
+    .detail-page__actions {
+        margin: 0 auto ;
+    }
+    .detail-page__logo-section {
+        margin-bottom: ;
+    }
+    .detail-page__left {
+        padding-top: 0 !important;
+    }
     .detail-page__logo{
-        max-width: 250px;
+        max-width: 250px!important;
+        margin: 0 auto;
     }
     .discover-tabs{
         margin: 0 auto;
@@ -56,6 +72,11 @@
     }
 }
 
+@media (max-width: 480) {
+    .detail-page__episode-details strong{
+        font-size:  0.7rem;
+    }
+}
 :root {
     --color-black: #050505;
     --color-primary: #858ae3;
@@ -2490,9 +2511,7 @@ body::after {
         position: static;
     }
 
-    .detail-page__episodes-section {
-        max-height: 600px;
-    }
+
 }
 @media (max-width: 768px) {
     .discover-tabs{
@@ -3133,7 +3152,7 @@ body::after {
 
 @media (max-width: 480px) {
     .detail-page__content {
-        padding: 0 1.5rem;
+        padding: 0.3rem;
     }
 
     .detail-page__title {
@@ -3143,11 +3162,6 @@ body::after {
     .detail-page__episode-still {
         width: 80px;
     }
-
-    .detail-page__actions {
-        flex-direction: column;
-    }
-
     .detail-page__btn {
         width: 100%;
     }
@@ -8307,6 +8321,313 @@ i.fa-solid.fa-trash:hover {
     overflow: visible;
 }
 
+/* ===== UPCOMING NEW PAGE (CARD LIST VIEW) ===== */
+.upcoming-new-page {
+    padding: 1.5rem 1rem 7rem;
+    min-height: 100vh;
+}
+
+.upcoming-new-shell {
+    max-width: 900px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.upcoming-new-header {
+    text-align: center;
+    padding: 1rem 0;
+}
+
+.upcoming-new-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    font-family: var(--font-title);
+    font-size: 2rem;
+    font-weight: 400;
+    color: var(--color-platinum);
+    margin: 0 0 0.5rem 0;
+    letter-spacing: 2px;
+}
+
+.upcoming-new-title i {
+    color: var(--color-primary);
+    font-size: 1.5rem;
+}
+
+.upcoming-new-subtitle {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+}
+
+.upcoming-new-empty {
+    text-align: center;
+    padding: 4rem 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 25px;
+}
+
+.upcoming-new-empty i {
+    font-size: 3rem;
+    color: rgba(255, 255, 255, 0.15);
+    margin-bottom: 1rem;
+}
+
+.upcoming-new-empty h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    margin: 0 0 0.5rem 0;
+}
+
+.upcoming-new-empty p {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.4);
+    margin: 0;
+}
+
+.upcoming-new-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2.5rem;
+}
+
+.upcoming-new-date-group {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.upcoming-new-date-label {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid rgba(133, 138, 227, 0.2);
+}
+
+.upcoming-new-date-label.today {
+    border-bottom-color: rgba(104, 255, 174, 0.3);
+}
+
+.upcoming-new-date-main {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+.upcoming-new-date-label.today .upcoming-new-date-main {
+    color: var(--color-mint);
+}
+
+.upcoming-new-today-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.6rem;
+    background: rgba(104, 255, 174, 0.1);
+    border: 1px solid rgba(104, 255, 174, 0.3);
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--color-mint);
+}
+
+.upcoming-new-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.upcoming-new-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.75rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 15px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.upcoming-new-card:hover {
+    background: rgba(133, 138, 227, 0.08);
+    border-color: rgba(133, 138, 227, 0.25);
+    transform: translateX(4px);
+}
+
+.upcoming-new-card-poster {
+    width: 60px;
+    height: 90px;
+    flex-shrink: 0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: linear-gradient(135deg, rgba(133, 138, 227, 0.3), rgba(255, 255, 255, 0.05));
+}
+
+.upcoming-new-card-poster img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.upcoming-new-card-no-poster {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.03);
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 0.5rem;
+}
+
+.upcoming-new-card-body {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.upcoming-new-card-type {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-episode {
+    background: rgba(133, 138, 227, 0.12);
+    color: var(--color-primary);
+    border: 1px solid rgba(133, 138, 227, 0.25);
+}
+
+.badge-movie {
+    background: rgba(104, 255, 174, 0.1);
+    color: var(--color-mint);
+    border: 1px solid rgba(104, 255, 174, 0.25);
+}
+
+.upcoming-new-card-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--color-platinum);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.upcoming-new-card-info {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.upcoming-new-card-season,
+.upcoming-new-card-episode {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.upcoming-new-card-season i,
+.upcoming-new-card-episode i {
+    color: var(--color-primary);
+    font-size: 0.7rem;
+}
+
+.upcoming-new-card-episode-title {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-style: italic;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.upcoming-new-card-movie-release {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    margin: 0;
+}
+
+.upcoming-new-card-movie-release i {
+    color: var(--color-mint);
+    font-size: 0.7rem;
+}
+
+.upcoming-new-card-date {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.upcoming-new-card-date i {
+    color: var(--color-primary);
+    font-size: 0.65rem;
+}
+
+.upcoming-new-card-arrow {
+    flex-shrink: 0;
+    color: rgba(255, 255, 255, 0.2);
+    font-size: 0.9rem;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+
+.upcoming-new-card:hover .upcoming-new-card-arrow {
+    color: var(--color-primary);
+    transform: translateX(2px);
+}
+
+/* Mobile: smaller cards */
+@media (max-width: 480px) {
+    .upcoming-new-card-poster {
+        width: 48px;
+        height: 72px;
+    }
+    .upcoming-new-card-title {
+        font-size: 0.85rem;
+    }
+    .upcoming-new-card-type {
+        font-size: 0.6rem;
+    }
+    .badge {
+        font-size: 0.6rem;
+    }
+}
+
 /* Hide auth links on mobile */
 /* ===== Mobile Bottom Navbar ===== */
 .mobile-bottom-navbar {
@@ -8390,5 +8711,38 @@ i.fa-solid.fa-trash:hover {
 
     .navbar-auth-link {
         display: none;
+    }
+
+    /* Allow scrolling on detail pages on mobile */
+    body.no-scroll {
+        overflow: auto !important;
+        overflow-y: auto !important;
+    }
+    .detail-page--no-scroll {
+        height: auto !important;
+        min-height: 100vh;
+        overflow-y: auto !important;
+    }
+    .detail-page__content--split {
+        height: auto !important;
+    }
+    .detail-page__main--tv {
+        height: auto !important;
+        overflow: visible !important;
+    }
+    .detail-page__left {
+        height: 100dvh !important;
+        overflow: visible !important;
+        padding-right: 0;
+    }
+}
+
+/* Desktop: hide mobile bottom navbar, show secondary navbar */
+@media (min-width: 769px) {
+    .mobile-bottom-navbar {
+        display: none !important;
+    }
+    .secondary-navbar {
+        display: flex !important;
     }
 }

@@ -112,7 +112,6 @@ const ListsCreatePage: React.FC = () => {
                 {/* List Items Section - Empty for new list */}
                 <div className="lists-page__items-section">
                     <div className="lists-page__items-header">
-                        <h2>List Items (0)</h2>
                     </div>
                     <div className="lists-page__empty-state">
                         <i className="fa-solid fa-film"></i>

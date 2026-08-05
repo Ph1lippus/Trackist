@@ -136,18 +136,6 @@ const ListsEditPage: React.FC = () => {
                         </label>
                     </div>
                     <div className="lists-page__form-actions">
-                        <button
-                            className="lists-page__action-btn"
-                            onClick={() => {
-                                if (isNewList) {
-                                    navigate('/Lists')
-                                } else {
-                                    navigate(`/ListsDetail/${selectedList!.id}`)
-                                }
-                            }}
-                        >
-                            Cancel
-                        </button>
                         {!isNewList && (
                             <button
                                 className="lists-page__action-btn lists-page__action-btn--danger"
@@ -176,7 +164,6 @@ const ListsEditPage: React.FC = () => {
                 {/* List Items Section - Show ALL items including watched */}
                 <div className="lists-page__items-section">
                     <div className="lists-page__items-header">
-                        <h2>List Items ({listItems.length})</h2>
                         <div className="lists-page__tabs">
                             <button
                                 className={`lists-page__tab ${activeTab === 'all' ? 'lists-page__tab--active' : ''}`}
