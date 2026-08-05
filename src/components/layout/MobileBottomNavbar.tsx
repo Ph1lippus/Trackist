@@ -9,8 +9,9 @@ const MobileBottomNavbar: React.FC = () => {
         { to: '/Discover', icon: 'fa-compass'},
         { to: '/Movies', icon: 'fa-film'},
         { to: '/Tvshows', icon: 'fa-tv'},
-        { to: '/Upcoming', icon: 'fa-calendar'},
+        { to: '/UpcomingNew', icon: 'fa-calendar'},
         { to: '/Finished', icon: 'fa-check-circle'},
+        { to: '/Lists', icon: 'fa-list'},
         { to: '/Friends', icon: 'fa-users'},
         { to: '/Statistics', icon: 'fa-chart-bar'},
     ];

@@ -275,6 +275,13 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack 
                                 >
                                 <button className="t-dropdown-item" onClick={() => {
                                         closeMenu();
+                                        navigate('/Profile');
+                                    }}>
+                                        <i className="fa-solid fa-user"></i>
+                                        Profile
+                                    </button>
+                                    <button className="t-dropdown-item" onClick={() => {
+                                        closeMenu();
                                         setShowFixModal(true);
                                     }}>
                                         <i className="fa-solid fa-wrench"></i>

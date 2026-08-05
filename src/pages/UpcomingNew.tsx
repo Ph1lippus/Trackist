@@ -142,7 +142,6 @@ const UpcomingNew: React.FC = () => {
             <div className="dashboard-shell upcoming-new-shell">
                 {sortedGroupedItems.length === 0 ? (
                     <div className="upcoming-new-empty">
-                        <i className="fas fa-calendar-check"></i>
                         <h3>Nothing upcoming</h3>
                         <p>No episodes or movie releases are scheduled. Add more shows to your watchlist!</p>
                     </div>
@@ -156,7 +155,7 @@ const UpcomingNew: React.FC = () => {
                                     </span>
                                     {isToday(date) && (
                                         <span className="upcoming-new-today-badge">
-                                            <i className="fas fa-star"></i> Today
+                                            Today
                                         </span>
                                     )}
                                 </div>
@@ -191,28 +190,14 @@ const UpcomingNew: React.FC = () => {
                                             </div>
 
                                             <div className="upcoming-new-card-body">
-                                                <div className="upcoming-new-card-type">
-                                                    {item.type === 'episode' ? (
-                                                        <span className="badge badge-episode">
-                                                            <i className="fas fa-tv"></i> Episode
-                                                        </span>
-                                                    ) : (
-                                                        <span className="badge badge-movie">
-                                                            <i className="fas fa-film"></i> Movie
-                                                        </span>
-                                                    )}
-                                                </div>
-
                                                 <h3 className="upcoming-new-card-title">{item.title}</h3>
 
                                                 {item.episode && (
                                                     <div className="upcoming-new-card-info">
                                                         <span className="upcoming-new-card-season">
-                                                            <i className="fas fa-layer-group"></i>
                                                             Season {item.episode.season_number}
                                                         </span>
                                                         <span className="upcoming-new-card-episode">
-                                                            <i className="fas fa-play-circle"></i>
                                                             Episode {item.episode.episode_number}
                                                         </span>
                                                     </div>
@@ -226,18 +211,17 @@ const UpcomingNew: React.FC = () => {
 
                                                 {item.type === 'movie' && (
                                                     <p className="upcoming-new-card-movie-release">
-                                                        <i className="fas fa-film"></i> Movie Release
+                                                        Movie Release
                                                     </p>
                                                 )}
 
                                                 <div className="upcoming-new-card-date">
-                                                    <i className="fas fa-calendar-day"></i>
                                                     {formatDateString(item.date, { month: 'short', day: 'numeric', year: 'numeric' })}
                                                 </div>
                                             </div>
 
                                             <div className="upcoming-new-card-arrow">
-                                                <i className="fas fa-chevron-right"></i>
+                                                ›
                                             </div>
                                         </div>
                                     ))}
