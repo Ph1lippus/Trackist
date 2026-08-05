@@ -4355,14 +4355,13 @@ i.fa-solid.fa-trash:hover {
     right: 0.5rem;
     font-size: 0.7rem;
     font-weight: 600;
-    color: var(--color-primary);
-    background: rgba(0, 0, 0, 0.8);
-    border: 1px solid rgba(133, 138, 227, 0.3);
+    color: var(--color-platinum);
+    background: rgba(128, 128, 128, 0.199);
     padding: 0.2rem 0.5rem;
-    border-radius: 20px;
+    border-radius: 25px;
     white-space: nowrap;
     z-index: 5;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(12px);
 }
 
 .media-card__type {

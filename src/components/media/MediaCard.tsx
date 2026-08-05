@@ -124,7 +124,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
                     </div>
                 )}
                 {episodesLeft !== undefined && episodesLeft > 0 && (
-                    <span className="media-card__episodes-left">{episodesLeft} left</span>
+                    <span className="media-card__episodes-left">+{episodesLeft}</span>
                 )}
                 {showAddButton && (
                     <button

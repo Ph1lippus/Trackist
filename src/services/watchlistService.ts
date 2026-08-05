@@ -237,6 +237,53 @@ export const updateStatusToWatching = async (watchlistId: string): Promise<void>
 }
 
 /**
+ * Mark a TV show as fully watched by directly setting the status.
+ * This is the gold standard approach - status changes instantly so the
+ * show moves to Finished immediately, then all episodes are saved in
+ * the background so individual episode tracking still works.
+ * If the show has ended on TMDB, sets status to 'completed'.
+ * If still airing, sets status to 'caught_up'.
+ */
+export const markShowAsFullyWatched = async (watchlistId: string, tmdbId: number): Promise<string> => {
+    try {
+        const details = await getTVDetails(tmdbId)
+        const showEnded = details.status === 'Ended' || details.status === 'Canceled'
+        const newStatus = showEnded ? 'completed' : 'caught_up'
+
+        // 1. Set status immediately - instant response
+        const { error } = await supabase
+            .from('watchlist')
+            .update({
+                status: newStatus,
+                completed_at: showEnded ? new Date().toISOString() : null,
+                current_episode: details.number_of_episodes || 0,
+                current_season: details.number_of_seasons || 1,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', watchlistId)
+
+        if (error) {
+            console.error('Failed to mark show as fully watched:', error)
+            return 'planning'
+        }
+
+        // Invalidate cache so Finished page shows updated data immediately
+        await invalidateUserCache()
+
+        // 2. Save all episodes in the background (fire and forget)
+        // This ensures individual episode tracking still works
+        saveAllEpisodesForShow(tmdbId, watchlistId).catch(err => {
+            console.error('Failed to save episodes in background:', err)
+        })
+
+        return newStatus
+    } catch (err) {
+        console.error('Failed to mark show as fully watched:', err)
+        return 'planning'
+    }
+}
+
+/**
  * Check if the user has watched all episodes of the latest season.
  * If so, update status to 'caught_up' (only if show is still airing).
  * If the show has ended, this function does nothing - checkAndUpdateCompleted handles that.

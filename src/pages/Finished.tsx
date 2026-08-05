@@ -21,12 +21,27 @@ const Finished: React.FC = () => {
         item: WatchlistItem
         isTV: boolean
     } | null>(null)
+    const [unwatchLoading, setUnwatchLoading    ] = useState(false)
 
     // Scroll to top when page loads
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
 
+    // DEBUG: Log finished items order
+    useEffect(() => {
+        if (finished.length > 0) {
+            console.log('🔍 DEBUG - Finished page order:', finished.map(item => ({
+                id: item.id,
+                title: item.title,
+                media_type: item.media_type,
+                completed_at: item.completed_at,
+                updated_at: item.updated_at,
+                status: item.status
+            })).sort((a, b) => new Date(b.completed_at || b.updated_at || 0).getTime() - new Date(a.completed_at || a.updated_at || 0).getTime()))
+        }
+    }, [finished])
+    
     // Filter items based on global search (both movie + tv types)
     const filteredItems = useMemo(() => {
         if (!committedQuery) return finished
@@ -55,21 +70,31 @@ const Finished: React.FC = () => {
 
     const handleUnwatchMovie = async (item: WatchlistItem) => {
         await store.updateStatus(item.id, 'planning')
+        // Refresh the store to update the UI
+        await store.refreshItem(item.id)
         setUnwatchModal(null)
     }
 
     const handleUnwatchTVShow = async (item: WatchlistItem) => {
+        // Remove all watched episodes AND update status
         await removeAllWatchedEpisodes(item.id)
+        // Refresh the store to update the UI
+        await store.refreshItem(item.id)
         setUnwatchModal(null)
     }
 
     const handleUnwatchConfirm = async () => {
         if (!unwatchModal) return
         
-        if (unwatchModal.isTV) {
-            await handleUnwatchTVShow(unwatchModal.item)
-        } else {
-            await handleUnwatchMovie(unwatchModal.item)
+        setUnwatchLoading(true)
+        try {
+            if (unwatchModal.isTV) {
+                await handleUnwatchTVShow(unwatchModal.item)
+            } else {
+                await handleUnwatchMovie(unwatchModal.item)
+            }
+        } finally {
+            setUnwatchLoading(false)
         }
     }
 
@@ -157,6 +182,7 @@ const Finished: React.FC = () => {
                     confirmText="Yes, Remove"
                     cancelText="Cancel"
                     confirmColor="danger"
+                    confirmLoading={unwatchLoading}
                 />
             )}
         </div>

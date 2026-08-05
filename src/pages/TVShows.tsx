@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
-import { markEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
+import { markShowAsFullyWatched } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
@@ -55,6 +55,15 @@ const TVShows: React.FC = () => {
             const currentTvShows = currentStore.tvShows
             
             if (!isInitialized || currentTvShows.length === 0) return
+            
+            // DEBUG: Log all shows and their updated_at timestamps
+            console.log('🔍 DEBUG - Checking shows order:', currentTvShows.map(s => ({
+                id: s.id,
+                title: s.title,
+                updated_at: s.updated_at,
+                added_at: s.added_at,
+                status: s.status
+            })).sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime()))
 
             const completedShows = currentTvShows.filter(
                 item => (item.status === 'completed' || item.status === 'caught_up' || (
@@ -90,28 +99,28 @@ const TVShows: React.FC = () => {
                         })
 
                         if (hasReleasedEpisodes) {
-                            // Update status and episode count with updated_at to keep database in sync
+                            // Update status and episode count WITHOUT updating updated_at
+                            // This prevents the show from jumping to the top of the list
                             const { supabase } = await import('../services/supabaseClient')
                             await supabase
                                 .from('watchlist')
                                 .update({
                                     status: 'watching' as const,
                                     total_episodes: currentTotalEpisodes,
-                                    total_seasons: details.number_of_seasons || show.total_seasons,
-                                    updated_at: new Date().toISOString()
+                                    total_seasons: details.number_of_seasons || show.total_seasons
                                 })
                                 .eq('id', show.id)
                             
-                            // Update local store state with updated_at to stay in sync
+                            // Update local store state WITHOUT changing updated_at
                             const currentState = useLibraryStore.getState()
                             const updatedItems = currentState.allItems.map(item => 
                                 item.id === show.id 
-                                    ? { ...item, status: 'watching' as const, total_episodes: currentTotalEpisodes, total_seasons: details.number_of_seasons || show.total_seasons, updated_at: new Date().toISOString() }
+                                    ? { ...item, status: 'watching' as const, total_episodes: currentTotalEpisodes, total_seasons: details.number_of_seasons || show.total_seasons }
                                     : item
                             )
                             const updatedTvShows = currentState.tvShows.map(item =>
                                 item.id === show.id
-                                    ? { ...item, status: 'watching' as const, total_episodes: currentTotalEpisodes, total_seasons: details.number_of_seasons || show.total_seasons, updated_at: new Date().toISOString() }
+                                    ? { ...item, status: 'watching' as const, total_episodes: currentTotalEpisodes, total_seasons: details.number_of_seasons || show.total_seasons }
                                     : item
                             )
                             useLibraryStore.setState({
@@ -183,30 +192,8 @@ const TVShows: React.FC = () => {
 
         setMarkingAllWatched(true)
         try {
-            // Fetch all episodes from TMDB
-            const details = await getTVDetails(item.tmdb_id)
-            const seasonNumbers = (details.seasons || [])
-                .filter((s: { season_number: number }) => s.season_number > 0)
-                .map((s: { season_number: number }) => s.season_number)
-
-            // Insert all episodes into watchlist_episodes
-            for (const season of seasonNumbers) {
-                const seasonData = await getTVSeasonDetails(item.tmdb_id, season)
-                const episodes = seasonData.episodes || []
-                for (const ep of episodes) {
-                    await markEpisodeWatched(item.id, season, ep.episode_number, {
-                        tmdb_episode_id: ep.id,
-                        title: ep.name,
-                        still_path: ep.still_path,
-                        overview: ep.overview,
-                        air_date: ep.air_date,
-                        runtime: ep.runtime
-                    })
-                }
-            }
-
-            // Check TMDB status and update accordingly (completed vs caught_up)
-            await checkAndUpdateCompleted(item.id, item.tmdb_id)
+            // Gold standard: just set the status directly - no need to insert every episode
+            await markShowAsFullyWatched(item.id, item.tmdb_id)
 
             setMarkAllModal(null)
             // Refresh the store

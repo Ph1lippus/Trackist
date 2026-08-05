@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getFanartImages, getBestBackdropPath } from '../services/tmdbService'
-import { markEpisodeWatched, unmarkEpisodeWatched, getWatchedEpisodes, checkAndUpdateCompleted } from '../services/watchlistService'
+import { markEpisodeWatched, unmarkEpisodeWatched, getWatchedEpisodes, checkAndUpdateCompleted, markShowAsFullyWatched } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { supabase } from '../services/supabaseClient'
 import { invalidateUserCache } from '../services/cacheService'
@@ -489,26 +489,26 @@ const TVShowDetail: React.FC = () => {
     }
 
     /**
-     * Refresh the watchlist item from the store after a status check,
-     * then fire Cosmic Confetti if the show just hit 'completed' or 'caught_up'.
+     * Check if milestone was achieved and fire Cosmic Confetti.
+     * Assumes the store has already been refreshed with the new status.
      */
     const checkMilestoneAndCelebrate = async (previousStatus: string | null, targetWatchlistId?: string) => {
         const wlId = targetWatchlistId || watchlistId
-        if (!wlId || !details) return
+        if (!wlId) return
         try {
-            await libraryStore.refreshItem(wlId)
-            // Use getState() to read the FRESH store state (the `libraryStore`
-            // variable is a stale closure snapshot from the last render)
+            // Read the FRESH store state (already refreshed by caller)
             const updatedItem = useLibraryStore.getState().allItems.find(item => item.id === wlId)
             if (updatedItem) {
                 const newStatus = updatedItem.status
+                // Update local state
+                setWatchlistStatus(newStatus)
+                // Fire confetti if just completed/caught_up
                 if (
                     (newStatus === 'completed' || newStatus === 'caught_up') &&
                     previousStatus !== 'completed' && previousStatus !== 'caught_up'
                 ) {
                     launchCosmicConfetti()
                 }
-                setWatchlistStatus(newStatus)
             }
         } catch (err) {
             console.error('Failed to check milestone:', err)
@@ -535,17 +535,20 @@ const TVShowDetail: React.FC = () => {
                 return
             }
 
+            // Recalculate status based on remaining watched episodes
+            await checkAndUpdateCompleted(watchlistId, details.id)
+            
             // Refresh the item from the store to get the updated status and recalculate progress
             await libraryStore.refreshItem(watchlistId)
+            
+            // Invalidate cache to ensure Finished page shows updated data immediately
+            await invalidateUserCache()
             
             // Update local state with the new status from the store
             const updatedItem = useLibraryStore.getState().allItems.find(item => item.id === watchlistId)
             if (updatedItem) {
                 setWatchlistStatus(updatedItem.status)
             }
-            
-            // Invalidate cache to ensure Finished page shows updated data immediately
-            await invalidateUserCache()
         } catch (err) {
             setEpisodes(prev => prev.map(ep => 
                 ep.id === episode.id ? { ...ep, watched: true } : ep
@@ -690,23 +693,14 @@ const TVShowDetail: React.FC = () => {
                                                 setIsUpdatingStatus(true)
                                                 const newWatchlistId = await handleAddToWatchlist()
                                                 if (newWatchlistId && details) {
-                                                    // Mark ALL episodes as watched (not just released) - parallel execution
-                                                    const markPromises = episodes.map(ep => 
-                                                        markEpisodeWatched(newWatchlistId, ep.season_number, ep.episode_number, {
-                                                            tmdb_episode_id: ep.tmdb_episode_id,
-                                                            title: ep.title,
-                                                            still_path: ep.still_path,
-                                                            overview: ep.overview,
-                                                            vote_average: ep.vote_average,
-                                                            air_date: ep.air_date,
-                                                            runtime: ep.runtime
-                                                        })
-                                                    )
-                                                    await Promise.all(markPromises)
-                                                    // Check TMDB status: if ended -> completed, if still airing -> caught_up
-                                                    await checkAndUpdateCompleted(newWatchlistId, details.id)
-                                                    // Check for milestone and celebrate
-                                                    await checkMilestoneAndCelebrate(watchlistStatus, newWatchlistId)
+                                                    // Gold standard: just set the status directly - no need to insert every episode
+                                                    const newStatus = await markShowAsFullyWatched(newWatchlistId, details.id)
+                                                    // Update local state with the new status
+                                                    setWatchlistStatus(newStatus)
+                                                    // Fire confetti if completed/caught_up
+                                                    if (newStatus === 'completed' || newStatus === 'caught_up') {
+                                                        launchCosmicConfetti()
+                                                    }
                                                     // Refresh episodes
                                                     setEpisodes(prev => prev.map(ep => ({ ...ep, watched: true })))
                                                 }
@@ -734,7 +728,7 @@ const TVShowDetail: React.FC = () => {
                                                 const markAsWatched = watchlistStatus !== 'completed'
                                                 setMarkWatchedModal({ isOpen: true, markAsWatched })
                                             }}
-                                            disabled={isUpdatingStatus}
+                                            disabled={isUpdatingStatus || modalLoading}
                                             title={watchlistStatus === 'completed' ? 'Mark as Unwatched' : 'Mark as Watched'}
                                         >
                                             <i className={watchlistStatus === 'completed' ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
@@ -904,6 +898,7 @@ const TVShowDetail: React.FC = () => {
                     confirmText={confirmModal.isUnwatch ? "Unmark" : confirmModal.markAll ? "Mark All" : "Mark This One"}
                     cancelText="Cancel"
                     confirmColor={confirmModal.isUnwatch ? "danger" : "success"}
+                    confirmLoading={episodeModalLoading !== null}
                 />
             )}
             {removeEpisodeModal && (
@@ -962,23 +957,18 @@ const TVShowDetail: React.FC = () => {
                             })
                             await Promise.all(markPromises)
                             
-                            // Refresh the item from the store to get the updated status and recalculate progress
-                            await libraryStore.refreshItem(watchlistId)
+                            // Determine the new status based on whether episodes are watched
+                            const newStatus = newWatchedState ? 'completed' : 'planning'
                             
-                            // Invalidate cache when marking as completed to ensure Finished page shows updated data immediately
+                            // Update the store with the new status (this updates DB + cache + optimistic UI)
+                            await libraryStore.updateStatus(watchlistId, newStatus)
+                            
+                            // Update local state
+                            setWatchlistStatus(newStatus)
+                            
+                            // Fire confetti if marking as watched
                             if (newWatchedState) {
-                                await invalidateUserCache()
-                            }
-                            
-                            // Update local state with the new status from the store
-                            const updatedItem = useLibraryStore.getState().allItems.find(item => item.id === watchlistId)
-                            if (updatedItem) {
-                                setWatchlistStatus(updatedItem.status)
-                            }
-                            
-                            // Check for milestone and celebrate (only when marking as watched)
-                            if (newWatchedState) {
-                                await checkMilestoneAndCelebrate(watchlistStatus)
+                                launchCosmicConfetti()
                             }
                             
                             // Refresh episodes
