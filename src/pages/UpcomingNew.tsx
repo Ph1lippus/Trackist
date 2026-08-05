@@ -140,6 +140,14 @@ const UpcomingNew: React.FC = () => {
     return (
         <section className="dashboard-page upcoming-new-page">
             <div className="dashboard-shell upcoming-new-shell">
+                <div className="upcoming-new-header">
+                    <h1 className="upcoming-new-title">
+                        <i className="fas fa-calendar-alt"></i> Upcoming
+                    </h1>
+                    <p className="upcoming-new-subtitle">
+                        All your upcoming episodes and movie releases
+                    </p>
+                </div>
 
                 {sortedGroupedItems.length === 0 ? (
                     <div className="upcoming-new-empty">
