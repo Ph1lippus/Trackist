@@ -413,6 +413,9 @@ const TVShowDetail: React.FC = () => {
                 )
                 await Promise.all(markPromises)
                 
+                // Check if all episodes are watched and update status to completed/caught_up
+                await checkAndUpdateCompleted(watchlistId, details.id)
+                
                 // Recalculate progress to ensure current_episode and status are in sync
                 await libraryStore.refreshItem(watchlistId)
                 
@@ -463,6 +466,8 @@ const TVShowDetail: React.FC = () => {
                         ))
                         return
                     }
+                    // Check if all episodes are watched and update status to completed/caught_up
+                    await checkAndUpdateCompleted(watchlistId, details.id)
                 } else {
                     // DELETE from watchlist_episodes
                     const success = await unmarkEpisodeWatched(watchlistId, episode.season_number, episode.episode_number)
@@ -472,6 +477,8 @@ const TVShowDetail: React.FC = () => {
                         ))
                         return
                     }
+                    // Recalculate status based on remaining watched episodes
+                    await checkAndUpdateCompleted(watchlistId, details.id)
                 }
 
                 // Recalculate progress to ensure current_episode and status are in sync
@@ -957,8 +964,13 @@ const TVShowDetail: React.FC = () => {
                             })
                             await Promise.all(markPromises)
                             
-                            // Determine the new status based on whether episodes are watched
-                            const newStatus = newWatchedState ? 'completed' : 'planning'
+                            // Check if all episodes are watched and update status properly
+                            await checkAndUpdateCompleted(watchlistId, details.id)
+                            
+                            // Read the actual status from the store after the check
+                            await libraryStore.refreshItem(watchlistId)
+                            const updatedItem = useLibraryStore.getState().allItems.find(item => item.id === watchlistId)
+                            const newStatus = updatedItem?.status || (newWatchedState ? 'completed' : 'planning')
                             
                             // Update the store with the new status (this updates DB + cache + optimistic UI)
                             await libraryStore.updateStatus(watchlistId, newStatus)

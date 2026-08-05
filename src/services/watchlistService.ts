@@ -107,6 +107,9 @@ export const markEpisodeWatched = async (
         })
         .eq('id', watchlistId)
 
+    // Update status from 'planning' to 'watching' when an episode is marked
+    await updateStatusToWatching(watchlistId)
+
     // Invalidate cache to ensure the updated_at change is reflected
     await invalidateUserCache()
 
