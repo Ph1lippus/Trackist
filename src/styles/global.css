@@ -1,3 +1,71 @@
+/* ============================
+   Desktop (default)
+   ============================ */
+
+/* your normal styles */
+
+
+/* ============================
+   Large tablets
+   ============================ */
+@media (max-width: 1200px) {
+
+}
+
+
+/* ============================
+   Tablets
+   ============================ */
+@media (max-width: 992px) {
+
+}
+
+
+/* ============================
+   Small tablets / large phones
+   ============================ */
+@media (max-width: 768px) {
+    .footer{
+        padding-right: 1rem;
+        padding-left: 1rem;
+    }
+    .auth-card{
+        
+    }
+    .main{
+        padding: 0!important;
+        min-height: calc(100vh - 6rem)!important;
+    }
+    .navbar-brand-row {
+        display: none;
+    }
+}
+
+
+/* ============================
+   Phones
+   ============================ */
+@media (max-width: 576px) {
+
+}
+
+
+/* ============================
+   Small phones
+   ============================ */
+@media (max-width: 420px) {
+
+}
+
+
+/* ============================
+   Very small devices
+   ============================ */
+@media (max-width: 360px) {
+
+}
+
+
 :root {
     --color-black: #050505;
     --color-primary: #858ae3;
@@ -16,6 +84,17 @@
     --tabs-bar-bg: rgba(7, 7, 7, 0.96);
     --tabs-pill-bg: #454545;
     --dropdown-close-dur: 150ms;
+    --mobile-breakpoint: 768px;
+    --tablet-breakpoint: 992px;
+
+    --header-height: 72px;
+    --bottom-nav-height: 72px;
+
+    --page-padding: 2rem;
+    --page-padding-mobile: 1rem;
+
+    --card-gap: 1rem;
+    --card-gap-mobile: .75rem;
 }
 body.no-scroll {
     overflow: hidden;
@@ -754,12 +833,7 @@ body::after {
 
 
 /* Sections */
-.discover-section {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 16px;
-    padding: 1.25rem;
-}
+
 .discover-section__head {
     display: flex;
     justify-content: space-between;
@@ -1176,7 +1250,7 @@ body::after {
 .add-modal {
     background: rgba(15, 15, 20, 0.98);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
+    border-radius: 25px;
     padding: 1.5rem;
     max-width: 360px;
     width: 90%;
@@ -2271,7 +2345,7 @@ body::after {
 .detail-page__person-photo {
     width: 200px;
     flex-shrink: 0;
-    border-radius: 16px;
+    border-radius: 25px;
     overflow: hidden;
     background: rgba(255, 255, 255, 0.1);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
@@ -2404,9 +2478,8 @@ body::after {
 }
 .lists-page__container {
     display: grid;
-    grid-template-columns: 300px 1fr;
     gap: 2rem;
-    max-width: 1400px;
+    max-width: 85%;
     margin: 0 auto;
 }
 .lists-page__overview-header {
@@ -2423,13 +2496,13 @@ body::after {
 }
 .lists-page__grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 2rem;
 }
 .lists-page__card {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
+    border-radius: 25px;
     padding: 1.5rem;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -2465,7 +2538,7 @@ body::after {
 .lists-page__sidebar {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
+    border-radius: 25px;
     padding: 1.5rem;
     height: fit-content;
 }
@@ -2482,18 +2555,18 @@ body::after {
     margin: 0;
 }
 .lists-page__create-btn {
-    background: var(--color-primary);
+    background: rgba(255, 255, 255, 0.02);
     color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0.6rem 1rem;
+    border-radius: 25px;
     cursor: pointer;
     font-size: 0.9rem;
     transition: all 0.2s ease;
 }
 .lists-page__create-btn:hover {
-    background: var(--color-primary-hover);
-    transform: translateY(-2px);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.15);
 }
 .lists-page__list {
     display: flex;
@@ -2556,7 +2629,7 @@ body::after {
 .lists-page__main {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
+    border-radius: 25px;
     padding: 2rem;
     min-height: 400px;
 }
@@ -2726,15 +2799,16 @@ body::after {
 
 .lists-page__form .form-group input[type="text"],
 .lists-page__form .form-group textarea {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    border-radius: 8px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 25px;
     padding: 0.75rem 1rem;
     color: var(--color-platinum);
     font-size: 0.95rem;
     transition: all 0.2s ease;
     outline: none;
     width: 100%;
+    backdrop-filter: blur(12px);
 }
 
 .lists-page__form .form-group input[type="text"]:focus,
@@ -2751,7 +2825,7 @@ body::after {
 
 .lists-page__form .form-group textarea {
     resize: vertical;
-    min-height: 280px;
+    min-height: 180px;
     font-family: inherit;
 }
 
@@ -2778,11 +2852,10 @@ body::after {
 }
 
 .lists-page__action-btn {
-    padding: 0.6rem 2.5rem 0.6rem 1.2rem;
-    background: rgba(255, 255, 255, 0.08);
+    background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.15);
     border-radius: 25px;
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(12px);
     color: var(--color-platinum);
     font-size: 0.9rem;
     font-weight: 500;
@@ -2790,9 +2863,14 @@ body::after {
     outline: none;
     transition: all 0.2s ease;
     height: 44px;
-    min-width: 130px;
+    min-width: 150px;
     text-align: center;
     align-self: center;
+}
+
+.lists-page__action-btn:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--color-platinum);
 }
 
 .lists-page__action-btn--primary:disabled {
@@ -2835,7 +2913,7 @@ body::after {
 }
 
 .lists-page__tab {
-    padding: 0.4rem 0.8rem;
+    padding: 0.6rem 1rem;
     border-radius: 6px;
     border: 1px solid rgba(255, 255, 255, 0.1);
     background: transparent;
@@ -2845,7 +2923,8 @@ body::after {
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 1rem;
+    border-radius: 25px;
 }
 
 .lists-page__tab:hover {
@@ -3500,7 +3579,7 @@ body::after {
 .more-card {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 16px;
+    border-radius: 25px;
     padding: 1.5rem;
     text-decoration: none;
     transition: all 0.2s ease;
@@ -3791,7 +3870,7 @@ body::after {
 .auth-card {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
+    border-radius: 25px;
     padding: 2rem;
     width: 100%;
     max-width: 420px;
@@ -3972,7 +4051,7 @@ button:focus-visible {
 .auth-card {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
+    border-radius: 25px;
     padding: 1.5rem 1.25rem 1.25rem;
     max-width: 400px;
     width: 100%;
@@ -4273,7 +4352,8 @@ button:focus-visible {
     position: absolute;
     top: 0.5rem;
     right: 0.5rem;
-    background: transparent;
+    background: #00000030;
+    backdrop-filter: blur(12px);
     border: none;
     color: var(--color-platinum);
     width: 32px;
@@ -4540,7 +4620,7 @@ i.fa-solid.fa-trash:hover {
 .confirm-modal-content {
     background: rgba(20, 20, 25, 0.98);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    border-radius: 16px;
+    border-radius: 25px;
     padding: 1.5rem;
     max-width: 360px;
     width: 100%;
@@ -5180,8 +5260,6 @@ i.fa-solid.fa-trash:hover {
 
 .friends-container {
     margin: 0 auto;
-    display: flex;
-    flex-direction: row;
     gap: 1.5rem;
     width: 100%;
 }
@@ -5212,7 +5290,7 @@ i.fa-solid.fa-trash:hover {
 .friends-results {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 1rem;
 }
 
 .friend-card {
@@ -5224,9 +5302,10 @@ i.fa-solid.fa-trash:hover {
     padding: 1rem;
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 12px;
+    border-radius: 50px;
     text-decoration: none;
     transition: all 0.2s ease;
+    height: 110px;
 }
 
 .friend-card__name {
@@ -5239,8 +5318,8 @@ i.fa-solid.fa-trash:hover {
 }
 
 .friend-card__avatar {
-    width: 50px;
-    height: 50px;
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
     flex-shrink: 0;
     overflow: hidden;
@@ -5282,11 +5361,11 @@ i.fa-solid.fa-trash:hover {
 }
 
 .friend-card__follow-btn {
-    padding: 0.5rem 1rem;
+    padding: 0.6rem 1rem;
     border: 1px solid rgba(133, 138, 227, 0.3);
     background: rgba(133, 138, 227, 0.1);
     color: var(--color-primary);
-    border-radius: 8px;
+    border-radius: 25px;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
@@ -5367,7 +5446,7 @@ i.fa-solid.fa-trash:hover {
 .summary-stat {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 16px;
+    border-radius: 25px;
     padding: 1.25rem 1rem;
     text-align: center;
     transition: all 0.2s ease;
@@ -5611,7 +5690,7 @@ i.fa-solid.fa-trash:hover {
 .stats-hero-card {
     background: rgba(255, 255, 255, 0.03);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 16px;
+    border-radius: 25px;
     padding: 1.25rem 1rem;
     text-align: center;
     transition: all 0.2s ease;
@@ -5675,7 +5754,7 @@ i.fa-solid.fa-trash:hover {
 .stats-panel {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 16px;
+    border-radius: 25px;
     padding: 1.5rem;
 }
 
@@ -7223,7 +7302,7 @@ i.fa-solid.fa-trash:hover {
 .settings-panel {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 16px;
+    border-radius: 25px;
     padding: 1.75rem;
 }
 
@@ -7870,8 +7949,7 @@ i.fa-solid.fa-trash:hover {
     background: rgba(15, 15, 20, 0.98);
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+    border-radius: 25px;
     z-index: 1000;
     overflow: hidden;
     animation: searchDropdownIn 0.18s cubic-bezier(0.22, 1, 0.36, 1);
@@ -8143,7 +8221,7 @@ i.fa-solid.fa-trash:hover {
 /* View Mode - Full Page */
 .lists-page--view {
     width: 100%;
-    max-width: 1400px;
+    max-width: 85%;
     margin: 0 auto;
     padding: 2rem;
 }
@@ -8159,7 +8237,6 @@ i.fa-solid.fa-trash:hover {
 }
 
 .lists-page__view-header h1 {
-    font-family: var(--font-title);
     font-size: 2rem;
     color: var(--color-platinum);
     margin: 0 0 1rem 0;

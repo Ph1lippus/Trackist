@@ -1,23 +1,16 @@
-import React, { useEffect, useRef } from 'react'
-import { useParams } from 'react-router-dom'
+import React, { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useListsLogic } from '../hooks/useListsLogic'
 import MediaCard from '../components/media/MediaCard'
 import { VirtuosoGrid } from 'react-virtuoso'
 import ConfirmModal from '../components/modals/ConfirmModal'
-import { deleteList } from '../services/profileService'
 
-const ListsEditPage: React.FC = () => {
-    usePageTitle('Trackist - Lists')
-    const { id } = useParams<{ id: string }>()
-    const hasInitializedRef = useRef(false)
+const ListsCreatePage: React.FC = () => {
+    usePageTitle('Trackist - Create List')
+    const navigate = useNavigate()
     
     const {
-        selectedList,
-        listItems,
-        loading,
-        activeTab,
-        setActiveTab,
         title,
         setTitle,
         description,
@@ -25,7 +18,6 @@ const ListsEditPage: React.FC = () => {
         isPublic,
         setIsPublic,
         saving,
-        isNewList,
         browseLoading,
         browsePage,
         hasMore,
@@ -36,66 +28,31 @@ const ListsEditPage: React.FC = () => {
         setSelectedGenre,
         sortBy,
         setSortBy,
-        watchlistIds,
-        reordering,
         isFetchingRef,
-        showWatchConfirmModal,
-        pendingWatchItem,
-        isWatchOperation,
-        showDeleteModal,
-        pendingDeleteItem,
-        filteredListItems,
         filteredBrowseResults,
         Footer,
         handleSave,
         handleAddToList,
-        handleDeleteItem,
+        showWatchConfirmModal,
+        pendingWatchItem,
+        isWatchOperation,
         confirmWatchAction,
         cancelWatchAction,
-        confirmDeleteItem,
-        cancelDeleteItem,
-        handleMoveUp,
-        handleMoveDown,
-        loadListDetails,
         fetchBrowseData,
         fetchWatchlistIds,
         initNewList,
-        committedQuery,
-        navigate,
     } = useListsLogic()
 
-    // Load list details when editing an existing list
+    // Initialize new list and fetch browse data on mount
     useEffect(() => {
-        if (id && id !== 'new') {
-            loadListDetails(id)
-        } else if (id === 'new') {
-            initNewList()
-            // Fetch browse data immediately after initializing new list
-            // since isNewList state update is async
-            fetchBrowseData(1, true)
-        }
+        initNewList()
+        fetchBrowseData(1, true)
         fetchWatchlistIds()
-        hasInitializedRef.current = true
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id, loadListDetails, fetchWatchlistIds, initNewList])
+    }, [initNewList, fetchBrowseData, fetchWatchlistIds])
 
-    // Fetch browse data when filters change (not on initial load)
-    useEffect(() => {
-        if (selectedList) {
-            fetchBrowseData(1, true)
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [selectedList, browseMediaType, sortBy, selectedGenre, committedQuery])
-
-    if (loading) {
-        return (
-            <section className="lists-page">
-                <div className="discover-loading">
-                    <div className="discover-spinner" />
-                    <p>Loading...</p>
-                </div>
-            </section>
-        )
+    const handleCreate = async () => {
+        await handleSave()
+        // handleSave will navigate to the new list detail page
     }
 
     return (
@@ -138,109 +95,29 @@ const ListsEditPage: React.FC = () => {
                     <div className="lists-page__form-actions">
                         <button
                             className="lists-page__action-btn"
-                            onClick={() => {
-                                if (isNewList) {
-                                    navigate('/Lists')
-                                } else {
-                                    navigate(`/ListsDetail/${selectedList!.id}`)
-                                }
-                            }}
+                            onClick={() => navigate('/Lists')}
                         >
                             Cancel
                         </button>
-                        {!isNewList && (
-                            <button
-                                className="lists-page__action-btn lists-page__action-btn--danger"
-                                onClick={async () => {
-                                    if (confirm('Are you sure you want to delete this list?')) {
-                                        const { error } = await deleteList(selectedList!.id)
-                                        if (!error) {
-                                            navigate('/Lists')
-                                        }
-                                    }
-                                }}
-                            >
-                                Delete List
-                            </button>
-                        )}
                         <button
                             className="lists-page__action-btn lists-page__action-btn--primary"
-                            onClick={handleSave}
+                            onClick={handleCreate}
                             disabled={saving}
                         >
-                            {saving ? 'Saving...' : (isNewList ? 'Create List' : 'Save Changes')}
+                            {saving ? 'Creating...' : 'Create List'}
                         </button>
                     </div>
                 </div>
 
-                {/* List Items Section - Show ALL items including watched */}
+                {/* List Items Section - Empty for new list */}
                 <div className="lists-page__items-section">
                     <div className="lists-page__items-header">
-                        <h2>List Items ({listItems.length})</h2>
-                        <div className="lists-page__tabs">
-                            <button
-                                className={`lists-page__tab ${activeTab === 'all' ? 'lists-page__tab--active' : ''}`}
-                                onClick={() => setActiveTab('all')}
-                            >
-                                All ({listItems.length})
-                            </button>
-                            <button
-                                className={`lists-page__tab ${activeTab === 'movie' ? 'lists-page__tab--active' : ''}`}
-                                onClick={() => setActiveTab('movie')}
-                            >
-                                <i className="fa-solid fa-film"></i> Movies ({listItems.filter(i => i.media_type === 'movie').length})
-                            </button>
-                            <button
-                                className={`lists-page__tab ${activeTab === 'tv' ? 'lists-page__tab--active' : ''}`}
-                                onClick={() => setActiveTab('tv')}
-                            >
-                                <i className="fa-solid fa-tv"></i> TV Shows ({listItems.filter(i => i.media_type === 'tv' || i.media_type === 'anime').length})
-                            </button>
-                        </div>
+                        <h2>List Items (0)</h2>
                     </div>
-
-                    {filteredListItems.length === 0 ? (
-                        <div className="lists-page__empty-state">
-                            <i className="fa-solid fa-film"></i>
-                            <p>This list is empty. Use the search bar to find content to add!</p>
-                        </div>
-                    ) : (
-                        <div className="lists-page__items-grid">
-                            {filteredListItems.map((item, index) => (
-                                <div key={item.id} className="lists-page__item-wrapper">
-                                    <div className="lists-page__reorder-controls">
-                                        <button
-                                            className="lists-page__reorder-btn"
-                                            onClick={() => handleMoveUp(item, index)}
-                                            disabled={index === 0 || reordering === item.id}
-                                            title="Move up"
-                                        >
-                                            <i className="fa-solid fa-arrow-up"></i>
-                                        </button>
-                                        <button
-                                            className="lists-page__reorder-btn"
-                                            onClick={() => handleMoveDown(item, index)}
-                                            disabled={index === listItems.length - 1 || reordering === item.id}
-                                            title="Move down"
-                                        >
-                                            <i className="fa-solid fa-arrow-down"></i>
-                                        </button>
-                                    </div>
-                                    <MediaCard
-                                        item={{
-                                            id: item.tmdb_id,
-                                            title: item.title,
-                                            poster_path: item.poster_path,
-                                            media_type: item.media_type
-                                        }}
-                                        isInWatchlist={watchlistIds.has(item.tmdb_id)}
-                                        listMode={true}
-                                        onDelete={() => handleDeleteItem(item)}
-                                    />
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                    <div className="lists-page__empty-state">
+                        <i className="fa-solid fa-film"></i>
+                        <p>This list is empty. Use the search bar to find content to add!</p>
+                    </div>
                 </div>
             </div>
 
@@ -348,19 +225,8 @@ const ListsEditPage: React.FC = () => {
                     confirmColor={isWatchOperation ? 'success' : 'primary'}
                 />
             )}
-            {showDeleteModal && (
-                <ConfirmModal
-                    isOpen={showDeleteModal}
-                    title="Remove from List"
-                    message={`Are you sure you want to remove "${pendingDeleteItem?.title}" from this list?`}
-                    onConfirm={confirmDeleteItem}
-                    onCancel={cancelDeleteItem}
-                    confirmText="Remove"
-                    confirmColor="danger"
-                />
-            )}
         </div>
     )
 }
 
-export default ListsEditPage
+export default ListsCreatePage

@@ -147,29 +147,30 @@ export const useListsLogic = (): UseListsLogicResult => {
     // Fetch functions
     const fetchLists = useCallback(async () => {
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
+        
+        if (user) {
+            // Fetch user's own lists
+            const { data: userLists, error: userError } = await supabase
+                .from('lists')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('updated_at', { ascending: false })
 
-        // Fetch user's own lists
-        const { data: userLists, error: userError } = await supabase
-            .from('lists')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('updated_at', { ascending: false })
+            // Fetch public lists from other users
+            const { data: publicListsData, error: publicError } = await supabase
+                .from('lists')
+                .select('*, profiles!inner(display_name, avatar_url)')
+                .eq('is_public', true)
+                .neq('user_id', user.id)
+                .order('updated_at', { ascending: false })
 
-        // Fetch public lists from other users
-        const { data: publicListsData, error: publicError } = await supabase
-            .from('lists')
-            .select('*, profiles!inner(display_name, avatar_url)')
-            .eq('is_public', true)
-            .neq('user_id', user.id)
-            .order('updated_at', { ascending: false })
+            if (!userError && userLists) {
+                setLists(userLists)
+            }
 
-        if (!userError && userLists) {
-            setLists(userLists)
-        }
-
-        if (!publicError && publicListsData) {
-            setPublicLists(publicListsData)
+            if (!publicError && publicListsData) {
+                setPublicLists(publicListsData)
+            }
         }
 
         setLoading(false)
@@ -212,6 +213,8 @@ export const useListsLogic = (): UseListsLogicResult => {
                     } else {
                         setWatchedListItems(new Set())
                     }
+                } else {
+                    setWatchedListItems(new Set())
                 }
             }
         }
@@ -219,13 +222,15 @@ export const useListsLogic = (): UseListsLogicResult => {
 
     const fetchWatchlistIds = useCallback(async () => {
         const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-        const { data } = await supabase
-            .from('watchlist')
-            .select('tmdb_id')
-            .eq('user_id', user.id)
-        if (data) {
-            setWatchlistIds(new Set(data.map(item => item.tmdb_id).filter((id): id is number => id != null)))
+        
+        if (user) {
+            const { data } = await supabase
+                .from('watchlist')
+                .select('tmdb_id')
+                .eq('user_id', user.id)
+            if (data) {
+                setWatchlistIds(new Set(data.map(item => item.tmdb_id).filter((id): id is number => id != null)))
+            }
         }
     }, [])
 
@@ -256,18 +261,25 @@ export const useListsLogic = (): UseListsLogicResult => {
     // Initialize genres and watchlist IDs on mount
     useEffect(() => {
         const init = async () => {
-            const [movieGenres, tvGenres] = await Promise.all([
-                getGenres('movie'),
-                getGenres('tv')
-            ])
-            const allGenres = [...movieGenres, ...tvGenres]
-            const filteredGenres = allGenres.filter(g => g.id !== 10769)
-            const uniqueGenres = Array.from(
-                new Map(filteredGenres.map(g => [g.id, g])).values()
-            ).sort((a, b) => a.name.localeCompare(b.name))
-            setGenres(uniqueGenres)
+            try {
+                const [movieGenres, tvGenres] = await Promise.all([
+                    getGenres('movie'),
+                    getGenres('tv')
+                ])
+                const allGenres = [...movieGenres, ...tvGenres]
+                const filteredGenres = allGenres.filter(g => g.id !== 10769)
+                const uniqueGenres = Array.from(
+                    new Map(filteredGenres.map(g => [g.id, g])).values()
+                ).sort((a, b) => a.name.localeCompare(b.name))
+                setGenres(uniqueGenres)
 
-            await fetchWatchlistIds()
+                await fetchWatchlistIds()
+            } catch (err) {
+                console.error('Failed to initialize lists page:', err)
+            } finally {
+                // Ensure loading is set to false even if initialization fails
+                setLoading(false)
+            }
         }
         init()
     }, [fetchWatchlistIds])
@@ -287,12 +299,15 @@ export const useListsLogic = (): UseListsLogicResult => {
 
     // Browse data fetching
     const fetchBrowseData = useCallback(async (page: number = 1, reset: boolean = false) => {
-        if (isFetchingRef.current) return
+        // Allow reset to bypass the fetching guard
+        if (isFetchingRef.current && !reset) {
+            return
+        }
         isFetchingRef.current = true
         setBrowseLoading(true)
 
         try {
-            let data
+            let data: { results: TMDBResult[]; total_pages?: number }
             let totalPages = 1
 
             if (committedQuery) {
@@ -316,10 +331,10 @@ export const useListsLogic = (): UseListsLogicResult => {
                         sort_by: tvSortBy,
                     })
                 }
-                totalPages = (data as { total_pages?: number }).total_pages || 1
+                totalPages = data.total_pages || 1
             }
 
-            const newResults: TMDBResult[] = ((data as { results: TMDBResult[] }).results || [])
+            const newResults: TMDBResult[] = (data.results || [])
                 .filter(r => {
                     if (committedQuery) {
                         return true
@@ -346,11 +361,15 @@ export const useListsLogic = (): UseListsLogicResult => {
             setHasMore(page < totalPages)
         } catch (err) {
             console.error('Failed to fetch browse data:', err)
+            // Ensure browse results are set to empty array on error
+            if (reset || page === 1) {
+                setBrowseResults([])
+            }
         } finally {
             setBrowseLoading(false)
             isFetchingRef.current = false
         }
-    }, [browseMediaType, sortBy, selectedGenre, committedQuery])
+    }, [browseMediaType, sortBy, selectedGenre, committedQuery, isNewList, selectedList])
 
     // Handle save
     const handleSave = useCallback(async () => {

@@ -72,7 +72,7 @@ const ListsDetail: React.FC = () => {
                         <h1>{selectedList.title}</h1>
                         <p className="lists-page__view-description">{selectedList.description || 'No description'}</p>
                         <div className="lists-page__view-meta">
-                            <span>{selectedList.is_public ? '🌐 Public' : '🔒 Private'}</span>
+                            <span>{selectedList.is_public ? 'Public' : 'Private'}</span>
                             <span>•</span>
                             <span>{listItems.length} {listItems.length === 1 ? 'item' : 'items'}</span>
                         </div>
@@ -80,7 +80,7 @@ const ListsDetail: React.FC = () => {
                             className="lists-page__action-btn lists-page__action-btn--primary"
                             onClick={() => navigate(`/ListsEditPage/${selectedList.id}`)}
                         >
-                            <i className="fa-solid fa-pen"></i> Edit List
+                            Edit List
                         </button>
                     </div>
                 </div>
@@ -98,13 +98,13 @@ const ListsDetail: React.FC = () => {
                                 className={`lists-page__tab ${activeTab === 'movie' ? 'lists-page__tab--active' : ''}`}
                                 onClick={() => setActiveTab('movie')}
                             >
-                                <i className="fa-solid fa-film"></i> Movies ({listItems.filter(i => i.media_type === 'movie' && !watchedListItems.has(i.tmdb_id)).length})
+                                Movies ({listItems.filter(i => i.media_type === 'movie' && !watchedListItems.has(i.tmdb_id)).length})
                             </button>
                             <button
                                 className={`lists-page__tab ${activeTab === 'tv' ? 'lists-page__tab--active' : ''}`}
                                 onClick={() => setActiveTab('tv')}
                             >
-                                <i className="fa-solid fa-tv"></i> TV Shows ({listItems.filter(i => (i.media_type === 'tv' || i.media_type === 'anime') && !watchedListItems.has(i.tmdb_id)).length})
+                                TV Shows ({listItems.filter(i => (i.media_type === 'tv' || i.media_type === 'anime') && !watchedListItems.has(i.tmdb_id)).length})
                             </button>
                         </div>
                     </div>

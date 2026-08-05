@@ -170,11 +170,6 @@ const FriendsPage = () => {
 
                 {/* Following Section */}
                 <div className="discover-section">
-                    <div className="discover-section__head">
-                        <h2>Following</h2>
-                        <span>{following.length} {following.length === 1 ? 'person' : 'people'}</span>
-                    </div>
-                    
                     {following.length > 0 ? (
                         <div className="friends-results">
                             {following.map((user) => (

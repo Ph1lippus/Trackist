@@ -12,6 +12,9 @@ export const searchMulti = async (query: string, page: number = 1): Promise<{ re
     const res = await fetch(
         `${BASE_URL}/search/multi?api_key=${API_KEY}&query=${encodeURIComponent(query)}&page=${page}`
     )
+    if (!res.ok) {
+        throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
+    }
     return res.json()
 }
 
@@ -102,6 +105,9 @@ export const getMovieDetails = async (id: number) => {
     const res = await fetch(
         `${BASE_URL}/movie/${id}?api_key=${API_KEY}&append_to_response=credits,videos,images,release_dates,watch/providers&include_image_language=en,null`
     )
+    if (!res.ok) {
+        throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
+    }
     return res.json()
 }
 
@@ -237,7 +243,14 @@ export const discoverMovies = async (params: {
     if (params['release_date.gte']) url.searchParams.append('release_date.gte', params['release_date.gte'])
     if (params['vote_count.gte']) url.searchParams.append('vote_count.gte', String(params['vote_count.gte']))
     const res = await fetch(url.toString())
-    return res.json()
+    if (!res.ok) {
+        throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
+    }
+    const data = await res.json()
+    if (data.status_code || data.status_message) {
+        throw new Error(`TMDB API error: ${data.status_message || 'Unknown error'}`)
+    }
+    return data
 }
 
 export const discoverTV = async (params: {
@@ -260,7 +273,14 @@ export const discoverTV = async (params: {
     if (params['first_air_date.gte']) url.searchParams.append('first_air_date.gte', params['first_air_date.gte'])
     if (params['vote_count.gte']) url.searchParams.append('vote_count.gte', String(params['vote_count.gte']))
     const res = await fetch(url.toString())
-    return res.json()
+    if (!res.ok) {
+        throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
+    }
+    const data = await res.json()
+    if (data.status_code || data.status_message) {
+        throw new Error(`TMDB API error: ${data.status_message || 'Unknown error'}`)
+    }
+    return data
 }
 
 export const getGenres = async (type: 'movie' | 'tv') => {
@@ -270,6 +290,9 @@ export const getGenres = async (type: 'movie' | 'tv') => {
         cacheKey,
         async () => {
             const res = await fetch(`${BASE_URL}/genre/${type}/list?api_key=${API_KEY}`)
+            if (!res.ok) {
+                throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
+            }
             const data = await res.json()
             return data.genres || []
         },

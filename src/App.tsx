@@ -29,6 +29,7 @@ import EpisodeDetail from './pages/EpisodeDetail'
 import Lists from './pages/Lists'
 import ListsDetail from './pages/ListsDetail'
 import ListsEditPage from './pages/ListsEditPage'
+import ListsCreatePage from './pages/ListsCreatePage'
 import Finished from './pages/Finished'
 import DetailLayout from './components/layout/DetailLayout'
 
@@ -164,10 +165,10 @@ const AppContent: React.FC = () => {
                     <Route path="/person/:id" element={<PersonDetail />} />
                     <Route path="/Lists" element={user ? <Lists /> : <Navigate to="/login" replace />} />
                     <Route path="/ListsDetail/:id" element={user ? <ListsDetail /> : <Navigate to="/login" replace />} />
-                    <Route path="/ListsEditPage/new" element={user ? <ListsEditPage /> : <Navigate to="/login" replace />} />
+                    <Route path="/Lists/new" element={user ? <ListsCreatePage /> : <Navigate to="/login" replace />} />
                     <Route path="/ListsEditPage/:id" element={user ? <ListsEditPage /> : <Navigate to="/login" replace />} />
                     {/* Legacy redirects for old URLs */}
-                    <Route path="/Lists/new" element={<Navigate to="/ListsEditPage/new" replace />} />
+                    <Route path="/Lists/new" element={<Navigate to="/Lists/new" replace />} />
                     <Route path="/Lists/:id" element={<LegacyListRedirect />} />
                     <Route path="/Finished" element={user ? <Finished /> : <Navigate to="/login" replace />} />
                     <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />

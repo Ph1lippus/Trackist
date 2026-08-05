@@ -95,28 +95,27 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     visibleCount: 0,
 
     // Actions
-    setQuery: (query) => set({ query }),
+    setQuery: (query) => set({ query, sessionAddedIds: new Set() }),
 
     setMediaType: (mediaType) => set((state) => {
-        // Recalculate visible results when media type changes
         const visibleResults = state.showAdded || mediaType === 'person'
             ? state.results 
-            : state.results.filter(item => !state.watchlistIds.has(item.id) || state.sessionAddedIds.has(item.id))
+            : state.results.filter(item => !state.watchlistIds.has(item.id))
         return { 
             mediaType,
+            sessionAddedIds: new Set(), // Clear session overrides on tab switch
             visibleResults,
             visibleCount: visibleResults.length
         }
     }),
 
-    setSortBy: (sortBy) => set({ sortBy }),
+    setSortBy: (sortBy) => set({ sortBy, sessionAddedIds: new Set() }),
 
-    setSelectedGenre: (selectedGenre) => set({ selectedGenre }),
+    setSelectedGenre: (selectedGenre) => set({ selectedGenre, sessionAddedIds: new Set() }),
 
-    setSelectedYear: (selectedYear) => set({ selectedYear }),
+    setSelectedYear: (selectedYear) => set({ selectedYear, sessionAddedIds: new Set() }),
 
     setWatchlistIds: (watchlistIds) => set((state) => {
-        // People are never filtered by watchlist since they can't be added to watchlist
         const visibleResults = state.showAdded || state.mediaType === 'person'
             ? state.results 
             : state.results.filter(item => !watchlistIds.has(item.id) || state.sessionAddedIds.has(item.id))
@@ -128,7 +127,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     }),
 
     setShowAdded: (showAdded) => set((state) => {
-        // People are never filtered by watchlist since they can't be added to watchlist
         const visibleResults = showAdded || state.mediaType === 'person'
             ? state.results 
             : state.results.filter(item => !state.watchlistIds.has(item.id) || state.sessionAddedIds.has(item.id))
@@ -140,7 +138,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     }),
 
     setSessionAddedIds: (sessionAddedIds: Set<number>) => set((state) => {
-        // People are never filtered by watchlist since they can't be added to watchlist
         const visibleResults = state.showAdded || state.mediaType === 'person'
             ? state.results 
             : state.results.filter(item => !state.watchlistIds.has(item.id) || sessionAddedIds.has(item.id))
@@ -155,7 +152,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
-        // Build a WatchlistItem to add via the library store (single source of truth)
         const newItem: WatchlistItem = {
             id: crypto.randomUUID(),
             user_id: user.id,
@@ -171,8 +167,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             updated_at: new Date().toISOString(),
         }
 
-        // Use the library store which handles Supabase insert + optimistic update
-        // The subscription below will sync watchlistIds back to this store
         await useLibraryStore.getState().addItem(newItem)
     },
 
@@ -180,17 +174,13 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
-        // Find the watchlist item by tmdb_id in the library store
         const libraryItem = useLibraryStore.getState().allItems.find(
             (item) => item.tmdb_id === id
         )
 
         if (libraryItem) {
-            // Use the library store which handles Supabase delete + optimistic update
-            // The subscription below will sync watchlistIds back to this store
             await useLibraryStore.getState().removeItem(libraryItem.id)
         } else {
-            // Fallback: direct Supabase delete if not in library store
             await supabase
                 .from('watchlist')
                 .delete()
@@ -225,6 +215,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         scrollY: 0,
         isDataLoaded: false,
         showAdded: true,
+        sessionAddedIds: new Set<number>(),
         visibleResults: [],
         visibleCount: 0,
     }),
@@ -240,6 +231,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         hasMore: true,
         scrollY: 0,
         watchlistIds: new Set<number>(),
+        sessionAddedIds: new Set<number>(),
         isLoading: true,
         isLoadingMore: false,
         isDataLoaded: false,
@@ -275,7 +267,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             getGenres('tv'),
         ])
         const allGenres = [...movieGenres, ...tvGenres]
-        // Filter out News (10763) and Talk (10767) genres from default list
         const filteredGenres = allGenres.filter(g => g.id !== 10763 && g.id !== 10767)
         const uniqueGenres = Array.from(
             new Map(filteredGenres.map(g => [g.id, g])).values()
@@ -289,15 +280,8 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         
         for (let i = 0; i < pagesToLoad; i++) {
             await fetchData(currentPage)
-            
-            // Get current state
             const state = get()
-            
-            // If no more data, stop
-            if (!state.hasMore) {
-                break
-            }
-            
+            if (!state.hasMore) break
             currentPage++
         }
     },
@@ -319,22 +303,20 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         if (isLoading || isLoadingMore) return
 
         if (pageNum === 1) {
-            set({ isLoading: true, results: [], page: 1 })
+            // Reset sessionAddedIds when fetching page 1 (fresh query or filter change)
+            set({ isLoading: true, results: [], page: 1, sessionAddedIds: new Set() })
         } else {
             set({ isLoadingMore: true })
         }
 
-        // Helper to check if result has excluded genres (News: 10763, Talk: 10767)
         const hasExcludedGenre = (item: TMDBResult & { genre_ids?: number[] }): boolean => {
-            const excludedGenres = [10763, 10767] // News, Talk
+            const excludedGenres = [10763, 10767]
             return (item.genres?.some(g => excludedGenres.includes(g.id)) ?? false) ||
                    (item.genre_ids?.some(id => excludedGenres.includes(id)) ?? false)
         }
 
-        // Minimum vote count threshold
         const MIN_VOTES = mediaType === 'tv' ? 200 : 100
 
-        // Helper function to map sort parameters for TV shows
         const mapSortParamForTV = (sortValue: string): string => {
             if (sortValue.includes('release_date')) {
                 return sortValue.replace('release_date', 'first_air_date')
@@ -342,7 +324,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             return sortValue
         }
 
-        // Helper function to sort merged results client-side
         const sortMergedResults = (items: TMDBResult[], sortValue: string): TMDBResult[] => {
             const [field, direction] = sortValue.split('.')
             const isAscending = direction === 'asc'
@@ -386,7 +367,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             let newResults: TMDBResult[] = []
             let totalPages = 1
 
-            // SEARCH MODE
             if (query.trim()) {
                 const [multiData, personData] = await Promise.all([
                     searchMulti(query, pageNum),
@@ -398,7 +378,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     (personData as { total_pages?: number }).total_pages || 1
                 )
 
-                // Deduplicate by id
                 const seen = new Set<number>()
                 combined = combined.filter(item => {
                     if (seen.has(item.id)) return false
@@ -429,7 +408,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     totalPages = (data as { total_pages?: number }).total_pages || 1
                 }
 
-                // If searching for people, also fetch their filmography
                 if (query.trim() && combined.some(r => r.media_type === 'person')) {
                     const personIds = combined.filter(r => r.media_type === 'person').map(r => r.id)
                     const [personMovies, personTV] = await Promise.all([
@@ -450,15 +428,11 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 }
 
                 newResults = combined
-            }
-            // PERSON MODE
-            else if (mediaType === 'person') {
+            } else if (mediaType === 'person') {
                 const data = await getPopularPeople(pageNum)
                 newResults = (data.results || []).map(r => ({ ...r, media_type: 'person' as const }))
                 totalPages = (data as { total_pages?: number }).total_pages || 1
-            }
-            // ALL MEDIA TYPE MODE
-            else if (mediaType === 'all') {
+            } else if (mediaType === 'all') {
                 const movieCacheKey = `${query}-${pageNum}-${sortBy}-${selectedYear}-${selectedGenre}-min-100`
                 const tvCacheKey = `${query}-${pageNum}-${mapSortParamForTV(sortBy)}-${selectedYear}-${selectedGenre}-min-200`
 
@@ -500,7 +474,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
 
                 let combined: TMDBResult[] = [...movies, ...tv]
 
-                // Filter out News and Talk genres and low-vote content when not searching and not using genre filter
                 const shouldFilterGenres = !query.trim() && !selectedGenre
                 if (shouldFilterGenres) {
                     combined = combined.filter(item => {
@@ -516,9 +489,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 const moviesTotal = (moviesData as { total_pages?: number }).total_pages || 1
                 const tvTotal = (tvData as { total_pages?: number }).total_pages || 1
                 totalPages = Math.max(moviesTotal, tvTotal)
-            }
-            // MOVIE MODE
-            else if (mediaType === 'movie') {
+            } else if (mediaType === 'movie') {
                 const movieCacheKey = `${query}-${pageNum}-${sortBy}-${selectedYear}-${selectedGenre}-min-100`
                 const data = await getCachedOrFetch(
                     'discover-movie',
@@ -537,7 +508,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     media_type: 'movie' as const,
                 }))
 
-                // Filter out News and Talk genres and low-vote content when not searching and not using genre filter
                 const shouldFilterGenres = !query.trim() && !selectedGenre
                 if (shouldFilterGenres) {
                     newResults = movieResults.filter(item => {
@@ -550,9 +520,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 }
 
                 totalPages = (data as { total_pages?: number }).total_pages || 1
-            }
-            // TV MODE
-            else if (mediaType === 'tv') {
+            } else if (mediaType === 'tv') {
                 const tvCacheKey = `${query}-${pageNum}-${mapSortParamForTV(sortBy)}-${selectedYear}-${selectedGenre}-min-200`
                 const data = await getCachedOrFetch(
                     'discover-tv',
@@ -571,7 +539,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     media_type: 'tv' as const,
                 }))
 
-                // Filter out News and Talk genres and low-vote content when not searching and not using genre filter
                 const shouldFilterGenres = !query.trim() && !selectedGenre
                 if (shouldFilterGenres) {
                     newResults = tvResults.filter(item => {
@@ -587,9 +554,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             }
 
             set((state) => {
-                // Filter out News and Talk genres and low-vote content when not searching and not using genre filter
-                // These should only appear when users explicitly search or select them via genre options
-                // People are never filtered by genre/vote count since they have different structure
                 const shouldFilterGenres = !query.trim() && !selectedGenre && mediaType !== 'person'
                 let finalResults = newResults
                 if (shouldFilterGenres) {
@@ -604,19 +568,17 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 if (pageNum === 1) {
                     updatedResults = finalResults
                 } else {
-                    // Deduplicate when appending new results
                     const existingIds = new Set(state.results.map(item => item.id))
                     const newUniqueItems = finalResults.filter(item => !existingIds.has(item.id))
                     updatedResults = [...state.results, ...newUniqueItems]
                 }
 
-                // Calculate visible results based on watchlist filtering
-                // People are never filtered by watchlist since they can't be added to watchlist
+                const currentSessionIds = pageNum === 1 ? new Set<number>() : state.sessionAddedIds;
+
                 const visibleResults = showAdded || mediaType === 'person'
                     ? updatedResults 
-                    : updatedResults.filter(item => !watchlistIds.has(item.id) || sessionAddedIds.has(item.id))
+                    : updatedResults.filter(item => !watchlistIds.has(item.id) || currentSessionIds.has(item.id))
 
-                // Update hasMore - only check if there are more pages available
                 const visibleCount = visibleResults.length
                 const hasMoreContent = pageNum < totalPages
 
@@ -638,15 +600,8 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     },
 }))
 
-// ---------------------------------------------------------------------------
-// Cross-store sync: keep discoverStore.watchlistIds in sync with
-// useLibraryStore.allItems so that actions performed on any page
-// (Discover, Movies, TVShows, MovieDetail, TVShowDetail, Lists) are
-// immediately reflected everywhere without a full page refresh.
-// ---------------------------------------------------------------------------
 let lastAllItems: WatchlistItem[] = []
 useLibraryStore.subscribe((state) => {
-    // Only sync when allItems reference changes (i.e. items were added/removed)
     if (state.allItems !== lastAllItems) {
         lastAllItems = state.allItems
         const ids = new Set(
@@ -657,8 +612,6 @@ useLibraryStore.subscribe((state) => {
         const discoverState = useDiscoverStore.getState()
         discoverState.setWatchlistIds(ids)
         
-        // Recalculate visible results after watchlist sync
-        // People are never filtered by watchlist since they can't be added to watchlist
         const visibleResults = discoverState.showAdded || discoverState.mediaType === 'person'
             ? discoverState.results 
             : discoverState.results.filter(item => !ids.has(item.id) || discoverState.sessionAddedIds.has(item.id))
@@ -669,7 +622,6 @@ useLibraryStore.subscribe((state) => {
     }
 })
 
-// Selector hooks for optimized re-renders
 export const useDiscoverResults = () => useDiscoverStore((state) => state.results)
 export const useDiscoverVisibleResults = () => useDiscoverStore((state) => state.visibleResults)
 export const useDiscoverWatchlistIds = () => useDiscoverStore((state) => state.watchlistIds)

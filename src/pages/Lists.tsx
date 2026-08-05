@@ -30,9 +30,8 @@ const Lists: React.FC = () => {
 
     return (
         <div className="lists-page">
-            <div className="friends-container">
+            <div className="lists-page__container">
                 <div className="lists-page__overview-header">
-                    <h1>My Lists</h1>
                     <button
                         className="lists-page__create-btn"
                         onClick={() => navigate('/ListsEditPage/new')}
@@ -56,9 +55,6 @@ const Lists: React.FC = () => {
                                 <div className="lists-page__card-content">
                                     <h3>{list.title}</h3>
                                     {list.description && <p>{list.description}</p>}
-                                    <div className="lists-page__card-meta">
-                                        <span>{list.is_public ? '🌐 Public' : '🔒 Private'}</span>
-                                    </div>
                                 </div>
                             </div>
                         ))}
@@ -81,7 +77,7 @@ const Lists: React.FC = () => {
                                         <h3>{list.title}</h3>
                                         {list.description && <p>{list.description}</p>}
                                         <div className="lists-page__card-meta">
-                                            <span>🌐 Public</span>
+                                            <span>Public</span>
                                             <span>by {list.profiles?.display_name || 'Anonymous'}</span>
                                         </div>
                                     </div>
