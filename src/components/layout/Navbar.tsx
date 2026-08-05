@@ -50,7 +50,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack 
     const showSearchBar = !['/login', '/register'].includes(location.pathname) && 
         (['/Discover', '/Movies', '/Tvshows', '/', '/Finished', '/Friends', '/Lists'].includes(location.pathname) || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/'));
     
-    const showCalendarHeader = location.pathname === '/Upcoming' && currentMonth && navigateMonth && canGoBack;
+    const showCalendarHeader = false;
     
     const monthName = currentMonth ? currentMonth.toLocaleDateString('en-US', { 
         month: 'long', 
