@@ -111,7 +111,8 @@ const AppContent: React.FC = () => {
         const registerServiceWorker = async () => {
             // Check if running in PWA mode (standalone mode)
             const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
-                         window.navigator.standalone === true ||
+                         // @ts-ignore - iOS Safari specific property
+                         (window.navigator.standalone === true) ||
                          document.referrer.includes('android-app://')
 
             // Only register service worker and show updates in PWA mode
