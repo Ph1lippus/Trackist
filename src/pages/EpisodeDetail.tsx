@@ -245,7 +245,7 @@ const EpisodeDetail: React.FC = () => {
                                 <button
                                     className="detail-page__icon-btn"
                                     onClick={() => {
-                                        const sharingLink = createEpisodeDeepLink(Number(id), Number(season), Number(episode), tvDetails.external_ids?.imdb_id)
+                                        const sharingLink = createEpisodeDeepLink(Number(id), tvDetails.external_ids?.imdb_id)
                                         openInStremio(sharingLink)
                                     }}
                                     title="Open in Stremio"
