@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback, useRef } from 'react'
+import React, { useMemo, useCallback } from 'react'
 import { imageUrl } from '../../services/tmdbService'
 import type { TMDBResult } from '../../types'
 import { Link } from "react-router-dom"
@@ -44,9 +44,6 @@ const MediaCard: React.FC<MediaCardProps> = ({
     const { isMobile } = useMobile()
     const isPerson = item.media_type === 'person'
     
-    // Scroll protection: track touch start position to distinguish scroll from tap
-    const touchStartPos = useRef<{ x: number; y: number } | null>(null)
-
     const imgUrl = useMemo(
         () => {
             const imageSize = isMobile ? 'w185' : 'w342'
@@ -112,30 +109,6 @@ const MediaCard: React.FC<MediaCardProps> = ({
         },
         [onDelete, item],
     )
-    
-    // Handle touch start for scroll protection
-    const handleTouchStart = useCallback((e: React.TouchEvent) => {
-        const touch = e.touches[0]
-        touchStartPos.current = { x: touch.clientX, y: touch.clientY }
-    }, [])
-    
-    // Handle touch end to detect if it was a tap or scroll
-    const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-        if (!touchStartPos.current) return
-        
-        const touch = e.changedTouches[0]
-        const deltaX = Math.abs(touch.clientX - touchStartPos.current.x)
-        const deltaY = Math.abs(touch.clientY - touchStartPos.current.y)
-        const moveDistance = Math.max(deltaX, deltaY)
-        
-        // If moved more than 10px, it was a scroll, not a tap
-        const wasScroll = moveDistance > 10
-        
-        touchStartPos.current = null
-        
-        return wasScroll
-    }, [])
-
     const showAddButton = !compact && onAdd && !(isInWatchlist && (onMarkWatched || onMarkUnwatched)) && !listMode
     const showAddToListButton = !compact && onAddToList && !isPerson && !listMode
     // Show watch/unwatch icons for watchlist items regardless of listMode, but keep delete button only in listMode
@@ -148,8 +121,6 @@ const MediaCard: React.FC<MediaCardProps> = ({
     return (
         <article 
             className="media-card"
-            onTouchStart={handleTouchStart}
-            onTouchEnd={handleTouchEnd}
         >
             <Link 
                 to={href} 
