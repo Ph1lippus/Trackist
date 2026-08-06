@@ -18,6 +18,10 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .lists-page__grid {
+        margin: 0 auto;
+        width: 95%;
+    }
     html, body {
         overscroll-behavior: none;
     }
@@ -29,7 +33,7 @@
         height: 20px !important;
     }
     .lists-page__card{
-        padding: 1rem !important;
+        padding: 0.5rem !important;
     }
     .lists-page__card-content {
         padding-left: 1rem !important;
@@ -2618,7 +2622,7 @@ body::after {
     display: grid;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 25px;
-    padding: 1.5rem;
+    padding: 1rem;
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -4372,7 +4376,7 @@ button:focus-visible {
     flex-shrink: 0;
     aspect-ratio: 2 / 3;
     overflow: hidden;
-    border-radius: 25px;
+    border-radius: 20px;
     aspect-ratio: 2 / 3;
     height: auto;
     flex-shrink: 0 !important;
