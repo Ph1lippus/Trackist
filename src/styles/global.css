@@ -18,8 +18,8 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
-    .navbar-menu-btn{
-        display:none;
+    i.fa-solid.fa-expand{
+        display:none !important;
     }
     .detail-page__genres{
         display: flex;
@@ -8737,6 +8737,7 @@ i.fa-solid.fa-trash:hover {
     background: transparent;
     backdrop-filter: blur(50px);
     -webkit-backdrop-filter: blur(50px);
+    backdrop-filter: blur(50px);
     z-index: 9999 !important;
     padding: 0.35rem 0;
     transform: translateZ(0);
