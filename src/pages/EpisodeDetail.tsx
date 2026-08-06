@@ -7,7 +7,7 @@ import { supabase } from '../services/supabaseClient'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { createEpisodeDeepLink, openInStremio, createStremioWebUrl } from '../utils/stremioUtils'
+import { createEpisodeDeepLink, openInStremio } from '../utils/stremioUtils'
 
 interface EpisodeData {
     id: number
@@ -248,9 +248,8 @@ const EpisodeDetail: React.FC = () => {
                                 <button
                                     className="detail-page__icon-btn"
                                     onClick={() => {
-                                        const deepLink = createEpisodeDeepLink(Number(id), Number(season), Number(episode), tvDetails.external_ids?.imdb_id)
-                                        const webUrl = createStremioWebUrl('series', Number(id), tvDetails.external_ids?.imdb_id, Number(season), Number(episode))
-                                        openInStremio(deepLink, webUrl)
+                                        const sharingLink = createEpisodeDeepLink(Number(id), Number(season), Number(episode), tvDetails.name)
+                                        openInStremio(sharingLink)
                                     }}
                                     title="Open in Stremio"
                                 >

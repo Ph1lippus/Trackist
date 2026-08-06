@@ -10,7 +10,7 @@ import EpisodeChoiceModal from '../components/modals/EpisodeChoiceModal'
 import type { TMDBResult, WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
-import { createTVShowDeepLink, openInStremio, createStremioWebUrl } from '../utils/stremioUtils'
+import { createTVShowDeepLink, openInStremio } from '../utils/stremioUtils'
 
 interface LocalEpisode {
     id: string
@@ -686,9 +686,8 @@ const TVShowDetail: React.FC = () => {
                                 <button
                                     className="detail-page__icon-btn"
                                     onClick={() => {
-                                        const deepLink = createTVShowDeepLink(details.id, details.external_ids?.imdb_id)
-                                        const webUrl = createStremioWebUrl('series', details.id, details.external_ids?.imdb_id)
-                                        openInStremio(deepLink, webUrl)
+                                        const sharingLink = createTVShowDeepLink(details.id, details.name)
+                                        openInStremio(sharingLink)
                                     }}
                                     title="Open in Stremio"
                                 >
