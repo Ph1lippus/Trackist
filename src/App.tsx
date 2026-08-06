@@ -7,6 +7,7 @@ import { SearchProvider } from './contexts/SearchContext'
 import { MobileProvider } from './contexts/MobileProvider'
 import { useLibraryStore } from './stores/useLibraryStore'
 import { registerSW } from 'virtual:pwa-register'
+import { invalidateCalendarCache } from './services/calendarService'
 import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 import SecondaryNavbar from './components/layout/SecondaryNavbar'
@@ -75,6 +76,9 @@ const AppContent: React.FC = () => {
                     if (!nextSession?.user) {
                         useLibraryStore.getState().reset()
                         hasUpdatedLastActive.current = false
+                    } else if (nextSession?.user) {
+                        // Invalidate calendar cache on login to ensure fresh data
+                        void invalidateCalendarCache(nextSession.user.id)
                     }
                 })
 
@@ -104,6 +108,8 @@ const AppContent: React.FC = () => {
             void updateLastActive()
             // Initialize library store once at app startup
             void useLibraryStore.getState().fetchInitialLibrary(user.id)
+            // Invalidate calendar cache on login to ensure fresh data
+            void invalidateCalendarCache(user.id)
         }
     }, [loading, user])
 

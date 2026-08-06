@@ -312,6 +312,20 @@ export async function getCachedOrFetch<T>(
 // Clear cache utility
 export async function clearAllCache(): Promise<void> {
     await cacheService.clear()
+    
+    // Also clear localStorage calendar cache
+    try {
+        const keysToRemove: string[] = []
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i)
+            if (key && key.startsWith('trackist-calendar:')) {
+                keysToRemove.push(key)
+            }
+        }
+        keysToRemove.forEach(key => localStorage.removeItem(key))
+    } catch (err) {
+        console.error('localStorage clear error:', err)
+    }
 }
 
 // Get cache stats

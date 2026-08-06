@@ -1,6 +1,18 @@
 import { supabase } from './supabaseClient'
 import { shouldRevalidateByDate } from '../utils/dateUtils'
 
+// Invalidate calendar cache on auth state change
+let currentUserId: string | null = null
+
+export const invalidateCalendarCache = (userId: string): void => {
+    if (currentUserId && currentUserId !== userId) {
+        // User changed, invalidate old cache
+        const cacheKey = getCacheKey(currentUserId)
+        localStorage.removeItem(cacheKey)
+    }
+    currentUserId = userId
+}
+
 export interface CalendarEpisodeItem {
     id: string
     media_type: 'tv'
