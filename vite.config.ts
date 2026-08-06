@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icons.svg'],
       manifest: {
         name: 'Trackist',
@@ -17,7 +17,7 @@ export default defineConfig({
         display: 'standalone',
         orientation: 'portrait-primary',
         scope: '/',
-        start_url: '/',
+        start_url: '.',
         icons: [
           {
             src: '/android-chrome-192x192.png',
@@ -33,6 +33,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api/, /^\/auth/],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\.themoviedb\.org\/.*/i,
@@ -45,7 +47,8 @@ export default defineConfig({
               },
               cacheableResponse: {
                 statuses: [0, 200]
-              }
+              },
+              networkTimeoutSeconds: 10
             }
           },
           {
@@ -59,7 +62,8 @@ export default defineConfig({
               },
               cacheableResponse: {
                 statuses: [0, 200]
-              }
+              },
+              networkTimeoutSeconds: 10
             }
           },
           {
@@ -87,7 +91,8 @@ export default defineConfig({
               },
               cacheableResponse: {
                 statuses: [0, 200]
-              }
+              },
+              networkTimeoutSeconds: 10
             }
           }
         ]
