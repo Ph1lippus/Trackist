@@ -18,6 +18,7 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+
     .media-card__icon-btn {
         font-size: 0.7rem !important;
         width: 20px !important;
@@ -65,6 +66,7 @@
     }
     .lists-page--view{
         padding: 2rem 0rem !important;
+        max-width: 95%;
     }
     .detail-page__actions {
         margin: 0 auto ;
