@@ -13,9 +13,9 @@
 export const createMovieDeepLink = (tmdbId: number, imdbId?: string): string => {
     if (imdbId) {
         const cleanImdb = imdbId.startsWith('tt') ? imdbId : `tt${imdbId}`
-        return `stremio://detail/movie/${cleanImdb}`
+        return `stremio:///detail/movie/${cleanImdb}`
     }
-    return `stremio://detail/movie/tmdb/${tmdbId}`
+    return `stremio:///detail/movie/tmdb/${tmdbId}`
 }
 
 /**
@@ -27,9 +27,9 @@ export const createMovieDeepLink = (tmdbId: number, imdbId?: string): string => 
 export const createTVDeepLink = (tmdbId: number, imdbId?: string): string => {
     if (imdbId) {
         const cleanImdb = imdbId.startsWith('tt') ? imdbId : `tt${imdbId}`
-        return `stremio://detail/series/${cleanImdb}`
+        return `stremio:///detail/series/${cleanImdb}`
     }
-    return `stremio://detail/series/tmdb/${tmdbId}`
+    return `stremio:///detail/series/tmdb/${tmdbId}`
 }
 
 /**
@@ -43,9 +43,9 @@ export const createTVDeepLink = (tmdbId: number, imdbId?: string): string => {
 export const createEpisodeDeepLink = (tmdbId: number, season: number, episode: number, imdbId?: string): string => {
     if (imdbId) {
         const cleanImdb = imdbId.startsWith('tt') ? imdbId : `tt${imdbId}`
-        return `stremio://detail/series/${cleanImdb}?season=${season}&episode=${episode}`
+        return `stremio:///detail/series/${cleanImdb}?season=${season}&episode=${episode}`
     }
-    return `stremio://detail/series/tmdb/${tmdbId}?season=${season}&episode=${episode}`
+    return `stremio:///detail/series/tmdb/${tmdbId}?season=${season}&episode=${episode}`
 }
 
 /**
@@ -55,12 +55,5 @@ export const createEpisodeDeepLink = (tmdbId: number, season: number, episode: n
 export const openInStremio = (url: string) => {
     if (!url) return
 
-    const iframe = document.createElement('iframe')
-    iframe.style.display = 'none'
-    iframe.src = url
-    document.body.appendChild(iframe)
-
-    setTimeout(() => {
-        document.body.removeChild(iframe)
-    }, 2000)
+    window.location.href = url
 }
