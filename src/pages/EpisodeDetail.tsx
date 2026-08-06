@@ -32,9 +32,6 @@ const EpisodeDetail: React.FC = () => {
     const [watched, setWatched] = useState(false)
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean } | null>(null)
 
-    // Use global store
-    const libraryStore = useLibraryStore()
-
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [id, season, episode])
@@ -56,7 +53,7 @@ const EpisodeDetail: React.FC = () => {
                 setEpisodeData(ep)
 
                 // Check if in watchlist using global store
-                const watchlistItem = libraryStore.allItems.find(item => item.tmdb_id === Number(id))
+                const watchlistItem = useLibraryStore.getState().allItems.find(item => item.tmdb_id === Number(id))
                 if (watchlistItem) {
                     setIsInWatchlist(true)
                     setWatchlistId(watchlistItem.id)
@@ -80,7 +77,7 @@ const EpisodeDetail: React.FC = () => {
             setLoading(false)
         }
         fetchData()
-    }, [id, season, episode, libraryStore])
+    }, [id, season, episode])
 
     const getLogoUrl = (): string | null => {
         if (tvDetails?.images?.logos) {

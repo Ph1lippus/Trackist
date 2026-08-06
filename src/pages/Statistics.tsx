@@ -18,7 +18,6 @@ const Statistics: React.FC = () => {
     usePageTitle('Trackist - Statistics')
     const [episodeStats, setEpisodeStats] = useState<EpisodeStats>({ totalEpisodesWatched: 0, totalWatchTimeMinutes: 0 })
     const [loading, setLoading] = useState(true)
-    const libraryStore = useLibraryStore()
 
     useEffect(() => {
         const fetchEpisodeStats = async () => {
@@ -38,7 +37,7 @@ const Statistics: React.FC = () => {
         fetchEpisodeStats()
     }, [])
 
-    const items = libraryStore.allItems
+    const items = useLibraryStore((state) => state.allItems)
 
     const stats = useMemo(() => {
         const movies = items.filter(i => i.media_type === 'movie')

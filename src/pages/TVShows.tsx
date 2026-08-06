@@ -15,10 +15,9 @@ const TVShows: React.FC = () => {
     usePageTitle('Trackist - TV Shows')
     const { committedQuery } = useSearch()
 
-    // Use global store
-    const store = useLibraryStore()
-    const tvShows = store.tvShows
-    const isInitialized = store.isInitialized
+    // Use global store with proper selectors
+    const tvShows = useLibraryStore((state) => state.tvShows)
+    const isInitialized = useLibraryStore((state) => state.isInitialized)
 
     const [markAllModal, setMarkAllModal] = useState<WatchlistItem | null>(null)
     const [markingAllWatched, setMarkingAllWatched] = useState(false)
@@ -114,22 +113,21 @@ const TVShows: React.FC = () => {
                                 })
                                 .eq('id', show.id)
                             
-                            // Update local store state WITHOUT changing updated_at
-                            const currentState = useLibraryStore.getState()
-                            const updatedItems = currentState.allItems.map(item => 
-                                item.id === show.id 
-                                    ? { ...item, status: 'watching' as const, total_episodes: currentTotalEpisodes, total_seasons: details.number_of_seasons || show.total_seasons }
-                                    : item
-                            )
-                            const updatedTvShows = currentState.tvShows.map(item =>
-                                item.id === show.id
-                                    ? { ...item, status: 'watching' as const, total_episodes: currentTotalEpisodes, total_seasons: details.number_of_seasons || show.total_seasons }
-                                    : item
-                            )
-                            useLibraryStore.setState({
-                                allItems: updatedItems,
-                                tvShows: updatedTvShows
-                            })
+                            // Direct state updates are problematic, use the store's built-in methods instead
+                            // For now, just fetch the data normally
+                            const { data } = await supabase
+                                .from('watchlist')
+                                .update({ 
+                                    status: 'watching',
+                                    total_episodes: currentTotalEpisodes,
+                                    total_seasons: details.number_of_seasons || show.total_seasons
+                                })
+                                .eq('id', show.id)
+                                .select()
+                            
+                            if (data && data.length > 0) {
+                                await useLibraryStore.getState().refreshItem(show.id)
+                            }
                         }
                     }
                 } catch (err) {
@@ -200,7 +198,7 @@ const TVShows: React.FC = () => {
 
             setMarkAllModal(null)
             // Refresh the store
-            await store.refreshItem(item.id)
+            await useLibraryStore.getState().refreshItem(item.id)
             
             // Check for milestone and celebrate
             // Use getState() to read the FRESH store state (the `store`

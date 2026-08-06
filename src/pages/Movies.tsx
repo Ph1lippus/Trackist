@@ -13,9 +13,8 @@ const Movies: React.FC = () => {
     usePageTitle('Trackist - Movies')
     const { committedQuery } = useSearch()
 
-    // Use global store
-    const store = useLibraryStore()
-    const movies = store.movies
+    // Use global store with proper selector
+    const movies = useLibraryStore((state) => state.movies)
 
     const [confirmModal, setConfirmModal] = useState<{
         isOpen: boolean
@@ -31,7 +30,7 @@ const Movies: React.FC = () => {
     }, [])
 
     const updateStatus = async (id: string, status: string) => {
-        await store.updateStatus(id, status as WatchlistItem['status'])
+        await useLibraryStore.getState().updateStatus(id, status as WatchlistItem['status'])
     }
 
     const markAsWatched = async (tmdbItem: TMDBResult) => {

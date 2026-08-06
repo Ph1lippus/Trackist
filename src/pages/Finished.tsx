@@ -13,9 +13,8 @@ const Finished: React.FC = () => {
     usePageTitle('Trackist - Finished')
     const { committedQuery } = useSearch()
 
-    // Use global store
-    const store = useLibraryStore()
-    const finished = store.finished
+    // Use global store with proper selector
+    const finished = useLibraryStore((state) => state.finished)
 
     const [unwatchModal, setUnwatchModal] = useState<{
         isOpen: boolean
@@ -72,9 +71,9 @@ const Finished: React.FC = () => {
     })
 
     const handleUnwatchMovie = async (item: WatchlistItem) => {
-        await store.updateStatus(item.id, 'planning')
+        await useLibraryStore.getState().updateStatus(item.id, 'planning')
         // Refresh the store to update the UI
-        await store.refreshItem(item.id)
+        await useLibraryStore.getState().refreshItem(item.id)
         setUnwatchModal(null)
     }
 
@@ -82,7 +81,7 @@ const Finished: React.FC = () => {
         // Remove all watched episodes AND update status
         await removeAllWatchedEpisodes(item.id)
         // Refresh the store to update the UI
-        await store.refreshItem(item.id)
+        await useLibraryStore.getState().refreshItem(item.id)
         setUnwatchModal(null)
     }
 

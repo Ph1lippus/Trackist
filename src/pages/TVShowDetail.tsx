@@ -39,8 +39,6 @@ const TVShowDetail: React.FC = () => {
     const [adding, setAdding] = useState(false)
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
     
-    // Use global store
-    const libraryStore = useLibraryStore()
     const [seasons, setSeasons] = useState<number[]>([])
     const [episodes, setEpisodes] = useState<LocalEpisode[]>([])
     const [selectedSeason, setSelectedSeason] = useState(1)
@@ -238,7 +236,7 @@ const TVShowDetail: React.FC = () => {
             }
         }
         loadEpisodes()
-    }, [details, id])
+    }, [details, id, isInWatchlist, watchlistId])
 
     const handleAddToWatchlist = async () => {
         const { data: { user } } = await supabase.auth.getUser()
@@ -274,7 +272,7 @@ const TVShowDetail: React.FC = () => {
         }
 
         // Optimistic update
-        await libraryStore.addItem(newItem)
+        await useLibraryStore.getState().addItem(newItem)
         
         setIsInWatchlist(true)
         setWatchlistId(newItem.id)
@@ -291,7 +289,7 @@ const TVShowDetail: React.FC = () => {
         setModalLoading(true)
         try {
             // Optimistic update via store
-            await libraryStore.removeItem(watchlistId)
+            await useLibraryStore.getState().removeItem(watchlistId)
             
             // Invalidate cache to ensure Finished page shows updated data immediately
             await invalidateUserCache()
@@ -418,7 +416,7 @@ const TVShowDetail: React.FC = () => {
                 await checkAndUpdateCompleted(watchlistId, details.id)
                 
                 // Recalculate progress to ensure current_episode and status are in sync
-                await libraryStore.refreshItem(watchlistId)
+                await useLibraryStore.getState().refreshItem(watchlistId)
                 
                 // Check for milestone and celebrate
                 await checkMilestoneAndCelebrate(watchlistStatus)
@@ -483,7 +481,7 @@ const TVShowDetail: React.FC = () => {
                 }
 
                 // Recalculate progress to ensure current_episode and status are in sync
-                await libraryStore.refreshItem(watchlistId)
+                await useLibraryStore.getState().refreshItem(watchlistId)
                 
                 // Check for milestone and celebrate
                 await checkMilestoneAndCelebrate(watchlistStatus)
@@ -547,7 +545,7 @@ const TVShowDetail: React.FC = () => {
             await checkAndUpdateCompleted(watchlistId, details.id)
             
             // Refresh the item from the store to get the updated status and recalculate progress
-            await libraryStore.refreshItem(watchlistId)
+            await useLibraryStore.getState().refreshItem(watchlistId)
             
             // Invalidate cache to ensure Finished page shows updated data immediately
             await invalidateUserCache()
@@ -979,12 +977,12 @@ const TVShowDetail: React.FC = () => {
                             await checkAndUpdateCompleted(watchlistId, details.id)
                             
                             // Read the actual status from the store after the check
-                            await libraryStore.refreshItem(watchlistId)
+                            await useLibraryStore.getState().refreshItem(watchlistId)
                             const updatedItem = useLibraryStore.getState().allItems.find(item => item.id === watchlistId)
                             const newStatus = updatedItem?.status || (newWatchedState ? 'completed' : 'planning')
                             
                             // Update the store with the new status (this updates DB + cache + optimistic UI)
-                            await libraryStore.updateStatus(watchlistId, newStatus)
+                            await useLibraryStore.getState().updateStatus(watchlistId, newStatus)
                             
                             // Update local state
                             setWatchlistStatus(newStatus)

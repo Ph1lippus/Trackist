@@ -29,9 +29,6 @@ const MovieDetail: React.FC = () => {
     const [markWatchedModal, setMarkWatchedModal] = useState<{ isOpen: boolean; markAsWatched: boolean } | null>(null)
     const [modalLoading, setModalLoading] = useState(false)
 
-    // Use global store
-    const libraryStore = useLibraryStore()
-
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [id])
@@ -164,7 +161,7 @@ const MovieDetail: React.FC = () => {
         }
 
         // Optimistic update via store
-        await libraryStore.addItem(newItem)
+        await useLibraryStore.getState().addItem(newItem)
         
         setIsInWatchlist(true)
         setWatchlistId(newItem.id)
@@ -179,7 +176,7 @@ const MovieDetail: React.FC = () => {
         setModalLoading(true)
         try {
             // Optimistic update via store
-            await libraryStore.removeItem(watchlistId)
+            await useLibraryStore.getState().removeItem(watchlistId)
             
             // Invalidate cache to ensure Finished page shows updated data immediately
             await invalidateUserCache()
@@ -303,7 +300,7 @@ const MovieDetail: React.FC = () => {
                             <button 
                                 className="detail-page__icon-btn"
                                 onClick={() => {
-                                    const sharingLink = createMovieDeepLink(details.id, (details as any).external_ids?.imdb_id)
+                                    const sharingLink = createMovieDeepLink(details.id, (details.external_ids as { imdb_id?: string })?.imdb_id)
                                     openInStremio(sharingLink)
                                 }}
                                 title="Open in Stremio"
@@ -329,7 +326,7 @@ const MovieDetail: React.FC = () => {
                                                 // Capture previous status from store
                                                 const previousStatus = useLibraryStore.getState().allItems.find(item => item.id === newWatchlistId)?.status
                                                 // Update status to completed via store
-                                                await libraryStore.updateStatus(newWatchlistId, 'completed')
+                                                await useLibraryStore.getState().updateStatus(newWatchlistId, 'completed')
                                                 setWatchlistStatus('completed')
                                                 // Trigger Cosmic Confetti when transitioning from 'planning' to 'completed'
                                                 if (previousStatus === 'planning') {
@@ -445,7 +442,7 @@ const MovieDetail: React.FC = () => {
                         try {
                             const newStatus = markWatchedModal.markAsWatched ? 'completed' : 'planning'
                             const previousStatus = watchlistStatus
-                            await libraryStore.updateStatus(watchlistId, newStatus)
+                            await useLibraryStore.getState().updateStatus(watchlistId, newStatus)
                             setWatchlistStatus(newStatus)
                             // Trigger Cosmic Confetti when transitioning from 'planning' to 'completed'
                             if (markWatchedModal.markAsWatched && previousStatus === 'planning') {
