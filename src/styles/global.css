@@ -1002,7 +1002,7 @@ body::after {
 /* Smaller cards on phones */
 @media (max-width: 480px) {
     .discover-grid {
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
         gap: 0.6rem;
         padding: 0.5rem 0;
     }
@@ -1010,7 +1010,7 @@ body::after {
         border-radius: 12px;
     }
     .media-card__body h3 {
-        font-size: 0.7rem;
+        font-size: 0.7rem !important;
         margin-top: 0.4rem;
         padding: 0 0.25rem;
     }
