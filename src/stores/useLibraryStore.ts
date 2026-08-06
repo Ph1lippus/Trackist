@@ -79,6 +79,21 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             if (cachedData) {
                 console.log('Using cached library data')
                 items = cachedData
+                // Revalidate in background with fresh data
+                ;(async () => {
+                    try {
+                        const { data, error } = await supabase
+                            .from('watchlist')
+                            .select(selectColumns)
+                            .eq('user_id', userId)
+                            .order('updated_at', { ascending: false })
+                        if (!error && data) {
+                            await cacheService.set('library', userId, data, 5 * 60 * 1000)
+                        }
+                    } catch (err) {
+                        console.error('Background revalidation failed:', err)
+                    }
+                })()
             } else {
                 console.log('Fetching fresh library data from database')
                 const { data, error } = await supabase

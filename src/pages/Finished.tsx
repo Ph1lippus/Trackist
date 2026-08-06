@@ -112,14 +112,14 @@ const Finished: React.FC = () => {
                     {finishedTVShows.length > 0 ? (
                         <VirtuosoGrid
                             increaseViewportBy={{
-                                top: isMobile ? 2000 : 1000,
-                                bottom: isMobile ? 4000 : 2500,
+                                top: isMobile ? 500 : 1000,
+                                bottom: isMobile ? 1500 : 2500,
                             }}
                             computeItemKey={(index) => finishedTVShows[index]?.id ?? index}
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={finishedTVShows}
-                            overscan={isMobile ? 2000 : 800}
+                            overscan={isMobile ? 500 : 800}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = finishedTVShows[index]
@@ -146,14 +146,14 @@ const Finished: React.FC = () => {
                     {finishedMovies.length > 0 ? (
                         <VirtuosoGrid
                             increaseViewportBy={{
-                                top: isMobile ? 2000 : 1000,
-                                bottom: isMobile ? 4000 : 2500,
+                                top: isMobile ? 500 : 1000,
+                                bottom: isMobile ? 1500 : 2500,
                             }}
                             computeItemKey={(index) => finishedMovies[index]?.id ?? index}
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={finishedMovies}
-                            overscan={isMobile ? 2000 : 800}
+                            overscan={isMobile ? 500 : 800}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = finishedMovies[index]

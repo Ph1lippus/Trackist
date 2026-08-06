@@ -48,9 +48,9 @@ const Discover: React.FC = () => {
     useEffect(() => {
         // Clear session added IDs when media type changes
         actions.setSessionAddedIds(new Set())
-        // Load initial pages (10 pages = 200 items) to ensure sufficient content after watchlist filtering
+        // Load initial pages (3 pages = 60 items) to ensure sufficient content after watchlist filtering
         // This ensures both Movies and TV shows have enough content since filtering removes many items
-        actions.loadInitialPages(10)
+        actions.loadInitialPages(3)
     }, [filters.mediaType, filters.sortBy, filters.selectedGenre, filters.selectedYear, actions])
     
     // Sync global search with discover store
@@ -224,8 +224,8 @@ const Discover: React.FC = () => {
                             <VirtuosoGrid
                                 key={`${filters.mediaType}-${filters.sortBy}-${filters.selectedGenre ?? 'all'}-${filters.selectedYear ?? 'all'}-${filters.query}`}
                                 increaseViewportBy={{
-                                        top: isMobile ? 2000 : 1000,
-                                        bottom: isMobile ? 8000 : 2500,
+                                        top: isMobile ? 500 : 1000,
+                                        bottom: isMobile ? 1500 : 2500,
                                     }}
                                 computeItemKey={(index) => visibleResults[index]?.id ?? index}
                                 style={{ height: '100%', width: '100%' }}
@@ -236,7 +236,7 @@ const Discover: React.FC = () => {
                                         actions.fetchData(store.page + 1)
                                     }
                                 }}
-                                overscan={isMobile ? 2000 : 1200}
+                                overscan={isMobile ? 500 : 1200}
                                 listClassName="discover-grid"
                                 itemContent={(index) => {
                                     const item = visibleResults[index];

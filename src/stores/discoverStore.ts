@@ -466,7 +466,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                             with_genres: selectedGenre ? String(selectedGenre) : undefined,
                             'vote_count.gte': 100,
                         }),
-                        { ttl: 6 * 60 * 60 * 1000 }
+                        { ttl: 6 * 60 * 60 * 1000, staleWhileRevalidate: true }
                     ),
                     getCachedOrFetch(
                         'discover-tv',
@@ -478,7 +478,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                             with_genres: selectedGenre ? String(selectedGenre) : undefined,
                             'vote_count.gte': 200,
                         }),
-                        { ttl: 6 * 60 * 60 * 1000 }
+                        { ttl: 6 * 60 * 60 * 1000, staleWhileRevalidate: true }
                     ),
                 ])
 
@@ -520,7 +520,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                         with_genres: selectedGenre ? String(selectedGenre) : undefined,
                         'vote_count.gte': 100,
                     }),
-                    { ttl: 6 * 60 * 60 * 1000 }
+                    { ttl: 6 * 60 * 60 * 1000, staleWhileRevalidate: true }
                 )
                 const movieResults = ((data as { results: TMDBResult[] }).results || []).map(r => ({
                     ...r,
@@ -551,7 +551,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                         with_genres: selectedGenre ? String(selectedGenre) : undefined,
                         'vote_count.gte': 200,
                     }),
-                    { ttl: 6 * 60 * 60 * 1000 }
+                    { ttl: 6 * 60 * 60 * 1000, staleWhileRevalidate: true }
                 )
                 const tvResults = ((data as { results: TMDBResult[] }).results || []).map(r => ({
                     ...r,
