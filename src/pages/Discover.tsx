@@ -17,7 +17,7 @@ const Discover: React.FC = () => {
     const location = useLocation()
     usePageTitle('Trackist - Discover')
     const isVisible = location.pathname === '/' || location.pathname === '/Discover'
-    
+
     // Store selectors
     const visibleResults = useDiscoverVisibleResults()
     const filters = useDiscoverFilters()
@@ -27,9 +27,26 @@ const Discover: React.FC = () => {
     const showAdded = useDiscoverShowAdded()
     const store = useDiscoverStore()
     const { committedQuery } = useSearch()
-    
+
     // State for confirmation modal when removing from watchlist
     const [removeConfirmItem, setRemoveConfirmItem] = useState<TMDBResult | null>(null)
+
+    // Mobile detection for responsive grid configuration
+    const [isMobile, setIsMobile] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth < 768
+        }
+        return false
+    })
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768)
+        }
+
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
 
     
 
@@ -222,8 +239,8 @@ const Discover: React.FC = () => {
                             <VirtuosoGrid
                                 key={`${filters.mediaType}-${filters.sortBy}-${filters.selectedGenre ?? 'all'}-${filters.selectedYear ?? 'all'}-${filters.query}`}
                                 increaseViewportBy={{
-                                        top: 1000,
-                                        bottom: 2500,
+                                        top: isMobile ? 300 : 1000,
+                                        bottom: isMobile ? 600 : 2500,
                                     }}
                                 computeItemKey={(index) => visibleResults[index]?.id ?? index}
                                 style={{ height: '100%', width: '100%' }}
@@ -234,7 +251,7 @@ const Discover: React.FC = () => {
                                         actions.fetchData(store.page + 1)
                                     }
                                 }}
-                                overscan={1200}
+                                overscan={isMobile ? 400 : 1200}
                                 listClassName="discover-grid"
                                 itemContent={(index) => {
                                     const item = visibleResults[index];

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useListsLogic } from '../hooks/useListsLogic'
@@ -9,6 +9,23 @@ import ConfirmModal from '../components/modals/ConfirmModal'
 const ListsDetail: React.FC = () => {
     usePageTitle('Trackist - Lists')
     const { id } = useParams<{ id: string }>()
+
+    // Mobile detection for responsive grid configuration
+    const [isMobile, setIsMobile] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth < 768
+        }
+        return false
+    })
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768)
+        }
+
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
     const {
         selectedList,
         listItems,
@@ -127,7 +144,7 @@ const ListsDetail: React.FC = () => {
                 style={{ height: '100%', width: '100%' }}
                 useWindowScroll={true}
                 data={filteredListItems}
-                overscan={800}
+                overscan={isMobile ? 400 : 800}
                 listClassName="discover-grid"
                 itemContent={(index) => {
                     const item = filteredListItems[index]
@@ -165,7 +182,7 @@ const ListsDetail: React.FC = () => {
                     style={{ height: '100%', width: '100%' }}
                     useWindowScroll={true}
                     data={filteredWatchedItems}
-                    overscan={800}
+                    overscan={isMobile ? 400 : 800}
                     listClassName="discover-grid"
                     itemContent={(index) => {
                         const item = filteredWatchedItems[index]

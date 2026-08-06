@@ -11,7 +11,7 @@ import { removeAllWatchedEpisodes } from '../services/watchlistService'
 const Finished: React.FC = () => {
     usePageTitle('Trackist - Finished')
     const { committedQuery } = useSearch()
-    
+
     // Use global store
     const store = useLibraryStore()
     const finished = store.finished
@@ -23,9 +23,26 @@ const Finished: React.FC = () => {
     } | null>(null)
     const [unwatchLoading, setUnwatchLoading    ] = useState(false)
 
+    // Mobile detection for responsive grid configuration
+    const [isMobile, setIsMobile] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth < 768
+        }
+        return false
+    })
+
     // Scroll to top when page loads
     useEffect(() => {
         window.scrollTo(0, 0)
+    }, [])
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768)
+        }
+
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
     }, [])
 
     // DEBUG: Log finished items order
@@ -112,7 +129,7 @@ const Finished: React.FC = () => {
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={finishedTVShows}
-                            overscan={800}
+                            overscan={isMobile ? 400 : 800}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = finishedTVShows[index]
@@ -142,7 +159,7 @@ const Finished: React.FC = () => {
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={finishedMovies}
-                            overscan={800}
+                            overscan={isMobile ? 400 : 800}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = finishedMovies[index]

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useListsLogic } from '../hooks/useListsLogic'
@@ -9,6 +9,23 @@ import ConfirmModal from '../components/modals/ConfirmModal'
 const ListsCreatePage: React.FC = () => {
     usePageTitle('Trackist - Create List')
     const navigate = useNavigate()
+
+    // Mobile detection for responsive grid configuration
+    const [isMobile, setIsMobile] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth < 768
+        }
+        return false
+    })
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768)
+        }
+
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
     
     const {
         title,
@@ -162,6 +179,7 @@ const ListsCreatePage: React.FC = () => {
                             }}
                             components={{ Footer }}
                             useWindowScroll={true}
+                            overscan={isMobile ? 400 : 800}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = filteredBrowseResults[index]

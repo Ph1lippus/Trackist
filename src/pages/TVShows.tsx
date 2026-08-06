@@ -13,18 +13,35 @@ import { VirtuosoGrid } from 'react-virtuoso'
 const TVShows: React.FC = () => {
     usePageTitle('Trackist - TV Shows')
     const { committedQuery } = useSearch()
-    
+
     // Use global store
     const store = useLibraryStore()
     const tvShows = store.tvShows
     const isInitialized = store.isInitialized
-    
+
     const [markAllModal, setMarkAllModal] = useState<WatchlistItem | null>(null)
     const [markingAllWatched, setMarkingAllWatched] = useState(false)
+
+    // Mobile detection for responsive grid configuration
+    const [isMobile, setIsMobile] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth < 768
+        }
+        return false
+    })
 
     // Scroll to top when page loads
     useEffect(() => {
         window.scrollTo(0, 0)
+    }, [])
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768)
+        }
+
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
     }, [])
 
     // Use current_episode from store data instead of fetching from database
@@ -231,14 +248,14 @@ const TVShows: React.FC = () => {
                     {currentlyWatching.length > 0 ? (
                         <VirtuosoGrid
                             increaseViewportBy={{
-                                        top: 1000,
-                                        bottom: 2500,
+                                        top: isMobile ? 300 : 1000,
+                                        bottom: isMobile ? 600 : 2500,
                                     }}
                             computeItemKey={(index) => currentlyWatching[index]?.id ?? index}
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={currentlyWatching}
-                            overscan={1200}
+                            overscan={isMobile ? 400 : 1200}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = currentlyWatching[index]
@@ -274,7 +291,7 @@ const TVShows: React.FC = () => {
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={notStarted}
-                            overscan={800}
+                            overscan={isMobile ? 400 : 800}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = notStarted[index]
