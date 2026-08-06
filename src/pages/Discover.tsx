@@ -225,7 +225,7 @@ const Discover: React.FC = () => {
                                 key={`${filters.mediaType}-${filters.sortBy}-${filters.selectedGenre ?? 'all'}-${filters.selectedYear ?? 'all'}-${filters.query}`}
                                 increaseViewportBy={{
                                         top: isMobile ? 2000 : 1000,
-                                        bottom: isMobile ? 4000 : 2500,
+                                        bottom: isMobile ? 8000 : 2500,
                                     }}
                                 computeItemKey={(index) => visibleResults[index]?.id ?? index}
                                 style={{ height: '100%', width: '100%' }}
