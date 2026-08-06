@@ -18,6 +18,10 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    html, body {
+        overscroll-behavior: none;
+    }
+
 
     .media-card__icon-btn {
         font-size: 0.7rem !important;
