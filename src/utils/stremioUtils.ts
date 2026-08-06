@@ -53,16 +53,25 @@ export const createEpisodeDeepLink = (tmdbId: number, season: number, episode: n
 export const openInStremio = (deepLink: string, webFallback?: string): void => {
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
   
+  // On desktop, always use web version since custom URL schemes don't work well
+  if (!isMobile) {
+    if (webFallback) {
+      window.open(webFallback, '_blank')
+    }
+    return
+  }
+  
+  // On mobile, try deep link first
   try {
     // Try to open the deep link
     window.location.href = deepLink
     
-    // If on mobile and we have a fallback, set a timeout to try the web version
-    if (isMobile && webFallback) {
+    // Set a timeout to try the web version if deep link doesn't work
+    if (webFallback) {
       setTimeout(() => {
         // If the deep link didn't work, open the web version
         window.open(webFallback, '_blank')
-      }, 2000)
+      }, 2500)
     }
   } catch (error) {
     console.error('Failed to open Stremio link:', error)
