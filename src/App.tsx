@@ -135,12 +135,17 @@ const AppContent: React.FC = () => {
                (currentMonth.getFullYear() === now.getFullYear() && currentMonth.getMonth() > now.getMonth())
     }
 
+    const goToToday = () => {
+        setCurrentMonth(new Date())
+    }
+
     return (
         <div className="d-flex flex-column min-vh-100">
             <Navbar 
                 currentMonth={currentMonth}
                 navigateMonth={navigateMonth}
                 canGoBack={canGoBack}
+                goToToday={goToToday}
             />
             <main className={`page-main flex-grow-1 ${hideFooter ? 'page-main--no-footer' : ''}`}>
                 <Routes>

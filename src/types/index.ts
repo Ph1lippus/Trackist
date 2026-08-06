@@ -129,6 +129,7 @@ export interface UserList {
         display_name: string
         avatar_url?: string
     }
+    poster?: string | null
 }
 
 export interface ListItem {

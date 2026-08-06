@@ -220,6 +220,7 @@ const Discover: React.FC = () => {
                 ) : (
                         <div style={{ flex: 1, minHeight: 0, width: '100%' }}>
                             <VirtuosoGrid
+                                key={`${filters.mediaType}-${filters.sortBy}-${filters.selectedGenre ?? 'all'}-${filters.selectedYear ?? 'all'}-${filters.query}`}
                                 increaseViewportBy={{
                                         top: 1000,
                                         bottom: 2500,

@@ -36,10 +36,13 @@ const ListsDetail: React.FC = () => {
 
     // Load list details when component mounts or id changes
     useEffect(() => {
-        if (id) {
-            loadListDetails(id)
+        async function loadData() {
+            if (id) {
+                await loadListDetails(id)
+            }
+            await fetchWatchlistIds()
         }
-        fetchWatchlistIds()
+        loadData()
     }, [id, loadListDetails, fetchWatchlistIds])
 
     if (loading) {
@@ -109,80 +112,83 @@ const ListsDetail: React.FC = () => {
                         </div>
                     </div>
 
-                    {filteredListItems.length === 0 && filteredWatchedItems.length === 0 ? (
-                        <div className="lists-page__empty-state">
-                            <i className="fa-solid fa-film"></i>
-                            <p>This list is empty. Click "Edit List" to add content!</p>
-                        </div>
-                    ) : filteredListItems.length === 0 ? (
-                        <div className="lists-page__empty-state">
-                            <i className="fa-solid fa-check"></i>
-                            <p>All items in this list have been watched!</p>
-                        </div>
-                    ) : (
-                        <>
-                            {filteredListItems.length > 0 && (
-                                <VirtuosoGrid
-                                    computeItemKey={(index) => filteredListItems[index]?.id ?? index}
-                                    style={{ height: '100%', width: '100%' }}
-                                    useWindowScroll={true}
-                                    data={filteredListItems}
-                                    overscan={800}
-                                    listClassName="discover-grid"
-                                    itemContent={(index) => {
-                                        const item = filteredListItems[index]
-                                        return (
-                                            <MediaCard
-                                                item={{
-                                                    id: item.tmdb_id,
-                                                    title: item.title,
-                                                    poster_path: item.poster_path,
-                                                    media_type: item.media_type
-                                                }}
-                                                isInWatchlist={watchlistIds.has(item.tmdb_id)}
-                                                listMode={true}
-                                                onMarkWatched={handleMarkWatched}
-                                                onMarkUnwatched={undefined}
-                                            />
-                                        )
-                                    }}
-                                />
-                            )}
+                    {/* Empty state – no items at all */}
+{filteredListItems.length === 0 && filteredWatchedItems.length === 0 ? (
+    <div className="lists-page__empty-state">
+        <i className="fa-solid fa-film"></i>
+        <p>This list is empty. Click "Edit List" to add content!</p>
+    </div>
+) : (
+    <>
+        {/* Unwatched items section */}
+        {filteredListItems.length > 0 && (
+            <VirtuosoGrid
+                computeItemKey={(index) => filteredListItems[index]?.id ?? index}
+                style={{ height: '100%', width: '100%' }}
+                useWindowScroll={true}
+                data={filteredListItems}
+                overscan={800}
+                listClassName="discover-grid"
+                itemContent={(index) => {
+                    const item = filteredListItems[index]
+                    return (
+                        <MediaCard
+                            item={{
+                                id: item.tmdb_id,
+                                title: item.title,
+                                poster_path: item.poster_path,
+                                media_type: item.media_type
+                            }}
+                            isInWatchlist={watchlistIds.has(item.tmdb_id)}
+                            listMode={true}
+                            onMarkWatched={handleMarkWatched}
+                            onMarkUnwatched={undefined}
+                        />
+                    )
+                }}
+            />
+        )}
 
-                            {filteredWatchedItems.length > 0 && (
-                                <div className="lists-page__watched-section">
-                                    <h3 className="lists-page__watched-title">
-                                        <i className="fa-solid fa-eye"></i> Watched ({filteredWatchedItems.length})
-                                    </h3>
-                                    <VirtuosoGrid
-                                        computeItemKey={(index) => filteredWatchedItems[index]?.id ?? index}
-                                        style={{ height: '100%', width: '100%' }}
-                                        useWindowScroll={true}
-                                        data={filteredWatchedItems}
-                                        overscan={800}
-                                        listClassName="discover-grid"
-                                        itemContent={(index) => {
-                                            const item = filteredWatchedItems[index]
-                                            return (
-                                                <MediaCard
-                                                    item={{
-                                                        id: item.tmdb_id,
-                                                        title: item.title,
-                                                        poster_path: item.poster_path,
-                                                        media_type: item.media_type
-                                                    }}
-                                                    isInWatchlist={watchlistIds.has(item.tmdb_id)}
-                                                    listMode={true}
-                                                    onMarkUnwatched={handleMarkWatched}
-                                                    onMarkWatched={undefined}
-                                                />
-                                            )
-                                        }}
-                                    />
-                                </div>
-                            )}
-                        </>
+        {/* Watched items section – always shown if there are any */}
+        {filteredWatchedItems.length > 0 && (
+            <div className="lists-page__watched-section">
+                <h3 className="lists-page__watched-title">
+                    <i className="fa-solid fa-eye"></i> Watched ({filteredWatchedItems.length})
+                    {filteredListItems.length === 0 && (
+                        <span style={{ marginLeft: '0.5rem', fontSize: '0.8rem', fontWeight: 'normal', color: 'rgba(255,255,255,0.5)' }}>
+                            – All items in this list have been watched!
+                        </span>
                     )}
+                </h3>
+                <VirtuosoGrid
+                    computeItemKey={(index) => filteredWatchedItems[index]?.id ?? index}
+                    style={{ height: '100%', width: '100%' }}
+                    useWindowScroll={true}
+                    data={filteredWatchedItems}
+                    overscan={800}
+                    listClassName="discover-grid"
+                    itemContent={(index) => {
+                        const item = filteredWatchedItems[index]
+                        return (
+                            <MediaCard
+                                item={{
+                                    id: item.tmdb_id,
+                                    title: item.title,
+                                    poster_path: item.poster_path,
+                                    media_type: item.media_type
+                                }}
+                                isInWatchlist={watchlistIds.has(item.tmdb_id)}
+                                listMode={true}
+                                onMarkUnwatched={handleMarkWatched}
+                                onMarkWatched={undefined}
+                            />
+                        )
+                    }}
+                />
+            </div>
+        )}
+    </>
+)}
                 </div>
             </div>
 

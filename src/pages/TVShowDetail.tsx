@@ -857,7 +857,7 @@ const TVShowDetail: React.FC = () => {
                                             }
                                         }}>
                                             <div className="detail-page__episode-details">
-                                                <strong>{ep.title || `Episode ${ep.episode_number}`}</strong>
+                                                <strong>{ep.episode_number}{ep.title ? `. ${ep.title}` : ''}</strong>
                                                     <div className="detail-page__episode-meta">
                                                         {ep.air_date && <span>{ep.air_date}</span>}
                                                         {ep.runtime && <span>{ep.runtime} min</span>}

@@ -73,6 +73,9 @@ interface DiscoverState {
     setFilters: (filters: Partial<DiscoverState>) => void
 }
 
+// Generation counter to invalidate stale fetch requests when tabs/filters change rapidly
+let fetchGeneration = 0
+
 const useDiscoverStore = create<DiscoverState>((set, get) => ({
     // Initial state
     results: [],
@@ -276,10 +279,16 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
 
     loadInitialPages: async (pagesToLoad = 10) => {
         const { fetchData } = get()
+        // Capture the generation at start so we stop if a newer tab/filter
+        // switch invalidates this loading session.
+        const initialGeneration = fetchGeneration
         let currentPage = 1
         
         for (let i = 0; i < pagesToLoad; i++) {
+            // Stop if a newer tab/filter switch started another load
+            if (fetchGeneration !== initialGeneration) break
             await fetchData(currentPage)
+            if (fetchGeneration !== initialGeneration) break
             const state = get()
             if (!state.hasMore) break
             currentPage++
@@ -287,23 +296,31 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     },
 
     fetchData: async (pageNum = 1) => {
+        // Page 1 requests (tab/filter changes) bump the generation,
+        // invalidating any in-flight requests from older generations.
+        const isNewSearch = pageNum === 1
+        if (isNewSearch) {
+            fetchGeneration++
+        }
+        const generation = fetchGeneration
+
         const {
             mediaType,
             sortBy,
             query,
             selectedGenre,
             selectedYear,
-            isLoading,
-            isLoadingMore,
             showAdded,
             watchlistIds,
         } = get()
 
-        if (isLoading || isLoadingMore) return
+        // Stale request from a previous tab/filter - abandon it.
+        // Do not touch loading flags because the newer request owns them.
+        if (generation !== fetchGeneration) return
 
         if (pageNum === 1) {
             // Reset sessionAddedIds when fetching page 1 (fresh query or filter change)
-            set({ isLoading: true, results: [], page: 1, sessionAddedIds: new Set() })
+            set({ isLoading: true, isLoadingMore: false, results: [], page: 1, sessionAddedIds: new Set() })
         } else {
             set({ isLoadingMore: true })
         }
@@ -363,6 +380,9 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         }
 
         try {
+            // Bail early if a newer tab/filter switch invalidated this request
+            if (generation !== fetchGeneration) return
+
             let newResults: TMDBResult[] = []
             let totalPages = 1
 
@@ -552,7 +572,14 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 totalPages = (data as { total_pages?: number }).total_pages || 1
             }
 
+            // Ignore stale responses from a previous tab/filter generation
+            if (generation !== fetchGeneration) return
+
             set((state) => {
+                // Double-check inside the set callback as well - a newer request
+                // may have started between the check above and the state update.
+                if (generation !== fetchGeneration) return state
+
                 const shouldFilterGenres = !query.trim() && !selectedGenre && mediaType !== 'person'
                 let finalResults = newResults
                 if (shouldFilterGenres) {
@@ -593,8 +620,11 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 }
             })
         } catch (err) {
-            console.error('Failed to load:', err)
-            set({ isLoading: false, isLoadingMore: false })
+            // Only reset loading flags if this request is still current
+            if (generation === fetchGeneration) {
+                console.error('Failed to load:', err)
+                set({ isLoading: false, isLoadingMore: false })
+            }
         }
     },
 }))

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useListsLogic } from '../hooks/useListsLogic'
+import { imageUrl } from '../services/tmdbService'
 
 const Lists: React.FC = () => {
     usePageTitle('Trackist - Lists')
@@ -52,6 +53,15 @@ const Lists: React.FC = () => {
                                 className="lists-page__card"
                                 onClick={() => navigate(`/ListsDetail/${list.id}`)}
                             >
+                                <div className="media-card__poster list">
+                                        {list.poster ? (
+                                            <img src={imageUrl(list.poster) ?? undefined} alt={list.title} />   
+                                        ) : (
+                                            <div className="lists-page__card-placeholder">
+                                                <i className="fa-regular fa-images" />
+                                            </div>
+                                        )}
+                                    </div>
                                 <div className="lists-page__card-content">
                                     <h3>{list.title}</h3>
                                     {list.description && <p>{list.description}</p>}

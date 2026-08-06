@@ -147,34 +147,67 @@ export const useListsLogic = (): UseListsLogicResult => {
     // Fetch functions
     const fetchLists = useCallback(async () => {
         const { data: { user } } = await supabase.auth.getUser()
-        
-        if (user) {
-            // Fetch user's own lists
-            const { data: userLists, error: userError } = await supabase
+
+        if (!user) {
+            setLoading(false)
+            return
+        }
+
+        // 1. Fetch lists (both user's own and public)
+        const [userResult, publicResult] = await Promise.all([
+            supabase
                 .from('lists')
                 .select('*')
                 .eq('user_id', user.id)
-                .order('updated_at', { ascending: false })
-
-            // Fetch public lists from other users
-            const { data: publicListsData, error: publicError } = await supabase
+                .order('updated_at', { ascending: false }),
+            supabase
                 .from('lists')
                 .select('*, profiles!inner(display_name, avatar_url)')
                 .eq('is_public', true)
                 .neq('user_id', user.id)
                 .order('updated_at', { ascending: false })
+        ])
 
-            if (!userError && userLists) {
-                setLists(userLists)
-            }
+        const userLists = userResult.data || []
+        const publicListsData = publicResult.data || []
 
-            if (!publicError && publicListsData) {
-                setPublicLists(publicListsData)
+        // 2. Combine all list IDs
+        const allListIds = [...userLists.map(l => l.id), ...publicListsData.map(l => l.id)]
+
+        // 3. Fetch ALL list items for these lists (only poster_path and list_id)
+        const posterMap: Record<string, string | null> = {}
+        if (allListIds.length > 0) {
+            const { data: items, error: itemsError } = await supabase
+                .from('list_items')
+                .select('list_id, poster_path')
+                .in('list_id', allListIds)
+                .order('added_at', { ascending: true })
+
+            if (!itemsError && items) {
+                // Group by list_id and take the first one
+                items.forEach(item => {
+                    if (!posterMap[item.list_id]) {
+                        posterMap[item.list_id] = item.poster_path
+                    }
+                })
             }
         }
 
+        // 4. Merge the poster into the list objects
+        const userListsWithPoster = userLists.map(list => ({
+            ...list,
+            poster: posterMap[list.id] || null
+        }))
+
+        const publicListsWithPoster = publicListsData.map(list => ({
+            ...list,
+            poster: posterMap[list.id] || null
+        }))
+
+        setLists(userListsWithPoster)
+        setPublicLists(publicListsWithPoster)
         setLoading(false)
-    }, [])
+}, [])
 
     const fetchListItems = useCallback(async (listId: string) => {
         const { data, error } = await supabase

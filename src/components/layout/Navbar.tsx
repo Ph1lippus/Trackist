@@ -11,9 +11,10 @@ interface NavbarProps {
     currentMonth?: Date;
     navigateMonth?: (direction: number) => void;
     canGoBack?: () => boolean;
+    goToToday?: () => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack }) => {
+const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack, goToToday }) => {
     const navigate = useNavigate();
     const location = useLocation();
     const [user, setUser] = useState<User | null>(null);
@@ -178,15 +179,24 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack 
                 
                 {showCalendarHeader && (
                     <div className="calendar-header">
-                        <button 
-                            className="calendar-nav-btn-inline"
-                            onClick={() => navigateMonth(-1)}
-                            title="Previous month"
-                            disabled={!canGoBack()}
-                            style={{ opacity: canGoBack() ? 1 : 0.3, cursor: canGoBack() ? 'pointer' : 'not-allowed' }}
-                        >
-                            <i className="fas fa-chevron-left"></i>
-                        </button>
+                        <div className="calendar-header-left">
+                            <button 
+                                className="calendar-nav-btn-inline"
+                                onClick={() => navigateMonth(-1)}
+                                title="Previous month"
+                                disabled={!canGoBack()}
+                                style={{ opacity: canGoBack() ? 1 : 0.3, cursor: canGoBack() ? 'pointer' : 'not-allowed' }}
+                            >
+                                <i className="fas fa-chevron-left"></i>
+                            </button>
+                            <button 
+                                className="calendar-today-btn"
+                                onClick={() => goToToday?.()}
+                                title="Go to current month"
+                            >
+                                Today
+                            </button>
+                        </div>
                         <h2 className="calendar-title">{monthName}</h2>
                         <button 
                             className="calendar-nav-btn-inline"

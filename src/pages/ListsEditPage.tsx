@@ -31,11 +31,8 @@ const ListsEditPage: React.FC = () => {
         hasMore,
         browseMediaType,
         setBrowseMediaType,
-        genres,
         selectedGenre,
-        setSelectedGenre,
         sortBy,
-        setSortBy,
         watchlistIds,
         reordering,
         isFetchingRef,
@@ -122,7 +119,7 @@ const ListsEditPage: React.FC = () => {
                             onChange={(e) => setDescription(e.target.value)}
                             placeholder="What's this list about?"
                             rows={4}
-                            maxLength={500}
+                            maxLength={2500}
                         />
                     </div>
                     <div className="form-group">
@@ -253,34 +250,6 @@ const ListsEditPage: React.FC = () => {
                         >
                             TV Shows
                         </button>
-                    </div>
-                    <div className="discover-sorts">
-                        <select
-                            className="discover-filter-select"
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                        >
-                            <option value="popularity.desc">Popularity (High to Low)</option>
-                            <option value="popularity.asc">Popularity (Low to High)</option>
-                            <option value="vote_average.desc">Rating (High to Low)</option>
-                            <option value="vote_average.asc">Rating (Low to High)</option>
-                            <option value="release_date.desc">Release Date (Newest)</option>
-                            <option value="release_date.asc">Release Date (Oldest)</option>
-                            <option value="original_title.asc">Title (A-Z)</option>
-                            <option value="original_title.desc">Title (Z-A)</option>
-                        </select>
-                        <select
-                            className="discover-filter-select"
-                            value={selectedGenre ?? ''}
-                            onChange={(e) => setSelectedGenre(e.target.value ? Number(e.target.value) : null)}
-                        >
-                            <option value="">All Genres</option>
-                            {genres.map(genre => (
-                                <option key={genre.id} value={genre.id}>
-                                    {genre.name}
-                                </option>
-                            ))}
-                        </select>
                     </div>
                 </div>
 
