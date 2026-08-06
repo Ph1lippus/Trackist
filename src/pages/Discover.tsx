@@ -38,10 +38,10 @@ const Discover: React.FC = () => {
     // Search is now handled globally via navbar
     // const [searchInput, setSearchInput] = useState(filters.query)
     
-    // Fetch genres and watchlist IDs on mount
+    // Fetch genres and sync watchlist IDs on mount
     useEffect(() => {
         store.fetchGenres()
-        store.fetchWatchlistIds()
+        store.syncWatchlistIds()
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
@@ -76,6 +76,8 @@ const Discover: React.FC = () => {
             // Add to session added IDs to keep it visible
             const currentSessionIds = useDiscoverStore.getState().sessionAddedIds
             actions.setSessionAddedIds(new Set(currentSessionIds).add(item.id));
+            // Sync watchlist IDs to ensure UI is updated
+            actions.syncWatchlistIds();
         }
     },
     [actions, watchlistIds]
