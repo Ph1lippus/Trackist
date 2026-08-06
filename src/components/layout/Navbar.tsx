@@ -366,7 +366,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                         <i className="fa-solid fa-user"></i>
                                         Profile
                                     </button>
-                                    {isLocal && showInstallButton && (
+                                    {showInstallButton && (
                                         <button className="t-dropdown-item" onClick={handleInstallClick}>
                                             <i className="fa-solid fa-download"></i>
                                             Install App
