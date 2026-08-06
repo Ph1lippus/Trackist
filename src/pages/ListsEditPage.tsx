@@ -271,8 +271,14 @@ const ListsEditPage: React.FC = () => {
                             computeItemKey={(index) => filteredBrowseResults[index]?.id ?? index}
                             style={{ height: '100%', width: '100%' }}
                             data={filteredBrowseResults}
-                            endReached={() => {
-                                if (hasMore && !isFetchingRef.current) {
+                            rangeChanged={(range) => {
+                                // Load more items when user scrolls near the end
+                                // This fires continuously during scrolling (unlike endReached which only fires on mobile when finger lifts)
+                                const { endIndex } = range
+                                const totalItems = filteredBrowseResults.length
+                                const threshold = isMobile ? 15 : 20 // Load more when within 15-20 items of the end
+                                
+                                if (endIndex >= totalItems - threshold && hasMore && !isFetchingRef.current) {
                                     fetchBrowseData(browsePage + 1)
                                 }
                             }}

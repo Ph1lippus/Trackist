@@ -4356,6 +4356,19 @@ button:focus-visible {
     min-height: 0;
     min-width: 0;
     max-width: 100%;
+    /* Disable double-tap zoom delay for instant interaction */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    /* Prevent callout/menu on long press */
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Instant visual feedback on touch/click */
+.media-card:active {
+    transform: scale(0.97);
+    opacity: 0.9;
+    transition: transform 0.1s ease, opacity 0.1s ease;
 }
 
 .media-card__no-poster {

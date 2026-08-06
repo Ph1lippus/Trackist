@@ -232,8 +232,14 @@ const Discover: React.FC = () => {
                                 style={{ height: '100%', width: '100%' }}
                                 useWindowScroll={true}
                                 data={visibleResults}
-                                endReached={() => {
-                                    if (loading.hasMore && !loading.isLoadingMore) {
+                                rangeChanged={(range) => {
+                                    // Load more items when user scrolls near the end
+                                    // This fires continuously during scrolling (unlike endReached which only fires on mobile when finger lifts)
+                                    const { endIndex } = range
+                                    const totalItems = visibleResults.length
+                                    const threshold = isMobile ? 15 : 20 // Load more when within 15-20 items of the end
+                                    
+                                    if (endIndex >= totalItems - threshold && loading.hasMore && !loading.isLoadingMore) {
                                         actions.fetchData(store.page + 1)
                                     }
                                 }}

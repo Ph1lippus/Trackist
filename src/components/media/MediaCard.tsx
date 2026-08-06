@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react'
+import React, { useMemo, useCallback, useRef } from 'react'
 import { imageUrl } from '../../services/tmdbService'
 import type { TMDBResult } from '../../types'
 import { Link } from "react-router-dom"
@@ -43,6 +43,9 @@ const MediaCard: React.FC<MediaCardProps> = ({
 }) => {
     const { isMobile } = useMobile()
     const isPerson = item.media_type === 'person'
+    
+    // Scroll protection: track touch start position to distinguish scroll from tap
+    const touchStartPos = useRef<{ x: number; y: number } | null>(null)
 
     const imgUrl = useMemo(
         () => {
@@ -66,7 +69,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
         : `/movie/${item.id}`
 
     const handleAddClick = useCallback(
-        (e: React.MouseEvent) => {
+        (e: React.MouseEvent | React.TouchEvent) => {
             e.stopPropagation()
             e.preventDefault()
             onAdd?.(item)
@@ -75,7 +78,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
     )
 
     const handleAddToListClick = useCallback(
-        (e: React.MouseEvent) => {
+        (e: React.MouseEvent | React.TouchEvent) => {
             e.stopPropagation()
             e.preventDefault()
             onAddToList?.(item)
@@ -84,7 +87,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
     )
 
     const handleMarkWatchedClick = useCallback(
-        (e: React.MouseEvent) => {
+        (e: React.MouseEvent | React.TouchEvent) => {
             e.stopPropagation()
             e.preventDefault()
             onMarkWatched?.(item)
@@ -93,7 +96,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
     )
 
     const handleMarkUnwatchedClick = useCallback(
-        (e: React.MouseEvent) => {
+        (e: React.MouseEvent | React.TouchEvent) => {
             e.stopPropagation()
             e.preventDefault()
             onMarkUnwatched?.(item)
@@ -102,13 +105,36 @@ const MediaCard: React.FC<MediaCardProps> = ({
     )
 
     const handleDeleteClick = useCallback(
-        (e: React.MouseEvent) => {
+        (e: React.MouseEvent | React.TouchEvent) => {
             e.stopPropagation()
             e.preventDefault()
             onDelete?.(item)
         },
         [onDelete, item],
     )
+    
+    // Handle touch start for scroll protection
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+        const touch = e.touches[0]
+        touchStartPos.current = { x: touch.clientX, y: touch.clientY }
+    }, [])
+    
+    // Handle touch end to detect if it was a tap or scroll
+    const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+        if (!touchStartPos.current) return
+        
+        const touch = e.changedTouches[0]
+        const deltaX = Math.abs(touch.clientX - touchStartPos.current.x)
+        const deltaY = Math.abs(touch.clientY - touchStartPos.current.y)
+        const moveDistance = Math.max(deltaX, deltaY)
+        
+        // If moved more than 10px, it was a scroll, not a tap
+        const wasScroll = moveDistance > 10
+        
+        touchStartPos.current = null
+        
+        return wasScroll
+    }, [])
 
     const showAddButton = !compact && onAdd && !(isInWatchlist && (onMarkWatched || onMarkUnwatched)) && !listMode
     const showAddToListButton = !compact && onAddToList && !isPerson && !listMode
@@ -120,8 +146,21 @@ const MediaCard: React.FC<MediaCardProps> = ({
         !compact && !isPerson && isInWatchlist && !onMarkWatched && !onMarkUnwatched && !onAdd && !onDelete && !listMode && !onAddToList
 
     return (
-        <article className="media-card">
-            <Link to={href} className="media-card__poster">
+        <article 
+            className="media-card"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+        >
+            <Link 
+                to={href} 
+                className="media-card__poster"
+                onClick={(e) => {
+                    // Only prevent default if a button was clicked
+                    if ((e.target as HTMLElement).closest('button')) {
+                        e.preventDefault()
+                    }
+                }}
+            >
                 {imgUrl && <img src={imgUrl} alt={displayTitle} loading="lazy" fetchPriority={priority ? "high" : "auto"} decoding="async" />}
                 {!imgUrl && (
                     <div className="media-card__no-poster">
@@ -135,6 +174,10 @@ const MediaCard: React.FC<MediaCardProps> = ({
                     <button
                         className="media-card__icon-btn"
                         onClick={handleAddClick}
+                        onTouchStart={(e) => {
+                            // Prevent scroll only on the button itself
+                            e.stopPropagation()
+                        }}
                         title={isInWatchlist ? (isPerson ? 'Following' : 'In watchlist') : (isPerson ? 'Follow' : 'Add to watchlist')}
                     >
                         {isInWatchlist ? (
@@ -148,6 +191,9 @@ const MediaCard: React.FC<MediaCardProps> = ({
                     <button
                         className="media-card__list-icon"
                         onClick={handleAddToListClick}
+                        onTouchStart={(e) => {
+                            e.stopPropagation()
+                        }}
                         title="Add to list"
                     >
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" width="16" height="16">
@@ -159,6 +205,9 @@ const MediaCard: React.FC<MediaCardProps> = ({
                     <button
                         className="media-card__icon-btn"
                         onClick={handleMarkWatchedClick}
+                        onTouchStart={(e) => {
+                            e.stopPropagation()
+                        }}
                         title="Mark as watched"
                     >
                         <i className="fa-solid fa-eye"></i>
@@ -168,6 +217,9 @@ const MediaCard: React.FC<MediaCardProps> = ({
                     <button
                         className="media-card__icon-btn"
                         onClick={handleMarkUnwatchedClick}
+                        onTouchStart={(e) => {
+                            e.stopPropagation()
+                        }}
                         title="Mark as unwatched"
                     >
                         <i className="fa-solid fa-eye-slash"></i>
@@ -177,6 +229,9 @@ const MediaCard: React.FC<MediaCardProps> = ({
                     <button
                         className="media-card__icon-btn"
                         onClick={handleDeleteClick}
+                        onTouchStart={(e) => {
+                            e.stopPropagation()
+                        }}
                         title="Remove from list"
                         style={{ color: '#ff6b6b' }}
                     >
