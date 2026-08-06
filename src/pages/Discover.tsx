@@ -76,8 +76,7 @@ const Discover: React.FC = () => {
             // Add to session added IDs to keep it visible
             const currentSessionIds = useDiscoverStore.getState().sessionAddedIds
             actions.setSessionAddedIds(new Set(currentSessionIds).add(item.id));
-            // Sync watchlist IDs to ensure UI is updated
-            actions.syncWatchlistIds();
+
         }
     },
     [actions, watchlistIds]
