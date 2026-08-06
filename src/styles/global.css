@@ -18,6 +18,17 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .media-card__icon-btn {
+        font-size: 0.7rem !important;
+        width: 20px !important;
+        height: 20px !important;
+    }
+    .lists-page__card{
+        padding: 1rem !important;
+    }
+    .lists-page__card-content {
+        padding-left: 1rem !important;
+    }
     i.fa-solid.fa-expand{
         display:none !important;
     }
@@ -3182,6 +3193,7 @@ body::after {
 @media (max-width: 768px) {
     .lists-page__container {
         grid-template-columns: 1fr;
+        max-width: 100% !important;
     }
     .lists-page__sidebar {
         margin-bottom: 1rem;
