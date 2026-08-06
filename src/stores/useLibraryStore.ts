@@ -518,7 +518,23 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     // Add item to library
     addItem: async (item: WatchlistItem) => {
         const state = get()
-        
+
+        // For TV shows, fetch total episodes and seasons from TMDB
+        let enhancedItem = { ...item }
+        if ((item.media_type === 'tv' || item.media_type === 'anime') && item.tmdb_id) {
+            try {
+                const { getTVDetails } = await import('../services/tmdbService')
+                const details = await getTVDetails(item.tmdb_id)
+                enhancedItem = {
+                    ...item,
+                    total_episodes: details.number_of_episodes || 0,
+                    total_seasons: details.number_of_seasons || 1,
+                }
+            } catch (error) {
+                console.error('Failed to fetch TV details for episode count:', error)
+            }
+        }
+
         // Store previous state for rollback
         const previousAllItems = [...state.allItems]
         const previousTvShows = [...state.tvShows]
@@ -526,20 +542,20 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         const previousFinished = [...state.finished]
 
         // Optimistic update - add to appropriate arrays
-        const newAllItems = [item, ...state.allItems]
-        
+        const newAllItems = [enhancedItem, ...state.allItems]
+
         let newTvShows = state.tvShows
         let newMovies = state.movies
         let newFinished = state.finished
 
-        if (item.media_type === 'tv' || item.media_type === 'anime') {
-            newTvShows = [item as TVShowWithProgress, ...state.tvShows]
-        } else if (item.media_type === 'movie') {
-            newMovies = [item, ...state.movies]
+        if (enhancedItem.media_type === 'tv' || enhancedItem.media_type === 'anime') {
+            newTvShows = [enhancedItem as TVShowWithProgress, ...state.tvShows]
+        } else if (enhancedItem.media_type === 'movie') {
+            newMovies = [enhancedItem, ...state.movies]
         }
 
-        if (item.status === 'completed' || item.status === 'caught_up') {
-            newFinished = [item, ...state.finished]
+        if (enhancedItem.status === 'completed' || enhancedItem.status === 'caught_up') {
+            newFinished = [enhancedItem, ...state.finished]
         }
 
         // Sort arrays by updated_at (most recent first)
@@ -574,7 +590,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         try {
             const { error } = await supabase
                 .from('watchlist')
-                .insert([item])
+                .insert([enhancedItem])
 
             if (error) {
                 throw error
@@ -583,7 +599,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             // Update cache with new data
             const { data: { user } } = await supabase.auth.getUser()
             if (user) {
-                const newAllItems = [item, ...previousAllItems]
+                const newAllItems = [enhancedItem, ...previousAllItems]
                 await cacheService.set('library', user.id, newAllItems, 5 * 60 * 1000)
             }
         } catch (error) {
@@ -613,11 +629,27 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 throw error || new Error('Item not found')
             }
 
+            // For TV shows, fetch total episodes and seasons from TMDB if missing
+            let enhancedData = { ...data }
+            if ((data.media_type === 'tv' || data.media_type === 'anime') && data.tmdb_id && (!data.total_episodes || !data.total_seasons)) {
+                try {
+                    const { getTVDetails } = await import('../services/tmdbService')
+                    const details = await getTVDetails(data.tmdb_id)
+                    enhancedData = {
+                        ...data,
+                        total_episodes: details.number_of_episodes || 0,
+                        total_seasons: details.number_of_seasons || 1,
+                    }
+                } catch (tmdbError) {
+                    console.error('Failed to fetch TV details for episode count:', tmdbError)
+                }
+            }
+
             const state = get()
-            
+
             // Re-categorize based on new status
-            const newAllItems = state.allItems.map(item => item.id === id ? data : item)
-            
+            const newAllItems = state.allItems.map(item => item.id === id ? enhancedData : item)
+
             const newTvShows = newAllItems.filter(item => item.media_type === 'tv' || item.media_type === 'anime') as TVShowWithProgress[]
             const newMovies = newAllItems.filter(item => item.media_type === 'movie')
             const newFinished = newAllItems.filter(item => item.status === 'completed' || item.status === 'caught_up')

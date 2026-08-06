@@ -261,6 +261,8 @@ export const markShowAsFullyWatched = async (watchlistId: string, tmdbId: number
                 completed_at: showEnded ? new Date().toISOString() : null,
                 current_episode: details.number_of_episodes || 0,
                 current_season: details.number_of_seasons || 1,
+                total_episodes: details.number_of_episodes || 0,
+                total_seasons: details.number_of_seasons || 1,
                 updated_at: new Date().toISOString()
             })
             .eq('id', watchlistId)
