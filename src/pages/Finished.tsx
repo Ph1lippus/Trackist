@@ -129,7 +129,7 @@ const Finished: React.FC = () => {
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={finishedTVShows}
-                            overscan={isMobile ? 400 : 800}
+                            overscan={isMobile ? 800 : 800}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = finishedTVShows[index]
@@ -159,7 +159,7 @@ const Finished: React.FC = () => {
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={finishedMovies}
-                            overscan={isMobile ? 400 : 800}
+                            overscan={isMobile ? 800 : 800}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = finishedMovies[index]

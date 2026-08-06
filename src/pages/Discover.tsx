@@ -239,8 +239,8 @@ const Discover: React.FC = () => {
                             <VirtuosoGrid
                                 key={`${filters.mediaType}-${filters.sortBy}-${filters.selectedGenre ?? 'all'}-${filters.selectedYear ?? 'all'}-${filters.query}`}
                                 increaseViewportBy={{
-                                        top: isMobile ? 300 : 1000,
-                                        bottom: isMobile ? 600 : 2500,
+                                        top: isMobile ? 800 : 1000,
+                                        bottom: isMobile ? 1500 : 2500,
                                     }}
                                 computeItemKey={(index) => visibleResults[index]?.id ?? index}
                                 style={{ height: '100%', width: '100%' }}
@@ -251,7 +251,7 @@ const Discover: React.FC = () => {
                                         actions.fetchData(store.page + 1)
                                     }
                                 }}
-                                overscan={isMobile ? 400 : 1200}
+                                overscan={isMobile ? 800 : 1200}
                                 listClassName="discover-grid"
                                 itemContent={(index) => {
                                     const item = visibleResults[index];

@@ -248,14 +248,14 @@ const TVShows: React.FC = () => {
                     {currentlyWatching.length > 0 ? (
                         <VirtuosoGrid
                             increaseViewportBy={{
-                                        top: isMobile ? 300 : 1000,
-                                        bottom: isMobile ? 600 : 2500,
+                                        top: isMobile ? 800 : 1000,
+                                        bottom: isMobile ? 1500 : 2500,
                                     }}
                             computeItemKey={(index) => currentlyWatching[index]?.id ?? index}
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={currentlyWatching}
-                            overscan={isMobile ? 400 : 1200}
+                            overscan={isMobile ? 800 : 1200}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = currentlyWatching[index]
@@ -291,7 +291,7 @@ const TVShows: React.FC = () => {
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={notStarted}
-                            overscan={isMobile ? 400 : 800}
+                            overscan={isMobile ? 800 : 800}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = notStarted[index]

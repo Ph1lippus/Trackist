@@ -144,7 +144,7 @@ const ListsDetail: React.FC = () => {
                 style={{ height: '100%', width: '100%' }}
                 useWindowScroll={true}
                 data={filteredListItems}
-                overscan={isMobile ? 400 : 800}
+                overscan={isMobile ? 800 : 800}
                 listClassName="discover-grid"
                 itemContent={(index) => {
                     const item = filteredListItems[index]
@@ -182,7 +182,7 @@ const ListsDetail: React.FC = () => {
                     style={{ height: '100%', width: '100%' }}
                     useWindowScroll={true}
                     data={filteredWatchedItems}
-                    overscan={isMobile ? 400 : 800}
+                    overscan={isMobile ? 800 : 800}
                     listClassName="discover-grid"
                     itemContent={(index) => {
                         const item = filteredWatchedItems[index]

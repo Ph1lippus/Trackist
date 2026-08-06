@@ -292,7 +292,7 @@ const ListsEditPage: React.FC = () => {
                             }}
                             components={{ Footer }}
                             useWindowScroll={true}
-                            overscan={isMobile ? 400 : 800}
+                            overscan={isMobile ? 800 : 800}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = filteredBrowseResults[index]
