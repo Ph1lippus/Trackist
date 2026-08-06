@@ -11,6 +11,7 @@ import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
 import { VirtuosoGrid } from 'react-virtuoso'
+import { useMobile } from '../contexts/useMobile'
 
 
 const Discover: React.FC = () => {
@@ -27,26 +28,10 @@ const Discover: React.FC = () => {
     const showAdded = useDiscoverShowAdded()
     const store = useDiscoverStore()
     const { committedQuery } = useSearch()
+    const { isMobile } = useMobile()
 
     // State for confirmation modal when removing from watchlist
     const [removeConfirmItem, setRemoveConfirmItem] = useState<TMDBResult | null>(null)
-
-    // Mobile detection for responsive grid configuration
-    const [isMobile, setIsMobile] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return window.innerWidth < 768
-        }
-        return false
-    })
-
-    useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth < 768)
-        }
-
-        window.addEventListener('resize', handleResize)
-        return () => window.removeEventListener('resize', handleResize)
-    }, [])
 
     
 

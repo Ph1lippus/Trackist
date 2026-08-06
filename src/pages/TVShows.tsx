@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
 import { markShowAsFullyWatched } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
@@ -9,6 +9,7 @@ import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { VirtuosoGrid } from 'react-virtuoso'
+import { useMobile } from '../contexts/useMobile'
 
 const TVShows: React.FC = () => {
     usePageTitle('Trackist - TV Shows')
@@ -22,26 +23,11 @@ const TVShows: React.FC = () => {
     const [markAllModal, setMarkAllModal] = useState<WatchlistItem | null>(null)
     const [markingAllWatched, setMarkingAllWatched] = useState(false)
 
-    // Mobile detection for responsive grid configuration
-    const [isMobile, setIsMobile] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return window.innerWidth < 768
-        }
-        return false
-    })
+    const { isMobile } = useMobile()
 
     // Scroll to top when page loads
     useEffect(() => {
         window.scrollTo(0, 0)
-    }, [])
-
-    useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth < 768)
-        }
-
-        window.addEventListener('resize', handleResize)
-        return () => window.removeEventListener('resize', handleResize)
     }, [])
 
     // Use current_episode from store data instead of fetching from database

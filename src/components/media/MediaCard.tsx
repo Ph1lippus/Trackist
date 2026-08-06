@@ -1,7 +1,8 @@
-import React, { useMemo, useCallback, useState, useEffect } from 'react'
+import React, { useMemo, useCallback } from 'react'
 import { imageUrl } from '../../services/tmdbService'
 import type { TMDBResult } from '../../types'
 import { Link } from "react-router-dom"
+import { useMobile } from '../../contexts/useMobile'
 
 type ResultItem = TMDBResult
 
@@ -40,27 +41,12 @@ const MediaCard: React.FC<MediaCardProps> = ({
     episodesLeft,
     priority = false,
 }) => {
-    const [isMobile, setIsMobile] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return window.innerWidth < 768
-        }
-        return false
-    })
-
-    useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth < 768)
-        }
-
-        window.addEventListener('resize', handleResize)
-        return () => window.removeEventListener('resize', handleResize)
-    }, [])
-
+    const { isMobile } = useMobile()
     const isPerson = item.media_type === 'person'
 
     const imgUrl = useMemo(
         () => {
-            const imageSize = isMobile ? 'w185' : 'w342'
+            const imageSize = isMobile ? 'w92' : 'w342'
             return isPerson ? imageUrl(item.profile_path ?? null, imageSize) : imageUrl(item.poster_path ?? null, imageSize)
         },
         [isPerson, item.profile_path, item.poster_path, isMobile],

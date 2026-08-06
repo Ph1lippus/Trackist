@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
@@ -7,6 +7,7 @@ import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { VirtuosoGrid } from 'react-virtuoso'
+import { useMobile } from '../contexts/useMobile'
 
 const Movies: React.FC = () => {
     usePageTitle('Trackist - Movies')
@@ -22,26 +23,11 @@ const Movies: React.FC = () => {
         item: TMDBResult
     } | null>(null)
 
-    // Mobile detection for responsive grid configuration
-    const [isMobile, setIsMobile] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return window.innerWidth < 768
-        }
-        return false
-    })
+    const { isMobile } = useMobile()
 
     // Scroll to top when page loads
     useEffect(() => {
         window.scrollTo(0, 0)
-    }, [])
-
-    useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth < 768)
-        }
-
-        window.addEventListener('resize', handleResize)
-        return () => window.removeEventListener('resize', handleResize)
     }, [])
 
     const updateStatus = async (id: string, status: string) => {

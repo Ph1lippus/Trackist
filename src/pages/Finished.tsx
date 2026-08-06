@@ -7,6 +7,7 @@ import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { VirtuosoGrid } from 'react-virtuoso'
 import { removeAllWatchedEpisodes } from '../services/watchlistService'
+import { useMobile } from '../contexts/useMobile'
 
 const Finished: React.FC = () => {
     usePageTitle('Trackist - Finished')
@@ -23,26 +24,11 @@ const Finished: React.FC = () => {
     } | null>(null)
     const [unwatchLoading, setUnwatchLoading    ] = useState(false)
 
-    // Mobile detection for responsive grid configuration
-    const [isMobile, setIsMobile] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return window.innerWidth < 768
-        }
-        return false
-    })
+    const { isMobile } = useMobile()
 
     // Scroll to top when page loads
     useEffect(() => {
         window.scrollTo(0, 0)
-    }, [])
-
-    useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth < 768)
-        }
-
-        window.addEventListener('resize', handleResize)
-        return () => window.removeEventListener('resize', handleResize)
     }, [])
 
     // DEBUG: Log finished items order

@@ -1,31 +1,17 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useListsLogic } from '../hooks/useListsLogic'
 import MediaCard from '../components/media/MediaCard'
 import { VirtuosoGrid } from 'react-virtuoso'
 import ConfirmModal from '../components/modals/ConfirmModal'
+import { useMobile } from '../contexts/useMobile'
 
 const ListsCreatePage: React.FC = () => {
     usePageTitle('Trackist - Create List')
     const navigate = useNavigate()
 
-    // Mobile detection for responsive grid configuration
-    const [isMobile, setIsMobile] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return window.innerWidth < 768
-        }
-        return false
-    })
-
-    useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth < 768)
-        }
-
-        window.addEventListener('resize', handleResize)
-        return () => window.removeEventListener('resize', handleResize)
-    }, [])
+    const { isMobile } = useMobile()
     
     const {
         title,

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useListsLogic } from '../hooks/useListsLogic'
@@ -6,28 +6,14 @@ import MediaCard from '../components/media/MediaCard'
 import { VirtuosoGrid } from 'react-virtuoso'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import { deleteList } from '../services/profileService'
+import { useMobile } from '../contexts/useMobile'
 
 const ListsEditPage: React.FC = () => {
     usePageTitle('Trackist - Lists')
     const { id } = useParams<{ id: string }>()
     const hasInitializedRef = useRef(false)
 
-    // Mobile detection for responsive grid configuration
-    const [isMobile, setIsMobile] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return window.innerWidth < 768
-        }
-        return false
-    })
-
-    useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth < 768)
-        }
-
-        window.addEventListener('resize', handleResize)
-        return () => window.removeEventListener('resize', handleResize)
-    }, [])
+    const { isMobile } = useMobile()
     
     const {
         selectedList,

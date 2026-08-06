@@ -4,6 +4,7 @@ import { supabase } from './services/supabaseClient'
 import { updateLastActive } from './services/profileService'
 import type { User } from '@supabase/supabase-js'
 import { SearchProvider } from './contexts/SearchContext'
+import { MobileProvider } from './contexts/MobileProvider'
 import { useLibraryStore } from './stores/useLibraryStore'
 import { registerSW } from 'virtual:pwa-register'
 import Navbar from './components/layout/Navbar'
@@ -111,7 +112,7 @@ const AppContent: React.FC = () => {
         const registerServiceWorker = async () => {
             // Check if running in PWA mode (standalone mode)
             const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
-                         // @ts-ignore - iOS Safari specific property
+                         // @ts-expect-error - iOS Safari specific property
                          (window.navigator.standalone === true) ||
                          document.referrer.includes('android-app://')
 
@@ -261,7 +262,9 @@ const App: React.FC = () => {
     return (
         <BrowserRouter>
             <SearchProvider>
-                <AppContent />
+                <MobileProvider>
+                    <AppContent />
+                </MobileProvider>
             </SearchProvider>
         </BrowserRouter>
     )
