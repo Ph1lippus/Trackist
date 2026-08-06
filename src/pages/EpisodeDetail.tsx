@@ -7,7 +7,6 @@ import { supabase } from '../services/supabaseClient'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { createEpisodeDeepLink, openInStremio } from '../utils/stremioUtils'
 
 interface EpisodeData {
     id: number
@@ -242,16 +241,6 @@ const EpisodeDetail: React.FC = () => {
                                         <i className={watched ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash'}></i>
                                     </button>
                                 )}
-                                <button
-                                    className="detail-page__icon-btn"
-                                    onClick={() => {
-                                        const sharingLink = createEpisodeDeepLink(Number(id), tvDetails.external_ids?.imdb_id)
-                                        openInStremio(sharingLink)
-                                    }}
-                                    title="Open in Stremio"
-                                >
-                                    <i className="fa-solid fa-play"></i>
-                                </button>
                             </div>
                         </div>
                     </div>

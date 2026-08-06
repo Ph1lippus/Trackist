@@ -161,7 +161,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
                     }
                 }}
             >
-                {imgUrl && <img src={imgUrl} alt={displayTitle} loading="lazy" fetchPriority={priority ? "high" : "auto"} decoding="async" />}
+                {imgUrl && <img src={imgUrl} alt={displayTitle} fetchPriority={priority ? "high" : "auto"} decoding="async" />}
                 {!imgUrl && (
                     <div className="media-card__no-poster">
                         <span>{displayTitle}</span>

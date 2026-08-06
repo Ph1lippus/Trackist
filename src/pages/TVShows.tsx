@@ -162,24 +162,24 @@ const TVShows: React.FC = () => {
     }, [tvShowsWithProgress, committedQuery])
 
     // Container A: Currently Watching - only shows with 'watching' status
-    const currentlyWatching = filteredItems.filter(
+    const currentlyWatching = useMemo(() => filteredItems.filter(
         item => item.status === 'watching'
     ).sort((a, b) => {
         // Sort by updated_at (most recent first)
         const dateA = new Date(a.updated_at || 0)
         const dateB = new Date(b.updated_at || 0)
         return dateB.getTime() - dateA.getTime()
-    })
+    }), [filteredItems])
 
     // Container B: Watchlist (Not Started) - in watchlist with 0 episodes watched
-    const notStarted = filteredItems.filter(
+    const notStarted = useMemo(() => filteredItems.filter(
         item => item.status === 'planning'
     ).sort((a, b) => {
         // Sort by added_at (oldest first, newest last)
         const dateA = new Date(a.added_at || 0)
         const dateB = new Date(b.added_at || 0)
         return dateA.getTime() - dateB.getTime()
-    })
+    }), [filteredItems])
 
     const buildTmdbItem = (item: WatchlistItem): TMDBResult => ({
         id: item.tmdb_id as number,
@@ -232,14 +232,14 @@ const TVShows: React.FC = () => {
                     {currentlyWatching.length > 0 ? (
                         <VirtuosoGrid
                             increaseViewportBy={{
-                                        top: isMobile ? 500 : 1000,
-                                        bottom: isMobile ? 1500 : 2500,
-                                    }}
+                                top: isMobile ? 600 : 1200,
+                                bottom: isMobile ? 2000 : 3000,
+                            }}
                             computeItemKey={(index) => currentlyWatching[index]?.id ?? index}
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={currentlyWatching}
-                            overscan={isMobile ? 500 : 1200}
+                            overscan={isMobile ? 800 : 1500}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = currentlyWatching[index]
@@ -272,14 +272,14 @@ const TVShows: React.FC = () => {
                     {notStarted.length > 0 ? (
                         <VirtuosoGrid
                             increaseViewportBy={{
-                                top: isMobile ? 500 : 1000,
-                                bottom: isMobile ? 1500 : 2500,
+                                top: isMobile ? 600 : 1200,
+                                bottom: isMobile ? 2000 : 3000,
                             }}
                             computeItemKey={(index) => notStarted[index]?.id ?? index}
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={notStarted}
-                            overscan={isMobile ? 500 : 800}
+                            overscan={isMobile ? 800 : 1500}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = notStarted[index]

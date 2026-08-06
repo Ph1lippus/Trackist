@@ -85,24 +85,24 @@ const Movies: React.FC = () => {
     }
 
     // Container A: To Watch (Released movies in planning status)
-    const watchlistItems = filteredItems.filter(item => 
+    const watchlistItems = useMemo(() => filteredItems.filter(item => 
         item.status === 'planning' && isMovieReleased(item)
     ).sort((a, b) => {
         // Sort by added_at (oldest first to newest at the end)
         const dateA = new Date(a.added_at || 0)
         const dateB = new Date(b.added_at || 0)
         return dateA.getTime() - dateB.getTime()
-    })
+    }), [filteredItems])
 
     // Container B: Not Released (Movies that haven't been released yet)
-    const notReleasedItems = filteredItems.filter(item => 
+    const notReleasedItems = useMemo(() => filteredItems.filter(item => 
         item.status === 'planning' && !isMovieReleased(item)
     ).sort((a, b) => {
         // Sort by release date (soonest first)
         const dateA = new Date(a.release_date || '9999-12-31')
         const dateB = new Date(b.release_date || '9999-12-31')
         return dateA.getTime() - dateB.getTime()
-    })
+    }), [filteredItems])
 
     return (
         <div className="discover-page">
@@ -114,14 +114,14 @@ const Movies: React.FC = () => {
                     {watchlistItems.length > 0 ? (
                         <VirtuosoGrid
                             increaseViewportBy={{
-                                top: isMobile ? 500 : 1000,
-                                bottom: isMobile ? 1500 : 2500,
+                                top: isMobile ? 600 : 1200,
+                                bottom: isMobile ? 2000 : 3000,
                             }}
                             computeItemKey={(index) => watchlistItems[index]?.id ?? index}
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={watchlistItems}
-                            overscan={isMobile ? 500 : 800}
+                            overscan={isMobile ? 800 : 1500}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = watchlistItems[index]
@@ -162,14 +162,14 @@ const Movies: React.FC = () => {
                     {notReleasedItems.length > 0 ? (
                         <VirtuosoGrid
                             increaseViewportBy={{
-                                        top: isMobile ? 500 : 1000,
-                                        bottom: isMobile ? 1500 : 2500,
-                                    }}
+                                top: isMobile ? 600 : 1200,
+                                bottom: isMobile ? 2000 : 3000,
+                            }}
                             computeItemKey={(index) => notReleasedItems[index]?.id ?? index}
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={notReleasedItems}
-                            overscan={isMobile ? 500 : 1200}
+                            overscan={isMobile ? 800 : 1500}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = notReleasedItems[index]
