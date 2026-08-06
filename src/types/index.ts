@@ -58,6 +58,13 @@ export interface TMDBResult {
     content_ratings?: {
         results?: Array<{ iso_3166_1: string; rating: string }>
     }
+    external_ids?: {
+        imdb_id?: string
+        tvdb_id?: number
+        facebook_id?: string
+        instagram_id?: string
+        twitter_id?: string
+    }
 }
 
 export interface WatchlistItem {

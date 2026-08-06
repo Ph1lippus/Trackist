@@ -36,10 +36,14 @@ const extractImdbId = (imdbId?: string): string => {
  * @param title - The title of the movie (for the URL)
  * @returns The sharing URL
  */
-export const createMovieDeepLink = (tmdbId: number, imdbId?: string, title?: string): string => {
-  const safeTitle = title ? sanitizeTitle(title) : 'movie'
-  const id = imdbId ? extractImdbId(imdbId) : tmdbId.toString()
-  return `https://www.strem.io/s/movie/${safeTitle}-${id}`
+export const createMovieDeepLink = (tmdbId: number, imdbId?: string): string => {
+    // Use IMDB ID if available (with tt prefix)
+    if (imdbId) {
+        const cleanImdb = imdbId.startsWith('tt') ? imdbId : `tt${imdbId}`
+        return `stremio:///detail/movie/${cleanImdb}`
+    }
+    // Fallback to TMDB ID
+    return `stremio:///detail/movie/tmdb/${tmdbId}`
 }
 
 /**
@@ -49,10 +53,12 @@ export const createMovieDeepLink = (tmdbId: number, imdbId?: string, title?: str
  * @param title - The title of the TV show (for the URL)
  * @returns The sharing URL
  */
-export const createTVShowDeepLink = (tmdbId: number, imdbId?: string, title?: string): string => {
-  const safeTitle = title ? sanitizeTitle(title) : 'series'
-  const id = imdbId ? extractImdbId(imdbId) : tmdbId.toString()
-  return `https://www.strem.io/s/series/${safeTitle}-${id}`
+export const createTVDeepLink = (tmdbId: number, imdbId?: string): string => {
+    if (imdbId) {
+        const cleanImdb = imdbId.startsWith('tt') ? imdbId : `tt${imdbId}`
+        return `stremio:///detail/series/${cleanImdb}`
+    }
+    return `stremio:///detail/series/tmdb/${tmdbId}`
 }
 
 /**
@@ -74,6 +80,16 @@ export const createEpisodeDeepLink = (tmdbId: number, season: number, episode: n
  * Opens a Stremio sharing link
  * @param sharingLink - The sharing URL to open
  */
-export const openInStremio = (sharingLink: string): void => {
-  window.open(sharingLink, '_blank')
+export const openInStremio = (url: string) => {
+    if (!url) return
+
+    // Try direct navigation (most reliable)
+    window.location.href = url
+
+    // Fallback: if the browser blocks custom protocols, open in a new tab
+    setTimeout(() => {
+        if (!document.hidden) {
+            window.open(url, '_blank')
+        }
+    }, 2000)
 }
