@@ -596,6 +596,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 throw error
             }
 
+            // Invalidate cache to ensure the enhanced data is reflected across the app
+            const { invalidateUserCache } = await import('../services/cacheService')
+            await invalidateUserCache()
+
             // Update cache with new data
             const { data: { user } } = await supabase.auth.getUser()
             if (user) {
@@ -631,6 +635,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
             // For TV shows, fetch total episodes and seasons from TMDB if missing
             let enhancedData = { ...data }
+            let needsDbUpdate = false
             if ((data.media_type === 'tv' || data.media_type === 'anime') && data.tmdb_id && (!data.total_episodes || !data.total_seasons)) {
                 try {
                     const { getTVDetails } = await import('../services/tmdbService')
@@ -640,8 +645,29 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                         total_episodes: details.number_of_episodes || 0,
                         total_seasons: details.number_of_seasons || 1,
                     }
+                    needsDbUpdate = true
                 } catch (tmdbError) {
                     console.error('Failed to fetch TV details for episode count:', tmdbError)
+                }
+            }
+
+            // If we enhanced the data, save it to the database
+            if (needsDbUpdate) {
+                const { error: updateError } = await supabase
+                    .from('watchlist')
+                    .update({
+                        total_episodes: enhancedData.total_episodes,
+                        total_seasons: enhancedData.total_seasons,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', id)
+
+                if (updateError) {
+                    console.error('Failed to update total episodes in database:', updateError)
+                } else {
+                    // Invalidate cache to ensure the updated data is reflected across the app
+                    const { invalidateUserCache } = await import('../services/cacheService')
+                    await invalidateUserCache()
                 }
             }
 
