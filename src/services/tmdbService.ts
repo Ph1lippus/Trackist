@@ -1,7 +1,6 @@
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY
 const FANART_API_KEY = import.meta.env.VITE_FANART_API_KEY
 const BASE_URL = 'https://api.themoviedb.org/3'
-const IMAGE_BASE = 'https://image.tmdb.org/t/p/w500'
 const IMAGE_BASE_ORIGINAL = 'https://image.tmdb.org/t/p/original'
 const FANART_BASE = 'https://webservice.fanart.tv/v3'
 
@@ -177,9 +176,9 @@ export const getTVSeasons = async (id: number, seasonNumber: number) => {
     return res.json()
 }
 
-export const imageUrl = (path: string | null) => {
+export const imageUrl = (path: string | null, size: string = 'w500') => {
     if (!path) return null
-    return `${IMAGE_BASE}${path}`
+    return `https://image.tmdb.org/t/p/${size}${path}`
 }
 
 export const imageUrlOriginal = (path: string | null) => {

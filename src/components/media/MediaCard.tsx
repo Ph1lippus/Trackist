@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react'
+import React, { useMemo, useCallback, useState, useEffect } from 'react'
 import { imageUrl } from '../../services/tmdbService'
 import type { TMDBResult } from '../../types'
 import { Link } from "react-router-dom"
@@ -16,8 +16,8 @@ export interface MediaCardProps {
     onDelete?: (item: ResultItem) => void
     listMode?: boolean
     episodesLeft?: number
+    priority?: boolean
 }
-
 /**
  * Stable, memoized media card.
  *
@@ -38,13 +38,32 @@ const MediaCard: React.FC<MediaCardProps> = ({
     onDelete,
     listMode = false,
     episodesLeft,
+    priority = false,
 }) => {
-    
+    const [isMobile, setIsMobile] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return window.innerWidth < 768
+        }
+        return false
+    })
+
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 768)
+        }
+
+        window.addEventListener('resize', handleResize)
+        return () => window.removeEventListener('resize', handleResize)
+    }, [])
+
     const isPerson = item.media_type === 'person'
 
     const imgUrl = useMemo(
-        () => (isPerson ? imageUrl(item.profile_path ?? null) : imageUrl(item.poster_path ?? null)),
-        [isPerson, item.profile_path, item.poster_path],
+        () => {
+            const imageSize = isMobile ? 'w185' : 'w342'
+            return isPerson ? imageUrl(item.profile_path ?? null, imageSize) : imageUrl(item.poster_path ?? null, imageSize)
+        },
+        [isPerson, item.profile_path, item.poster_path, isMobile],
     )
 
     const displayTitle = useMemo(
@@ -117,7 +136,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
     return (
         <article className="media-card">
             <Link to={href} className="media-card__poster">
-                {imgUrl && <img src={imgUrl} alt={displayTitle} loading="lazy" />}
+                {imgUrl && <img src={imgUrl} alt={displayTitle} loading="lazy" fetchPriority={priority ? "high" : "auto"} decoding="async" />}
                 {!imgUrl && (
                     <div className="media-card__no-poster">
                         <span>{displayTitle}</span>
@@ -212,6 +231,7 @@ export default React.memo(MediaCard, (prev, next) => {
         prev.onAddToList === next.onAddToList &&
         prev.onDelete === next.onDelete &&
         prev.listMode === next.listMode &&
-        prev.episodesLeft === next.episodesLeft
+        prev.episodesLeft === next.episodesLeft &&
+        prev.priority === next.priority
     )
 })
