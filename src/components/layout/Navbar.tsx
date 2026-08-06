@@ -25,7 +25,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [showInstallButton, setShowInstallButton] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
-    const [isLocal, setIsLocal] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
     const searchBoxRef = useRef<HTMLDivElement>(null);
@@ -103,12 +102,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         return () => {
             document.removeEventListener('fullscreenchange', handleFullscreenChange);
         };
-    }, []);
-
-    // Check if running locally
-    useEffect(() => {
-        const hostname = window.location.hostname;
-        setIsLocal(hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '');
     }, []);
 
     const closeMenu = useCallback(() => {
@@ -343,17 +336,15 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                         <span className="hamburger-line"></span>
                                     </div>
                                 </button>
-                                {isLocal && (
-                                    <button
-                                        className="navbar-menu-btn"
-                                        onClick={handleFullscreenToggle}
-                                        aria-label={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-                                        title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-                                        style={{ marginLeft: '0.5rem' }}
-                                    >
-                                        <i className={isFullscreen ? "fa-solid fa-compress" : "fa-solid fa-expand"}></i>
-                                    </button>
-                                )}
+                                <button
+                                    className="navbar-menu-btn"
+                                    onClick={handleFullscreenToggle}
+                                    aria-label={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+                                    title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+                                    style={{ marginLeft: '0.5rem' }}
+                                >
+                                    <i className={isFullscreen ? "fa-solid fa-compress" : "fa-solid fa-expand"}></i>
+                                </button>
                                 <div
                                     ref={menuRef}
                                     className={`t-dropdown ${menuOpen ? (closing ? 'is-closing' : 'is-open') : ''}`}
