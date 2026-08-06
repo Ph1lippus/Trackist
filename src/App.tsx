@@ -5,10 +5,12 @@ import { updateLastActive } from './services/profileService'
 import type { User } from '@supabase/supabase-js'
 import { SearchProvider } from './contexts/SearchContext'
 import { useLibraryStore } from './stores/useLibraryStore'
+import { registerSW } from 'virtual:pwa-register'
 import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 import SecondaryNavbar from './components/layout/SecondaryNavbar'
 import MobileBottomNavbar from './components/layout/MobileBottomNavbar'
+import PWAUpdateModal from './components/modals/PWAUpdateModal'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -47,6 +49,9 @@ const AppContent: React.FC = () => {
     const [loading, setLoading] = useState(true)
     const [currentMonth, setCurrentMonth] = useState(new Date())
     const hasUpdatedLastActive = useRef(false)
+    const [showUpdateModal, setShowUpdateModal] = useState(false)
+    const [updateLoading, setUpdateLoading] = useState(false)
+    const [updateSW, setUpdateSW] = useState<((reloadPage?: boolean) => Promise<void>) | null>(null)
 
     const isDetailPage = location.pathname.match(/^\/(movie|tv|person)\/\d+$/) || location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/)
 
@@ -100,6 +105,51 @@ const AppContent: React.FC = () => {
             void useLibraryStore.getState().fetchInitialLibrary(user.id)
         }
     }, [loading, user])
+
+    // PWA service worker registration
+    useEffect(() => {
+        const registerServiceWorker = async () => {
+            try {
+                const swUpdate = registerSW({
+                    onNeedRefresh() {
+                        setShowUpdateModal(true)
+                    },
+                    onOfflineReady() {
+                        console.log('App is ready for offline use')
+                    },
+                    onRegistered(registration) {
+                        console.log('Service worker registered:', registration)
+                    },
+                    onRegisterError(error: Error) {
+                        console.error('Service worker registration error:', error)
+                    }
+                })
+                setUpdateSW(() => swUpdate)
+            } catch (error) {
+                console.error('Failed to register service worker:', error)
+            }
+        }
+
+        registerServiceWorker()
+    }, [])
+
+    const handleUpdate = async () => {
+        if (!updateSW) return
+
+        setUpdateLoading(true)
+        try {
+            await updateSW(true)
+            // The page will reload automatically after update
+        } catch (error) {
+            console.error('Failed to update:', error)
+            setUpdateLoading(false)
+            setShowUpdateModal(false)
+        }
+    }
+
+    const handleDismissUpdate = () => {
+        setShowUpdateModal(false)
+    }
 
     if (loading) {
         return (
@@ -185,6 +235,12 @@ const AppContent: React.FC = () => {
             <SecondaryNavbar />
             <MobileBottomNavbar />
             {!hideFooter && !isDetailPage && <Footer />}
+            <PWAUpdateModal
+                isOpen={showUpdateModal}
+                onUpdate={handleUpdate}
+                onDismiss={handleDismissUpdate}
+                confirmLoading={updateLoading}
+            />
         </div>
     )
 }

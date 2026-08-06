@@ -18,6 +18,9 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .navbar-menu-btn{
+        display:none;
+    }
     .detail-page__genres{
         display: flex;
         flex-wrap: wrap;
