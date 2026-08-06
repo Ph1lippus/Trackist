@@ -68,7 +68,7 @@ interface DiscoverState {
     fetchData: (pageNum?: number) => Promise<void>
     loadInitialPages: (pagesToLoad?: number) => Promise<void>
     fetchGenres: () => Promise<void>
-    syncWatchlistIds: () => void
+    fetchWatchlistIds: () => Promise<void>
     setIsVisible: (visible: boolean) => void
     setFilters: (filters: Partial<DiscoverState>) => void
 }
@@ -172,8 +172,12 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
 
         await useLibraryStore.getState().addItem(newItem)
         
-        // Sync with library store's watchlistIds after adding
-        get().syncWatchlistIds()
+        // Manually update discover store's watchlistIds
+        set((state) => {
+            const newSet = new Set(state.watchlistIds)
+            newSet.add(id)
+            return { watchlistIds: newSet }
+        })
     },
 
     removeFromWatchlist: async (id) => {
@@ -186,16 +190,24 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
 
         if (libraryItem) {
             await useLibraryStore.getState().removeItem(libraryItem.id)
+            // Manually update discover store's watchlistIds
+            set((state) => {
+                const newSet = new Set(state.watchlistIds)
+                newSet.delete(id)
+                return { watchlistIds: newSet }
+            })
         } else {
             await supabase
                 .from('watchlist')
                 .delete()
                 .eq('user_id', user.id)
                 .eq('tmdb_id', id)
+            set((state) => {
+                const newSet = new Set(state.watchlistIds)
+                newSet.delete(id)
+                return { watchlistIds: newSet }
+            })
         }
-        
-        // Sync with library store's watchlistIds after removing
-        get().syncWatchlistIds()
     },
 
     saveScroll: () => set({ scrollY: window.scrollY }),
@@ -252,11 +264,17 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
 
     setFilters: (filters) => set(filters),
 
-    syncWatchlistIds: () => {
-        // Sync with library store's watchlistIds instead of fetching separately
-        // This ensures consistency between the two stores
-        const libraryWatchlistIds = useLibraryStore.getState().watchlistIds
-        set({ watchlistIds: libraryWatchlistIds })
+    fetchWatchlistIds: async () => {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+        const { data } = await supabase
+            .from('watchlist')
+            .select('tmdb_id')
+            .eq('user_id', user.id)
+        if (data) {
+            const ids = new Set(data.map(item => item.tmdb_id).filter((id): id is number => id != null))
+            set({ watchlistIds: ids })
+        }
     },
 
     fetchGenres: async () => {
@@ -686,7 +704,6 @@ export const useDiscoverActions = () => {
         saveScroll: state.saveScroll,
         addToWatchlist: state.addToWatchlist,
         removeFromWatchlist: state.removeFromWatchlist,
-        syncWatchlistIds: state.syncWatchlistIds,
     }))
     return useDiscoverStore(selector)
 }

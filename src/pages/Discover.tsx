@@ -38,10 +38,10 @@ const Discover: React.FC = () => {
     // Search is now handled globally via navbar
     // const [searchInput, setSearchInput] = useState(filters.query)
     
-    // Fetch genres and sync watchlist IDs on mount
+    // Fetch genres and watchlist IDs on mount
     useEffect(() => {
         store.fetchGenres()
-        store.syncWatchlistIds()
+        store.fetchWatchlistIds()
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
