@@ -106,9 +106,20 @@ const AppContent: React.FC = () => {
         }
     }, [loading, user])
 
-    // PWA service worker registration
+    // PWA service worker registration - only for PWA context
     useEffect(() => {
         const registerServiceWorker = async () => {
+            // Check if running in PWA mode (standalone mode)
+            const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+                         window.navigator.standalone === true ||
+                         document.referrer.includes('android-app://')
+
+            // Only register service worker and show updates in PWA mode
+            if (!isPWA) {
+                console.log('Not running in PWA mode, skipping service worker registration')
+                return
+            }
+
             try {
                 const swUpdate = registerSW({
                     onNeedRefresh() {
