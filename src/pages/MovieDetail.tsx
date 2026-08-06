@@ -8,6 +8,7 @@ import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult, WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
+import { createMovieDeepLink, openInStremio, createStremioWebUrl } from '../utils/stremioUtils'
 
 const MovieDetail: React.FC = () => {
     usePageTitle('Trackist - Movie Detail')
@@ -299,6 +300,17 @@ const MovieDetail: React.FC = () => {
                                     <i className="fa-solid fa-users"></i>
                                 </button>
                             )}
+                            <button 
+                                className="detail-page__icon-btn"
+                                onClick={() => {
+                                    const deepLink = createMovieDeepLink(details.id)
+                                    const webUrl = createStremioWebUrl('movie', details.id)
+                                    openInStremio(deepLink, webUrl)
+                                }}
+                                title="Open in Stremio"
+                            >
+                                <i className="fa-solid fa-play"></i>
+                            </button>
                             {!isInWatchlist ? (
                                 <>
                                     <button 

@@ -21,6 +21,10 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const [menuOpen, setMenuOpen] = useState(false);
     const [closing, setClosing] = useState(false);
     const [showFixModal, setShowFixModal] = useState(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+    const [showInstallButton, setShowInstallButton] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
     const searchBoxRef = useRef<HTMLDivElement>(null);
@@ -72,6 +76,34 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         return () => subscription.unsubscribe();
     }, []);
 
+    // PWA install prompt handling
+    useEffect(() => {
+        const handleBeforeInstallPrompt = (e: Event) => {
+            e.preventDefault();
+            setDeferredPrompt(e);
+            setShowInstallButton(true);
+        };
+
+        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+        return () => {
+            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+        };
+    }, []);
+
+    // Check fullscreen state
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+        };
+    }, []);
+
     const closeMenu = useCallback(() => {
         setClosing(true);
         setTimeout(() => {
@@ -120,6 +152,33 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
             await clearAllCache();
             // Reload the page to refresh all data
             window.location.reload();
+        }
+    };
+
+    const handleInstallClick = async () => {
+        if (!deferredPrompt) return;
+
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+
+        if (outcome === 'accepted') {
+            setShowInstallButton(false);
+        }
+
+        setDeferredPrompt(null);
+    };
+
+    const handleFullscreenToggle = () => {
+        closeMenu();
+
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch((err) => {
+                console.error(`Error attempting to enable fullscreen: ${err.message}`);
+            });
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
         }
     };
 
@@ -289,6 +348,16 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                     }}>
                                         <i className="fa-solid fa-user"></i>
                                         Profile
+                                    </button>
+                                    {showInstallButton && (
+                                        <button className="t-dropdown-item" onClick={handleInstallClick}>
+                                            <i className="fa-solid fa-download"></i>
+                                            Install App
+                                        </button>
+                                    )}
+                                    <button className="t-dropdown-item" onClick={handleFullscreenToggle}>
+                                        <i className={isFullscreen ? "fa-solid fa-compress" : "fa-solid fa-expand"}></i>
+                                        {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
                                     </button>
                                     <button className="t-dropdown-item" onClick={() => {
                                         closeMenu();
