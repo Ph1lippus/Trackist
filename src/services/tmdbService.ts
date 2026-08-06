@@ -103,7 +103,7 @@ export const getTopRatedTV = async (page: number = 1): Promise<{ results: TMDBRe
 
 export const getMovieDetails = async (id: number) => {
     const res = await fetch(
-        `${BASE_URL}/movie/${id}?api_key=${API_KEY}&append_to_response=credits,videos,images,release_dates,watch/providers&include_image_language=en,null`
+        `${BASE_URL}/movie/${id}?api_key=${API_KEY}&append_to_response=credits,videos,images,release_dates,watch/providers,external_ids&include_image_language=en,null`
     )
     if (!res.ok) {
         throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
@@ -117,7 +117,7 @@ export const getTVDetails = async (id: number) => {
         id,
         async () => {
             const res = await fetch(
-                `${BASE_URL}/tv/${id}?api_key=${API_KEY}&append_to_response=credits,videos,aggregate_credits,images,watch/providers,content_ratings&include_image_language=en,null`
+                `${BASE_URL}/tv/${id}?api_key=${API_KEY}&append_to_response=credits,videos,aggregate_credits,images,watch/providers,content_ratings,external_ids&include_image_language=en,null`
             )
             return res.json()
         },

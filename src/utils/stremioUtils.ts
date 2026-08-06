@@ -1,34 +1,47 @@
 /**
  * Stremio deep link utilities
  * Functions to construct and handle Stremio app deep links
+ * Supports both IMDB and TMDB IDs, preferring IMDB when available
  */
 
 /**
  * Creates a Stremio deep link for a movie
- * @param tmdbId - The TMDB ID of the movie
+ * @param tmdbId - The TMDB ID of the movie (fallback)
+ * @param imdbId - The IMDB ID of the movie (preferred)
  * @returns The deep link URL
  */
-export const createMovieDeepLink = (tmdbId: number): string => {
+export const createMovieDeepLink = (tmdbId: number, imdbId?: string): string => {
+  if (imdbId) {
+    return `stremio://detail/movie/imdb:${imdbId}`
+  }
   return `stremio://detail/movie/tmdb:${tmdbId}`
 }
 
 /**
  * Creates a Stremio deep link for a TV show
- * @param tmdbId - The TMDB ID of the TV show
+ * @param tmdbId - The TMDB ID of the TV show (fallback)
+ * @param imdbId - The IMDB ID of the TV show (preferred)
  * @returns The deep link URL
  */
-export const createTVShowDeepLink = (tmdbId: number): string => {
+export const createTVShowDeepLink = (tmdbId: number, imdbId?: string): string => {
+  if (imdbId) {
+    return `stremio://detail/series/imdb:${imdbId}`
+  }
   return `stremio://detail/series/tmdb:${tmdbId}`
 }
 
 /**
  * Creates a Stremio deep link for a specific episode
- * @param tmdbId - The TMDB ID of the TV show
+ * @param tmdbId - The TMDB ID of the TV show (fallback)
+ * @param imdbId - The IMDB ID of the TV show (preferred)
  * @param season - The season number
  * @param episode - The episode number
  * @returns The deep link URL
  */
-export const createEpisodeDeepLink = (tmdbId: number, season: number, episode: number): string => {
+export const createEpisodeDeepLink = (tmdbId: number, season: number, episode: number, imdbId?: string): string => {
+  if (imdbId) {
+    return `stremio://detail/series/imdb:${imdbId}:${season}:${episode}`
+  }
   return `stremio://detail/series/tmdb:${tmdbId}:${season}:${episode}`
 }
 
@@ -64,7 +77,8 @@ export const openInStremio = (deepLink: string, webFallback?: string): void => {
 /**
  * Creates a web fallback URL for Stremio
  * @param type - 'movie' or 'series'
- * @param tmdbId - The TMDB ID
+ * @param tmdbId - The TMDB ID (fallback)
+ * @param imdbId - The IMDB ID (preferred)
  * @param season - Optional season number for series
  * @param episode - Optional episode number for series
  * @returns The web URL
@@ -72,18 +86,20 @@ export const openInStremio = (deepLink: string, webFallback?: string): void => {
 export const createStremioWebUrl = (
   type: 'movie' | 'series',
   tmdbId: number,
+  imdbId?: string,
   season?: number,
   episode?: number
 ): string => {
   const baseUrl = 'https://web.stremio.com'
+  const idPrefix = imdbId ? `imdb:${imdbId}` : `tmdb:${tmdbId}`
   
   if (type === 'movie') {
-    return `${baseUrl}/#/detail/movie/tmdb:${tmdbId}`
+    return `${baseUrl}/#/detail/movie/${idPrefix}`
   } else if (type === 'series') {
     if (season !== undefined && episode !== undefined) {
-      return `${baseUrl}/#/detail/series/tmdb:${tmdbId}:${season}:${episode}`
+      return `${baseUrl}/#/detail/series/${idPrefix}:${season}:${episode}`
     }
-    return `${baseUrl}/#/detail/series/tmdb:${tmdbId}`
+    return `${baseUrl}/#/detail/series/${idPrefix}`
   }
   
   return baseUrl

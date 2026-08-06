@@ -248,8 +248,8 @@ const EpisodeDetail: React.FC = () => {
                                 <button
                                     className="detail-page__icon-btn"
                                     onClick={() => {
-                                        const deepLink = createEpisodeDeepLink(Number(id), Number(season), Number(episode))
-                                        const webUrl = createStremioWebUrl('series', Number(id), Number(season), Number(episode))
+                                        const deepLink = createEpisodeDeepLink(Number(id), Number(season), Number(episode), tvDetails.external_ids?.imdb_id)
+                                        const webUrl = createStremioWebUrl('series', Number(id), tvDetails.external_ids?.imdb_id, Number(season), Number(episode))
                                         openInStremio(deepLink, webUrl)
                                     }}
                                     title="Open in Stremio"

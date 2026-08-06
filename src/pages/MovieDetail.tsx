@@ -303,8 +303,8 @@ const MovieDetail: React.FC = () => {
                             <button 
                                 className="detail-page__icon-btn"
                                 onClick={() => {
-                                    const deepLink = createMovieDeepLink(details.id)
-                                    const webUrl = createStremioWebUrl('movie', details.id)
+                                    const deepLink = createMovieDeepLink(details.id, details.external_ids?.imdb_id)
+                                    const webUrl = createStremioWebUrl('movie', details.id, details.external_ids?.imdb_id)
                                     openInStremio(deepLink, webUrl)
                                 }}
                                 title="Open in Stremio"
