@@ -2,6 +2,7 @@ import React, {
     useEffect,
     useCallback,
     useState,
+    memo,
 } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useSearch } from '../hooks/useSearch'
@@ -12,6 +13,20 @@ import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
 import { VirtuosoGrid } from 'react-virtuoso'
 import { useMobile } from '../contexts/useMobile'
+
+// Memoized item renderer to prevent re-mounts during scroll
+const DiscoverCard = memo(({ item, onAdd, isInWatchlist }: { 
+    item: TMDBResult
+    onAdd: (item: TMDBResult) => void
+    isInWatchlist: boolean
+}) => (
+    <MediaCard
+        item={item}
+        compact={item.media_type === "person"}
+        onAdd={onAdd}
+        isInWatchlist={isInWatchlist}
+    />
+))
 
 
 const Discover: React.FC = () => {
@@ -225,8 +240,8 @@ const Discover: React.FC = () => {
                             <VirtuosoGrid
                                 key={`${filters.mediaType}-${filters.sortBy}-${filters.selectedGenre ?? 'all'}-${filters.selectedYear ?? 'all'}-${filters.query}`}
                                 increaseViewportBy={{
-                                        top: isMobile ? 500 : 1000,
-                                        bottom: isMobile ? 1500 : 2500,
+                                        top: isMobile ? 600 : 1200,
+                                        bottom: isMobile ? 2000 : 3000,
                                     }}
                                 computeItemKey={(index) => visibleResults[index]?.id ?? index}
                                 style={{ height: '100%', width: '100%' }}
@@ -243,18 +258,16 @@ const Discover: React.FC = () => {
                                         actions.fetchData(store.page + 1)
                                     }
                                 }}
-                                overscan={isMobile ? 500 : 1200}
+                                overscan={isMobile ? 800 : 1500}
                                 listClassName="discover-grid"
                                 itemContent={(index) => {
                                     const item = visibleResults[index];
                                     if (!item) return null;
 
                                     return (
-                                        <MediaCard
+                                        <DiscoverCard
                                             item={item}
-                                            compact={item.media_type === "person"}
                                             onAdd={handleAddToWatchlist}
-                                            // isInWatchlist={isInWatchlist(item.id)}
                                             isInWatchlist={watchlistIds.has(item.id)}
                                         />
                                     );

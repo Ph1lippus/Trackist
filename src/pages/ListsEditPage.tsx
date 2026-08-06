@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, memo } from 'react'
 import { useParams } from 'react-router-dom'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useListsLogic } from '../hooks/useListsLogic'
@@ -7,6 +7,19 @@ import { VirtuosoGrid } from 'react-virtuoso'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import { deleteList } from '../services/profileService'
 import { useMobile } from '../contexts/useMobile'
+import type { TMDBResult } from '../types'
+
+// Memoized item renderer to prevent re-mounts during scroll
+const BrowseCard = memo(({ item, onAdd }: { 
+    item: TMDBResult
+    onAdd: (item: TMDBResult) => void
+}) => (
+    <MediaCard
+        item={item}
+        onAddToList={onAdd}
+        isInWatchlist={false}
+    />
+))
 
 const ListsEditPage: React.FC = () => {
     usePageTitle('Trackist - Lists')
@@ -285,18 +298,18 @@ const ListsEditPage: React.FC = () => {
                             components={{ Footer }}
                             useWindowScroll={true}
                             increaseViewportBy={{
-                                top: isMobile ? 500 : 1000,
-                                bottom: isMobile ? 1500 : 2500,
+                                top: isMobile ? 600 : 1200,
+                                bottom: isMobile ? 2000 : 3000,
                             }}
-                            overscan={isMobile ? 500 : 800}
+                            overscan={isMobile ? 800 : 1500}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = filteredBrowseResults[index]
+                                if (!item) return null
                                 return (
-                                    <MediaCard
+                                    <BrowseCard
                                         item={item}
-                                        onAddToList={handleAddToList}
-                                        isInWatchlist={false}
+                                        onAdd={handleAddToList}
                                     />
                                 )
                             }}
