@@ -303,7 +303,7 @@ const MovieDetail: React.FC = () => {
                             <button 
                                 className="detail-page__icon-btn"
                                 onClick={() => {
-                                    const sharingLink = createMovieDeepLink(details.id, details.title)
+                                    const sharingLink = createMovieDeepLink(details.id, details.external_ids?.imdb_id, details.title)
                                     openInStremio(sharingLink)
                                 }}
                                 title="Open in Stremio"
