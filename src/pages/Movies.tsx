@@ -114,11 +114,15 @@ const Movies: React.FC = () => {
                     </div>
                     {watchlistItems.length > 0 ? (
                         <VirtuosoGrid
+                            increaseViewportBy={{
+                                top: isMobile ? 2000 : 1000,
+                                bottom: isMobile ? 4000 : 2500,
+                            }}
                             computeItemKey={(index) => watchlistItems[index]?.id ?? index}
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={watchlistItems}
-                            overscan={isMobile ? 800 : 800}
+                            overscan={isMobile ? 2000 : 800}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = watchlistItems[index]
@@ -159,14 +163,14 @@ const Movies: React.FC = () => {
                     {notReleasedItems.length > 0 ? (
                         <VirtuosoGrid
                             increaseViewportBy={{
-                                        top: isMobile ? 800 : 1000,
-                                        bottom: isMobile ? 1500 : 2500,
+                                        top: isMobile ? 2000 : 1000,
+                                        bottom: isMobile ? 4000 : 2500,
                                     }}
                             computeItemKey={(index) => notReleasedItems[index]?.id ?? index}
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={notReleasedItems}
-                            overscan={isMobile ? 800 : 1200}
+                            overscan={isMobile ? 2000 : 1200}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = notReleasedItems[index]

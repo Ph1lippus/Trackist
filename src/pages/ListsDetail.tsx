@@ -126,11 +126,15 @@ const ListsDetail: React.FC = () => {
         {/* Unwatched items section */}
         {filteredListItems.length > 0 && (
             <VirtuosoGrid
+                increaseViewportBy={{
+                    top: isMobile ? 2000 : 1000,
+                    bottom: isMobile ? 4000 : 2500,
+                }}
                 computeItemKey={(index) => filteredListItems[index]?.id ?? index}
                 style={{ height: '100%', width: '100%' }}
                 useWindowScroll={true}
                 data={filteredListItems}
-                overscan={isMobile ? 800 : 800}
+                overscan={isMobile ? 2000 : 800}
                 listClassName="discover-grid"
                 itemContent={(index) => {
                     const item = filteredListItems[index]
@@ -164,11 +168,15 @@ const ListsDetail: React.FC = () => {
                     )}
                 </h3>
                 <VirtuosoGrid
+                    increaseViewportBy={{
+                        top: isMobile ? 2000 : 1000,
+                        bottom: isMobile ? 4000 : 2500,
+                    }}
                     computeItemKey={(index) => filteredWatchedItems[index]?.id ?? index}
                     style={{ height: '100%', width: '100%' }}
                     useWindowScroll={true}
                     data={filteredWatchedItems}
-                    overscan={isMobile ? 800 : 800}
+                    overscan={isMobile ? 2000 : 800}
                     listClassName="discover-grid"
                     itemContent={(index) => {
                         const item = filteredWatchedItems[index]

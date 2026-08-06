@@ -111,11 +111,15 @@ const Finished: React.FC = () => {
                     </div>
                     {finishedTVShows.length > 0 ? (
                         <VirtuosoGrid
+                            increaseViewportBy={{
+                                top: isMobile ? 2000 : 1000,
+                                bottom: isMobile ? 4000 : 2500,
+                            }}
                             computeItemKey={(index) => finishedTVShows[index]?.id ?? index}
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={finishedTVShows}
-                            overscan={isMobile ? 800 : 800}
+                            overscan={isMobile ? 2000 : 800}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = finishedTVShows[index]
@@ -141,11 +145,15 @@ const Finished: React.FC = () => {
                     </div>
                     {finishedMovies.length > 0 ? (
                         <VirtuosoGrid
+                            increaseViewportBy={{
+                                top: isMobile ? 2000 : 1000,
+                                bottom: isMobile ? 4000 : 2500,
+                            }}
                             computeItemKey={(index) => finishedMovies[index]?.id ?? index}
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={finishedMovies}
-                            overscan={isMobile ? 800 : 800}
+                            overscan={isMobile ? 2000 : 800}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = finishedMovies[index]
