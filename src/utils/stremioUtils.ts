@@ -5,91 +5,62 @@
  */
 
 /**
- * Sanitizes a title for use in Stremio URLs
- * @param title - The title to sanitize
- * @returns The sanitized title
- */
-const sanitizeTitle = (title: string): string => {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '') // Remove special characters except spaces and hyphens
-    .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
-    .replace(/^-|-$/g, '') // Remove leading/trailing hyphens
-    || 'unknown'
-}
-
-/**
- * Extracts numeric ID from IMDB ID (removes 'tt' prefix if present)
- * @param imdbId - The IMDB ID (with or without 'tt' prefix)
- * @returns The numeric ID
- */
-const extractImdbId = (imdbId?: string): string => {
-  if (!imdbId) return ''
-  return imdbId.replace(/^tt/, '')
-}
-
-/**
  * Creates a Stremio sharing link for a movie
  * @param tmdbId - The TMDB ID of the movie (fallback)
  * @param imdbId - The IMDB ID of the movie (preferred)
- * @param title - The title of the movie (for the URL)
  * @returns The sharing URL
  */
 export const createMovieDeepLink = (tmdbId: number, imdbId?: string): string => {
-    // Use IMDB ID if available (with tt prefix)
     if (imdbId) {
         const cleanImdb = imdbId.startsWith('tt') ? imdbId : `tt${imdbId}`
-        return `stremio:///detail/movie/${cleanImdb}`
+        return `stremio://detail/movie/${cleanImdb}`
     }
-    // Fallback to TMDB ID
-    return `stremio:///detail/movie/tmdb/${tmdbId}`
+    return `stremio://detail/movie/tmdb/${tmdbId}`
 }
 
 /**
  * Creates a Stremio sharing link for a TV show
  * @param tmdbId - The TMDB ID of the TV show (fallback)
  * @param imdbId - The IMDB ID of the TV show (preferred)
- * @param title - The title of the TV show (for the URL)
  * @returns The sharing URL
  */
 export const createTVDeepLink = (tmdbId: number, imdbId?: string): string => {
     if (imdbId) {
         const cleanImdb = imdbId.startsWith('tt') ? imdbId : `tt${imdbId}`
-        return `stremio:///detail/series/${cleanImdb}`
+        return `stremio://detail/series/${cleanImdb}`
     }
-    return `stremio:///detail/series/tmdb/${tmdbId}`
+    return `stremio://detail/series/tmdb/${tmdbId}`
 }
 
 /**
  * Creates a Stremio sharing link for a specific episode
  * @param tmdbId - The TMDB ID of the TV show (fallback)
- * @param imdbId - The IMDB ID of the TV show (preferred)
  * @param season - The season number
  * @param episode - The episode number
- * @param title - The title of the TV show (for the URL)
+ * @param imdbId - The IMDB ID of the TV show (preferred)
  * @returns The sharing URL
  */
-export const createEpisodeDeepLink = (tmdbId: number, season: number, episode: number, imdbId?: string, title?: string): string => {
-  const safeTitle = title ? sanitizeTitle(title) : 'series'
-  const id = imdbId ? extractImdbId(imdbId) : tmdbId.toString()
-  return `https://www.strem.io/s/series/${safeTitle}-${id}:${season}:${episode}`
+export const createEpisodeDeepLink = (tmdbId: number, season: number, episode: number, imdbId?: string): string => {
+    if (imdbId) {
+        const cleanImdb = imdbId.startsWith('tt') ? imdbId : `tt${imdbId}`
+        return `stremio://detail/series/${cleanImdb}?season=${season}&episode=${episode}`
+    }
+    return `stremio://detail/series/tmdb/${tmdbId}?season=${season}&episode=${episode}`
 }
 
 /**
  * Opens a Stremio sharing link
- * @param sharingLink - The sharing URL to open
+ * @param url - The sharing URL to open
  */
 export const openInStremio = (url: string) => {
     if (!url) return
 
-    // Try direct navigation (most reliable)
-    window.location.href = url
+    const iframe = document.createElement('iframe')
+    iframe.style.display = 'none'
+    iframe.src = url
+    document.body.appendChild(iframe)
 
-    // Fallback: if the browser blocks custom protocols, open in a new tab
     setTimeout(() => {
-        if (!document.hidden) {
-            window.open(url, '_blank')
-        }
+        document.body.removeChild(iframe)
     }, 2000)
 }
