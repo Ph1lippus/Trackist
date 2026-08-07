@@ -54,6 +54,10 @@ const UpcomingNew: React.FC = () => {
     const [upcomingItems, setUpcomingItems] = useState<UpcomingItem[]>([])
     const [loading, setLoading] = useState(true)
 
+    const scrollToTop = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
     useEffect(() => {
         const fetchUpcoming = async () => {
             const { data: { user } } = await supabase.auth.getUser()
@@ -209,15 +213,11 @@ const UpcomingNew: React.FC = () => {
                                                     </p>
                                                 )}
 
-                                                {item.type === 'movie' && (
-                                                    <p className="upcoming-new-card-movie-release">
-                                                        Movie Release
-                                                    </p>
-                                                )}
-
-                                                <div className="upcoming-new-card-date">
-                                                    {formatDateString(item.date, { month: 'short', day: 'numeric', year: 'numeric' })}
-                                                </div>
+                                                 {item.type === 'movie' && (
+                                                     <p className="upcoming-new-card-movie-release">
+                                                         Movie Release
+                                                     </p>
+                                                 )}
                                             </div>
 
                                             <div className="upcoming-new-card-arrow">
@@ -231,6 +231,9 @@ const UpcomingNew: React.FC = () => {
                     </div>
                 )}
             </div>
+            <button className="upcoming-new-scroll-top" onClick={scrollToTop} aria-label="Scroll to top" title="Back to top">
+                <i className="fas fa-arrow-up"></i>
+            </button>
         </section>
     )
 }

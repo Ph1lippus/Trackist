@@ -3,17 +3,23 @@ import type { User } from '@supabase/supabase-js'
 import { supabase } from '../services/supabaseClient'
 import { getProfile } from '../services/profileService'
 
-/**
- * Shared auth hook that manages user session and optionally profile data.
- * Used by Navbar (with profile) and SecondaryNavbar (user only).
- */
+interface Profile {
+    id: string
+    display_name: string | null
+    role?: string | null
+    bio?: string | null
+    avatar_url?: string | null
+    created_at?: string
+    updated_at?: string
+}
+
 export const useAuth = (loadProfileData = false) => {
     const [user, setUser] = useState<User | null>(null)
-    const [profile, setProfile] = useState<{ display_name: string | null } | null>(null)
+    const [profile, setProfile] = useState<Profile | null>(null)
 
     const loadProfile = useCallback(async (userId: string) => {
         const { data } = await getProfile(userId)
-        setProfile(data)
+        setProfile(data as Profile | null)
     }, [])
 
     useEffect(() => {

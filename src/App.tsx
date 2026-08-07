@@ -28,6 +28,7 @@ import Profile from './pages/Profile'
 import Friends from './pages/Friends'
 import Statistics from './pages/Statistics'
 import EditProfile from './pages/EditProfile'
+import Admin from './pages/Admin'
 import MovieDetail from './pages/MovieDetail'
 import TVShowDetail from './pages/TVShowDetail'
 import PersonDetail from './pages/PersonDetail'
@@ -180,7 +181,7 @@ const AppContent: React.FC = () => {
         )
     }
 
-    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Friends', '/Statistics', '/Finished', '/Lists', '/Profile']
+    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Friends', '/Statistics', '/Finished', '/Lists', '/Profile', '/Admin']
     const hideFooter = Boolean(user) && (mediaPages.includes(location.pathname) || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname.startsWith('/Lists/') || location.pathname.startsWith('/Profile/'))
     
     const navigateMonth = (direction: number) => {
@@ -225,6 +226,7 @@ const AppContent: React.FC = () => {
                     <Route path="/Friends" element={user ? <Friends /> : <Navigate to="/login" replace />} />
                     <Route path="/Statistics" element={user ? <Statistics /> : <Navigate to="/login" replace />} />
                     <Route path="/Settings" element={user ? <Settings /> : <Navigate to="/login" replace />} />
+                    <Route path="/Admin" element={<Admin />} />
                     <Route path="/Credits" element={<Credits />} />
                     <Route path="/login" element={user ? <Navigate to="/Tvshows" replace /> : <Login />} />
                     <Route path="/register" element={user ? <Navigate to="/Tvshows" replace /> : <Register />} />

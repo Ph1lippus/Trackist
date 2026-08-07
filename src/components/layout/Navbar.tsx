@@ -25,6 +25,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [showInstallButton, setShowInstallButton] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
     const searchBoxRef = useRef<HTMLDivElement>(null);
@@ -66,11 +67,23 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         // Get initial session
         supabase.auth.getSession().then(({ data: { session } }) => {
             setUser(session?.user || null);
+            if (session?.user) {
+                supabase.from('profiles').select('role').eq('id', session.user.id).single().then(({ data }) => {
+                    setIsAdmin(data?.role === 'admin')
+                })
+            }
         });
 
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user || null);
+            if (session?.user) {
+                supabase.from('profiles').select('role').eq('id', session.user.id).single().then(({ data }) => {
+                    setIsAdmin(data?.role === 'admin')
+                })
+            } else {
+                setIsAdmin(false)
+            }
         });
 
         return () => subscription.unsubscribe();
@@ -322,6 +335,16 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                     {nickname}
                                 </NavLink>
                             </div>
+                            {isAdmin && (
+                                <NavLink
+                                    className={({ isActive }) =>
+                                        `navbar-action-link${isActive ? ' active' : ''}`
+                                    }
+                                    to="/Admin"
+                                >
+                                    <i className="fa-solid fa-shield-halved"></i>
+                                </NavLink>
+                            )}
                             <div className="t-dropdown-wrap">
                                 <button
                                     ref={buttonRef}
@@ -350,14 +373,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                     className={`t-dropdown ${menuOpen ? (closing ? 'is-closing' : 'is-open') : ''}`}
                                     data-origin="top-right"
                                 >
-                                <button className="t-dropdown-item" onClick={() => {
-                                        closeMenu();
-                                        navigate('/Profile');
-                                    }}>
-                                        <i className="fa-solid fa-user"></i>
-                                        Profile
-                                    </button>
-                                    {showInstallButton && (
+                                {showInstallButton && (
                                         <button className="t-dropdown-item" onClick={handleInstallClick}>
                                             <i className="fa-solid fa-download"></i>
                                             Install App
