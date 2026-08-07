@@ -28,6 +28,7 @@ const Admin: React.FC = () => {
     const [user, setUser] = useState<User | null>(null)
     const [profile, setProfile] = useState<{ role: string | null } | null>(null)
     const [loading, setLoading] = useState(true)
+    const [authError, setAuthError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<TabType>('overview')
     const [profiles, setProfiles] = useState<ProfileRow[]>([])
     const [stats, setStats] = useState<AdminStats>({
@@ -45,17 +46,30 @@ const Admin: React.FC = () => {
 
     useEffect(() => {
         const checkAuth = async () => {
-            const { data } = await supabase.auth.getUser()
-            setUser(data.user)
-            if (data.user) {
-                const { data: profileData } = await supabase
-                    .from('profiles')
-                    .select('role')
-                    .eq('id', data.user.id)
-                    .single()
-                setProfile(profileData)
+            try {
+                const { data } = await supabase.auth.getUser()
+                setUser(data.user)
+
+                if (data.user) {
+                    const { data: profileData, error: profileError } = await supabase
+                        .from('profiles')
+                        .select('role')
+                        .eq('id', data.user.id)
+                        .single()
+
+                    if (profileError) {
+                        console.error('Admin page: profile fetch error', profileError)
+                        setAuthError('Unable to verify permissions.')
+                    } else {
+                        setProfile(profileData)
+                    }
+                }
+            } catch (err) {
+                console.error('Admin page: auth error', err)
+                setAuthError('Authentication check failed.')
+            } finally {
+                setLoading(false)
             }
-            setLoading(false)
         }
         checkAuth()
     }, [])
@@ -122,11 +136,13 @@ const Admin: React.FC = () => {
 
             if (error) {
                 console.error('Failed to update role:', error)
+                alert('Failed to update role. Please try again.')
             } else {
                 setProfiles(prev => prev.map(p => p.id === roleConfirm.userId ? { ...p, role: roleConfirm.newRole } : p))
             }
         } catch (err) {
             console.error('Role update error:', err)
+            alert('An unexpected error occurred.')
         } finally {
             setRoleLoading(false)
             setRoleConfirm(null)
@@ -148,6 +164,29 @@ const Admin: React.FC = () => {
 
     if (!isAdmin || !user) {
         return <Navigate to="/" replace />
+    }
+
+    if (authError) {
+        return (
+            <section className="dashboard-page">
+                <div className="dashboard-shell">
+                    <div className="discover-loading">
+                        <p style={{ color: '#ff6b6b' }}>{authError}</p>
+                        <button className="discover-loading__retry" onClick={() => window.location.reload()}>Retry</button>
+                    </div>
+                </div>
+            </section>
+        )
+    }
+
+    const formatDate = (dateStr: string) => {
+        if (!dateStr) return '—'
+        const date = new Date(dateStr)
+        return date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        })
     }
 
     return (
@@ -176,22 +215,27 @@ const Admin: React.FC = () => {
                 {activeTab === 'overview' && (
                     <div className="admin-stats-grid">
                         <div className="stats-hero-card stats-hero-card--primary">
+                            <div className="stats-hero-card__icon"><i className="fas fa-users"></i></div>
                             <div className="stats-hero-card__value">{stats.totalUsers}</div>
                             <div className="stats-hero-card__label">Total Users</div>
                         </div>
                         <div className="stats-hero-card stats-hero-card--mint">
+                            <div className="stats-hero-card__icon"><i className="fas fa-bookmark"></i></div>
                             <div className="stats-hero-card__value">{stats.totalWatchlistItems.toLocaleString()}</div>
                             <div className="stats-hero-card__label">Watchlist Items</div>
                         </div>
                         <div className="stats-hero-card stats-hero-card--gold">
+                            <div className="stats-hero-card__icon"><i className="fas fa-list"></i></div>
                             <div className="stats-hero-card__value">{stats.totalLists.toLocaleString()}</div>
                             <div className="stats-hero-card__label">Lists</div>
                         </div>
                         <div className="stats-hero-card stats-hero-card--blue">
+                            <div className="stats-hero-card__icon"><i className="fas fa-user-plus"></i></div>
                             <div className="stats-hero-card__value">{stats.usersThisWeek}</div>
                             <div className="stats-hero-card__label">New This Week</div>
                         </div>
                         <div className="stats-hero-card stats-hero-card--purple">
+                            <div className="stats-hero-card__icon"><i className="fas fa-calendar"></i></div>
                             <div className="stats-hero-card__value">{stats.usersThisMonth}</div>
                             <div className="stats-hero-card__label">New This Month</div>
                         </div>
@@ -220,8 +264,8 @@ const Admin: React.FC = () => {
                                                     {profile.role || 'user'}
                                                 </span>
                                             </td>
-                                            <td>{new Date(profile.created_at).toLocaleDateString()}</td>
-                                            <td>{new Date(profile.updated_at).toLocaleDateString()}</td>
+                                            <td>{formatDate(profile.created_at)}</td>
+                                            <td>{formatDate(profile.updated_at)}</td>
                                             <td>
                                                 {profile.id !== user.id && (
                                                     <button
