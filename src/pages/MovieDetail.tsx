@@ -9,11 +9,13 @@ import type { TMDBResult, WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { createMovieDeepLink, openInStremio } from '../utils/stremioUtils'
+import { useShowStremioButton } from '../hooks/useShowStremioButton'
 
 const MovieDetail: React.FC = () => {
     usePageTitle('Trackist - Movie Detail')
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
+    const { showStremioButton, loading: stremioLoading } = useShowStremioButton()
     const [details, setDetails] = useState<TMDBResult | null>(null)
     const [fanartImages, setFanartImages] = useState<{ hdmovielogo?: Array<{ url: string }> } | null>(null)
     const [isInWatchlist, setIsInWatchlist] = useState(false)
@@ -297,16 +299,18 @@ const MovieDetail: React.FC = () => {
                                     <i className="fa-solid fa-users"></i>
                                 </button>
                             )}
-                            <button 
-                                className="detail-page__icon-btn"
-                                onClick={() => {
-                                    const sharingLink = createMovieDeepLink(details.id, (details.external_ids as { imdb_id?: string })?.imdb_id)
-                                    openInStremio(sharingLink)
-                                }}
-                                title="Open in Stremio"
-                            >
-                                <i className="fa-solid fa-play"></i>
-                            </button>
+                            {showStremioButton && !stremioLoading && (
+                                <button 
+                                    className="detail-page__icon-btn"
+                                    onClick={() => {
+                                        const sharingLink = createMovieDeepLink(details.id, (details.external_ids as { imdb_id?: string })?.imdb_id)
+                                        openInStremio(sharingLink)
+                                    }}
+                                    title="Open in Stremio"
+                                >
+                                    <i className="fa-solid fa-play"></i>
+                                </button>
+                            )}
                             {!isInWatchlist ? (
                                 <>
                                     <button 

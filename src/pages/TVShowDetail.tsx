@@ -11,6 +11,7 @@ import type { TMDBResult, WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { createEpisodeDeepLink, openInStremio, createTVDeepLink  } from '../utils/stremioUtils'
+import { useShowStremioButton } from '../hooks/useShowStremioButton'
 
 interface LocalEpisode {
     id: string
@@ -30,6 +31,7 @@ const TVShowDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>()
     usePageTitle('Trackist - TV Show Detail')
     const navigate = useNavigate()
+    const { showStremioButton, loading: stremioLoading } = useShowStremioButton()
     const [details, setDetails] = useState<TMDBResult | null>(null)
     const [loading, setLoading] = useState(true)
     const [fanartImages, setFanartImages] = useState<{ hdtvlogo?: Array<{ url: string }> } | null>(null)
@@ -720,19 +722,21 @@ const TVShowDetail: React.FC = () => {
                                         <i className="fa-solid fa-users"></i>
                                     </button>
                                 )}
-                                <button
-                                    className="detail-page__icon-btn"
-                                    onClick={() => {
-                                        const nextEp = getNextEpisodeToWatch()
-                                        const sharingLink = nextEp
-                                            ? createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids?.imdb_id)
-                                            : createTVDeepLink(details.id, details.external_ids?.imdb_id)
-                                        openInStremio(sharingLink)
-                                    }}
-                                    title="Open in Stremio"
-                                >
-                                    <i className="fa-solid fa-play"></i>
-                                </button>
+                                {showStremioButton && !stremioLoading && (
+                                    <button
+                                        className="detail-page__icon-btn"
+                                        onClick={() => {
+                                            const nextEp = getNextEpisodeToWatch()
+                                            const sharingLink = nextEp
+                                                ? createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids?.imdb_id)
+                                                : createTVDeepLink(details.id, details.external_ids?.imdb_id)
+                                            openInStremio(sharingLink)
+                                        }}
+                                        title="Open in Stremio"
+                                    >
+                                        <i className="fa-solid fa-play"></i>
+                                    </button>
+                                )}
                                 {!isInWatchlist ? (
                                     <>
                                         <button 

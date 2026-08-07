@@ -8,7 +8,7 @@ import { validateDisplayName, validateEmail } from '../utils/validation'
 import { getUTCTodayString } from '../utils/dateUtils'
 import type { User } from '@supabase/supabase-js'
 
-type SettingsSection = 'account' | 'profile' | 'privacy' | 'notifications' | 'data' | 'danger'
+type SettingsSection = 'account' | 'profile' | 'privacy' | 'notifications' | 'data' | 'danger' | 'additions'
 
 const Settings: React.FC = () => {
     usePageTitle('Trackist - Settings')
@@ -41,6 +41,11 @@ const Settings: React.FC = () => {
     const [exportLoading, setExportLoading] = useState(false)
     const [dataMessage, setDataMessage] = useState('')
 
+    // Additions states
+    const [showStremioButton, setShowStremioButton] = useState(false)
+    const [additionsLoading, setAdditionsLoading] = useState(false)
+    const [additionsMessage, setAdditionsMessage] = useState('')
+
     // Danger zone
     const [deleteConfirm, setDeleteConfirm] = useState('')
     const [deleteLoading, setDeleteLoading] = useState(false)
@@ -58,6 +63,7 @@ const Settings: React.FC = () => {
                 if (profileData) {
                     setDisplayName(profileData.display_name || '')
                     setBio(profileData.bio || '')
+                    setShowStremioButton(profileData.show_stremio_button === true)
                 }
             }
 
@@ -246,6 +252,26 @@ const Settings: React.FC = () => {
         setDeleteLoading(false)
     }
 
+    const handleAdditionsUpdate = async () => {
+        if (!currentUser) return
+        setAdditionsLoading(true)
+        setAdditionsMessage('')
+
+        const { error } = await updateProfile(currentUser.id, {
+            show_stremio_button: !showStremioButton
+        })
+
+        setAdditionsLoading(false)
+
+        if (error) {
+            setAdditionsMessage(error.message)
+            return
+        }
+
+        setShowStremioButton(prev => !prev)
+        setAdditionsMessage('Preference updated successfully')
+    }
+
     const handleLogout = async () => {
         if (window.confirm('Are you sure you want to logout?')) {
             await supabase.auth.signOut()
@@ -272,6 +298,7 @@ const Settings: React.FC = () => {
         { id: 'privacy', label: 'Privacy', icon: 'fa-lock' },
         { id: 'notifications', label: 'Notifications', icon: 'fa-bell' },
         { id: 'data', label: 'Data & Cache', icon: 'fa-database' },
+        { id: 'additions', label: 'Additions', icon: 'fa-puzzle-piece' },
         { id: 'danger', label: 'Danger Zone', icon: 'fa-triangle-exclamation' }
     ]
 
@@ -547,6 +574,43 @@ const Settings: React.FC = () => {
                                 </div>
 
                                 {dataMessage && <div className="settings-alert settings-alert--success">{dataMessage}</div>}
+                            </div>
+                        )}
+
+                        {activeSection === 'additions' && (
+                            <div className="settings-panel">
+                                <div className="settings-panel__header">
+                                    <h3>Additions</h3>
+                                    <p>Manage optional features and integrations</p>
+                                </div>
+
+                                <div className="settings-toggle-row">
+                                    <div className="settings-toggle-row__info">
+                                        <span className="settings-toggle-row__label">Stremio Button</span>
+                                        <span className="settings-toggle-row__desc">Show an "Open in Stremio" button on movie and TV show detail pages</span>
+                                    </div>
+                                    <label className="settings-switch">
+                                        <input
+                                            type="checkbox"
+                                            checked={showStremioButton}
+                                            onChange={handleAdditionsUpdate}
+                                            disabled={additionsLoading}
+                                        />
+                                        <span className="settings-switch__slider"></span>
+                                    </label>
+                                </div>
+
+                                {additionsMessage && <div className="settings-alert settings-alert--success">{additionsMessage}</div>}
+
+                                <div className="settings-divider"></div>
+
+                                <div className="settings-info-box">
+                                    <i className="fa-solid fa-circle-info"></i>
+                                    <div>
+                                        <h4>About the Stremio Button</h4>
+                                        <p>When enabled, you'll see a play button on movie and TV show pages that opens the content directly in Stremio using deep links. This feature is off by default.</p>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
