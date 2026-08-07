@@ -5533,6 +5533,31 @@ i.fa-solid.fa-trash:hover {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
 }
 
+/* Profile Watchlist Categories (Virtuoso sections) */
+.profile-watchlist-category {
+    margin-bottom: 2rem;
+}
+
+.profile-watchlist-category:last-child {
+    margin-bottom: 0;
+}
+
+.profile-category-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-platinum);
+    margin: 0 0 1rem 0;
+    padding: 0 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.profile-category-title i {
+    font-size: 0.95rem;
+    opacity: 0.7;
+}
+
 .avatar-hover-wrapper {
     border: 2px solid rgba(255, 255, 255, 0.3);
     transition: all 0.2s ease;
@@ -6712,19 +6737,18 @@ i.fa-solid.fa-trash:hover {
 
 /* ===== MODERN PROFILE PAGE ===== */
 .profile-page {
-    padding-bottom: 7rem;
+    padding-bottom: 1.5rem;
 }
 
 .profile-hero {
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 20px;
-    overflow: hidden;
     margin-bottom: 1.5rem;
 }
 
 .profile-hero__banner {
-    height: 140px;
+    height: 120px;
     background: linear-gradient(
         135deg,
         rgba(133, 138, 227, 0.15),
@@ -6748,19 +6772,19 @@ i.fa-solid.fa-trash:hover {
     display: flex;
     gap: 1.5rem;
     padding: 0 1.5rem 1.5rem;
-    margin-top: -50px;
     flex-wrap: wrap;
 }
 
 .profile-hero__avatar-wrap {
+    align-content: center;
     flex-shrink: 0;
     position: relative;
     z-index: 1;
 }
 
 .profile-hero__avatar {
-    width: 110px;
-    height: 110px;
+    width: 130px;
+    height: 130px;
     border-radius: 50%;
     border: 4px solid var(--color-bg);
     object-fit: cover;
@@ -6774,8 +6798,8 @@ i.fa-solid.fa-trash:hover {
 }
 
 .profile-hero__avatar--placeholder {
-    width: 110px;
-    height: 110px;
+    width: 130px;
+    height: 130px;
     border-radius: 50%;
     border: 4px solid var(--color-bg);
     background: linear-gradient(135deg, var(--color-primary), #a5a9f0);

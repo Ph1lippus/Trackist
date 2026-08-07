@@ -4,16 +4,16 @@ import { supabase } from '../services/supabaseClient'
 import {
     getProfile,
     getProfileByUsername,
-    getFollowers,
-    getFollowing,
     followUser,
     unfollowUser,
     isFollowing
 } from '../services/profileService'
 import type { User } from '@supabase/supabase-js'
-import type { WatchlistItem } from '../types'
+import type { WatchlistItem, TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { formatDateString } from '../utils/dateUtils'
+import { VirtuosoGrid } from 'react-virtuoso'
+import { useMobile } from '../contexts/useMobile'
+import MediaCard from '../components/media/MediaCard'
 
 interface ProfileData {
     id: string
@@ -34,48 +34,20 @@ interface UserList {
     completed_at: string | null
 }
 
-type TabType = 'watchlist' | 'lists' | 'stats'
-type StatusFilter = 'all' | 'planning' | 'watching' | 'completed' | 'caught_up' | 'dropped'
-
-const STATUS_LABELS: Record<string, string> = {
-    planning: 'Planning',
-    watching: 'Watching',
-    completed: 'Completed',
-    caught_up: 'Caught Up',
-    dropped: 'Dropped'
-}
-
-const STATUS_COLORS: Record<string, string> = {
-    planning: '#888',
-    watching: '#ffc107',
-    completed: '#68ffae',
-    caught_up: '#0096ff',
-    dropped: '#f44336'
-}
+type TabType = 'watching' | 'movies' | 'finished' | 'lists'
 
 const ProfilePage: React.FC = () => {
     const { username } = useParams<{ username: string }>()
     usePageTitle('Trackist - Profile')
+    const { isMobile } = useMobile()
     const [currentUser, setCurrentUser] = useState<User | null>(null)
     const [profile, setProfile] = useState<ProfileData | null>(null)
-    const [followersCount, setFollowersCount] = useState(0)
-    const [followingCount, setFollowingCount] = useState(0)
     const [isFollowingUser, setIsFollowingUser] = useState(false)
     const [followLoading, setFollowLoading] = useState(false)
     const [loading, setLoading] = useState(true)
     const [watchlistItems, setWatchlistItems] = useState<WatchlistItem[]>([])
     const [userLists, setUserLists] = useState<UserList[]>([])
-    const [activeTab, setActiveTab] = useState<TabType>('watchlist')
-    const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
-    const [stats, setStats] = useState({
-        totalMovies: 0,
-        totalTvShows: 0,
-        totalCompleted: 0,
-        totalWatching: 0,
-        totalPlanning: 0,
-        totalEpisodesWatched: 0,
-        totalWatchTimeMinutes: 0
-    })
+    const [activeTab, setActiveTab] = useState<TabType>('watching')
 
     useEffect(() => {
         const loadUser = async () => {
@@ -91,88 +63,92 @@ const ProfilePage: React.FC = () => {
         const loadProfile = async () => {
             setLoading(true)
 
-            let profileData: ProfileData | null = null
-            let targetUserId: string | null = null
+            try {
+                let profileData: ProfileData | null = null
+                let targetUserId: string | null = null
 
-            if (username) {
-                const { data } = await getProfileByUsername(username)
-                profileData = data as ProfileData | null
-                targetUserId = profileData?.id || null
-            } else if (currentUser) {
-                const { data } = await getProfile(currentUser.id)
-                profileData = data as ProfileData | null
-                targetUserId = currentUser.id
-            }
-
-            setProfile(profileData)
-
-            if (targetUserId && profileData) {
-                const { count: fCount } = await getFollowers(targetUserId)
-                setFollowersCount(fCount || 0)
-
-                const { count: fgCount } = await getFollowing(targetUserId)
-                setFollowingCount(fgCount || 0)
-
-                if (currentUser && currentUser.id !== targetUserId) {
-                    const following = await isFollowing(currentUser.id, targetUserId)
-                    setIsFollowingUser(following)
+                if (username) {
+                    const { data } = await getProfileByUsername(username)
+                    profileData = data as ProfileData | null
+                    targetUserId = profileData?.id || null
+                } else if (currentUser) {
+                    const { data } = await getProfile(currentUser.id)
+                    profileData = data as ProfileData | null
+                    targetUserId = currentUser.id
                 }
 
-                // Load watchlist
-                const { data: watchlistData } = await supabase
-                    .from('watchlist')
-                    .select('*')
-                    .eq('user_id', targetUserId)
-                    .order('added_at', { ascending: false })
-                const items = (watchlistData || []) as WatchlistItem[]
-                setWatchlistItems(items)
+                setProfile(profileData)
 
-                // Calculate stats
-                const movies = items.filter(i => i.media_type === 'movie')
-                const tvShows = items.filter(i => i.media_type === 'tv' || i.media_type === 'anime')
-                setStats({
-                    totalMovies: movies.length,
-                    totalTvShows: tvShows.length,
-                    totalCompleted: items.filter(i => i.status === 'completed').length,
-                    totalWatching: items.filter(i => i.status === 'watching').length,
-                    totalPlanning: items.filter(i => i.status === 'planning').length,
-                    totalEpisodesWatched: 0,
-                    totalWatchTimeMinutes: 0
-                })
+                if (targetUserId && profileData) {
+                    if (currentUser && currentUser.id !== targetUserId) {
+                        const following = await isFollowing(currentUser.id, targetUserId)
+                        setIsFollowingUser(following)
+                    }
 
-                // Try to fetch episode stats (only for own profile)
-                if (currentUser && currentUser.id === targetUserId) {
-                    try {
-                        const { data: episodeStats } = await supabase.rpc('get_my_watch_statistics')
-                        if (episodeStats && episodeStats.length > 0) {
-                            setStats(prev => ({
-                                ...prev,
-                                totalEpisodesWatched: Number(episodeStats[0].total_episodes_watched),
-                                totalWatchTimeMinutes: Number(episodeStats[0].total_watch_time_minutes)
-                            }))
+                    // Load watchlist
+                    const { data: watchlistData, error: watchlistError } = await supabase
+                        .from('watchlist')
+                        .select('*')
+                        .eq('user_id', targetUserId)
+                        .order('added_at', { ascending: false })
+                    
+                    if (watchlistError) {
+                        console.error('Failed to load watchlist for profile:', watchlistError)
+                    }
+                    
+                    const items = (watchlistData || []) as WatchlistItem[]
+                    setWatchlistItems(items)
+
+                    // Load lists - query lists table directly and compute counts from list_items
+                    const isOwn = currentUser?.id === targetUserId
+                    let listsQuery = supabase
+                        .from('lists')
+                        .select('*')
+                        .eq('user_id', targetUserId)
+                        .order('updated_at', { ascending: false })
+
+                    if (!isOwn) {
+                        listsQuery = listsQuery.eq('is_public', true)
+                    }
+
+                    const { data: listsData } = await listsQuery
+                    const rawLists = (listsData || []) as UserList[]
+
+                    // Compute item counts from list_items
+                    if (rawLists.length > 0) {
+                        const listIds = rawLists.map(l => l.id)
+                        const { data: listItems } = await supabase
+                            .from('list_items')
+                            .select('list_id, watched_at')
+                            .in('list_id', listIds)
+
+                        const counts: Record<string, { item_count: number; watched_count: number }> = {}
+                        if (listItems) {
+                            listItems.forEach(item => {
+                                if (!counts[item.list_id]) {
+                                    counts[item.list_id] = { item_count: 0, watched_count: 0 }
+                                }
+                                counts[item.list_id].item_count++
+                                if (item.watched_at) counts[item.list_id].watched_count++
+                            })
                         }
-                    } catch {
-                        // Ignore episode stats errors for other users
+
+                        const listsWithCounts = rawLists.map(list => ({
+                            ...list,
+                            item_count: counts[list.id]?.item_count || 0,
+                            watched_count: counts[list.id]?.watched_count || 0
+                        }))
+
+                        setUserLists(listsWithCounts)
+                    } else {
+                        setUserLists([])
                     }
                 }
-
-                // Load lists - show all for own profile, only public for others
-                const isOwn = currentUser?.id === targetUserId
-                let listsQuery = supabase
-                    .from('list_stats')
-                    .select('*')
-                    .eq('user_id', targetUserId)
-                    .order('created_at', { ascending: false })
-
-                if (!isOwn) {
-                    listsQuery = listsQuery.eq('is_public', true)
-                }
-
-                const { data: listsData } = await listsQuery
-                setUserLists(listsData || [])
+            } catch (error) {
+                console.error('Failed to load profile:', error)
+            } finally {
+                setLoading(false)
             }
-
-            setLoading(false)
         }
 
         void loadProfile()
@@ -185,10 +161,8 @@ const ProfilePage: React.FC = () => {
 
         if (isFollowingUser) {
             await unfollowUser(currentUser.id, profile.id)
-            setFollowersCount(prev => prev - 1)
         } else {
             await followUser(currentUser.id, profile.id)
-            setFollowersCount(prev => prev + 1)
         }
 
         setIsFollowingUser(!isFollowingUser)
@@ -197,32 +171,21 @@ const ProfilePage: React.FC = () => {
 
     const isOwnProfile = currentUser?.id === profile?.id
 
-    const filteredWatchlist = useMemo(() => {
-        if (statusFilter === 'all') return watchlistItems
-        return watchlistItems.filter(item => item.status === statusFilter)
-    }, [watchlistItems, statusFilter])
+    const watchingTVShows = useMemo(() => watchlistItems.filter(item => 
+        (item.media_type === 'tv' || item.media_type === 'anime') && item.status === 'watching'
+    ), [watchlistItems])
 
-    const statusCounts = useMemo(() => {
-        const counts: Record<string, number> = {}
-        watchlistItems.forEach(item => {
-            counts[item.status] = (counts[item.status] || 0) + 1
-        })
-        return counts
-    }, [watchlistItems])
+    const moviesToWatch = useMemo(() => watchlistItems.filter(item => 
+        item.media_type === 'movie' && item.status === 'planning'
+    ), [watchlistItems])
 
-    const formatMinutes = (minutes: number): string => {
-        const days = Math.floor(minutes / 1440)
-        const hours = Math.floor((minutes % 1440) / 60)
-        const mins = minutes % 60
-        const parts: string[] = []
-        if (days > 0) parts.push(`${days}d`)
-        if (hours > 0) parts.push(`${hours}h`)
-        if (mins > 0 || parts.length === 0) parts.push(`${mins}m`)
-        return parts.join(' ')
-    }
+    const finishedItems = useMemo(() => watchlistItems.filter(item => 
+        item.status === 'completed' || item.status === 'caught_up'
+    ), [watchlistItems])
 
     const formatDate = (dateString: string): string => {
-        return formatDateString(dateString, { year: 'numeric', month: 'long', day: 'numeric' })
+        const date = new Date(dateString)
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
     }
 
     if (loading) {
@@ -258,7 +221,6 @@ const ProfilePage: React.FC = () => {
             <div className="dashboard-shell">
                 {/* Profile Hero */}
                 <div className="profile-hero">
-                    <div className="profile-hero__banner"></div>
                     <div className="profile-hero__content">
                         <div className="profile-hero__avatar-wrap">
                             {profile.avatar_url ? (
@@ -323,28 +285,8 @@ const ProfilePage: React.FC = () => {
 
                             <div className="profile-hero__meta">
                                 <span className="profile-hero__meta-item">
-                                    <i className="fa-solid fa-calendar"></i>
                                     Joined {formatDate(profile.created_at)}
                                 </span>
-                            </div>
-
-                            <div className="profile-hero__stats">
-                                <div className="profile-stat">
-                                    <span className="profile-stat__value">{watchlistItems.length}</span>
-                                    <span className="profile-stat__label">Watchlist</span>
-                                </div>
-                                <div className="profile-stat">
-                                    <span className="profile-stat__value">{followersCount}</span>
-                                    <span className="profile-stat__label">Followers</span>
-                                </div>
-                                <div className="profile-stat">
-                                    <span className="profile-stat__value">{followingCount}</span>
-                                    <span className="profile-stat__label">Following</span>
-                                </div>
-                                <div className="profile-stat">
-                                    <span className="profile-stat__value">{userLists.length}</span>
-                                    <span className="profile-stat__label">Lists</span>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -353,12 +295,28 @@ const ProfilePage: React.FC = () => {
                 {/* Tabs */}
                 <div className="profile-tabs">
                     <button
-                        className={`profile-tab ${activeTab === 'watchlist' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('watchlist')}
+                        className={`profile-tab ${activeTab === 'watching' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('watching')}
+                    >
+                        <i className="fa-solid fa-tv"></i>
+                        Watching
+                        <span className="profile-tab__count">{watchingTVShows.length}</span>
+                    </button>
+                    <button
+                        className={`profile-tab ${activeTab === 'movies' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('movies')}
                     >
                         <i className="fa-solid fa-film"></i>
-                        Watchlist
-                        <span className="profile-tab__count">{watchlistItems.length}</span>
+                        Movies
+                        <span className="profile-tab__count">{moviesToWatch.length}</span>
+                    </button>
+                    <button
+                        className={`profile-tab ${activeTab === 'finished' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('finished')}
+                    >
+                        <i className="fa-solid fa-check-circle"></i>
+                        Finished
+                        <span className="profile-tab__count">{finishedItems.length}</span>
                     </button>
                     <button
                         className={`profile-tab ${activeTab === 'lists' ? 'active' : ''}`}
@@ -368,89 +326,131 @@ const ProfilePage: React.FC = () => {
                         Lists
                         <span className="profile-tab__count">{userLists.length}</span>
                     </button>
-                    <button
-                        className={`profile-tab ${activeTab === 'stats' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('stats')}
-                    >
-                        <i className="fa-solid fa-chart-bar"></i>
-                        Stats
-                    </button>
                 </div>
 
                 {/* Tab Content */}
                 <div className="profile-tab-content">
-                    {/* Watchlist Tab */}
-                    {activeTab === 'watchlist' && (
+                    {/* Watching Tab */}
+                    {activeTab === 'watching' && (
                         <div className="profile-watchlist-section">
-                            {/* Status Filters */}
-                            {watchlistItems.length > 0 && (
-                                <div className="profile-filters">
-                                    <button
-                                        className={`profile-filter ${statusFilter === 'all' ? 'active' : ''}`}
-                                        onClick={() => setStatusFilter('all')}
-                                    >
-                                        All <span className="profile-filter__count">{watchlistItems.length}</span>
-                                    </button>
-                                    {Object.entries(STATUS_LABELS).map(([key, label]) => {
-                                        const count = statusCounts[key] || 0
-                                        if (count === 0) return null
-                                        return (
-                                            <button
-                                                key={key}
-                                                className={`profile-filter ${statusFilter === key ? 'active' : ''}`}
-                                                onClick={() => setStatusFilter(key as StatusFilter)}
-                                                style={statusFilter === key ? { background: STATUS_COLORS[key], borderColor: STATUS_COLORS[key] } : {}}
-                                            >
-                                                {label}
-                                                <span className="profile-filter__count">{count}</span>
-                                            </button>
-                                        )
-                                    })}
+                            {watchingTVShows.length > 0 ? (
+                                <div className="profile-watchlist-category">
+                                    <VirtuosoGrid
+                                        increaseViewportBy={{
+                                            top: isMobile ? 600 : 1200,
+                                            bottom: isMobile ? 2000 : 3000,
+                                        }}
+                                        computeItemKey={(index) => watchingTVShows[index]?.id ?? index}
+                                        style={{ height: '100%', width: '100%' }}
+                                        useWindowScroll={true}
+                                        data={watchingTVShows}
+                                        overscan={isMobile ? 800 : 1500}
+                                        listClassName="discover-grid"
+                                        itemContent={(index) => {
+                                            const item = watchingTVShows[index]
+                                            const tmdbItem: TMDBResult = {
+                                                id: item.tmdb_id as number,
+                                                title: item.title,
+                                                poster_path: item.poster_path,
+                                                media_type: item.media_type === 'anime' ? 'tv' : item.media_type
+                                            }
+                                            return (
+                                                <MediaCard
+                                                    item={tmdbItem}
+                                                    isInWatchlist={true}
+                                                />
+                                            )
+                                        }}
+                                    />
+                                </div>
+                            ) : (
+                                <div className="profile-empty">
+                                    <i className="fa-solid fa-tv profile-empty__icon"></i>
+                                    <h3>Not watching anything yet</h3>
                                 </div>
                             )}
+                        </div>
+                    )}
 
-                            {filteredWatchlist.length > 0 ? (
-                                <div className="profile-watchlist-grid">
-                                    {filteredWatchlist.map((item) => (
-                                        <Link
-                                            key={item.id}
-                                            to={`/${item.media_type === 'movie' ? 'movie' : 'tv'}/${item.tmdb_id}`}
-                                            className="profile-media-card"
-                                        >
-                                            <div className="profile-media-card__poster">
-                                                {item.poster_path ? (
-                                                    <img
-                                                        src={`https://image.tmdb.org/t/p/w300${item.poster_path}`}
-                                                        alt={item.title}
-                                                    />
-                                                ) : (
-                                                    <div className="profile-media-card__no-poster">
-                                                        {item.title}
-                                                    </div>
-                                                )}
-                                                <div
-                                                    className="profile-media-card__status"
-                                                    style={{ background: STATUS_COLORS[item.status] }}
-                                                >
-                                                    {STATUS_LABELS[item.status]}
-                                                </div>
-                                            </div>
-                                            <div className="profile-media-card__body">
-                                                <h3>{item.title}</h3>
-                                                <span className="profile-media-card__type">
-                                                    {item.media_type === 'movie' ? 'Movie' : item.media_type === 'anime' ? 'Anime' : 'TV Show'}
-                                                </span>
-                                            </div>
-                                        </Link>
-                                    ))}
+                    {/* Movies Tab */}
+                    {activeTab === 'movies' && (
+                        <div className="profile-watchlist-section">
+                            {moviesToWatch.length > 0 ? (
+                                <div className="profile-watchlist-category">
+                                    <VirtuosoGrid
+                                        increaseViewportBy={{
+                                            top: isMobile ? 600 : 1200,
+                                            bottom: isMobile ? 2000 : 3000,
+                                        }}
+                                        computeItemKey={(index) => moviesToWatch[index]?.id ?? index}
+                                        style={{ height: '100%', width: '100%' }}
+                                        useWindowScroll={true}
+                                        data={moviesToWatch}
+                                        overscan={isMobile ? 800 : 1500}
+                                        listClassName="discover-grid"
+                                        itemContent={(index) => {
+                                            const item = moviesToWatch[index]
+                                            const tmdbItem: TMDBResult = {
+                                                id: item.tmdb_id as number,
+                                                title: item.title,
+                                                poster_path: item.poster_path,
+                                                media_type: 'movie'
+                                            }
+                                            return (
+                                                <MediaCard
+                                                    item={tmdbItem}
+                                                    isInWatchlist={true}
+                                                />
+                                            )
+                                        }}
+                                    />
                                 </div>
                             ) : (
                                 <div className="profile-empty">
                                     <i className="fa-solid fa-film profile-empty__icon"></i>
-                                    <h3>{statusFilter === 'all' ? 'No items in watchlist' : `No ${STATUS_LABELS[statusFilter]} items`}</h3>
-                                    {isOwnProfile && (
-                                        <Link to="/Discover" className="dashboard-link-btn">Add some media</Link>
-                                    )}
+                                    <h3>No movies to watch</h3>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Finished Tab */}
+                    {activeTab === 'finished' && (
+                        <div className="profile-watchlist-section">
+                            {finishedItems.length > 0 ? (
+                                <div className="profile-watchlist-category">
+                                    <VirtuosoGrid
+                                        increaseViewportBy={{
+                                            top: isMobile ? 600 : 1200,
+                                            bottom: isMobile ? 2000 : 3000,
+                                        }}
+                                        computeItemKey={(index) => finishedItems[index]?.id ?? index}
+                                        style={{ height: '100%', width: '100%' }}
+                                        useWindowScroll={true}
+                                        data={finishedItems}
+                                        overscan={isMobile ? 800 : 1500}
+                                        listClassName="discover-grid"
+                                        itemContent={(index) => {
+                                            const item = finishedItems[index]
+                                            const tmdbItem: TMDBResult = {
+                                                id: item.tmdb_id as number,
+                                                title: item.title,
+                                                poster_path: item.poster_path,
+                                                media_type: item.media_type === 'anime' ? 'tv' : item.media_type
+                                            }
+                                            return (
+                                                <MediaCard
+                                                    item={tmdbItem}
+                                                    isInWatchlist={true}
+                                                />
+                                            )
+                                        }}
+                                    />
+                                </div>
+                            ) : (
+                                <div className="profile-empty">
+                                    <i className="fa-solid fa-check-circle profile-empty__icon"></i>
+                                    <h3>Nothing finished yet</h3>
                                 </div>
                             )}
                         </div>
@@ -498,81 +498,6 @@ const ProfilePage: React.FC = () => {
                                         <Link to="/lists" className="dashboard-link-btn">Create a list</Link>
                                     )}
                                 </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Stats Tab */}
-                    {activeTab === 'stats' && (
-                        <div className="profile-stats-section">
-                            <div className="profile-stats-summary">
-                                <div className="profile-stat-card">
-                                    <span className="profile-stat-card__value">{stats.totalMovies}</span>
-                                    <span className="profile-stat-card__label">Movies</span>
-                                </div>
-                                <div className="profile-stat-card">
-                                    <span className="profile-stat-card__value">{stats.totalTvShows}</span>
-                                    <span className="profile-stat-card__label">TV Shows</span>
-                                </div>
-                                <div className="profile-stat-card">
-                                    <span className="profile-stat-card__value">{stats.totalCompleted}</span>
-                                    <span className="profile-stat-card__label">Completed</span>
-                                </div>
-                                <div className="profile-stat-card">
-                                    <span className="profile-stat-card__value">{stats.totalWatching}</span>
-                                    <span className="profile-stat-card__label">Watching</span>
-                                </div>
-                                <div className="profile-stat-card">
-                                    <span className="profile-stat-card__value">{stats.totalPlanning}</span>
-                                    <span className="profile-stat-card__label">Planning</span>
-                                </div>
-                                {isOwnProfile && (
-                                    <>
-                                        <div className="profile-stat-card">
-                                            <span className="profile-stat-card__value">{stats.totalEpisodesWatched.toLocaleString()}</span>
-                                            <span className="profile-stat-card__label">Episodes</span>
-                                        </div>
-                                        <div className="profile-stat-card">
-                                            <span className="profile-stat-card__value">{formatMinutes(stats.totalWatchTimeMinutes)}</span>
-                                            <span className="profile-stat-card__label">Watch Time</span>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-
-                            {/* Status Breakdown */}
-                            {watchlistItems.length > 0 && (
-                                <div className="profile-stats-breakdown">
-                                    <h3 className="profile-stats-breakdown__title">Status Breakdown</h3>
-                                    {Object.entries(STATUS_LABELS).map(([key, label]) => {
-                                        const count = statusCounts[key] || 0
-                                        const percentage = watchlistItems.length > 0 ? (count / watchlistItems.length) * 100 : 0
-                                        return (
-                                            <div key={key} className="profile-breakdown-item">
-                                                <div className="profile-breakdown-item__header">
-                                                    <span className="profile-breakdown-item__label">{label}</span>
-                                                    <span className="profile-breakdown-item__count">{count}</span>
-                                                </div>
-                                                <div className="profile-breakdown-bar">
-                                                    <div
-                                                        className="profile-breakdown-bar__fill"
-                                                        style={{
-                                                            width: `${percentage}%`,
-                                                            background: `linear-gradient(90deg, ${STATUS_COLORS[key]}, ${STATUS_COLORS[key]}dd)`
-                                                        }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
-                                </div>
-                            )}
-
-                            {isOwnProfile && (
-                                <Link to="/Statistics" className="profile-stats-link">
-                                    View Full Statistics
-                                    <i className="fa-solid fa-arrow-right"></i>
-                                </Link>
                             )}
                         </div>
                     )}
