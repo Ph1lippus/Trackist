@@ -4,11 +4,13 @@ import { imageUrl } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useSearch } from '../hooks/useSearch'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 
 const MobileMovies: React.FC = () => {
     usePageTitle('Trackist - Movies')
     const navigate = useNavigate()
+    const { committedQuery } = useSearch()
     const movies = useLibraryStore((state) => state.movies)
     const [updatingId, setUpdatingId] = useState<string | null>(null)
 
@@ -37,24 +39,26 @@ const MobileMovies: React.FC = () => {
     }
 
     const toWatch = useMemo(() => {
-        return movies
-            .filter(movie => movie.status === 'planning')
-            .sort((a, b) => {
-                const dateA = new Date(a.added_at || 0)
-                const dateB = new Date(b.added_at || 0)
-                return dateA.getTime() - dateB.getTime()
-            })
-    }, [movies])
+        const filtered = committedQuery
+            ? movies.filter(m => m.status === 'planning' && m.title.toLowerCase().includes(committedQuery.toLowerCase()))
+            : movies.filter(m => m.status === 'planning')
+        return filtered.sort((a, b) => {
+            const dateA = new Date(a.added_at || 0)
+            const dateB = new Date(b.added_at || 0)
+            return dateA.getTime() - dateB.getTime()
+        })
+    }, [movies, committedQuery])
 
     const watched = useMemo(() => {
-        return movies
-            .filter(movie => movie.status === 'completed' || movie.status === 'caught_up')
-            .sort((a, b) => {
-                const dateA = new Date(a.updated_at || 0)
-                const dateB = new Date(b.updated_at || 0)
-                return dateB.getTime() - dateA.getTime()
-            })
-    }, [movies])
+        const filtered = committedQuery
+            ? movies.filter(m => (m.status === 'completed' || m.status === 'caught_up') && m.title.toLowerCase().includes(committedQuery.toLowerCase()))
+            : movies.filter(m => m.status === 'completed' || m.status === 'caught_up')
+        return filtered.sort((a, b) => {
+            const dateA = new Date(a.updated_at || 0)
+            const dateB = new Date(b.updated_at || 0)
+            return dateB.getTime() - dateA.getTime()
+        })
+    }, [movies, committedQuery])
 
     const renderMovieCard = (movie: WatchlistItem) => {
         const isUpdating = updatingId === movie.id
@@ -63,23 +67,23 @@ const MobileMovies: React.FC = () => {
         return (
             <div
                 key={movie.id}
-                className="mobile-movie-card"
+                className="mobile-tvshow-card"
                 onClick={() => { if (movie.tmdb_id) navigate(`/movie/${movie.tmdb_id}`) }}
             >
-                <div className="mobile-movie-card-poster">
+                <div className="mobile-tvshow-card-poster">
                     {movie.poster_path ? (
                         <img src={imageUrl(movie.poster_path) || ''} alt={movie.title} loading="lazy" />
                     ) : (
-                        <div className="mobile-movie-card-no-poster">
+                        <div className="mobile-tvshow-card-no-poster">
                             <span>{movie.title}</span>
                         </div>
                     )}
                 </div>
-                <div className="mobile-movie-card-body">
-                    <h3 className="mobile-movie-card-title">{movie.title}</h3>
+                <div className="mobile-tvshow-card-body">
+                    <h3 className="mobile-tvshow-card-title">{movie.title}</h3>
                 </div>
                 <button
-                    className={`mobile-movie-card-add-btn ${isCompleted ? 'mobile-movie-card-add-btn--done' : ''}`}
+                    className={`mobile-tvshow-card-add-btn ${isCompleted ? 'mobile-tvshow-card-add-btn--done' : ''}`}
                     onClick={(e) => {
                         e.stopPropagation()
                         handleToggleWatched(movie)
@@ -87,36 +91,41 @@ const MobileMovies: React.FC = () => {
                     disabled={isUpdating}
                     title={isCompleted ? 'Mark as unwatched' : 'Mark as watched'}
                 >
-                    <i className={`fa-solid ${isUpdating ? 'fa-spinner fa-spin' : isCompleted ? 'fa-check' : 'fa-check'}`}></i>
+                    <i className={`fa-solid ${isUpdating ? 'fa-spinner fa-spin' : 'fa-check'}`}></i>
                 </button>
             </div>
         )
     }
 
     return (
-        <section className="dashboard-page mobile-movies-page">
-            <div className="dashboard-shell mobile-movies-shell">
+        <section className="dashboard-page mobile-tvshows-page">
+            <div className="dashboard-shell mobile-tvshows-shell">
+                <div className="mobile-page-tabs">
+                    <button className="mobile-page-tab active">Mobile</button>
+                    <button className="mobile-page-tab" onClick={() => navigate('/Movies')}>Normal</button>
+                </div>
+
                 {toWatch.length === 0 && watched.length === 0 ? (
-                    <div className="mobile-movies-empty">
+                    <div className="mobile-tvshows-empty">
                         <i className="fa-solid fa-film"></i>
                         <h3>No movies yet</h3>
                         <p>Add movies to your watchlist to see them here</p>
                     </div>
                 ) : (
-                    <div className="mobile-movies-list">
+                    <div className="mobile-tvshows-list">
                         {toWatch.length > 0 && (
-                            <div className="mobile-movies-section">
-                                <h2 className="mobile-movies-section-title">To Watch</h2>
-                                <div className="mobile-movies-cards">
+                            <div className="mobile-tvshows-section">
+                                <h2 className="mobile-tvshows-section-title">To Watch</h2>
+                                <div className="mobile-tvshows-cards">
                                     {toWatch.map(movie => renderMovieCard(movie))}
                                 </div>
                             </div>
                         )}
 
                         {watched.length > 0 && (
-                            <div className="mobile-movies-section">
-                                <h2 className="mobile-movies-section-title">Watched</h2>
-                                <div className="mobile-movies-cards">
+                            <div className="mobile-tvshows-section">
+                                <h2 className="mobile-tvshows-section-title">Watched</h2>
+                                <div className="mobile-tvshows-cards">
                                     {watched.map(movie => renderMovieCard(movie))}
                                 </div>
                             </div>

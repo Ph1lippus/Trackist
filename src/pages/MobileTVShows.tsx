@@ -1,47 +1,116 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../services/supabaseClient'
-import { imageUrl } from '../services/tmdbService'
+import { imageUrl, getTVSeasonDetails } from '../services/tmdbService'
+import { markEpisodeWatched, getWatchedEpisodes } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useSearch } from '../hooks/useSearch'
+
+interface EpisodeInfo {
+    season_number: number
+    episode_number: number
+    tmdb_episode_id?: number
+    title?: string
+    still_path?: string
+    overview?: string
+    air_date?: string
+    runtime?: number
+}
 
 const MobileTVShows: React.FC = () => {
     usePageTitle('Trackist - TV Shows')
     const navigate = useNavigate()
+    const { committedQuery } = useSearch()
     const tvShows = useLibraryStore((state) => state.tvShows)
     const [addingEpisode, setAddingEpisode] = useState<string | null>(null)
+    const [episodesMap, setEpisodesMap] = useState<Map<string, EpisodeInfo[]>>(new Map())
+    const [watchedSet, setWatchedSet] = useState<Set<string>>(new Set())
 
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
+
+    useEffect(() => {
+        const loadEpisodes = async () => {
+            const watching = tvShows.filter(s => s.status === 'watching' && s.tmdb_id)
+            if (watching.length === 0) return
+
+            const newEpisodesMap = new Map<string, EpisodeInfo[]>()
+            const newWatchedSet = new Set<string>()
+
+            for (const show of watching) {
+                if (!show.id || !show.tmdb_id) continue
+
+                try {
+                    const seasonData = await getTVSeasonDetails(show.tmdb_id, 1)
+                    const eps: EpisodeInfo[] = (seasonData.episodes || []).map((ep: {
+                        episode_number: number
+                        id?: number
+                        name?: string
+                        still_path?: string
+                        overview?: string
+                        air_date?: string
+                        runtime?: number
+                    }) => ({
+                        season_number: 1,
+                        episode_number: ep.episode_number,
+                        tmdb_episode_id: ep.id,
+                        title: ep.name,
+                        still_path: ep.still_path,
+                        overview: ep.overview,
+                        air_date: ep.air_date,
+                        runtime: ep.runtime
+                    }))
+                    newEpisodesMap.set(show.id, eps)
+
+                    const watched = await getWatchedEpisodes(show.id)
+                    watched.forEach(ep => {
+                        newWatchedSet.add(`${show.id}-${ep.season_number}-${ep.episode_number}`)
+                    })
+                } catch (err) {
+                    console.error(`Failed to load episodes for ${show.title}:`, err)
+                }
+            }
+
+            setEpisodesMap(newEpisodesMap)
+            setWatchedSet(newWatchedSet)
+        }
+
+        loadEpisodes()
+    }, [tvShows])
 
     const handleAddEpisode = async (show: WatchlistItem) => {
         if (!show.id || !show.tmdb_id) return
 
         setAddingEpisode(show.id)
         try {
-            const newEpisode = (show.current_episode || 0) + 1
-            const updates: Record<string, unknown> = {
-                current_episode: newEpisode,
-                updated_at: new Date().toISOString()
-            }
+            const showEpisodes = episodesMap.get(show.id) || []
+            const nextEpisode = showEpisodes.find(ep => !watchedSet.has(`${show.id}-${ep.season_number}-${ep.episode_number}`))
 
-            if (show.status === 'planning') {
-                updates.status = 'watching'
-            }
-
-            const { error } = await supabase
-                .from('watchlist')
-                .update(updates)
-                .eq('id', show.id)
-
-            if (error) {
-                console.error('Failed to add episode:', error)
+            if (!nextEpisode) {
+                setAddingEpisode(null)
                 return
             }
 
-            await useLibraryStore.getState().refreshItem(show.id)
+            const success = await markEpisodeWatched(
+                show.id,
+                nextEpisode.season_number,
+                nextEpisode.episode_number,
+                {
+                    tmdb_episode_id: nextEpisode.tmdb_episode_id,
+                    title: nextEpisode.title,
+                    still_path: nextEpisode.still_path,
+                    overview: nextEpisode.overview,
+                    air_date: nextEpisode.air_date,
+                    runtime: nextEpisode.runtime
+                }
+            )
+
+            if (success) {
+                setWatchedSet(prev => new Set([...prev, `${show.id}-${nextEpisode.season_number}-${nextEpisode.episode_number}`]))
+                await useLibraryStore.getState().refreshItem(show.id)
+            }
         } catch (err) {
             console.error('Failed to add episode:', err)
         } finally {
@@ -50,55 +119,49 @@ const MobileTVShows: React.FC = () => {
     }
 
     const watching = useMemo(() => {
-        return tvShows
-            .filter(show => show.status === 'watching')
-            .sort((a, b) => {
-                const dateA = new Date(a.updated_at || 0)
-                const dateB = new Date(b.updated_at || 0)
-                return dateB.getTime() - dateA.getTime()
-            })
-    }, [tvShows])
+        const filtered = committedQuery
+            ? tvShows.filter(s => s.status === 'watching' && s.title.toLowerCase().includes(committedQuery.toLowerCase()))
+            : tvShows.filter(s => s.status === 'watching')
+        return filtered.sort((a, b) => {
+            const dateA = new Date(a.updated_at || 0)
+            const dateB = new Date(b.updated_at || 0)
+            return dateB.getTime() - dateA.getTime()
+        })
+    }, [tvShows, committedQuery])
 
     const toWatch = useMemo(() => {
-        return tvShows
-            .filter(show => show.status === 'planning')
-            .sort((a, b) => {
-                const dateA = new Date(a.added_at || 0)
-                const dateB = new Date(b.added_at || 0)
-                return dateA.getTime() - dateB.getTime()
-            })
-    }, [tvShows])
+        const filtered = committedQuery
+            ? tvShows.filter(s => s.status === 'planning' && s.title.toLowerCase().includes(committedQuery.toLowerCase()))
+            : tvShows.filter(s => s.status === 'planning')
+        return filtered.sort((a, b) => {
+            const dateA = new Date(a.added_at || 0)
+            const dateB = new Date(b.added_at || 0)
+            return dateA.getTime() - dateB.getTime()
+        })
+    }, [tvShows, committedQuery])
 
-    const getEpisodeInfo = (show: WatchlistItem): { label: string; subtitle: string; episodesLeft?: number } => {
-        const season = show.current_season || 1
-        const episode = show.current_episode || 1
-        const totalEpisodes = show.total_episodes
-        const episodesLeft = totalEpisodes ? Math.max(0, totalEpisodes - episode) : undefined
+    const getEpisodeLabel = (show: WatchlistItem): string => {
+        const watchedCount = episodesMap.get(show.id)?.filter(ep => watchedSet.has(`${show.id}-${ep.season_number}-${ep.episode_number}`)).length || 0
+        return `S1 Episode ${watchedCount}`
+    }
+
+    const getEpisodeSubtitle = (show: WatchlistItem): string => {
+        const watchedCount = episodesMap.get(show.id)?.filter(ep => watchedSet.has(`${show.id}-${ep.season_number}-${ep.episode_number}`)).length || 0
+        const totalEpisodes = episodesMap.get(show.id)?.length || 0
 
         if (show.status === 'planning') {
-            return {
-                label: `S${season} E1`,
-                subtitle: 'First episode'
-            }
+            return 'First episode'
         }
 
-        if (totalEpisodes && episode >= totalEpisodes) {
-            return {
-                label: `S${season} E${episode}`,
-                subtitle: 'Final episode'
-            }
+        if (totalEpisodes > 0 && watchedCount >= totalEpisodes) {
+            return 'Final episode'
         }
 
-        const suffix = episodesLeft !== undefined && episodesLeft > 0 ? ` +${episodesLeft}` : ''
-        return {
-            label: `S${season} E${episode}${suffix}`,
-            subtitle: `Episode ${episode}`
-        }
+        return `Episode ${watchedCount}`
     }
 
     const renderShowCard = (show: WatchlistItem, showFirstEpisode: boolean = false) => {
         const isAdding = addingEpisode === show.id
-        const { label, subtitle } = getEpisodeInfo(show)
         const isCompleted = show.status === 'completed' || show.status === 'caught_up'
 
         return (
@@ -119,9 +182,9 @@ const MobileTVShows: React.FC = () => {
                 <div className="mobile-tvshow-card-body">
                     <h3 className="mobile-tvshow-card-title">{show.title}</h3>
                     <div className="mobile-tvshow-card-episode">
-                        <span>{label}</span>
+                        <span>{showFirstEpisode ? 'S1 Episode 1' : getEpisodeLabel(show)}</span>
                     </div>
-                    <p className="mobile-tvshow-card-episode-title">{subtitle}</p>
+                    <p className="mobile-tvshow-card-episode-title">{showFirstEpisode ? 'First episode' : getEpisodeSubtitle(show)}</p>
                 </div>
                 {!showFirstEpisode && !isCompleted && (
                     <button
@@ -143,6 +206,11 @@ const MobileTVShows: React.FC = () => {
     return (
         <section className="dashboard-page mobile-tvshows-page">
             <div className="dashboard-shell mobile-tvshows-shell">
+                <div className="mobile-page-tabs">
+                    <button className="mobile-page-tab active">Mobile</button>
+                    <button className="mobile-page-tab" onClick={() => navigate('/Tvshows')}>Normal</button>
+                </div>
+
                 {watching.length === 0 && toWatch.length === 0 ? (
                     <div className="mobile-tvshows-empty">
                         <i className="fa-solid fa-tv"></i>
