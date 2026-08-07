@@ -789,7 +789,7 @@ const Admin: React.FC = () => {
                 onCancel={() => setEditUserConfirm(null)}
                 confirmText={editUserLoading ? 'Saving...' : 'Save'}
                 confirmColor="success"
-                disabled={editUserLoading || !(editUserConfirm?.displayName?.trim().length > 0)}
+                disabled={editUserLoading || !(editUserConfirm?.displayName && editUserConfirm.displayName.trim().length > 0)}
                 confirmLoading={editUserLoading}
             />
             
