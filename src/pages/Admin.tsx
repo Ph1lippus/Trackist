@@ -151,7 +151,6 @@ const Admin: React.FC = () => {
                 const { count: episodesCount } = await supabase
                     .from('watchlist_episodes')
                     .select('*', { count: 'exact', head: true })
-                    .eq('watched', true)
 
                 const { data: scoreData } = await supabase
                     .from('watchlist')
@@ -219,7 +218,6 @@ const Admin: React.FC = () => {
                 const { data: episodesData } = await supabase
                     .from('watchlist_episodes')
                     .select('watchlist_id')
-                    .eq('watched', true)
 
                 const { data: listsData } = await supabase
                     .from('lists')
