@@ -5,6 +5,8 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { User } from '@supabase/supabase-js'
 
+
+
 interface ProfileRow {
     id: string
     display_name: string | null
@@ -227,6 +229,11 @@ const Admin: React.FC = () => {
                     .select('user_id')
                     .range(0, 100000)
 
+                console.log('Admin debug - profiles:', profilesData.length)
+                console.log('Admin debug - watchlist rows:', watchlistData?.length)
+                console.log('Admin debug - episode rows:', episodesData?.length)
+                console.log('Admin debug - list rows:', listsData?.length)
+
                 const watchlistByUser = new Map<string, { total: number; movies: number; tv: number; completed: number }>()
                 watchlistData?.forEach(item => {
                     const existing = watchlistByUser.get(item.user_id) || { total: 0, movies: 0, tv: 0, completed: 0 }
@@ -243,12 +250,19 @@ const Admin: React.FC = () => {
                 })
 
                 const episodesByUser = new Map<string, number>()
+                let orphanedEpisodes = 0
                 episodesData?.forEach(ep => {
                     const userId = watchlistIdToUserId.get(ep.watchlist_id)
                     if (userId) {
                         episodesByUser.set(userId, (episodesByUser.get(userId) || 0) + 1)
+                    } else {
+                        orphanedEpisodes++
                     }
                 })
+
+                console.log('Admin debug - watchlistIdToUserId size:', watchlistIdToUserId.size)
+                console.log('Admin debug - episodesByUser map:', Object.fromEntries(episodesByUser))
+                console.log('Admin debug - orphaned episodes (no matching watchlist):', orphanedEpisodes)
 
                 const listsByUser = new Map<string, number>()
                 listsData?.forEach(list => {
@@ -274,6 +288,8 @@ const Admin: React.FC = () => {
                     if (a.role !== 'admin' && b.role === 'admin') return 1
                     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                 })
+
+                console.log('Admin debug - final user stats:', stats)
 
                 setUserStats(stats)
             } catch (err) {
@@ -430,6 +446,8 @@ const Admin: React.FC = () => {
             year: 'numeric'
         })
     }
+
+    
 
     return (
         <div className="admin-page">
@@ -740,6 +758,7 @@ const Admin: React.FC = () => {
                 disabled={editUserLoading || !(editUserConfirm?.displayName?.trim().length > 0)}
                 confirmLoading={editUserLoading}
             />
+            
 
             <ConfirmModal
                 isOpen={!!deleteUserConfirm}
