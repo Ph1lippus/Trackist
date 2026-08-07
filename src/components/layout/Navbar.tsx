@@ -27,6 +27,10 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const [showInstallButton, setShowInstallButton] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [isPWA] = useState<boolean>(() => {
+        return window.matchMedia('(display-mode: standalone)').matches ||
+            (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+    });
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
@@ -355,6 +359,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                         <span className="hamburger-line"></span>
                                     </div>
                                 </button>
+                                {isPWA && (
                                 <button
                                     className="navbar-menu-btn"
                                     onClick={handleFullscreenToggle}
@@ -364,6 +369,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                 >
                                     <i className={isFullscreen ? "fa-solid fa-compress" : "fa-solid fa-expand"}></i>
                                 </button>
+                                )}
                                 <div
                                     ref={menuRef}
                                     className={`t-dropdown ${menuOpen ? (closing ? 'is-closing' : 'is-open') : ''}`}

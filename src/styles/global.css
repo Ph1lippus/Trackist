@@ -5896,6 +5896,10 @@ i.fa-solid.fa-trash:hover {
 .stats-hero-card--blue .stats-hero-card__icon { color: #0096ff; }
 .stats-hero-card--purple .stats-hero-card__icon { color: #a855f7; }
 .stats-hero-card--pink .stats-hero-card__icon { color: #ff6b9d; }
+.stats-hero-card--teal .stats-hero-card__icon { color: #20c997; }
+.stats-hero-card--orange .stats-hero-card__icon { color: #fd7e14; }
+.stats-hero-card--cyan .stats-hero-card__icon { color: #17a2b8; }
+.stats-hero-card--indigo .stats-hero-card__icon { color: #6610f2; }
 
 /* Grid layout */
 .stats-grid {
@@ -6500,9 +6504,91 @@ i.fa-solid.fa-trash:hover {
     background: rgba(133, 138, 227, 0.1);
 }
 
+.admin-users-cards {
+    display: none;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.admin-user-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 20px;
+    padding: 1rem;
+    transition: all 0.2s ease;
+}
+
+.admin-user-card:hover {
+    border-color: rgba(133, 138, 227, 0.2);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.admin-user-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.admin-user-card__name {
+    font-weight: 600;
+    color: var(--color-platinum);
+    font-size: 0.95rem;
+}
+
+.admin-user-card__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-bottom: 0.75rem;
+}
+
+.admin-user-card__meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.admin-user-card__meta-item i {
+    width: 14px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.3);
+}
+
+.admin-user-card__action {
+    width: 100%;
+    padding: 0.6rem 1rem;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: transparent;
+    color: var(--color-platinum);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.admin-user-card__action:hover {
+    border-color: var(--color-primary);
+    color: #fff;
+    background: rgba(133, 138, 227, 0.1);
+}
+
 @media (max-width: 768px) {
     .admin-stats-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+    .admin-users-table {
+        display: none;
+    }
+    .admin-users-cards {
+        display: flex;
     }
     .admin-users-table th,
     .admin-users-table td {

@@ -17,6 +17,11 @@ interface AdminStats {
     totalUsers: number
     totalWatchlistItems: number
     totalLists: number
+    totalMovies: number
+    totalTVShows: number
+    totalCompleted: number
+    totalEpisodes: number
+    avgScore: number | null
     usersThisMonth: number
     usersThisWeek: number
 }
@@ -35,6 +40,11 @@ const Admin: React.FC = () => {
         totalUsers: 0,
         totalWatchlistItems: 0,
         totalLists: 0,
+        totalMovies: 0,
+        totalTVShows: 0,
+        totalCompleted: 0,
+        totalEpisodes: 0,
+        avgScore: null,
         usersThisMonth: 0,
         usersThisWeek: 0
     })
@@ -98,6 +108,35 @@ const Admin: React.FC = () => {
                     .from('lists')
                     .select('*', { count: 'exact', head: true })
 
+                const { count: moviesCount } = await supabase
+                    .from('watchlist')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('media_type', 'movie')
+
+                const { count: tvCount } = await supabase
+                    .from('watchlist')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('media_type', 'tv')
+
+                const { count: completedCount } = await supabase
+                    .from('watchlist')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('status', 'completed')
+
+                const { count: episodesCount } = await supabase
+                    .from('watchlist_episodes')
+                    .select('*', { count: 'exact', head: true })
+
+                const { data: scoreData } = await supabase
+                    .from('watchlist')
+                    .select('vote_average')
+                    .not('vote_average', 'is', null)
+                    .gt('vote_average', 0)
+
+                const avgScore = scoreData && scoreData.length > 0
+                    ? Math.round((scoreData.reduce((sum, item) => sum + (item.vote_average || 0), 0) / scoreData.length) * 10) / 10
+                    : null
+
                 const { count: weekCount } = await supabase
                     .from('profiles')
                     .select('*', { count: 'exact', head: true })
@@ -112,6 +151,11 @@ const Admin: React.FC = () => {
                     totalUsers: profilesData?.length || 0,
                     totalWatchlistItems: watchlistCount || 0,
                     totalLists: listsCount || 0,
+                    totalMovies: moviesCount || 0,
+                    totalTVShows: tvCount || 0,
+                    totalCompleted: completedCount || 0,
+                    totalEpisodes: episodesCount || 0,
+                    avgScore,
                     usersThisWeek: weekCount || 0,
                     usersThisMonth: monthCount || 0
                 })
@@ -230,11 +274,36 @@ const Admin: React.FC = () => {
                             <div className="stats-hero-card__label">Lists</div>
                         </div>
                         <div className="stats-hero-card stats-hero-card--blue">
+                            <div className="stats-hero-card__icon"><i className="fas fa-film"></i></div>
+                            <div className="stats-hero-card__value">{stats.totalMovies.toLocaleString()}</div>
+                            <div className="stats-hero-card__label">Movies</div>
+                        </div>
+                        <div className="stats-hero-card stats-hero-card--purple">
+                            <div className="stats-hero-card__icon"><i className="fas fa-tv"></i></div>
+                            <div className="stats-hero-card__value">{stats.totalTVShows.toLocaleString()}</div>
+                            <div className="stats-hero-card__label">TV Shows</div>
+                        </div>
+                        <div className="stats-hero-card stats-hero-card--pink">
+                            <div className="stats-hero-card__icon"><i className="fas fa-check-circle"></i></div>
+                            <div className="stats-hero-card__value">{stats.totalCompleted.toLocaleString()}</div>
+                            <div className="stats-hero-card__label">Completed</div>
+                        </div>
+                        <div className="stats-hero-card stats-hero-card--teal">
+                            <div className="stats-hero-card__icon"><i className="fas fa-play-circle"></i></div>
+                            <div className="stats-hero-card__value">{stats.totalEpisodes.toLocaleString()}</div>
+                            <div className="stats-hero-card__label">Episodes</div>
+                        </div>
+                        <div className="stats-hero-card stats-hero-card--orange">
+                            <div className="stats-hero-card__icon"><i className="fas fa-star"></i></div>
+                            <div className="stats-hero-card__value">{stats.avgScore !== null ? stats.avgScore.toFixed(1) : '—'}</div>
+                            <div className="stats-hero-card__label">Avg Score</div>
+                        </div>
+                        <div className="stats-hero-card stats-hero-card--cyan">
                             <div className="stats-hero-card__icon"><i className="fas fa-user-plus"></i></div>
                             <div className="stats-hero-card__value">{stats.usersThisWeek}</div>
                             <div className="stats-hero-card__label">New This Week</div>
                         </div>
-                        <div className="stats-hero-card stats-hero-card--purple">
+                        <div className="stats-hero-card stats-hero-card--indigo">
                             <div className="stats-hero-card__icon"><i className="fas fa-calendar"></i></div>
                             <div className="stats-hero-card__value">{stats.usersThisMonth}</div>
                             <div className="stats-hero-card__label">New This Month</div>
@@ -285,6 +354,44 @@ const Admin: React.FC = () => {
                                     ))}
                                 </tbody>
                             </table>
+                            {profiles.length === 0 && !statsLoading && (
+                                <p className="stats-empty">No users found.</p>
+                            )}
+                        </div>
+                        <div className="admin-users-cards">
+                            {profiles.map(profile => (
+                                <div key={profile.id} className="admin-user-card">
+                                    <div className="admin-user-card__header">
+                                        <div className="admin-user-card__name">{profile.display_name || '—'}</div>
+                                        <span className={`admin-role-badge admin-role-badge--${profile.role || 'user'}`}>
+                                            {profile.role || 'user'}
+                                        </span>
+                                    </div>
+                                    <div className="admin-user-card__meta">
+                                        <div className="admin-user-card__meta-item">
+                                            <i className="fas fa-calendar-plus"></i>
+                                            <span>Joined {formatDate(profile.created_at)}</span>
+                                        </div>
+                                        <div className="admin-user-card__meta-item">
+                                            <i className="fas fa-clock"></i>
+                                            <span>Updated {formatDate(profile.updated_at)}</span>
+                                        </div>
+                                    </div>
+                                    {profile.id !== user.id && (
+                                        <button
+                                            className="admin-user-card__action"
+                                            onClick={() => setRoleConfirm({
+                                                userId: profile.id,
+                                                newRole: profile.role === 'admin' ? 'user' : 'admin',
+                                                displayName: profile.display_name || 'Unknown'
+                                            })}
+                                        >
+                                            <i className={`fas ${profile.role === 'admin' ? 'fa-user-xmark' : 'fa-user-shield'}`}></i>
+                                            {profile.role === 'admin' ? 'Demote to user' : 'Promote to admin'}
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
                             {profiles.length === 0 && !statsLoading && (
                                 <p className="stats-empty">No users found.</p>
                             )}
