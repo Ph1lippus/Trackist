@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
-import { useAuth } from '../hooks/useAuth'
 import { usePageTitle } from '../hooks/usePageTitle'
 import ConfirmModal from '../components/modals/ConfirmModal'
+import type { User } from '@supabase/supabase-js'
 
 interface ProfileRow {
     id: string
@@ -25,9 +25,10 @@ type TabType = 'overview' | 'users'
 
 const Admin: React.FC = () => {
     usePageTitle('Trackist - Admin')
-    const { user, profile } = useAuth(true)
-    const activeTabState = useState<TabType>('overview')
-    const [activeTab, setActiveTab] = activeTabState
+    const [user, setUser] = useState<User | null>(null)
+    const [profile, setProfile] = useState<{ role: string | null } | null>(null)
+    const [loading, setLoading] = useState(true)
+    const [activeTab, setActiveTab] = useState<TabType>('overview')
     const [profiles, setProfiles] = useState<ProfileRow[]>([])
     const [stats, setStats] = useState<AdminStats>({
         totalUsers: 0,
@@ -41,31 +42,35 @@ const Admin: React.FC = () => {
     const [roleLoading, setRoleLoading] = useState(false)
 
     const isAdmin = profile?.role === 'admin'
-    const loading = Boolean(user && !profile)
-
-    console.log('[Admin] render state:', { userId: user?.id, profileRole: profile?.role, isAdmin, loading })
-
-    const handleRetry = () => {
-        window.location.reload()
-    }
 
     useEffect(() => {
-        if (!isAdmin || !user) {
-            return
+        const checkAuth = async () => {
+            const { data } = await supabase.auth.getUser()
+            setUser(data.user)
+            if (data.user) {
+                const { data: profileData } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', data.user.id)
+                    .single()
+                setProfile(profileData)
+            }
+            setLoading(false)
         }
+        checkAuth()
+    }, [])
+
+    useEffect(() => {
+        if (!isAdmin || !user) return
 
         const fetchData = async () => {
             try {
-                const { data: profilesData, error: profilesError } = await supabase
+                const { data: profilesData } = await supabase
                     .from('profiles')
                     .select('id, display_name, role, created_at, updated_at')
                     .order('created_at', { ascending: false })
 
-                if (profilesError) {
-                    console.error('Failed to fetch profiles:', profilesError)
-                } else {
-                    setProfiles(profilesData || [])
-                }
+                setProfiles(profilesData || [])
 
                 const now = new Date()
                 const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
@@ -135,7 +140,6 @@ const Admin: React.FC = () => {
                     <div className="discover-loading">
                         <div className="discover-spinner" />
                         <p>Loading admin data...</p>
-                        <button className="discover-loading__retry" onClick={handleRetry}>Retry</button>
                     </div>
                 </div>
             </section>
@@ -144,20 +148,6 @@ const Admin: React.FC = () => {
 
     if (!isAdmin || !user) {
         return <Navigate to="/" replace />
-    }
-
-    if (loading) {
-        return (
-            <section className="dashboard-page">
-                <div className="dashboard-shell">
-                    <div className="discover-loading">
-                        <div className="discover-spinner" />
-                        <p>Loading admin data...</p>
-                        <button className="discover-loading__retry" onClick={handleRetry}>Retry</button>
-                    </div>
-                </div>
-            </section>
-        )
     }
 
     return (

@@ -16,6 +16,7 @@ interface Profile {
 export const useAuth = (loadProfileData = false) => {
     const [user, setUser] = useState<User | null>(null)
     const [profile, setProfile] = useState<Profile | null>(null)
+    const [initializing, setInitializing] = useState(true)
 
     const loadProfile = useCallback(async (userId: string) => {
         const { data, error } = await getProfile(userId)
@@ -28,20 +29,28 @@ export const useAuth = (loadProfileData = false) => {
     }, [])
 
     useEffect(() => {
+        let active = true
         supabase.auth.getSession().then(({ data: { session } }) => {
+            if (!active) return
             setUser(session?.user || null)
+            setInitializing(false)
             if (session?.user && loadProfileData) {
                 loadProfile(session.user.id)
             }
         })
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            if (!active) return
             setUser(session?.user || null)
+            setInitializing(false)
             if (session?.user && loadProfileData) {
                 loadProfile(session.user.id)
             }
         })
-        return () => subscription.unsubscribe()
+        return () => {
+            active = false
+            subscription.unsubscribe()
+        }
     }, [loadProfile, loadProfileData])
 
-    return { user, profile }
+    return { user, profile, initializing }
 }

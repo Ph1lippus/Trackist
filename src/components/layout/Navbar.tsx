@@ -5,6 +5,7 @@ import { supabase } from '../../services/supabaseClient';
 import { useSearch } from '../../hooks/useSearch';
 import SearchDropdown from '../search/SearchDropdown';
 import ProgressFixModal from '../modals/ProgressFixModal';
+import ConfirmModal from '../modals/ConfirmModal';
 import { clearAllCache } from '../../services/cacheService';
 
 interface NavbarProps {
@@ -26,6 +27,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const [showInstallButton, setShowInstallButton] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [showLogoutModal, setShowLogoutModal] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
     const searchBoxRef = useRef<HTMLDivElement>(null);
@@ -153,11 +155,13 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
 
     const handleLogout = async () => {
         closeMenu();
-        // Ask for confirmation before logout
-        if (window.confirm('Are you sure you want to logout?')) {
-            await supabase.auth.signOut();
-            navigate('/login');
-        }
+        setShowLogoutModal(true);
+    };
+
+    const handleLogoutConfirm = async () => {
+        setShowLogoutModal(false);
+        await supabase.auth.signOut();
+        navigate('/login');
     };
 
     const handleClearCache = async () => {
@@ -431,9 +435,17 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                 isOpen={showFixModal}
                 onClose={() => setShowFixModal(false)}
                 onComplete={() => {
-                    // Refresh the current page if on a watchlist page
                     window.dispatchEvent(new CustomEvent('watchlist-refresh'))
                 }}
+            />
+            <ConfirmModal
+                isOpen={showLogoutModal}
+                title="Logout"
+                message="Are you sure you want to logout?"
+                onConfirm={handleLogoutConfirm}
+                onCancel={() => setShowLogoutModal(false)}
+                confirmText="Logout"
+                confirmColor="danger"
             />
         </nav>
     );
