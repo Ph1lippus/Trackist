@@ -9180,7 +9180,7 @@ i.fa-solid.fa-trash:hover {
 }
 
 .mobile-tvshow-card {
-        padding: 0.5rem 1rem 0.5rem 0rem;
+    padding: 0.5rem 1rem 0.5rem 0rem;
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -9196,7 +9196,7 @@ i.fa-solid.fa-trash:hover {
 }
 
 .mobile-tvshow-card-poster {
-    width: 100px;
+    width: 120px;
     height: auto;
     flex-shrink: 0;
     border-radius: 0px 25px 25px 0px;

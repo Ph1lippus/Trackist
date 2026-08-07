@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { imageUrl } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
@@ -6,6 +6,7 @@ import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useSearch } from '../hooks/useSearch'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
+import ConfirmModal from '../components/modals/ConfirmModal'
 
 const MobileMovies: React.FC = () => {
     usePageTitle('Trackist - Movies')
@@ -13,6 +14,11 @@ const MobileMovies: React.FC = () => {
     const { committedQuery } = useSearch()
     const movies = useLibraryStore((state) => state.movies)
     const [updatingId, setUpdatingId] = useState<string | null>(null)
+    const [confirmModal, setConfirmModal] = useState<{
+        isOpen: boolean
+        action: 'watch' | 'unwatch'
+        item: WatchlistItem
+    } | null>(null)
 
     useEffect(() => {
         window.scrollTo(0, 0)
@@ -21,20 +27,36 @@ const MobileMovies: React.FC = () => {
     const handleToggleWatched = async (movie: WatchlistItem) => {
         if (!movie.id) return
 
+        const isCompleted = movie.status === 'completed' || movie.status === 'caught_up'
+        const nextStatus = isCompleted ? 'planning' : 'completed'
+
+        if (!isCompleted) {
+            setConfirmModal({ isOpen: true, action: 'watch', item: movie })
+            return
+        }
+
         setUpdatingId(movie.id)
         try {
-            const isCompleted = movie.status === 'completed' || movie.status === 'caught_up'
-            const nextStatus = isCompleted ? 'planning' : 'completed'
-
             await useLibraryStore.getState().updateStatus(movie.id, nextStatus)
-
-            if (!isCompleted && movie.status === 'planning') {
-                launchCosmicConfetti()
-            }
         } catch (err) {
             console.error('Failed to update movie status:', err)
         } finally {
             setUpdatingId(null)
+        }
+    }
+
+    const handleConfirmAction = async () => {
+        if (!confirmModal) return
+
+        setUpdatingId(confirmModal.item.id)
+        try {
+            await useLibraryStore.getState().updateStatus(confirmModal.item.id, 'completed')
+            launchCosmicConfetti()
+        } catch (err) {
+            console.error('Failed to update movie status:', err)
+        } finally {
+            setUpdatingId(null)
+            setConfirmModal(null)
         }
     }
 
@@ -86,7 +108,11 @@ const MobileMovies: React.FC = () => {
                     className={`mobile-tvshow-card-add-btn ${isCompleted ? 'mobile-tvshow-card-add-btn--done' : ''}`}
                     onClick={(e) => {
                         e.stopPropagation()
-                        handleToggleWatched(movie)
+                        if (isCompleted) {
+                            handleToggleWatched(movie)
+                        } else {
+                            setConfirmModal({ isOpen: true, action: 'watch', item: movie })
+                        }
                     }}
                     disabled={isUpdating}
                     title={isCompleted ? 'Mark as unwatched' : 'Mark as watched'}
@@ -133,6 +159,16 @@ const MobileMovies: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            <ConfirmModal
+                isOpen={Boolean(confirmModal?.isOpen && confirmModal.action === 'watch')}
+                title="Mark as Watched"
+                message={`Are you sure you want to mark "${confirmModal?.item.title}" as watched?`}
+                onConfirm={handleConfirmAction}
+                onCancel={() => setConfirmModal(null)}
+                confirmText="Confirm"
+                confirmColor="success"
+            />
         </section>
     )
 }

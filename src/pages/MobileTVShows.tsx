@@ -1,22 +1,13 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { imageUrl, getTVSeasonDetails } from '../services/tmdbService'
-import { markEpisodeWatched, getWatchedEpisodes } from '../services/watchlistService'
+import { supabase } from '../services/supabaseClient'
+import { imageUrl } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useSearch } from '../hooks/useSearch'
-
-interface EpisodeInfo {
-    season_number: number
-    episode_number: number
-    tmdb_episode_id?: number
-    title?: string
-    still_path?: string
-    overview?: string
-    air_date?: string
-    runtime?: number
-}
+import { launchCosmicConfetti } from '../utils/cosmicConfetti'
+import ConfirmModal from '../components/modals/ConfirmModal'
 
 const MobileTVShows: React.FC = () => {
     usePageTitle('Trackist - TV Shows')
@@ -24,93 +15,78 @@ const MobileTVShows: React.FC = () => {
     const { committedQuery } = useSearch()
     const tvShows = useLibraryStore((state) => state.tvShows)
     const [addingEpisode, setAddingEpisode] = useState<string | null>(null)
-    const [episodesMap, setEpisodesMap] = useState<Map<string, EpisodeInfo[]>>(new Map())
-    const [watchedSet, setWatchedSet] = useState<Set<string>>(new Set())
+    const [markAllModal, setMarkAllModal] = useState<WatchlistItem | null>(null)
+    const [markingAllWatched, setMarkingAllWatched] = useState(false)
 
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
 
-    useEffect(() => {
-        const loadEpisodes = async () => {
-            const watching = tvShows.filter(s => s.status === 'watching' && s.tmdb_id)
-            if (watching.length === 0) return
-
-            const newEpisodesMap = new Map<string, EpisodeInfo[]>()
-            const newWatchedSet = new Set<string>()
-
-            for (const show of watching) {
-                if (!show.id || !show.tmdb_id) continue
-
-                try {
-                    const seasonData = await getTVSeasonDetails(show.tmdb_id, 1)
-                    const eps: EpisodeInfo[] = (seasonData.episodes || []).map((ep: {
-                        episode_number: number
-                        id?: number
-                        name?: string
-                        still_path?: string
-                        overview?: string
-                        air_date?: string
-                        runtime?: number
-                    }) => ({
-                        season_number: 1,
-                        episode_number: ep.episode_number,
-                        tmdb_episode_id: ep.id,
-                        title: ep.name,
-                        still_path: ep.still_path,
-                        overview: ep.overview,
-                        air_date: ep.air_date,
-                        runtime: ep.runtime
-                    }))
-                    newEpisodesMap.set(show.id, eps)
-
-                    const watched = await getWatchedEpisodes(show.id)
-                    watched.forEach(ep => {
-                        newWatchedSet.add(`${show.id}-${ep.season_number}-${ep.episode_number}`)
-                    })
-                } catch (err) {
-                    console.error(`Failed to load episodes for ${show.title}:`, err)
-                }
-            }
-
-            setEpisodesMap(newEpisodesMap)
-            setWatchedSet(newWatchedSet)
-        }
-
-        loadEpisodes()
+    const tvShowsWithProgress = useMemo(() => {
+        return tvShows.map(show => ({
+            ...show,
+            total_episodes_watched: show.current_episode ?? 0
+        }))
     }, [tvShows])
+
+    const watching = useMemo(() => {
+        const filtered = committedQuery
+            ? tvShowsWithProgress.filter(s => s.status === 'watching' && s.title.toLowerCase().includes(committedQuery.toLowerCase()))
+            : tvShowsWithProgress.filter(s => s.status === 'watching')
+        return filtered.sort((a, b) => {
+            const dateA = new Date(a.updated_at || 0)
+            const dateB = new Date(b.updated_at || 0)
+            return dateB.getTime() - dateA.getTime()
+        })
+    }, [tvShowsWithProgress, committedQuery])
+
+    const toWatch = useMemo(() => {
+        const filtered = committedQuery
+            ? tvShowsWithProgress.filter(s => s.status === 'planning' && s.title.toLowerCase().includes(committedQuery.toLowerCase()))
+            : tvShowsWithProgress.filter(s => s.status === 'planning')
+        return filtered.sort((a, b) => {
+            const dateA = new Date(a.added_at || 0)
+            const dateB = new Date(b.added_at || 0)
+            return dateA.getTime() - dateB.getTime()
+        })
+    }, [tvShowsWithProgress, committedQuery])
 
     const handleAddEpisode = async (show: WatchlistItem) => {
         if (!show.id || !show.tmdb_id) return
 
         setAddingEpisode(show.id)
         try {
-            const showEpisodes = episodesMap.get(show.id) || []
-            const nextEpisode = showEpisodes.find(ep => !watchedSet.has(`${show.id}-${ep.season_number}-${ep.episode_number}`))
+            const currentEpisode = show.current_episode || 0
+            const totalEpisodes = show.total_episodes
+            const isLastEpisode = totalEpisodes ? currentEpisode >= totalEpisodes - 1 : false
 
-            if (!nextEpisode) {
+            if (isLastEpisode) {
+                setMarkAllModal(show)
                 setAddingEpisode(null)
                 return
             }
 
-            const success = await markEpisodeWatched(
-                show.id,
-                nextEpisode.season_number,
-                nextEpisode.episode_number,
-                {
-                    tmdb_episode_id: nextEpisode.tmdb_episode_id,
-                    title: nextEpisode.title,
-                    still_path: nextEpisode.still_path,
-                    overview: nextEpisode.overview,
-                    air_date: nextEpisode.air_date,
-                    runtime: nextEpisode.runtime
-                }
-            )
-
-            if (success) {
-                setWatchedSet(prev => new Set([...prev, `${show.id}-${nextEpisode.season_number}-${nextEpisode.episode_number}`]))
-                await useLibraryStore.getState().refreshItem(show.id)
+            const newEpisode = currentEpisode + 1
+            const updates: Record<string, unknown> = {
+                current_episode: newEpisode,
+                updated_at: new Date().toISOString()
             }
+
+            if (show.status === 'planning') {
+                updates.status = 'watching'
+            }
+
+            const { error } = await supabase
+                .from('watchlist')
+                .update(updates)
+                .eq('id', show.id)
+
+            if (error) {
+                console.error('Failed to add episode:', error)
+                return
+            }
+
+            await useLibraryStore.getState().refreshItem(show.id)
         } catch (err) {
             console.error('Failed to add episode:', err)
         } finally {
@@ -118,46 +94,46 @@ const MobileTVShows: React.FC = () => {
         }
     }
 
-    const watching = useMemo(() => {
-        const filtered = committedQuery
-            ? tvShows.filter(s => s.status === 'watching' && s.title.toLowerCase().includes(committedQuery.toLowerCase()))
-            : tvShows.filter(s => s.status === 'watching')
-        return filtered.sort((a, b) => {
-            const dateA = new Date(a.updated_at || 0)
-            const dateB = new Date(b.updated_at || 0)
-            return dateB.getTime() - dateA.getTime()
-        })
-    }, [tvShows, committedQuery])
+    const handleMarkAllWatched = async () => {
+        if (!markAllModal || !markAllModal.tmdb_id) return
 
-    const toWatch = useMemo(() => {
-        const filtered = committedQuery
-            ? tvShows.filter(s => s.status === 'planning' && s.title.toLowerCase().includes(committedQuery.toLowerCase()))
-            : tvShows.filter(s => s.status === 'planning')
-        return filtered.sort((a, b) => {
-            const dateA = new Date(a.added_at || 0)
-            const dateB = new Date(b.added_at || 0)
-            return dateA.getTime() - dateB.getTime()
-        })
-    }, [tvShows, committedQuery])
+        setMarkingAllWatched(true)
+        try {
+            const { markShowAsFullyWatched } = await import('../services/watchlistService')
+            await markShowAsFullyWatched(markAllModal.id, markAllModal.tmdb_id)
+            await useLibraryStore.getState().refreshItem(markAllModal.id)
+
+            const updatedItem = useLibraryStore.getState().allItems.find(i => i.id === markAllModal.id)
+            if (updatedItem && (updatedItem.status === 'completed' || updatedItem.status === 'caught_up')) {
+                launchCosmicConfetti()
+            }
+
+            setMarkAllModal(null)
+        } catch (err) {
+            console.error('Failed to mark all as watched:', err)
+        } finally {
+            setMarkingAllWatched(false)
+        }
+    }
 
     const getEpisodeLabel = (show: WatchlistItem): string => {
-        const watchedCount = episodesMap.get(show.id)?.filter(ep => watchedSet.has(`${show.id}-${ep.season_number}-${ep.episode_number}`)).length || 0
-        return `S1 Episode ${watchedCount}`
+        const episode = show.current_episode || 0
+        return `S1 E${episode}`
     }
 
     const getEpisodeSubtitle = (show: WatchlistItem): string => {
-        const watchedCount = episodesMap.get(show.id)?.filter(ep => watchedSet.has(`${show.id}-${ep.season_number}-${ep.episode_number}`)).length || 0
-        const totalEpisodes = episodesMap.get(show.id)?.length || 0
+        const episode = show.current_episode || 0
+        const totalEpisodes = show.total_episodes
 
         if (show.status === 'planning') {
             return 'First episode'
         }
 
-        if (totalEpisodes > 0 && watchedCount >= totalEpisodes) {
+        if (totalEpisodes && episode >= totalEpisodes) {
             return 'Final episode'
         }
 
-        return `Episode ${watchedCount}`
+        return `E${episode}`
     }
 
     const renderShowCard = (show: WatchlistItem, showFirstEpisode: boolean = false) => {
@@ -182,7 +158,7 @@ const MobileTVShows: React.FC = () => {
                 <div className="mobile-tvshow-card-body">
                     <h3 className="mobile-tvshow-card-title">{show.title}</h3>
                     <div className="mobile-tvshow-card-episode">
-                        <span>{showFirstEpisode ? 'S1 Episode 1' : getEpisodeLabel(show)}</span>
+                        <span>{showFirstEpisode ? 'S1 E1' : getEpisodeLabel(show)}</span>
                     </div>
                     <p className="mobile-tvshow-card-episode-title">{showFirstEpisode ? 'First episode' : getEpisodeSubtitle(show)}</p>
                 </div>
@@ -239,6 +215,18 @@ const MobileTVShows: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            <ConfirmModal
+                isOpen={!!markAllModal}
+                title="Mark as Watched"
+                message={`Are you sure you want to mark "${markAllModal?.title}" as fully watched?`}
+                onConfirm={handleMarkAllWatched}
+                onCancel={() => setMarkAllModal(null)}
+                confirmText={markingAllWatched ? 'Saving...' : 'Confirm'}
+                confirmColor="success"
+                disabled={markingAllWatched}
+                confirmLoading={markingAllWatched}
+            />
         </section>
     )
 }
