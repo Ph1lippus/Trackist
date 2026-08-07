@@ -4398,6 +4398,8 @@ button:focus-visible {
 }
 
 .media-card__no-poster {
+    border-radius: 20px;
+    aspect-ratio: 2 / 3;
     width: 100%;
     height: 100%;
     display: flex;
@@ -4411,6 +4413,7 @@ button:focus-visible {
     word-break: break-word;
 }
 .media-card__poster {
+    border-radius: 25px;
     position: relative;
     flex-shrink: 0;
     aspect-ratio: 2 / 3;

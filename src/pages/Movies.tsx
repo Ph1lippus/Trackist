@@ -70,6 +70,18 @@ const Movies: React.FC = () => {
         setConfirmModal(null)
     }
 
+    const toggleSelection = (id: string) => {
+        setSelectedIds(prev => {
+            const newSet = new Set(prev)
+            if (newSet.has(id)) {
+                newSet.delete(id)
+            } else {
+                newSet.add(id)
+            }
+            return newSet
+        })
+    }
+
     const handleBatchMarkWatched = async () => {
         if (selectedIds.size === 0) return
 
@@ -204,6 +216,7 @@ const Movies: React.FC = () => {
                                             item={tmdbItem}
                                             selected={selectionMode && isSelected}
                                             selectable={selectionMode}
+                                            onSelect={() => toggleSelection(item.id)}
                                             isInWatchlist={true}
                                             onAdd={selectionMode ? undefined : () => {}}
                                             onMarkWatched={selectionMode ? undefined : (tmdbItem) => {
