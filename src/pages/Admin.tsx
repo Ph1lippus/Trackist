@@ -43,6 +43,10 @@ const Admin: React.FC = () => {
     const isAdmin = profile?.role === 'admin'
     const loading = Boolean(user && !profile)
 
+    const handleRetry = () => {
+        window.location.reload()
+    }
+
     useEffect(() => {
         if (!isAdmin || !user) {
             return
@@ -126,7 +130,11 @@ const Admin: React.FC = () => {
         return (
             <section className="dashboard-page">
                 <div className="dashboard-shell">
-                    <div className="discover-loading"><div className="discover-spinner" /><p>Loading...</p></div>
+                    <div className="discover-loading">
+                        <div className="discover-spinner" />
+                        <p>Loading admin data...</p>
+                        <button className="discover-loading__retry" onClick={handleRetry}>Retry</button>
+                    </div>
                 </div>
             </section>
         )
@@ -134,6 +142,20 @@ const Admin: React.FC = () => {
 
     if (!isAdmin || !user) {
         return <Navigate to="/" replace />
+    }
+
+    if (loading) {
+        return (
+            <section className="dashboard-page">
+                <div className="dashboard-shell">
+                    <div className="discover-loading">
+                        <div className="discover-spinner" />
+                        <p>Loading admin data...</p>
+                        <button className="discover-loading__retry" onClick={handleRetry}>Retry</button>
+                    </div>
+                </div>
+            </section>
+        )
     }
 
     return (

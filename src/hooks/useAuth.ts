@@ -18,8 +18,13 @@ export const useAuth = (loadProfileData = false) => {
     const [profile, setProfile] = useState<Profile | null>(null)
 
     const loadProfile = useCallback(async (userId: string) => {
-        const { data } = await getProfile(userId)
-        setProfile(data as Profile | null)
+        const { data, error } = await getProfile(userId)
+        if (error) {
+            console.error('useAuth: failed to load profile', error)
+            setProfile(null)
+        } else {
+            setProfile(data as Profile | null)
+        }
     }, [])
 
     useEffect(() => {
