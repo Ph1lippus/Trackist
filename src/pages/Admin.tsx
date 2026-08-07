@@ -75,6 +75,34 @@ const Admin: React.FC = () => {
 
     const isAdmin = profile?.role === 'admin'
 
+    const fetchAll = async <T,>(query: any): Promise<T[]> => {
+        const allData: T[] = []
+        let page = 0
+        const pageSize = 1000
+        let hasMore = true
+
+        while (hasMore) {
+            const { data, error } = await query
+                .range(page * pageSize, (page + 1) * pageSize - 1)
+
+            if (error) {
+                console.error('Supabase pagination error:', error)
+                break
+            }
+
+            const batch = data as T[]
+            if (batch.length === 0 || batch.length < pageSize) {
+                hasMore = false
+            } else {
+                page++
+            }
+
+            allData.push(...batch)
+        }
+
+        return allData
+    }
+
     useEffect(() => {
         const checkAuth = async () => {
             try {
@@ -110,11 +138,12 @@ const Admin: React.FC = () => {
 
         const fetchData = async () => {
             try {
-                const { data: profilesData } = await supabase
-                    .from('profiles')
-                    .select('id, display_name, role, created_at, updated_at')
-                    .order('created_at', { ascending: false })
-                    .range(0, 100000)
+                const profilesData = await fetchAll<ProfileRow>(
+                    supabase
+                        .from('profiles')
+                        .select('id, display_name, role, created_at, updated_at')
+                        .order('created_at', { ascending: false })
+                )
 
                 const sortedProfiles = (profilesData || []).sort((a, b) => {
                     if (a.role === 'admin' && b.role !== 'admin') return -1
@@ -155,12 +184,13 @@ const Admin: React.FC = () => {
                     .from('watchlist_episodes')
                     .select('*', { count: 'exact', head: true })
 
-                const { data: scoreData } = await supabase
-                    .from('watchlist')
-                    .select('vote_average')
-                    .not('vote_average', 'is', null)
-                    .gt('vote_average', 0)
-                    .range(0, 100000)
+                const scoreData = await fetchAll<{ vote_average: number | null }>(
+                    supabase
+                        .from('watchlist')
+                        .select('vote_average')
+                        .not('vote_average', 'is', null)
+                        .gt('vote_average', 0)
+                )
 
                 const avgScore = scoreData && scoreData.length > 0
                     ? Math.round((scoreData.reduce((sum, item) => sum + (item.vote_average || 0), 0) / scoreData.length) * 10) / 10
@@ -204,30 +234,34 @@ const Admin: React.FC = () => {
         const fetchUserStats = async () => {
             setUserStatsLoading(true)
             try {
-                const { data: profilesData } = await supabase
-                    .from('profiles')
-                    .select('id, display_name, role, created_at')
-                    .range(0, 100000)
+                const profilesData = await fetchAll<{ id: string; display_name: string | null; role: string | null; created_at: string }>(
+                    supabase
+                        .from('profiles')
+                        .select('id, display_name, role, created_at')
+                )
 
-                if (!profilesData) {
+                if (!profilesData || profilesData.length === 0) {
                     setUserStats([])
                     return
                 }
 
-                const { data: watchlistData } = await supabase
-                    .from('watchlist')
-                    .select('id, user_id, media_type, status')
-                    .range(0, 100000)
+                const watchlistData = await fetchAll<{ id: string; user_id: string; media_type: string; status: string }>(
+                    supabase
+                        .from('watchlist')
+                        .select('id, user_id, media_type, status')
+                )
 
-                const { data: episodesData } = await supabase
-                    .from('watchlist_episodes')
-                    .select('watchlist_id')
-                    .range(0, 100000)
+                const episodesData = await fetchAll<{ watchlist_id: string }>(
+                    supabase
+                        .from('watchlist_episodes')
+                        .select('watchlist_id')
+                )
 
-                const { data: listsData } = await supabase
-                    .from('lists')
-                    .select('user_id')
-                    .range(0, 100000)
+                const listsData = await fetchAll<{ user_id: string }>(
+                    supabase
+                        .from('lists')
+                        .select('user_id')
+                )
 
                 console.log('Admin debug - profiles:', profilesData.length)
                 console.log('Admin debug - watchlist rows:', watchlistData?.length)
