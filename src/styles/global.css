@@ -9162,10 +9162,10 @@ i.fa-solid.fa-trash:hover {
 }
 
 .mobile-tvshow-card-poster {
-    width: 60px;
-    height: 90px;
+    width: 80px;
+    height: 120px;
     flex-shrink: 0;
-    border-radius: 12px;
+    border-radius: 20px;
     overflow: hidden;
     background: linear-gradient(135deg, rgba(133, 138, 227, 0.3), rgba(255, 255, 255, 0.05));
 }
@@ -9233,13 +9233,13 @@ i.fa-solid.fa-trash:hover {
 
 .mobile-tvshow-card-add-btn {
     flex-shrink: 0;
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(255, 255, 255, 0.05);
-    color: var(--color-platinum);
-    font-size: 0.85rem;
+    border: 1px solid rgba(104, 255, 174, 0.3);
+    background: rgba(104, 255, 174, 0.1);
+    color: #68ffae;
+    font-size: 0.9rem;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -9248,9 +9248,9 @@ i.fa-solid.fa-trash:hover {
 }
 
 .mobile-tvshow-card-add-btn:hover:not(:disabled) {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: #fff;
+    background: #68ffae;
+    border-color: #68ffae;
+    color: #000;
     transform: scale(1.1);
 }
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
@@ -7,6 +8,7 @@ import { usePageTitle } from '../hooks/usePageTitle'
 
 const MobileTVShows: React.FC = () => {
     usePageTitle('Trackist - TV Shows')
+    const navigate = useNavigate()
     const tvShows = useLibraryStore((state) => state.tvShows)
     const [addingEpisode, setAddingEpisode] = useState<string | null>(null)
 
@@ -47,9 +49,9 @@ const MobileTVShows: React.FC = () => {
         }
     }
 
-    const recentlyUpdated = useMemo(() => {
+    const watching = useMemo(() => {
         return tvShows
-            .filter(show => show.status !== 'planning')
+            .filter(show => show.status === 'watching')
             .sort((a, b) => {
                 const dateA = new Date(a.updated_at || 0)
                 const dateB = new Date(b.updated_at || 0)
@@ -82,7 +84,7 @@ const MobileTVShows: React.FC = () => {
             <div
                 key={show.id}
                 className="mobile-tvshow-card"
-                onClick={() => { if (show.tmdb_id) void `/tv/${show.tmdb_id}` }}
+                onClick={() => { if (show.tmdb_id) navigate(`/tv/${show.tmdb_id}`) }}
             >
                 <div className="mobile-tvshow-card-poster">
                     {show.poster_path ? (
@@ -111,7 +113,7 @@ const MobileTVShows: React.FC = () => {
                         disabled={isAdding}
                         title="Add one episode"
                     >
-                        <i className={`fa-solid ${isAdding ? 'fa-spinner fa-spin' : 'fa-plus'}`}></i>
+                        <i className={`fa-solid ${isAdding ? 'fa-spinner fa-spin' : 'fa-check'}`}></i>
                     </button>
                 )}
             </div>
@@ -121,7 +123,7 @@ const MobileTVShows: React.FC = () => {
     return (
         <section className="dashboard-page mobile-tvshows-page">
             <div className="dashboard-shell mobile-tvshows-shell">
-                {recentlyUpdated.length === 0 && toWatch.length === 0 ? (
+                {watching.length === 0 && toWatch.length === 0 ? (
                     <div className="mobile-tvshows-empty">
                         <i className="fa-solid fa-tv"></i>
                         <h3>No TV shows yet</h3>
@@ -129,11 +131,11 @@ const MobileTVShows: React.FC = () => {
                     </div>
                 ) : (
                     <div className="mobile-tvshows-list">
-                        {recentlyUpdated.length > 0 && (
+                        {watching.length > 0 && (
                             <div className="mobile-tvshows-section">
-                                <h2 className="mobile-tvshows-section-title">Recently Updated</h2>
+                                <h2 className="mobile-tvshows-section-title">Watching</h2>
                                 <div className="mobile-tvshows-cards">
-                                    {recentlyUpdated.map(show => renderShowCard(show, false))}
+                                    {watching.map(show => renderShowCard(show, false))}
                                 </div>
                             </div>
                         )}
