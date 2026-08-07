@@ -33,19 +33,6 @@ const TVShows: React.FC = () => {
         window.scrollTo(0, 0)
     }, [])
 
-    // Selection handlers
-    const toggleSelection = (id: string) => {
-        setSelectedIds(prev => {
-            const newSet = new Set(prev)
-            if (newSet.has(id)) {
-                newSet.delete(id)
-            } else {
-                newSet.add(id)
-            }
-            return newSet
-        })
-    }
-
     const handleBatchMarkWatched = async () => {
         if (selectedIds.size === 0) return
 

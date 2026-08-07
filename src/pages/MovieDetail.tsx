@@ -319,7 +319,7 @@ const MovieDetail: React.FC = () => {
                                     onClick={() => {
                                         const imdbId = details.external_ids?.imdb_id
                                         if (imdbId) {
-                                            window.open(`https://letterboxd.com/film/${imdbId}/`, '_blank')
+                                            window.open(`https://letterboxd.com/imdb/${imdbId}/`, '_blank')
                                         } else {
                                             const title = details.title || ''
                                             const slug = title
