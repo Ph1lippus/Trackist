@@ -809,13 +809,14 @@ body::after {
     flex-wrap: wrap;
 }
 .discover-tabs {
-    margin-bottom: 2rem;
+    margin: 0;
     display: flex;
     gap: 0.25rem;
-    background: transparent;
+    background: #ffffff0d;
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius:25px;
     padding: 0.25rem;
+    height: 44px;
 }
 .discover-tab {
     padding: 0.5rem 1rem;
@@ -828,6 +829,9 @@ body::after {
     cursor: pointer;
     transition: all 0.2s ease;
     white-space: nowrap;
+    height: 100%;
+    display: flex;
+    align-items: center;
 }
 .discover-tab:hover {
     color: var(--color-platinum);
@@ -864,7 +868,7 @@ body::after {
 }
 .discover-filter-select {
     padding: 0.6rem 2.5rem 0.6rem 1.2rem;
-    background: transparent;
+    background: #ffffff0d;
     color: var(--color-platinum);
     font-size: 0.9rem;
     font-weight: 500;
