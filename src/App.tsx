@@ -182,7 +182,7 @@ const AppContent: React.FC = () => {
     }
 
     const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Friends', '/Statistics', '/Finished', '/Lists', '/Profile', '/Admin']
-    const hideFooter = Boolean(user) && (mediaPages.includes(location.pathname) || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname.startsWith('/Lists/') || location.pathname.startsWith('/Profile/'))
+    const hideFooter = Boolean(user) && (mediaPages.includes(location.pathname) || location.pathname === '/Settings' || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname.startsWith('/Lists/') || location.pathname.startsWith('/Profile/'))
     
     const navigateMonth = (direction: number) => {
         setCurrentMonth(prev => {
