@@ -40,12 +40,12 @@ export const createTVDeepLink = (tmdbId: number, imdbId?: string): string => {
  * @param imdbId - The IMDB ID of the TV show (preferred)
  * @returns The sharing URL
  */
-export const createEpisodeDeepLink = (tmdbId: number, imdbId?: string): string => {
+export const createEpisodeDeepLink = (tmdbId: number, season: number, episode: number, imdbId?: string): string => {
     if (imdbId) {
         const cleanImdb = imdbId.startsWith('tt') ? imdbId : `tt${imdbId}`
-        return `stremio:///detail/series/${cleanImdb}`
+        return `stremio:///detail/series/${cleanImdb}/${cleanImdb}:${season}:${episode}`
     }
-    return `stremio:///detail/series/tmdb/${tmdbId}`
+    return `stremio:///detail/series/tmdb/${tmdbId}/tmdb/${tmdbId}:${season}:${episode}`
 }
 
 /**

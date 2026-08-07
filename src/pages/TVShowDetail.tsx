@@ -10,7 +10,7 @@ import EpisodeChoiceModal from '../components/modals/EpisodeChoiceModal'
 import type { TMDBResult, WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
-import { createEpisodeDeepLink, openInStremio } from '../utils/stremioUtils'
+import { createEpisodeDeepLink, openInStremio, createTVDeepLink  } from '../utils/stremioUtils'
 
 interface LocalEpisode {
     id: string
@@ -72,6 +72,45 @@ const TVShowDetail: React.FC = () => {
     const isEpisodeReleased = (episode: LocalEpisode): boolean => {
         if (!episode.air_date) return true
         return new Date(episode.air_date) <= new Date()
+    }
+
+    const getNextEpisodeToWatch = (): { season: number; episode: number } | null => {
+        if (!episodes.length || !details?.external_ids?.imdb_id) return null
+
+        const watchedEps = episodes.filter(ep => ep.watched && isEpisodeReleased(ep))
+        if (watchedEps.length === 0) return null
+
+        const lastWatched = watchedEps.reduce((max, ep) => {
+            if (ep.season_number > max.season_number) return ep
+            if (ep.season_number === max.season_number && ep.episode_number > max.episode_number) return ep
+            return max
+        }, watchedEps[0])
+
+        const episodesInLastSeason = episodes.filter(ep => ep.season_number === lastWatched.season_number)
+        const releasedInLastSeason = episodesInLastSeason.filter(ep => isEpisodeReleased(ep))
+        const allReleasedWatched = releasedInLastSeason.length > 0 && releasedInLastSeason.every(ep => ep.watched)
+
+        if (allReleasedWatched) {
+            const nextSeason = seasons.find(s => s > lastWatched.season_number)
+            if (nextSeason) {
+                const firstEpOfNextSeason = episodes.find(ep => ep.season_number === nextSeason && isEpisodeReleased(ep))
+                if (firstEpOfNextSeason) {
+                    return { season: nextSeason, episode: firstEpOfNextSeason.episode_number }
+                }
+            }
+            return null
+        }
+
+        const nextEp = episodes.find(ep =>
+            ep.season_number === lastWatched.season_number &&
+            ep.episode_number === lastWatched.episode_number + 1 &&
+            isEpisodeReleased(ep)
+        )
+        if (nextEp) {
+            return { season: nextEp.season_number, episode: nextEp.episode_number }
+        }
+
+        return null
     }
 
     useEffect(() => {
@@ -684,7 +723,10 @@ const TVShowDetail: React.FC = () => {
                                 <button
                                     className="detail-page__icon-btn"
                                     onClick={() => {
-                                        const sharingLink = createEpisodeDeepLink(details.id, details.external_ids?.imdb_id)
+                                        const nextEp = getNextEpisodeToWatch()
+                                        const sharingLink = nextEp
+                                            ? createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids?.imdb_id)
+                                            : createTVDeepLink(details.id, details.external_ids?.imdb_id)
                                         openInStremio(sharingLink)
                                     }}
                                     title="Open in Stremio"
@@ -858,7 +900,13 @@ const TVShowDetail: React.FC = () => {
                                                     setAddEpisodeModal({ isOpen: true, episode: ep })
                                                 } else if (!ep.watched) {
                                                     // Mark as watched
-                                                    markEpisodeAsWatched(ep, false)
+                                                    markEpisodeAsWatched(ep, false).then(() => {
+                                                        const nextEp = getNextEpisodeToWatch()
+                                                        if (nextEp && details?.external_ids?.imdb_id) {
+                                                            const sharingLink = createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids.imdb_id)
+                                                            openInStremio(sharingLink)
+                                                        }
+                                                    })
                                                 } else {
                                                     // Toggle to unwatched
                                                     markEpisodeAsWatched(ep, false)
@@ -904,7 +952,13 @@ const TVShowDetail: React.FC = () => {
                         if (confirmModal.isUnwatch) {
                             markEpisodeAsWatched(confirmModal.episode, false)
                         } else {
-                            markEpisodeAsWatched(confirmModal.episode, confirmModal.markAll)
+                            markEpisodeAsWatched(confirmModal.episode, confirmModal.markAll).then(() => {
+                                const nextEp = getNextEpisodeToWatch()
+                                if (nextEp && details?.external_ids?.imdb_id) {
+                                    const sharingLink = createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids.imdb_id)
+                                    openInStremio(sharingLink)
+                                }
+                            })
                         }
                         setConfirmModal(null)
                     }}
