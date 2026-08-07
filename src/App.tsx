@@ -40,6 +40,7 @@ import ListsEditPage from './pages/ListsEditPage'
 import ListsCreatePage from './pages/ListsCreatePage'
 import Finished from './pages/Finished'
 import MobileTVShows from './pages/MobileTVShows'
+import MobileMovies from './pages/MobileMovies'
 import DetailLayout from './components/layout/DetailLayout'
 
 // Legacy redirect component for /Lists/:id -> /ListsDetail/:id
@@ -186,7 +187,7 @@ const AppContent: React.FC = () => {
         )
     }
 
-    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Friends', '/Statistics', '/Finished', '/Lists', '/Profile', '/Admin', '/MobileTVShows']
+    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Friends', '/Statistics', '/Finished', '/Lists', '/Profile', '/Admin', '/MobileTVShows', '/MobileMovies']
     const hideFooter = Boolean(user) && (mediaPages.includes(location.pathname) || location.pathname === '/Settings' || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname.startsWith('/Lists/') || location.pathname.startsWith('/Profile/'))
     
     const navigateMonth = (direction: number) => {
@@ -227,6 +228,7 @@ const AppContent: React.FC = () => {
                     <Route path="/" element={user ? <MobileTVShows key="mobiletvshows" /> : <Home />} />
                     <Route path="/Discover" element={user ? <Discover key="discover" /> : <Navigate to="/login" replace />} />
                     <Route path="/Movies" element={user ? <Movies /> : <Navigate to="/login" replace />} />
+                    <Route path="/MobileMovies" element={user ? <MobileMovies /> : <Navigate to="/login" replace />} />
                     <Route path="/Tvshows" element={user ? <TVShows /> : <Navigate to="/login" replace />} />
                     <Route path="/MobileTVShows" element={user ? <MobileTVShows /> : <Navigate to="/login" replace />} />
                     <Route path="/Friends" element={user ? <Friends /> : <Navigate to="/login" replace />} />

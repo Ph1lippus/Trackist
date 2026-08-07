@@ -69,16 +69,37 @@ const MobileTVShows: React.FC = () => {
             })
     }, [tvShows])
 
-    const getEpisodeLabel = (show: WatchlistItem): string => {
+    const getEpisodeInfo = (show: WatchlistItem): { label: string; subtitle: string; episodesLeft?: number } => {
         const season = show.current_season || 1
         const episode = show.current_episode || 1
-        return `S${season} E${episode}`
+        const totalEpisodes = show.total_episodes
+        const episodesLeft = totalEpisodes ? Math.max(0, totalEpisodes - episode) : undefined
+
+        if (show.status === 'planning') {
+            return {
+                label: `S${season} E1`,
+                subtitle: 'First episode'
+            }
+        }
+
+        if (totalEpisodes && episode >= totalEpisodes) {
+            return {
+                label: `S${season} E${episode}`,
+                subtitle: 'Final episode'
+            }
+        }
+
+        const suffix = episodesLeft !== undefined && episodesLeft > 0 ? ` +${episodesLeft}` : ''
+        return {
+            label: `S${season} E${episode}${suffix}`,
+            subtitle: `Episode ${episode}`
+        }
     }
 
     const renderShowCard = (show: WatchlistItem, showFirstEpisode: boolean = false) => {
         const isAdding = addingEpisode === show.id
-        const episodeLabel = showFirstEpisode ? 'S1 E1' : getEpisodeLabel(show)
-        const episodeTitle = showFirstEpisode ? 'First episode' : `Episode ${show.current_episode || 1}`
+        const { label, subtitle } = getEpisodeInfo(show)
+        const isCompleted = show.status === 'completed' || show.status === 'caught_up'
 
         return (
             <div
@@ -98,12 +119,11 @@ const MobileTVShows: React.FC = () => {
                 <div className="mobile-tvshow-card-body">
                     <h3 className="mobile-tvshow-card-title">{show.title}</h3>
                     <div className="mobile-tvshow-card-episode">
-                        <i className="fa-solid fa-play"></i>
-                        <span>{episodeLabel}</span>
+                        <span>{label}</span>
                     </div>
-                    <p className="mobile-tvshow-card-episode-title">{episodeTitle}</p>
+                    <p className="mobile-tvshow-card-episode-title">{subtitle}</p>
                 </div>
-                {!showFirstEpisode && (
+                {!showFirstEpisode && !isCompleted && (
                     <button
                         className="mobile-tvshow-card-add-btn"
                         onClick={(e) => {
