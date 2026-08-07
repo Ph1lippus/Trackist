@@ -209,14 +209,14 @@ const Discover: React.FC = () => {
                                 ))}
                             </select>
                             <button
-                                className={`discover-filter-select ${showAdded ? 'active' : ''}`}
+                                className={`discover-filter-select discover-filter-select--btn ${showAdded ? 'active' : ''}`}
                                 style={{ cursor: 'pointer' }}
                                 onClick={() => actions.setShowAdded(!showAdded)}
                             >
                                 {showAdded ? 'Hide Added' : 'Show Added'}
                             </button>
                             <button
-                                className="discover-filter-select"
+                                className="discover-filter-select discover-filter-select--btn"
                                 style={{ cursor: 'pointer' }}
                                 onClick={handleClearFilters}
                             >

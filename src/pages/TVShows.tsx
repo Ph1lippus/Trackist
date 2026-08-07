@@ -22,12 +22,57 @@ const TVShows: React.FC = () => {
     const [markAllModal, setMarkAllModal] = useState<WatchlistItem | null>(null)
     const [markingAllWatched, setMarkingAllWatched] = useState(false)
 
+    const [selectionMode, setSelectionMode] = useState(false)
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+    const [batchLoading, setBatchLoading] = useState(false)
+
     const { isMobile } = useMobile()
 
     // Scroll to top when page loads
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
+
+    // Selection handlers
+    const toggleSelection = (id: string) => {
+        setSelectedIds(prev => {
+            const newSet = new Set(prev)
+            if (newSet.has(id)) {
+                newSet.delete(id)
+            } else {
+                newSet.add(id)
+            }
+            return newSet
+        })
+    }
+
+    const handleBatchMarkWatched = async () => {
+        if (selectedIds.size === 0) return
+
+        setBatchLoading(true)
+        try {
+            const selectedItems = tvShows.filter(item => selectedIds.has(item.id))
+            
+            for (const item of selectedItems) {
+                if (item.tmdb_id) {
+                    await markShowAsFullyWatched(item.id, item.tmdb_id)
+                    await useLibraryStore.getState().refreshItem(item.id)
+                }
+            }
+            
+            setSelectedIds(new Set())
+            setSelectionMode(false)
+        } catch (err) {
+            console.error('Failed to batch mark shows as watched:', err)
+        } finally {
+            setBatchLoading(false)
+        }
+    }
+
+    const clearSelection = () => {
+        setSelectedIds(new Set())
+        setSelectionMode(false)
+    }
 
     // Use current_episode from store data instead of fetching from database
     // This prevents infinite loops caused by repeated API calls
@@ -226,8 +271,47 @@ const TVShows: React.FC = () => {
             <div className="discover-container" style={{ width: '85%' }}>
                 {/* Container A (Top): Currently Watching */}
                 <div className="watchlist-section">
-                    <div className="watchlist-section__header">
+                    <div className="watchlist-section__header" style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        marginBottom: '1rem'
+                    }}>
                         <h3 className="watchlist-section__title">Currently Watching</h3>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            {!selectionMode ? (
+                                <button
+                                    className="settings-btn settings-btn--secondary"
+                                    onClick={() => setSelectionMode(true)}
+                                    disabled={currentlyWatching.length === 0}
+                                >
+                                    Select
+                                </button>
+                            ) : (
+                                <>
+                                    <span style={{ 
+                                        color: 'rgba(255,255,255,0.6)', 
+                                        fontSize: '0.85rem',
+                                        marginRight: '0.5rem'
+                                    }}>
+                                        {selectedIds.size} selected
+                                    </span>
+                                    <button
+                                        className="settings-btn settings-btn--secondary"
+                                        onClick={clearSelection}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        className="settings-btn settings-btn--primary"
+                                        onClick={handleBatchMarkWatched}
+                                        disabled={selectedIds.size === 0 || batchLoading}
+                                    >
+                                        {batchLoading ? '...' : 'Mark as Watched'}
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     </div>
                     {currentlyWatching.length > 0 ? (
                         <VirtuosoGrid
@@ -246,14 +330,20 @@ const TVShows: React.FC = () => {
                                 const episodesLeft = item.total_episodes !== undefined
                                     ? Math.max(0, item.total_episodes - item.total_episodes_watched)
                                     : undefined
+                                const isSelected = selectedIds.has(item.id)
+                                
                                 return (
-                                    <MediaCard
-                                        item={buildTmdbItem(item)}
-                                        isInWatchlist={true}
-                                        onAdd={() => {}}
-                                        onMarkWatched={() => setMarkAllModal(item)}
-                                        episodesLeft={episodesLeft}
-                                    />
+                                    <div style={{ position: 'relative' }}>
+                                        <MediaCard
+                                            item={buildTmdbItem(item)}
+                                            selected={selectionMode && isSelected}
+                                            selectable={selectionMode}
+                                            isInWatchlist={true}
+                                            onAdd={selectionMode ? undefined : () => {}}
+                                            onMarkWatched={selectionMode ? undefined : () => setMarkAllModal(item)}
+                                            episodesLeft={episodesLeft}
+                                        />
+                                    </div>
                                 )
                             }}
                         />
@@ -266,8 +356,47 @@ const TVShows: React.FC = () => {
 
                 {/* Container B (Bottom): Watchlist (Not Started) */}
                 <div className="watchlist-section">
-                    <div className="watchlist-section__header">
+                    <div className="watchlist-section__header" style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        marginBottom: '1rem'
+                    }}>
                         <h3 className="watchlist-section__title">Watchlist (Not Started)</h3>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            {!selectionMode ? (
+                                <button
+                                    className="settings-btn settings-btn--secondary"
+                                    onClick={() => setSelectionMode(true)}
+                                    disabled={notStarted.length === 0}
+                                >
+                                    Select
+                                </button>
+                            ) : (
+                                <>
+                                    <span style={{ 
+                                        color: 'rgba(255,255,255,0.6)', 
+                                        fontSize: '0.85rem',
+                                        marginRight: '0.5rem'
+                                    }}>
+                                        {selectedIds.size} selected
+                                    </span>
+                                    <button
+                                        className="settings-btn settings-btn--secondary"
+                                        onClick={clearSelection}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        className="settings-btn settings-btn--primary"
+                                        onClick={handleBatchMarkWatched}
+                                        disabled={selectedIds.size === 0 || batchLoading}
+                                    >
+                                        {batchLoading ? '...' : 'Mark as Watched'}
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     </div>
                     {notStarted.length > 0 ? (
                         <VirtuosoGrid
@@ -283,13 +412,19 @@ const TVShows: React.FC = () => {
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = notStarted[index]
+                                const isSelected = selectedIds.has(item.id)
+                                
                                 return (
-                                    <MediaCard
-                                        item={buildTmdbItem(item)}
-                                        isInWatchlist={true}
-                                        onAdd={() => {}}
-                                        onMarkWatched={() => setMarkAllModal(item)}
-                                    />
+                                    <div style={{ position: 'relative' }}>
+                                        <MediaCard
+                                            item={buildTmdbItem(item)}
+                                            selected={selectionMode && isSelected}
+                                            selectable={selectionMode}
+                                            isInWatchlist={true}
+                                            onAdd={selectionMode ? undefined : () => {}}
+                                            onMarkWatched={selectionMode ? undefined : () => setMarkAllModal(item)}
+                                        />
+                                    </div>
                                 )
                             }}
                         />

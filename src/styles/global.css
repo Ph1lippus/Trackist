@@ -891,6 +891,10 @@ body::after {
     background-size: 12px;
     padding-right: 2.5rem;
 }
+.discover-filter-select--btn {
+    background-image: none !important;
+    padding-right: 1.2rem !important;
+}
 .discover-filter-select:focus {
     border-color: var(--color-primary);
     background-color: rgba(255, 255, 255, 0.12);
@@ -2121,6 +2125,16 @@ body::after {
 .detail-page__icon-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+}
+.detail-page__icon-btn--letterbox {
+    color: #00E054;
+}
+.detail-page__icon-btn--letterbox:hover:not(:disabled) {
+    color: #00ff66;
+}
+.detail-page__letterbox-logo {
+    width: 20px;
+    height: 20px;
 }
 .detail-page__trailer-overlay {
     position: fixed;
@@ -4360,6 +4374,7 @@ button:focus-visible {
     min-height: 0;
     min-width: 0;
     max-width: 100%;
+    border-radius: 20px;
     /* Disable double-tap zoom delay for instant interaction */
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
@@ -4379,6 +4394,7 @@ button:focus-visible {
     opacity: 1 !important;
     transform: scale(1.02);
     box-shadow: 0 0 0 2px var(--color-primary), 0 8px 25px rgba(133, 138, 227, 0.2);
+    background: rgba(133, 138, 227, 0.08);
 }
 
 .media-card__no-poster {
@@ -4399,8 +4415,6 @@ button:focus-visible {
     flex-shrink: 0;
     aspect-ratio: 2 / 3;
     overflow: hidden;
-    border-radius: 20px;
-    aspect-ratio: 2 / 3;
     height: auto;
     flex-shrink: 0 !important;
 }

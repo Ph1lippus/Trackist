@@ -19,6 +19,8 @@ export interface MediaCardProps {
     episodesLeft?: number
     priority?: boolean
     selected?: boolean
+    selectable?: boolean
+    onSelect?: (item: ResultItem) => void
 }
 /**
  * Stable, memoized media card.
@@ -42,6 +44,8 @@ const MediaCard: React.FC<MediaCardProps> = ({
     episodesLeft,
     priority = false,
     selected = false,
+    selectable = false,
+    onSelect,
 }) => {
     const { isMobile } = useMobile()
     const isPerson = item.media_type === 'person'
@@ -118,16 +122,26 @@ const MediaCard: React.FC<MediaCardProps> = ({
     const showMarkUnwatched = !compact && !isPerson && onMarkUnwatched && !onMarkWatched
     const showDeleteButton = !compact && onDelete && !isPerson && listMode
     const showInWatchlistIndicator =
-        !compact && !isPerson && isInWatchlist && !onMarkWatched && !onMarkUnwatched && !onAdd && !onDelete && !listMode && !onAddToList
+        !compact && !isPerson && isInWatchlist && !onMarkWatched && !onMarkUnwatched && !onAdd && !onDelete && !listMode && !onAddToList && !selectable
 
     return (
         <article 
             className={`media-card${selected ? ' media-card--selected' : ''}`}
+            onClick={() => {
+                if (selectable && onSelect) {
+                    onSelect(item)
+                }
+            }}
+            style={{ cursor: selectable ? 'pointer' : undefined }}
         >
             <Link 
                 to={href} 
                 className="media-card__poster"
                 onClick={(e) => {
+                    if (selectable) {
+                        e.preventDefault()
+                        return
+                    }
                     // Only prevent default if a button was clicked
                     if ((e.target as HTMLElement).closest('button')) {
                         e.preventDefault()
@@ -221,6 +235,11 @@ const MediaCard: React.FC<MediaCardProps> = ({
                 <h3>
                     <Link
                         to={href}
+                        onClick={(e) => {
+                            if (selectable) {
+                                e.preventDefault()
+                            }
+                        }}
                         style={{ textDecoration: "none", color: "inherit" }}
                     >
                         {displayTitle}
@@ -247,6 +266,8 @@ export default React.memo(MediaCard, (prev, next) => {
         prev.listMode === next.listMode &&
         prev.episodesLeft === next.episodesLeft &&
         prev.priority === next.priority &&
-        prev.selected === next.selected
+        prev.selected === next.selected &&
+        prev.selectable === next.selectable &&
+        prev.onSelect === next.onSelect
     )
 })

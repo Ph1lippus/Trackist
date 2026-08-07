@@ -315,18 +315,25 @@ const MovieDetail: React.FC = () => {
                             )}
                             {showLetterboxButton && !letterboxLoading && (
                                 <button 
-                                    className="detail-page__icon-btn"
+                                    className="detail-page__icon-btn detail-page__icon-btn--letterbox"
                                     onClick={() => {
-                                        const title = details.title || ''
-                                        const slug = title
-                                            .toLowerCase()
-                                            .replace(/[^a-z0-9]+/g, '-')
-                                            .replace(/^-+|-+$/g, '')
-                                        window.open(`https://letterboxd.com/film/${slug}/`, '_blank')
+                                        const imdbId = details.external_ids?.imdb_id
+                                        if (imdbId) {
+                                            window.open(`https://letterboxd.com/film/${imdbId}/`, '_blank')
+                                        } else {
+                                            const title = details.title || ''
+                                            const slug = title
+                                                .toLowerCase()
+                                                .replace(/[^a-z0-9]+/g, '-')
+                                                .replace(/^-+|-+$/g, '')
+                                            window.open(`https://letterboxd.com/film/${slug}/`, '_blank')
+                                        }
                                     }}
                                     title="Open in Letterbox"
                                 >
-                                    <i className="fa-solid fa-film"></i>
+                                    <svg className="detail-page__letterbox-logo" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                                        <path d="M8.28 3.03L6.5 4.8v14.4l1.78 1.78L12 19.17l3.72 3.81 1.78-1.78V4.8L15.72 3.03 12 6.75z"/>
+                                    </svg>
                                 </button>
                             )}
                             {!isInWatchlist ? (

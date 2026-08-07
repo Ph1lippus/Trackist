@@ -161,7 +161,7 @@ const Movies: React.FC = () => {
                                     onClick={() => setSelectionMode(true)}
                                     disabled={watchlistItems.length === 0}
                                 >
-                                    <i className="fa-solid fa-check-double"></i> Select
+                                    Select
                                 </button>
                             ) : (
                                 <>
@@ -213,48 +213,20 @@ const Movies: React.FC = () => {
                                 
                                 return (
                                     <div style={{ position: 'relative' }}>
-                                        {selectionMode && (
-                                            <div
-                                                onClick={(e) => {
-                                                    e.stopPropagation()
-                                                    toggleSelection(item.id)
-                                                }}
-                                                style={{
-                                                    position: 'absolute',
-                                                    top: '8px',
-                                                    right: '8px',
-                                                    width: '28px',
-                                                    height: '28px',
-                                                    borderRadius: '50%',
-                                                    border: isSelected ? '2px solid #68ffae' : '2px solid rgba(255,255,255,0.3)',
-                                                    background: isSelected ? '#68ffae' : 'rgba(0,0,0,0.5)',
-                                                    color: isSelected ? '#000' : '#fff',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    cursor: 'pointer',
-                                                    zIndex: 10,
-                                                    fontSize: '0.8rem',
-                                                    fontWeight: 'bold'
-                                                }}
-                                            >
-                                                {isSelected && '✓'}
-                                            </div>
-                                        )}
-                                        <div style={selectionMode ? { opacity: isSelected ? 1 : 0.6 } : {}}>
-                                            <MediaCard
-                                                item={tmdbItem}
-                                                isInWatchlist={true}
-                                                onAdd={() => {}}
-                                                onMarkWatched={(tmdbItem) => {
-                                                    if (!isMovieReleased(item)) {
-                                                        alert('This movie has not been released yet. You cannot mark it as watched.')
-                                                        return
-                                                    }
-                                                    setConfirmModal({ isOpen: true, action: 'watch', item: tmdbItem })
-                                                }}
-                                            />
-                                        </div>
+                                        <MediaCard
+                                            item={tmdbItem}
+                                            selected={selectionMode && isSelected}
+                                            selectable={selectionMode}
+                                            isInWatchlist={true}
+                                            onAdd={selectionMode ? undefined : () => {}}
+                                            onMarkWatched={selectionMode ? undefined : (tmdbItem) => {
+                                                if (!isMovieReleased(item)) {
+                                                    alert('This movie has not been released yet. You cannot mark it as watched.')
+                                                    return
+                                                }
+                                                setConfirmModal({ isOpen: true, action: 'watch', item: tmdbItem })
+                                            }}
+                                        />
                                     </div>
                                 )
                             }}
