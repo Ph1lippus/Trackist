@@ -10,12 +10,14 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { createMovieDeepLink, openInStremio } from '../utils/stremioUtils'
 import { useShowStremioButton } from '../hooks/useShowStremioButton'
+import { useShowLetterboxButton } from '../hooks/useShowLetterboxButton'
 
 const MovieDetail: React.FC = () => {
     usePageTitle('Trackist - Movie Detail')
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { showStremioButton, loading: stremioLoading } = useShowStremioButton()
+    const { showLetterboxButton, loading: letterboxLoading } = useShowLetterboxButton()
     const [details, setDetails] = useState<TMDBResult | null>(null)
     const [fanartImages, setFanartImages] = useState<{ hdmovielogo?: Array<{ url: string }> } | null>(null)
     const [isInWatchlist, setIsInWatchlist] = useState(false)
@@ -309,6 +311,22 @@ const MovieDetail: React.FC = () => {
                                     title="Open in Stremio"
                                 >
                                     <i className="fa-solid fa-play"></i>
+                                </button>
+                            )}
+                            {showLetterboxButton && !letterboxLoading && (
+                                <button 
+                                    className="detail-page__icon-btn"
+                                    onClick={() => {
+                                        const title = details.title || ''
+                                        const slug = title
+                                            .toLowerCase()
+                                            .replace(/[^a-z0-9]+/g, '-')
+                                            .replace(/^-+|-+$/g, '')
+                                        window.open(`https://letterboxd.com/film/${slug}/`, '_blank')
+                                    }}
+                                    title="Open in Letterbox"
+                                >
+                                    <i className="fa-solid fa-film"></i>
                                 </button>
                             )}
                             {!isInWatchlist ? (

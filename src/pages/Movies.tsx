@@ -13,7 +13,6 @@ const Movies: React.FC = () => {
     usePageTitle('Trackist - Movies')
     const { committedQuery } = useSearch()
 
-    // Use global store with proper selector
     const movies = useLibraryStore((state) => state.movies)
 
     const [confirmModal, setConfirmModal] = useState<{
@@ -22,9 +21,12 @@ const Movies: React.FC = () => {
         item: TMDBResult
     } | null>(null)
 
+    const [selectionMode, setSelectionMode] = useState(false)
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+    const [batchLoading, setBatchLoading] = useState(false)
+
     const { isMobile } = useMobile()
 
-    // Scroll to top when page loads
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
@@ -36,7 +38,6 @@ const Movies: React.FC = () => {
     const markAsWatched = async (tmdbItem: TMDBResult) => {
         const watchlistItem = movies.find(item => item.tmdb_id === tmdbItem.id)
         if (watchlistItem) {
-            // Check if movie is released
             if (!isMovieReleased(watchlistItem)) {
                 alert('This movie has not been released yet. You cannot mark it as watched.')
                 return
@@ -44,7 +45,6 @@ const Movies: React.FC = () => {
             
             const previousStatus = watchlistItem.status
             await updateStatus(watchlistItem.id, 'completed')
-            // Trigger Cosmic Confetti when transitioning from 'planning' to 'completed'
             if (previousStatus === 'planning') {
                 launchCosmicConfetti()
             }
@@ -70,35 +70,73 @@ const Movies: React.FC = () => {
         setConfirmModal(null)
     }
 
+    // Selection handlers
+    const toggleSelection = (id: string) => {
+        setSelectedIds(prev => {
+            const newSet = new Set(prev)
+            if (newSet.has(id)) {
+                newSet.delete(id)
+            } else {
+                newSet.add(id)
+            }
+            return newSet
+        })
+    }
+
+    const handleBatchMarkWatched = async () => {
+        if (selectedIds.size === 0) return
+
+        setBatchLoading(true)
+        try {
+            const selectedItems = movies.filter(item => selectedIds.has(item.id))
+            
+            for (const item of selectedItems) {
+                if (isMovieReleased(item)) {
+                    await updateStatus(item.id, 'completed')
+                    if (item.status === 'planning') {
+                        launchCosmicConfetti()
+                    }
+                }
+            }
+            
+            setSelectedIds(new Set())
+            setSelectionMode(false)
+        } catch (err) {
+            console.error('Failed to batch mark as watched:', err)
+        } finally {
+            setBatchLoading(false)
+        }
+    }
+
+    const clearSelection = () => {
+        setSelectedIds(new Set())
+        setSelectionMode(false)
+    }
+
     // Filter items based on global search (strict movie-type lock)
     const filteredItems = useMemo(() => {
         if (!committedQuery) return movies
         return movies.filter(item => item.title.toLowerCase().includes(committedQuery.toLowerCase()))
     }, [movies, committedQuery])
 
-    // Helper function to check if a movie is released
     const isMovieReleased = (item: WatchlistItem): boolean => {
-        if (!item.release_date) return true // Assume released if no date
+        if (!item.release_date) return true
         const releaseDate = new Date(item.release_date)
         const today = new Date()
         return releaseDate <= today
     }
 
-    // Container A: To Watch (Released movies in planning status)
     const watchlistItems = useMemo(() => filteredItems.filter(item => 
         item.status === 'planning' && isMovieReleased(item)
     ).sort((a, b) => {
-        // Sort by added_at (oldest first to newest at the end)
         const dateA = new Date(a.added_at || 0)
         const dateB = new Date(b.added_at || 0)
         return dateA.getTime() - dateB.getTime()
     }), [filteredItems])
 
-    // Container B: Not Released (Movies that haven't been released yet)
     const notReleasedItems = useMemo(() => filteredItems.filter(item => 
         item.status === 'planning' && !isMovieReleased(item)
     ).sort((a, b) => {
-        // Sort by release date (soonest first)
         const dateA = new Date(a.release_date || '9999-12-31')
         const dateB = new Date(b.release_date || '9999-12-31')
         return dateA.getTime() - dateB.getTime()
@@ -108,8 +146,48 @@ const Movies: React.FC = () => {
         <div className="discover-page">
             <div className="discover-container" style={{ width: '85%' }}>
                 <div className="watchlist-section">
-                    <div className="watchlist-section__header">
+                    <div className="watchlist-section__header" style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        marginBottom: '1rem'
+                    }}>
                         <h3 className="watchlist-section__title">To Watch</h3>
+                        
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            {!selectionMode ? (
+                                <button
+                                    className="settings-btn settings-btn--secondary"
+                                    onClick={() => setSelectionMode(true)}
+                                    disabled={watchlistItems.length === 0}
+                                >
+                                    <i className="fa-solid fa-check-double"></i> Select
+                                </button>
+                            ) : (
+                                <>
+                                    <span style={{ 
+                                        color: 'rgba(255,255,255,0.6)', 
+                                        fontSize: '0.85rem',
+                                        marginRight: '0.5rem'
+                                    }}>
+                                        {selectedIds.size} selected
+                                    </span>
+                                    <button
+                                        className="settings-btn settings-btn--secondary"
+                                        onClick={clearSelection}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        className="settings-btn settings-btn--primary"
+                                        onClick={handleBatchMarkWatched}
+                                        disabled={selectedIds.size === 0 || batchLoading}
+                                    >
+                                        {batchLoading ? '...' : 'Mark as Watched'}
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     </div>
                     {watchlistItems.length > 0 ? (
                         <VirtuosoGrid
@@ -131,19 +209,53 @@ const Movies: React.FC = () => {
                                     poster_path: item.poster_path,
                                     media_type: 'movie'
                                 }
+                                const isSelected = selectedIds.has(item.id)
+                                
                                 return (
-                                    <MediaCard
-                                        item={tmdbItem}
-                                        isInWatchlist={true}
-                                        onAdd={() => {}}
-                                        onMarkWatched={(tmdbItem) => {
-                                            if (!isMovieReleased(item)) {
-                                                alert('This movie has not been released yet. You cannot mark it as watched.')
-                                                return
-                                            }
-                                            setConfirmModal({ isOpen: true, action: 'watch', item: tmdbItem })
-                                        }}
-                                    />
+                                    <div style={{ position: 'relative' }}>
+                                        {selectionMode && (
+                                            <div
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    toggleSelection(item.id)
+                                                }}
+                                                style={{
+                                                    position: 'absolute',
+                                                    top: '8px',
+                                                    right: '8px',
+                                                    width: '28px',
+                                                    height: '28px',
+                                                    borderRadius: '50%',
+                                                    border: isSelected ? '2px solid #68ffae' : '2px solid rgba(255,255,255,0.3)',
+                                                    background: isSelected ? '#68ffae' : 'rgba(0,0,0,0.5)',
+                                                    color: isSelected ? '#000' : '#fff',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    cursor: 'pointer',
+                                                    zIndex: 10,
+                                                    fontSize: '0.8rem',
+                                                    fontWeight: 'bold'
+                                                }}
+                                            >
+                                                {isSelected && '✓'}
+                                            </div>
+                                        )}
+                                        <div style={selectionMode ? { opacity: isSelected ? 1 : 0.6 } : {}}>
+                                            <MediaCard
+                                                item={tmdbItem}
+                                                isInWatchlist={true}
+                                                onAdd={() => {}}
+                                                onMarkWatched={(tmdbItem) => {
+                                                    if (!isMovieReleased(item)) {
+                                                        alert('This movie has not been released yet. You cannot mark it as watched.')
+                                                        return
+                                                    }
+                                                    setConfirmModal({ isOpen: true, action: 'watch', item: tmdbItem })
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
                                 )
                             }}
                         />
@@ -184,7 +296,6 @@ const Movies: React.FC = () => {
                                         item={tmdbItem}
                                         isInWatchlist={true}
                                         onAdd={() => {}}
-                                        // Don't show watch icon for unreleased movies
                                     />
                                 )
                             }}
@@ -195,7 +306,6 @@ const Movies: React.FC = () => {
                         </p>
                     )}
                 </div>
-
             </div>
 
             {confirmModal && (

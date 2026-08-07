@@ -43,8 +43,11 @@ const Settings: React.FC = () => {
 
     // Additions states
     const [showStremioButton, setShowStremioButton] = useState(false)
+    const [showLetterboxButton, setShowLetterboxButton] = useState(false)
     const [additionsLoading, setAdditionsLoading] = useState(false)
     const [additionsMessage, setAdditionsMessage] = useState('')
+    const [letterboxLoading, setLetterboxLoading] = useState(false)
+    const [letterboxMessage, setLetterboxMessage] = useState('')
 
     // Danger zone
     const [deleteConfirm, setDeleteConfirm] = useState('')
@@ -64,6 +67,7 @@ const Settings: React.FC = () => {
                     setDisplayName(profileData.display_name || '')
                     setBio(profileData.bio || '')
                     setShowStremioButton(profileData.show_stremio_button === true)
+                    setShowLetterboxButton(profileData.show_letterbox_button === true)
                 }
             }
 
@@ -270,6 +274,26 @@ const Settings: React.FC = () => {
 
         setShowStremioButton(prev => !prev)
         setAdditionsMessage('Preference updated successfully')
+    }
+
+    const handleLetterboxUpdate = async () => {
+        if (!currentUser) return
+        setLetterboxLoading(true)
+        setLetterboxMessage('')
+
+        const { error } = await updateProfile(currentUser.id, {
+            show_letterbox_button: !showLetterboxButton
+        })
+
+        setLetterboxLoading(false)
+
+        if (error) {
+            setLetterboxMessage(error.message)
+            return
+        }
+
+        setShowLetterboxButton(prev => !prev)
+        setLetterboxMessage('Preference updated successfully')
     }
 
     const handleLogout = async () => {
@@ -604,11 +628,31 @@ const Settings: React.FC = () => {
 
                                 <div className="settings-divider"></div>
 
+                                <div className="settings-toggle-row">
+                                    <div className="settings-toggle-row__info">
+                                        <span className="settings-toggle-row__label">Letterbox Button</span>
+                                        <span className="settings-toggle-row__desc">Show a Letterbox icon on movie detail pages</span>
+                                    </div>
+                                    <label className="settings-switch">
+                                        <input
+                                            type="checkbox"
+                                            checked={showLetterboxButton}
+                                            onChange={handleLetterboxUpdate}
+                                            disabled={letterboxLoading}
+                                        />
+                                        <span className="settings-switch__slider"></span>
+                                    </label>
+                                </div>
+
+                                {letterboxMessage && <div className="settings-alert settings-alert--success">{letterboxMessage}</div>}
+
+                                <div className="settings-divider"></div>
+
                                 <div className="settings-info-box">
                                     <i className="fa-solid fa-circle-info"></i>
                                     <div>
-                                        <h4>About the Stremio Button</h4>
-                                        <p>When enabled, you'll see a play button on movie and TV show pages that opens the content directly in Stremio using deep links. This feature is off by default.</p>
+                                        <h4>About Integrations</h4>
+                                        <p>When enabled, you'll see action buttons on movie and TV show pages that open the content directly in external apps using deep links. These features are off by default.</p>
                                     </div>
                                 </div>
                             </div>

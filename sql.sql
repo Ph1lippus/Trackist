@@ -98,6 +98,7 @@ CREATE TABLE public.profiles (
   updated_at timestamp with time zone DEFAULT now(),
   role text NOT NULL DEFAULT 'user'::text,
   show_stremio_button boolean DEFAULT false,
+  show_letterbox_button boolean DEFAULT false NOT NULL,
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );

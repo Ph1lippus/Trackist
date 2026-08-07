@@ -18,6 +18,7 @@ export interface MediaCardProps {
     listMode?: boolean
     episodesLeft?: number
     priority?: boolean
+    selected?: boolean
 }
 /**
  * Stable, memoized media card.
@@ -40,6 +41,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
     listMode = false,
     episodesLeft,
     priority = false,
+    selected = false,
 }) => {
     const { isMobile } = useMobile()
     const isPerson = item.media_type === 'person'
@@ -120,7 +122,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
 
     return (
         <article 
-            className="media-card"
+            className={`media-card${selected ? ' media-card--selected' : ''}`}
         >
             <Link 
                 to={href} 
@@ -244,6 +246,7 @@ export default React.memo(MediaCard, (prev, next) => {
         prev.onDelete === next.onDelete &&
         prev.listMode === next.listMode &&
         prev.episodesLeft === next.episodesLeft &&
-        prev.priority === next.priority
+        prev.priority === next.priority &&
+        prev.selected === next.selected
     )
 })

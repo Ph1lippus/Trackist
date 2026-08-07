@@ -4375,6 +4375,12 @@ button:focus-visible {
     transition: transform 0.1s ease, opacity 0.1s ease;
 }
 
+.media-card--selected {
+    opacity: 1 !important;
+    transform: scale(1.02);
+    box-shadow: 0 0 0 2px var(--color-primary), 0 8px 25px rgba(133, 138, 227, 0.2);
+}
+
 .media-card__no-poster {
     width: 100%;
     height: 100%;
