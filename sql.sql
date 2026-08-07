@@ -38,6 +38,8 @@ CREATE TABLE public.watchlist_episodes (
   vote_average real,
   air_date date,
   runtime integer,
+  watched boolean DEFAULT false,
+  watched_at timestamp with time zone,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT watchlist_episodes_pkey PRIMARY KEY (id),
@@ -101,4 +103,62 @@ CREATE TABLE public.profiles (
   show_letterbox_button boolean DEFAULT false NOT NULL,
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+);
+
+-- RLS Policies for Admin access
+-- Run these in Supabase SQL Editor to allow admins to view all data
+
+CREATE POLICY "Admins can view all watchlist items"
+ON watchlist FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
+CREATE POLICY "Admins can view all watchlist episodes"
+ON watchlist_episodes FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
+CREATE POLICY "Admins can view all lists"
+ON lists FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
+CREATE POLICY "Admins can view all list items"
+ON list_items FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
+);
+
+CREATE POLICY "Admins can view all profiles"
+ON profiles FOR SELECT
+TO authenticated
+USING (
+  EXISTS (
+    SELECT 1 FROM profiles
+    WHERE profiles.id = auth.uid()
+    AND profiles.role = 'admin'
+  )
 );

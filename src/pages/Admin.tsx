@@ -26,7 +26,20 @@ interface AdminStats {
     usersThisWeek: number
 }
 
-type TabType = 'overview' | 'users'
+type TabType = 'overview' | 'users' | 'user-stats'
+
+interface UserStats {
+    id: string
+    display_name: string | null
+    role: string | null
+    created_at: string
+    watchlist_count: number
+    movies_count: number
+    tv_count: number
+    completed_count: number
+    episodes_count: number
+    lists_count: number
+}
 
 const Admin: React.FC = () => {
     usePageTitle('Trackist - Admin')
@@ -51,6 +64,12 @@ const Admin: React.FC = () => {
     const [statsLoading, setStatsLoading] = useState(true)
     const [roleConfirm, setRoleConfirm] = useState<{ userId: string; newRole: string; displayName: string } | null>(null)
     const [roleLoading, setRoleLoading] = useState(false)
+    const [editUserConfirm, setEditUserConfirm] = useState<{ userId: string; displayName: string; currentDisplayName: string } | null>(null)
+    const [editUserLoading, setEditUserLoading] = useState(false)
+    const [deleteUserConfirm, setDeleteUserConfirm] = useState<{ userId: string; displayName: string } | null>(null)
+    const [deleteUserLoading, setDeleteUserLoading] = useState(false)
+    const [userStats, setUserStats] = useState<UserStats[]>([])
+    const [userStatsLoading, setUserStatsLoading] = useState(false)
 
     const isAdmin = profile?.role === 'admin'
 
@@ -94,7 +113,13 @@ const Admin: React.FC = () => {
                     .select('id, display_name, role, created_at, updated_at')
                     .order('created_at', { ascending: false })
 
-                setProfiles(profilesData || [])
+                const sortedProfiles = (profilesData || []).sort((a, b) => {
+                    if (a.role === 'admin' && b.role !== 'admin') return -1
+                    if (a.role !== 'admin' && b.role === 'admin') return 1
+                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                })
+
+                setProfiles(sortedProfiles)
 
                 const now = new Date()
                 const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
@@ -126,6 +151,7 @@ const Admin: React.FC = () => {
                 const { count: episodesCount } = await supabase
                     .from('watchlist_episodes')
                     .select('*', { count: 'exact', head: true })
+                    .eq('watched', true)
 
                 const { data: scoreData } = await supabase
                     .from('watchlist')
@@ -169,6 +195,95 @@ const Admin: React.FC = () => {
         fetchData()
     }, [isAdmin, user])
 
+    useEffect(() => {
+        if (!isAdmin || !user || activeTab !== 'user-stats') return
+
+        const fetchUserStats = async () => {
+            setUserStatsLoading(true)
+            try {
+                const { data: profilesData } = await supabase
+                    .from('profiles')
+                    .select('id, display_name, role, created_at')
+
+                if (!profilesData) {
+                    setUserStats([])
+                    return
+                }
+
+                const userIds = profilesData.map(p => p.id)
+
+                const { data: watchlistData } = await supabase
+                    .from('watchlist')
+                    .select('id, user_id, media_type, status')
+
+                const { data: episodesData } = await supabase
+                    .from('watchlist_episodes')
+                    .select('watchlist_id')
+                    .eq('watched', true)
+
+                const { data: listsData } = await supabase
+                    .from('lists')
+                    .select('user_id')
+
+                const watchlistByUser = new Map<string, { total: number; movies: number; tv: number; completed: number }>()
+                watchlistData?.forEach(item => {
+                    const existing = watchlistByUser.get(item.user_id) || { total: 0, movies: 0, tv: 0, completed: 0 }
+                    existing.total++
+                    if (item.media_type === 'movie') existing.movies++
+                    if (item.media_type === 'tv') existing.tv++
+                    if (item.status === 'completed') existing.completed++
+                    watchlistByUser.set(item.user_id, existing)
+                })
+
+                const episodesByWatchlist = new Map<string, number>()
+                episodesData?.forEach(ep => {
+                    episodesByWatchlist.set(ep.watchlist_id, (episodesByWatchlist.get(ep.watchlist_id) || 0) + 1)
+                })
+
+                const episodesByUser = new Map<string, number>()
+                watchlistData?.forEach(item => {
+                    const eps = episodesByWatchlist.get(item.id) || 0
+                    if (eps > 0) {
+                        episodesByUser.set(item.user_id, (episodesByUser.get(item.user_id) || 0) + eps)
+                    }
+                })
+
+                const listsByUser = new Map<string, number>()
+                listsData?.forEach(list => {
+                    listsByUser.set(list.user_id, (listsByUser.get(list.user_id) || 0) + 1)
+                })
+
+                const stats: UserStats[] = profilesData.map(profile => {
+                    const wl = watchlistByUser.get(profile.id) || { total: 0, movies: 0, tv: 0, completed: 0 }
+                    return {
+                        id: profile.id,
+                        display_name: profile.display_name,
+                        role: profile.role,
+                        created_at: profile.created_at,
+                        watchlist_count: wl.total,
+                        movies_count: wl.movies,
+                        tv_count: wl.tv,
+                        completed_count: wl.completed,
+                        episodes_count: episodesByUser.get(profile.id) || 0,
+                        lists_count: listsByUser.get(profile.id) || 0
+                    }
+                }).sort((a, b) => {
+                    if (a.role === 'admin' && b.role !== 'admin') return -1
+                    if (a.role !== 'admin' && b.role === 'admin') return 1
+                    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                })
+
+                setUserStats(stats)
+            } catch (err) {
+                console.error('Failed to fetch user stats:', err)
+            } finally {
+                setUserStatsLoading(false)
+            }
+        }
+
+        fetchUserStats()
+    }, [isAdmin, user, activeTab])
+
     const handleRoleChange = async () => {
         if (!roleConfirm) return
         setRoleLoading(true)
@@ -190,6 +305,87 @@ const Admin: React.FC = () => {
         } finally {
             setRoleLoading(false)
             setRoleConfirm(null)
+        }
+    }
+
+    const handleEditUser = async () => {
+        if (!editUserConfirm) return
+        setEditUserLoading(true)
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ display_name: editUserConfirm.displayName })
+                .eq('id', editUserConfirm.userId)
+
+            if (error) {
+                console.error('Failed to update user:', error)
+                alert('Failed to update user. Please try again.')
+            } else {
+                setProfiles(prev => prev.map(p => p.id === editUserConfirm.userId ? { ...p, display_name: editUserConfirm.displayName } : p))
+            }
+        } catch (err) {
+            console.error('User update error:', err)
+            alert('An unexpected error occurred.')
+        } finally {
+            setEditUserLoading(false)
+            setEditUserConfirm(null)
+        }
+    }
+
+    const handleDeleteUser = async () => {
+        if (!deleteUserConfirm) return
+        setDeleteUserLoading(true)
+        try {
+            const userId = deleteUserConfirm.userId
+
+            const { data: watchlists } = await supabase
+                .from('watchlist')
+                .select('id')
+                .eq('user_id', userId)
+
+            if (watchlists && watchlists.length > 0) {
+                const watchlistIds = watchlists.map(w => w.id)
+                await supabase
+                    .from('watchlist_episodes')
+                    .delete()
+                    .in('watchlist_id', watchlistIds)
+            }
+
+            await supabase
+                .from('watchlist')
+                .delete()
+                .eq('user_id', userId)
+
+            const { data: userLists } = await supabase
+                .from('lists')
+                .select('id')
+                .eq('user_id', userId)
+
+            if (userLists && userLists.length > 0) {
+                const listIds = userLists.map(l => l.id)
+                await supabase
+                    .from('list_items')
+                    .delete()
+                    .in('list_id', listIds)
+            }
+
+            await supabase
+                .from('lists')
+                .delete()
+                .eq('user_id', userId)
+
+            await supabase
+                .from('profiles')
+                .delete()
+                .eq('id', userId)
+
+            setProfiles(prev => prev.filter(p => p.id !== userId))
+        } catch (err) {
+            console.error('Delete user error:', err)
+            alert('An unexpected error occurred while deleting the user.')
+        } finally {
+            setDeleteUserLoading(false)
+            setDeleteUserConfirm(null)
         }
     }
 
@@ -253,6 +449,12 @@ const Admin: React.FC = () => {
                         onClick={() => setActiveTab('users')}
                     >
                         All Users
+                    </button>
+                    <button
+                        className={`admin-tab ${activeTab === 'user-stats' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('user-stats')}
+                    >
+                        User Stats
                     </button>
                 </div>
 
@@ -337,17 +539,40 @@ const Admin: React.FC = () => {
                                             <td>{formatDate(profile.updated_at)}</td>
                                             <td>
                                                 {profile.id !== user.id && (
-                                                    <button
-                                                        className="admin-action-btn"
-                                                        onClick={() => setRoleConfirm({
-                                                            userId: profile.id,
-                                                            newRole: profile.role === 'admin' ? 'user' : 'admin',
-                                                            displayName: profile.display_name || 'Unknown'
-                                                        })}
-                                                        title={profile.role === 'admin' ? 'Demote to user' : 'Promote to admin'}
-                                                    >
-                                                        <i className={`fas ${profile.role === 'admin' ? 'fa-user-xmark' : 'fa-user-shield'}`}></i>
-                                                    </button>
+                                                    <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
+                                                        <button
+                                                            className="admin-action-btn"
+                                                            onClick={() => setEditUserConfirm({
+                                                                userId: profile.id,
+                                                                displayName: profile.display_name || '',
+                                                                currentDisplayName: profile.display_name || 'Unknown'
+                                                            })}
+                                                            title="Edit user"
+                                                        >
+                                                            <i className="fas fa-pen"></i>
+                                                        </button>
+                                                        <button
+                                                            className="admin-action-btn"
+                                                            onClick={() => setRoleConfirm({
+                                                                userId: profile.id,
+                                                                newRole: profile.role === 'admin' ? 'user' : 'admin',
+                                                                displayName: profile.display_name || 'Unknown'
+                                                            })}
+                                                            title={profile.role === 'admin' ? 'Demote to user' : 'Promote to admin'}
+                                                        >
+                                                            <i className={`fas ${profile.role === 'admin' ? 'fa-user-xmark' : 'fa-user-shield'}`}></i>
+                                                        </button>
+                                                        <button
+                                                            className="admin-action-btn admin-action-btn--danger"
+                                                            onClick={() => setDeleteUserConfirm({
+                                                                userId: profile.id,
+                                                                displayName: profile.display_name || 'Unknown'
+                                                            })}
+                                                            title="Delete user"
+                                                        >
+                                                            <i className="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
                                                 )}
                                             </td>
                                         </tr>
@@ -378,17 +603,40 @@ const Admin: React.FC = () => {
                                         </div>
                                     </div>
                                     {profile.id !== user.id && (
-                                        <button
-                                            className="admin-user-card__action"
-                                            onClick={() => setRoleConfirm({
-                                                userId: profile.id,
-                                                newRole: profile.role === 'admin' ? 'user' : 'admin',
-                                                displayName: profile.display_name || 'Unknown'
-                                            })}
-                                        >
-                                            <i className={`fas ${profile.role === 'admin' ? 'fa-user-xmark' : 'fa-user-shield'}`}></i>
-                                            {profile.role === 'admin' ? 'Demote to user' : 'Promote to admin'}
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            <button
+                                                className="admin-user-card__action"
+                                                onClick={() => setEditUserConfirm({
+                                                    userId: profile.id,
+                                                    displayName: profile.display_name || '',
+                                                    currentDisplayName: profile.display_name || 'Unknown'
+                                                })}
+                                            >
+                                                <i className="fas fa-pen"></i>
+                                                Edit
+                                            </button>
+                                            <button
+                                                className="admin-user-card__action"
+                                                onClick={() => setRoleConfirm({
+                                                    userId: profile.id,
+                                                    newRole: profile.role === 'admin' ? 'user' : 'admin',
+                                                    displayName: profile.display_name || 'Unknown'
+                                                })}
+                                            >
+                                                <i className={`fas ${profile.role === 'admin' ? 'fa-user-xmark' : 'fa-user-shield'}`}></i>
+                                                {profile.role === 'admin' ? 'Demote to user' : 'Promote to admin'}
+                                            </button>
+                                            <button
+                                                className="admin-user-card__action admin-user-card__action--danger"
+                                                onClick={() => setDeleteUserConfirm({
+                                                    userId: profile.id,
+                                                    displayName: profile.display_name || 'Unknown'
+                                                })}
+                                            >
+                                                <i className="fas fa-trash"></i>
+                                                Delete
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                             ))}
@@ -396,6 +644,54 @@ const Admin: React.FC = () => {
                                 <p className="stats-empty">No users found.</p>
                             )}
                         </div>
+                    </div>
+                )}
+
+                {activeTab === 'user-stats' && (
+                    <div className="admin-users-panel">
+                        {userStatsLoading ? (
+                            <div className="discover-loading">
+                                <div className="discover-spinner" />
+                                <p>Loading user stats...</p>
+                            </div>
+                        ) : (
+                            <div className="admin-users-table-wrap">
+                                <table className="admin-users-table">
+                                    <thead>
+                                        <tr>
+                                            <th>User</th>
+                                            <th>Watchlist</th>
+                                            <th>Movies</th>
+                                            <th>TV Shows</th>
+                                            <th>Episodes</th>
+                                            <th>Completed</th>
+                                            <th>Lists</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {userStats.map(us => (
+                                            <tr key={us.id}>
+                                                <td>
+                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                                                        <span style={{ fontWeight: 600 }}>{us.display_name || '—'}</span>
+                                                        <span className={`admin-role-badge admin-role-badge--${us.role || 'user'}`} style={{ alignSelf: 'flex-start' }}>{us.role || 'user'}</span>
+                                                    </div>
+                                                </td>
+                                                <td>{us.watchlist_count}</td>
+                                                <td>{us.movies_count}</td>
+                                                <td>{us.tv_count}</td>
+                                                <td>{us.episodes_count}</td>
+                                                <td>{us.completed_count}</td>
+                                                <td>{us.lists_count}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                {userStats.length === 0 && !userStatsLoading && (
+                                    <p className="stats-empty">No user stats found.</p>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
@@ -410,6 +706,49 @@ const Admin: React.FC = () => {
                 confirmColor={roleConfirm?.newRole === 'admin' ? 'success' : 'danger'}
                 disabled={roleLoading}
                 confirmLoading={roleLoading}
+            />
+
+            <ConfirmModal
+                isOpen={!!editUserConfirm}
+                title="Edit User Display Name"
+                message={
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        <span>Edit display name for "{editUserConfirm?.currentDisplayName}":</span>
+                        <input
+                            type="text"
+                            value={editUserConfirm?.displayName || ''}
+                            onChange={(e) => setEditUserConfirm(prev => prev ? { ...prev, displayName: e.target.value } : null)}
+                            style={{
+                                background: 'rgba(255,255,255,0.08)',
+                                border: '1px solid rgba(255,255,255,0.15)',
+                                borderRadius: '8px',
+                                padding: '0.6rem 0.8rem',
+                                color: 'var(--color-platinum)',
+                                fontSize: '0.9rem',
+                                outline: 'none'
+                            }}
+                            autoFocus
+                        />
+                    </div>
+                }
+                onConfirm={handleEditUser}
+                onCancel={() => setEditUserConfirm(null)}
+                confirmText={editUserLoading ? 'Saving...' : 'Save'}
+                confirmColor="success"
+                disabled={editUserLoading || !(editUserConfirm?.displayName.trim().length > 0)}
+                confirmLoading={editUserLoading}
+            />
+
+            <ConfirmModal
+                isOpen={!!deleteUserConfirm}
+                title="Delete User"
+                message={`Are you sure you want to delete user "${deleteUserConfirm?.displayName}"? This will permanently remove their profile, watchlist, episodes, and lists. This action cannot be undone.`}
+                onConfirm={handleDeleteUser}
+                onCancel={() => setDeleteUserConfirm(null)}
+                confirmText={deleteUserLoading ? 'Deleting...' : 'Delete'}
+                confirmColor="danger"
+                disabled={deleteUserLoading}
+                confirmLoading={deleteUserLoading}
             />
         </div>
     )
