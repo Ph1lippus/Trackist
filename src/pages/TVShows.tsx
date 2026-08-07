@@ -268,7 +268,7 @@ const TVShows: React.FC = () => {
                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                             {!selectionMode ? (
                                 <button
-                                    className="settings-btn settings-btn--secondary"
+                                    className="discover-filter-select discover-filter-select--btn"
                                     onClick={() => setSelectionMode(true)}
                                     disabled={currentlyWatching.length === 0}
                                 >
@@ -284,13 +284,13 @@ const TVShows: React.FC = () => {
                                         {selectedIds.size} selected
                                     </span>
                                     <button
-                                        className="settings-btn settings-btn--secondary"
+                                        className="discover-filter-select discover-filter-select--btn"
                                         onClick={clearSelection}
                                     >
                                         Cancel
                                     </button>
                                     <button
-                                        className="settings-btn settings-btn--primary"
+                                        className="discover-filter-select discover-filter-select--btn"
                                         onClick={handleBatchMarkWatched}
                                         disabled={selectedIds.size === 0 || batchLoading}
                                     >
@@ -353,7 +353,7 @@ const TVShows: React.FC = () => {
                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                             {!selectionMode ? (
                                 <button
-                                    className="settings-btn settings-btn--secondary"
+                                    className="discover-filter-select discover-filter-select--btn"
                                     onClick={() => setSelectionMode(true)}
                                     disabled={notStarted.length === 0}
                                 >
@@ -369,13 +369,13 @@ const TVShows: React.FC = () => {
                                         {selectedIds.size} selected
                                     </span>
                                     <button
-                                        className="settings-btn settings-btn--secondary"
+                                        className="discover-filter-select discover-filter-select--btn"
                                         onClick={clearSelection}
                                     >
                                         Cancel
                                     </button>
                                     <button
-                                        className="settings-btn settings-btn--primary"
+                                        className="discover-filter-select discover-filter-select--btn"
                                         onClick={handleBatchMarkWatched}
                                         disabled={selectedIds.size === 0 || batchLoading}
                                     >

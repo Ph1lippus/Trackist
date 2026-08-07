@@ -144,7 +144,7 @@ const Movies: React.FC = () => {
                         <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                             {!selectionMode ? (
                                 <button
-                                    className="settings-btn settings-btn--secondary"
+                                    className="discover-filter-select discover-filter-select--btn"
                                     onClick={() => setSelectionMode(true)}
                                     disabled={watchlistItems.length === 0}
                                 >
@@ -160,13 +160,13 @@ const Movies: React.FC = () => {
                                         {selectedIds.size} selected
                                     </span>
                                     <button
-                                        className="settings-btn settings-btn--secondary"
+                                        className="discover-filter-select discover-filter-select--btn"
                                         onClick={clearSelection}
                                     >
                                         Cancel
                                     </button>
                                     <button
-                                        className="settings-btn settings-btn--primary"
+                                        className="discover-filter-select discover-filter-select--btn"
                                         onClick={handleBatchMarkWatched}
                                         disabled={selectedIds.size === 0 || batchLoading}
                                     >
