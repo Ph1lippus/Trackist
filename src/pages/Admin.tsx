@@ -233,16 +233,16 @@ const Admin: React.FC = () => {
                     watchlistByUser.set(item.user_id, existing)
                 })
 
-                const episodesByWatchlist = new Map<string, number>()
-                episodesData?.forEach(ep => {
-                    episodesByWatchlist.set(ep.watchlist_id, (episodesByWatchlist.get(ep.watchlist_id) || 0) + 1)
+                const watchlistIdToUserId = new Map<string, string>()
+                watchlistData?.forEach(item => {
+                    watchlistIdToUserId.set(item.id, item.user_id)
                 })
 
                 const episodesByUser = new Map<string, number>()
-                watchlistData?.forEach(item => {
-                    const eps = episodesByWatchlist.get(item.id) || 0
-                    if (eps > 0) {
-                        episodesByUser.set(item.user_id, (episodesByUser.get(item.user_id) || 0) + eps)
+                episodesData?.forEach(ep => {
+                    const userId = watchlistIdToUserId.get(ep.watchlist_id)
+                    if (userId) {
+                        episodesByUser.set(userId, (episodesByUser.get(userId) || 0) + 1)
                     }
                 })
 
