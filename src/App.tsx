@@ -218,7 +218,7 @@ const AppContent: React.FC = () => {
             />
             <main className={`page-main flex-grow-1 ${hideFooter ? 'page-main--no-footer' : ''}`}>
                 <Routes>
-                    <Route path="/" element={user ? <Discover key="discover" /> : <Home />} />
+                    <Route path="/" element={user ? <TVShows key="tvshows" /> : <Home />} />
                     <Route path="/Discover" element={user ? <Discover key="discover" /> : <Navigate to="/login" replace />} />
                     <Route path="/Movies" element={user ? <Movies /> : <Navigate to="/login" replace />} />
                     <Route path="/Tvshows" element={user ? <TVShows /> : <Navigate to="/login" replace />} />
@@ -226,8 +226,8 @@ const AppContent: React.FC = () => {
                     <Route path="/Statistics" element={user ? <Statistics /> : <Navigate to="/login" replace />} />
                     <Route path="/Settings" element={user ? <Settings /> : <Navigate to="/login" replace />} />
                     <Route path="/Credits" element={<Credits />} />
-                    <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
-                    <Route path="/register" element={user ? <Navigate to="/" replace /> : <Register />} />
+                    <Route path="/login" element={user ? <Navigate to="/Tvshows" replace /> : <Login />} />
+                    <Route path="/register" element={user ? <Navigate to="/Tvshows" replace /> : <Register />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/EditProfile" element={user ? <EditProfile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile/:username" element={user ? <Profile /> : <Navigate to="/login" replace />} />

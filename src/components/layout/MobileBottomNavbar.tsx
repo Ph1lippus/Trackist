@@ -6,14 +6,11 @@ const MobileBottomNavbar: React.FC = () => {
     const { user } = useAuth();
 
     const navItems = [
-        { to: '/Discover', icon: 'fa-compass'},
-        { to: '/Movies', icon: 'fa-film'},
         { to: '/Tvshows', icon: 'fa-tv'},
+        { to: '/Movies', icon: 'fa-film'},
+        { to: '/Discover', icon: 'fa-compass'},
         { to: '/UpcomingNew', icon: 'fa-calendar'},
-        { to: '/Finished', icon: 'fa-check-circle'},
-        { to: '/Lists', icon: 'fa-list'},
-        { to: '/Friends', icon: 'fa-users'},
-        { to: '/Statistics', icon: 'fa-chart-bar'},
+        { to: '/Profile', icon: 'fa-user'},
     ];
 
     // Don't render if no user
