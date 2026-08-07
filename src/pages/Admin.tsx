@@ -20,7 +20,6 @@ interface AdminStats {
     totalMovies: number
     totalTVShows: number
     totalCompleted: number
-    totalEpisodes: number
     avgScore: number | null
     usersThisMonth: number
     usersThisWeek: number
@@ -37,7 +36,6 @@ interface UserStats {
     movies_count: number
     tv_count: number
     completed_count: number
-    episodes_count: number
     lists_count: number
 }
 
@@ -56,7 +54,6 @@ const Admin: React.FC = () => {
         totalMovies: 0,
         totalTVShows: 0,
         totalCompleted: 0,
-        totalEpisodes: 0,
         avgScore: null,
         usersThisMonth: 0,
         usersThisWeek: 0
@@ -148,10 +145,6 @@ const Admin: React.FC = () => {
                     .select('*', { count: 'exact', head: true })
                     .eq('status', 'completed')
 
-                const { count: episodesCount } = await supabase
-                    .from('watchlist_episodes')
-                    .select('*', { count: 'exact', head: true })
-
                 const { data: scoreData } = await supabase
                     .from('watchlist')
                     .select('vote_average')
@@ -179,7 +172,6 @@ const Admin: React.FC = () => {
                     totalMovies: moviesCount || 0,
                     totalTVShows: tvCount || 0,
                     totalCompleted: completedCount || 0,
-                    totalEpisodes: episodesCount || 0,
                     avgScore,
                     usersThisWeek: weekCount || 0,
                     usersThisMonth: monthCount || 0
@@ -209,15 +201,9 @@ const Admin: React.FC = () => {
                     return
                 }
 
-                const userIds = profilesData.map(p => p.id)
-
                 const { data: watchlistData } = await supabase
                     .from('watchlist')
                     .select('id, user_id, media_type, status')
-
-                const { data: episodesData } = await supabase
-                    .from('watchlist_episodes')
-                    .select('watchlist_id')
 
                 const { data: listsData } = await supabase
                     .from('lists')
@@ -231,19 +217,6 @@ const Admin: React.FC = () => {
                     if (item.media_type === 'tv') existing.tv++
                     if (item.status === 'completed') existing.completed++
                     watchlistByUser.set(item.user_id, existing)
-                })
-
-                const watchlistIdToUserId = new Map<string, string>()
-                watchlistData?.forEach(item => {
-                    watchlistIdToUserId.set(item.id, item.user_id)
-                })
-
-                const episodesByUser = new Map<string, number>()
-                episodesData?.forEach(ep => {
-                    const userId = watchlistIdToUserId.get(ep.watchlist_id)
-                    if (userId) {
-                        episodesByUser.set(userId, (episodesByUser.get(userId) || 0) + 1)
-                    }
                 })
 
                 const listsByUser = new Map<string, number>()
@@ -262,7 +235,6 @@ const Admin: React.FC = () => {
                         movies_count: wl.movies,
                         tv_count: wl.tv,
                         completed_count: wl.completed,
-                        episodes_count: episodesByUser.get(profile.id) || 0,
                         lists_count: listsByUser.get(profile.id) || 0
                     }
                 }).sort((a, b) => {
@@ -488,11 +460,6 @@ const Admin: React.FC = () => {
                             <div className="stats-hero-card__value">{stats.totalCompleted.toLocaleString()}</div>
                             <div className="stats-hero-card__label">Completed</div>
                         </div>
-                        <div className="stats-hero-card stats-hero-card--teal">
-                            <div className="stats-hero-card__icon"><i className="fas fa-play-circle"></i></div>
-                            <div className="stats-hero-card__value">{stats.totalEpisodes.toLocaleString()}</div>
-                            <div className="stats-hero-card__label">Episodes</div>
-                        </div>
                         <div className="stats-hero-card stats-hero-card--orange">
                             <div className="stats-hero-card__icon"><i className="fas fa-star"></i></div>
                             <div className="stats-hero-card__value">{stats.avgScore !== null ? stats.avgScore.toFixed(1) : '—'}</div>
@@ -661,7 +628,6 @@ const Admin: React.FC = () => {
                                             <th>Watchlist</th>
                                             <th>Movies</th>
                                             <th>TV Shows</th>
-                                            <th>Episodes</th>
                                             <th>Completed</th>
                                             <th>Lists</th>
                                         </tr>
@@ -678,7 +644,6 @@ const Admin: React.FC = () => {
                                                 <td>{us.watchlist_count}</td>
                                                 <td>{us.movies_count}</td>
                                                 <td>{us.tv_count}</td>
-                                                <td>{us.episodes_count}</td>
                                                 <td>{us.completed_count}</td>
                                                 <td>{us.lists_count}</td>
                                             </tr>
@@ -733,7 +698,7 @@ const Admin: React.FC = () => {
                 onCancel={() => setEditUserConfirm(null)}
                 confirmText={editUserLoading ? 'Saving...' : 'Save'}
                 confirmColor="success"
-                disabled={editUserLoading || !(editUserConfirm?.displayName.trim().length > 0)}
+                disabled={editUserLoading || !(editUserConfirm?.displayName?.trim().length > 0)}
                 confirmLoading={editUserLoading}
             />
 

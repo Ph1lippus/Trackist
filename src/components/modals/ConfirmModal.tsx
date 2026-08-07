@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, ReactNode } from 'react'
 
 interface ConfirmModalProps {
     isOpen: boolean
     title: string
-    message: string
+    message: ReactNode
     onConfirm: () => void
     onCancel: () => void
     confirmText?: string
