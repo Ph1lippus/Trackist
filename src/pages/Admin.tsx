@@ -112,6 +112,7 @@ const Admin: React.FC = () => {
                     .from('profiles')
                     .select('id, display_name, role, created_at, updated_at')
                     .order('created_at', { ascending: false })
+                    .range(0, 100000)
 
                 const sortedProfiles = (profilesData || []).sort((a, b) => {
                     if (a.role === 'admin' && b.role !== 'admin') return -1
@@ -157,6 +158,7 @@ const Admin: React.FC = () => {
                     .select('vote_average')
                     .not('vote_average', 'is', null)
                     .gt('vote_average', 0)
+                    .range(0, 100000)
 
                 const avgScore = scoreData && scoreData.length > 0
                     ? Math.round((scoreData.reduce((sum, item) => sum + (item.vote_average || 0), 0) / scoreData.length) * 10) / 10
@@ -203,6 +205,7 @@ const Admin: React.FC = () => {
                 const { data: profilesData } = await supabase
                     .from('profiles')
                     .select('id, display_name, role, created_at')
+                    .range(0, 100000)
 
                 if (!profilesData) {
                     setUserStats([])
@@ -212,14 +215,17 @@ const Admin: React.FC = () => {
                 const { data: watchlistData } = await supabase
                     .from('watchlist')
                     .select('id, user_id, media_type, status')
+                    .range(0, 100000)
 
                 const { data: episodesData } = await supabase
                     .from('watchlist_episodes')
                     .select('watchlist_id')
+                    .range(0, 100000)
 
                 const { data: listsData } = await supabase
                     .from('lists')
                     .select('user_id')
+                    .range(0, 100000)
 
                 const watchlistByUser = new Map<string, { total: number; movies: number; tv: number; completed: number }>()
                 watchlistData?.forEach(item => {
