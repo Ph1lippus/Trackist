@@ -5,6 +5,7 @@ import { updateLastActive } from './services/profileService'
 import type { User } from '@supabase/supabase-js'
 import { SearchProvider } from './contexts/SearchContext'
 import { MobileProvider } from './contexts/MobileProvider'
+import { useMobile } from './contexts/useMobile'
 import { useLibraryStore } from './stores/useLibraryStore'
 import { registerSW } from 'virtual:pwa-register'
 import { invalidateCalendarCache } from './services/calendarService'
@@ -38,6 +39,7 @@ import ListsDetail from './pages/ListsDetail'
 import ListsEditPage from './pages/ListsEditPage'
 import ListsCreatePage from './pages/ListsCreatePage'
 import Finished from './pages/Finished'
+import MobileTVShows from './pages/MobileTVShows'
 import DetailLayout from './components/layout/DetailLayout'
 
 // Legacy redirect component for /Lists/:id -> /ListsDetail/:id
@@ -48,6 +50,7 @@ const LegacyListRedirect: React.FC = () => {
 
 const AppContent: React.FC = () => {
     const location = useLocation()
+    const { isMobile } = useMobile()
     const [user, setUser] = useState<User | null>(null)
     const [loading, setLoading] = useState(true)
     const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -55,6 +58,8 @@ const AppContent: React.FC = () => {
     const [showUpdateModal, setShowUpdateModal] = useState(false)
     const [updateLoading, setUpdateLoading] = useState(false)
     const [updateSW, setUpdateSW] = useState<((reloadPage?: boolean) => Promise<void>) | null>(null)
+
+    const defaultRoute = isMobile ? '/MobileTVShows' : '/Tvshows'
 
     const isDetailPage = location.pathname.match(/^\/(movie|tv|person)\/\d+$/) || location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/)
 
@@ -219,17 +224,18 @@ const AppContent: React.FC = () => {
             />
             <main className={`page-main flex-grow-1 ${hideFooter ? 'page-main--no-footer' : ''}`}>
                 <Routes>
-                    <Route path="/" element={user ? <TVShows key="tvshows" /> : <Home />} />
+                    <Route path="/" element={user ? <MobileTVShows key="mobiletvshows" /> : <Home />} />
                     <Route path="/Discover" element={user ? <Discover key="discover" /> : <Navigate to="/login" replace />} />
                     <Route path="/Movies" element={user ? <Movies /> : <Navigate to="/login" replace />} />
                     <Route path="/Tvshows" element={user ? <TVShows /> : <Navigate to="/login" replace />} />
+                    <Route path="/MobileTVShows" element={user ? <MobileTVShows /> : <Navigate to="/login" replace />} />
                     <Route path="/Friends" element={user ? <Friends /> : <Navigate to="/login" replace />} />
                     <Route path="/Statistics" element={user ? <Statistics /> : <Navigate to="/login" replace />} />
                     <Route path="/Settings" element={user ? <Settings /> : <Navigate to="/login" replace />} />
                     <Route path="/Admin" element={<Admin />} />
                     <Route path="/Credits" element={<Credits />} />
-                    <Route path="/login" element={user ? <Navigate to="/Tvshows" replace /> : <Login />} />
-                    <Route path="/register" element={user ? <Navigate to="/Tvshows" replace /> : <Register />} />
+                    <Route path="/login" element={user ? <Navigate to={defaultRoute} replace /> : <Login />} />
+                    <Route path="/register" element={user ? <Navigate to={defaultRoute} replace /> : <Register />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/EditProfile" element={user ? <EditProfile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile/:username" element={user ? <Profile /> : <Navigate to="/login" replace />} />
