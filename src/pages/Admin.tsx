@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
-import { getProfile } from '../services/profileService'
 import { useAuth } from '../hooks/useAuth'
 import { usePageTitle } from '../hooks/usePageTitle'
 import ConfirmModal from '../components/modals/ConfirmModal'
@@ -26,10 +25,9 @@ type TabType = 'overview' | 'users'
 
 const Admin: React.FC = () => {
     usePageTitle('Trackist - Admin')
-    const { user } = useAuth(true)
-    const [isAdmin, setIsAdmin] = useState(false)
-    const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState<TabType>('overview')
+    const { user, profile } = useAuth(true)
+    const activeTabState = useState<TabType>('overview')
+    const [activeTab, setActiveTab] = activeTabState
     const [profiles, setProfiles] = useState<ProfileRow[]>([])
     const [stats, setStats] = useState<AdminStats>({
         totalUsers: 0,
@@ -42,25 +40,13 @@ const Admin: React.FC = () => {
     const [roleConfirm, setRoleConfirm] = useState<{ userId: string; newRole: string; displayName: string } | null>(null)
     const [roleLoading, setRoleLoading] = useState(false)
 
-    useEffect(() => {
-        const checkAdmin = async () => {
-            if (!user) {
-                setLoading(false)
-                return
-            }
-            const { data } = await getProfile(user.id)
-            if (data?.role === 'admin') {
-                setIsAdmin(true)
-            } else {
-                setIsAdmin(false)
-            }
-            setLoading(false)
-        }
-        checkAdmin()
-    }, [user])
+    const isAdmin = profile?.role === 'admin'
+    const loading = Boolean(user && !profile)
 
     useEffect(() => {
-        if (!isAdmin) return
+        if (!isAdmin || !user) {
+            return
+        }
 
         const fetchData = async () => {
             try {
@@ -112,7 +98,7 @@ const Admin: React.FC = () => {
         }
 
         fetchData()
-    }, [isAdmin])
+    }, [isAdmin, user])
 
     const handleRoleChange = async () => {
         if (!roleConfirm) return

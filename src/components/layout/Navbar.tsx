@@ -335,16 +335,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                     {nickname}
                                 </NavLink>
                             </div>
-                            {isAdmin && (
-                                <NavLink
-                                    className={({ isActive }) =>
-                                        `navbar-action-link${isActive ? ' active' : ''}`
-                                    }
-                                    to="/Admin"
-                                >
-                                    <i className="fa-solid fa-shield-halved"></i>
-                                </NavLink>
-                            )}
                             <div className="t-dropdown-wrap">
                                 <button
                                     ref={buttonRef}
@@ -373,6 +363,15 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                     className={`t-dropdown ${menuOpen ? (closing ? 'is-closing' : 'is-open') : ''}`}
                                     data-origin="top-right"
                                 >
+                                {isAdmin && (
+                                    <button className="t-dropdown-item" onClick={() => {
+                                        closeMenu();
+                                        navigate('/Admin');
+                                    }}>
+                                        <i className="fa-solid fa-user-shield"></i>
+                                        Admin Center
+                                    </button>
+                                )}
                                 {showInstallButton && (
                                         <button className="t-dropdown-item" onClick={handleInstallClick}>
                                             <i className="fa-solid fa-download"></i>

@@ -76,6 +76,7 @@ CREATE TABLE public.list_items (
   vote_average real,
   added_at timestamp with time zone DEFAULT now(),
   watched_at timestamp with time zone,
+  position integer DEFAULT 0,
   CONSTRAINT list_items_pkey PRIMARY KEY (id),
   CONSTRAINT list_items_list_id_fkey FOREIGN KEY (list_id) REFERENCES public.lists(id)
 );
@@ -95,17 +96,7 @@ CREATE TABLE public.profiles (
   avatar_url text,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  role text NOT NULL DEFAULT 'user'::text,
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
-);
-CREATE TABLE public.user_addons (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  url text NOT NULL,
-  name text,
-  manifest jsonb,
-  enabled boolean DEFAULT true,
-  added_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT user_addons_pkey PRIMARY KEY (id),
-  CONSTRAINT user_addons_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
