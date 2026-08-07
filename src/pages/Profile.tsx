@@ -526,7 +526,7 @@ const ProfilePage: React.FC = () => {
                                     {userLists.map((list) => (
                                         <Link
                                             key={list.id}
-                                            to={`/Profile/${profile.display_name || ''}/list/${list.id}`}
+                                            to={`/ListsDetail/${list.id}`}
                                             className="profile-list-card"
                                         >
                                             <div className="profile-list-card__header">

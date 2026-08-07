@@ -162,7 +162,7 @@ export const useListsLogic = (): UseListsLogicResult => {
                 .order('updated_at', { ascending: false }),
             supabase
                 .from('lists')
-                .select('*, profiles!inner(display_name, avatar_url)')
+                .select('*')
                 .eq('is_public', true)
                 .neq('user_id', user.id)
                 .order('updated_at', { ascending: false })
