@@ -4,6 +4,8 @@ import { supabase } from '../services/supabaseClient'
 import {
     getProfile,
     getProfileByUsername,
+    getFollowers,
+    getFollowing,
     followUser,
     unfollowUser,
     isFollowing
@@ -14,6 +16,7 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import { VirtuosoGrid } from 'react-virtuoso'
 import { useMobile } from '../contexts/useMobile'
 import MediaCard from '../components/media/MediaCard'
+import ConfirmModal from '../components/modals/ConfirmModal'
 
 interface ProfileData {
     id: string
@@ -42,8 +45,11 @@ const ProfilePage: React.FC = () => {
     const { isMobile } = useMobile()
     const [currentUser, setCurrentUser] = useState<User | null>(null)
     const [profile, setProfile] = useState<ProfileData | null>(null)
+    const [followersCount, setFollowersCount] = useState(0)
+    const [followingCount, setFollowingCount] = useState(0)
     const [isFollowingUser, setIsFollowingUser] = useState(false)
     const [followLoading, setFollowLoading] = useState(false)
+    const [showUnfollowModal, setShowUnfollowModal] = useState(false)
     const [loading, setLoading] = useState(true)
     const [watchlistItems, setWatchlistItems] = useState<WatchlistItem[]>([])
     const [userLists, setUserLists] = useState<UserList[]>([])
@@ -71,10 +77,12 @@ const ProfilePage: React.FC = () => {
                     const { data } = await getProfileByUsername(username)
                     profileData = data as ProfileData | null
                     targetUserId = profileData?.id || null
+                    console.log('[Profile] getProfileByUsername result:', { username, profileData, targetUserId })
                 } else if (currentUser) {
                     const { data } = await getProfile(currentUser.id)
                     profileData = data as ProfileData | null
                     targetUserId = currentUser.id
+                    console.log('[Profile] getProfile result:', { userId: currentUser.id, profileData, targetUserId })
                 }
 
                 setProfile(profileData)
@@ -83,9 +91,20 @@ const ProfilePage: React.FC = () => {
                     if (currentUser && currentUser.id !== targetUserId) {
                         const following = await isFollowing(currentUser.id, targetUserId)
                         setIsFollowingUser(following)
+                        console.log('[Profile] isFollowing:', following)
                     }
 
+                    // Load followers and following counts
+                    const [{ count: followersCountData }, { count: followingCountData }] = await Promise.all([
+                        getFollowers(targetUserId),
+                        getFollowing(targetUserId)
+                    ])
+                    setFollowersCount(followersCountData || 0)
+                    setFollowingCount(followingCountData || 0)
+                    console.log('[Profile] counts:', { followers: followersCountData, following: followingCountData })
+
                     // Load watchlist
+                    console.log('[Profile] Loading watchlist for user:', targetUserId)
                     const { data: watchlistData, error: watchlistError } = await supabase
                         .from('watchlist')
                         .select('*')
@@ -93,7 +112,9 @@ const ProfilePage: React.FC = () => {
                         .order('added_at', { ascending: false })
                     
                     if (watchlistError) {
-                        console.error('Failed to load watchlist for profile:', watchlistError)
+                        console.error('[Profile] Failed to load watchlist:', watchlistError)
+                    } else {
+                        console.log('[Profile] Watchlist loaded:', watchlistData?.length || 0, 'items')
                     }
                     
                     const items = (watchlistData || []) as WatchlistItem[]
@@ -111,16 +132,30 @@ const ProfilePage: React.FC = () => {
                         listsQuery = listsQuery.eq('is_public', true)
                     }
 
-                    const { data: listsData } = await listsQuery
+                    console.log('[Profile] Loading lists for user:', targetUserId, 'isOwn:', isOwn)
+                    const { data: listsData, error: listsError } = await listsQuery
+                    
+                    if (listsError) {
+                        console.error('[Profile] Failed to load lists:', listsError)
+                    } else {
+                        console.log('[Profile] Lists loaded:', listsData?.length || 0, 'lists')
+                    }
+                    
                     const rawLists = (listsData || []) as UserList[]
 
                     // Compute item counts from list_items
                     if (rawLists.length > 0) {
                         const listIds = rawLists.map(l => l.id)
-                        const { data: listItems } = await supabase
+                        const { data: listItems, error: listItemsError } = await supabase
                             .from('list_items')
                             .select('list_id, watched_at')
                             .in('list_id', listIds)
+
+                        if (listItemsError) {
+                            console.error('[Profile] Failed to load list_items:', listItemsError)
+                        } else {
+                            console.log('[Profile] List items loaded:', listItems?.length || 0, 'items')
+                        }
 
                         const counts: Record<string, { item_count: number; watched_count: number }> = {}
                         if (listItems) {
@@ -145,7 +180,7 @@ const ProfilePage: React.FC = () => {
                     }
                 }
             } catch (error) {
-                console.error('Failed to load profile:', error)
+                console.error('[Profile] Failed to load profile:', error)
             } finally {
                 setLoading(false)
             }
@@ -157,15 +192,23 @@ const ProfilePage: React.FC = () => {
     const handleFollow = async () => {
         if (!currentUser || !profile) return
 
-        setFollowLoading(true)
-
         if (isFollowingUser) {
-            await unfollowUser(currentUser.id, profile.id)
+            setShowUnfollowModal(true)
         } else {
+            setFollowLoading(true)
             await followUser(currentUser.id, profile.id)
+            setIsFollowingUser(true)
+            setFollowLoading(false)
         }
+    }
 
-        setIsFollowingUser(!isFollowingUser)
+    const confirmUnfollow = async () => {
+        if (!currentUser || !profile) return
+
+        setFollowLoading(true)
+        await unfollowUser(currentUser.id, profile.id)
+        setIsFollowingUser(false)
+        setShowUnfollowModal(false)
         setFollowLoading(false)
     }
 
@@ -287,6 +330,25 @@ const ProfilePage: React.FC = () => {
                                 <span className="profile-hero__meta-item">
                                     Joined {formatDate(profile.created_at)}
                                 </span>
+                            </div>
+
+                            <div className="profile-hero__stats">
+                                <div className="profile-stat">
+                                    <span className="profile-stat__value">{watchlistItems.length}</span>
+                                    <span className="profile-stat__label">Watchlist</span>
+                                </div>
+                                <div className="profile-stat">
+                                    <span className="profile-stat__value">{followersCount}</span>
+                                    <span className="profile-stat__label">Followers</span>
+                                </div>
+                                <div className="profile-stat">
+                                    <span className="profile-stat__value">{followingCount}</span>
+                                    <span className="profile-stat__label">Following</span>
+                                </div>
+                                <div className="profile-stat">
+                                    <span className="profile-stat__value">{userLists.length}</span>
+                                    <span className="profile-stat__label">Lists</span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -502,6 +564,21 @@ const ProfilePage: React.FC = () => {
                         </div>
                     )}
                 </div>
+
+                {/* Unfollow Confirmation Modal */}
+                {showUnfollowModal && (
+                    <ConfirmModal
+                        isOpen={showUnfollowModal}
+                        title="Unfollow User"
+                        message={`Are you sure you want to unfollow ${profile.display_name || 'this user'}?`}
+                        onConfirm={confirmUnfollow}
+                        onCancel={() => setShowUnfollowModal(false)}
+                        confirmText="Unfollow"
+                        confirmColor="danger"
+                        disabled={followLoading}
+                        confirmLoading={followLoading}
+                    />
+                )}
             </div>
         </section>
     )

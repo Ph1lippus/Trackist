@@ -6772,6 +6772,7 @@ i.fa-solid.fa-trash:hover {
     display: flex;
     gap: 1.5rem;
     padding: 0 1.5rem 1.5rem;
+    margin-top: -40px;
     flex-wrap: wrap;
 }
 
