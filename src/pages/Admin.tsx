@@ -43,6 +43,8 @@ const Admin: React.FC = () => {
     const isAdmin = profile?.role === 'admin'
     const loading = Boolean(user && !profile)
 
+    console.log('[Admin] render state:', { userId: user?.id, profileRole: profile?.role, isAdmin, loading })
+
     const handleRetry = () => {
         window.location.reload()
     }
