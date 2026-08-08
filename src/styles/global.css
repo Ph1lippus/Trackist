@@ -9180,14 +9180,23 @@ i.fa-solid.fa-trash:hover {
 }
 
 .mobile-tvshow-card {
-    padding: 0.5rem 1rem 0.5rem 0rem;
+    padding: 0.6rem 1.1rem 0.6rem 0rem;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    background: rgba(255, 255, 255, 0.03);
+    gap: 0.85rem;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.25s ease;
     position: relative;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.mobile-tvshow-card:hover {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03));
+    border-color: rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
 }
 
 .mobile-tvshow-card:active {
@@ -9200,9 +9209,10 @@ i.fa-solid.fa-trash:hover {
     height: auto;
     aspect-ratio: 2/3;
     flex-shrink: 0;
-    border-radius: 0px 25px 25px 0px;
+    border-radius: 0px 20px 20px 0px;
     overflow: hidden;
     background: linear-gradient(135deg, rgba(133, 138, 227, 0.3), rgba(255, 255, 255, 0.05));
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .mobile-tvshow-card-poster img {
@@ -9210,6 +9220,11 @@ i.fa-solid.fa-trash:hover {
     height: 100%;
     object-fit: cover;
     display: block;
+    transition: transform 0.3s ease;
+}
+
+.mobile-tvshow-card:hover .mobile-tvshow-card-poster img {
+    transform: scale(1.03);
 }
 
 .mobile-tvshow-card-no-poster {
@@ -9231,11 +9246,11 @@ i.fa-solid.fa-trash:hover {
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 0.25rem;
+    gap: 0.3rem;
 }
 
 .mobile-tvshow-card-title {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--color-platinum);
     margin: 0;
@@ -9272,15 +9287,15 @@ i.fa-solid.fa-trash:hover {
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: all 0.25s ease;
 }
 
 .mobile-tvshow-card-add-btn:hover:not(:disabled) {
     background: rgba(104, 255, 174, 0.2);
     border-color: rgba(104, 255, 174, 0.5);
     color: #68ffae;
-    transform: scale(1.1);
-    box-shadow: 0 0 12px rgba(104, 255, 174, 0.3);
+    transform: scale(1.15);
+    box-shadow: 0 0 16px rgba(104, 255, 174, 0.35);
 }
 
 .mobile-tvshow-card-add-btn:disabled {
@@ -9304,7 +9319,7 @@ i.fa-solid.fa-trash:hover {
     transform: translateX(-100%);
     animation: sweep 0.5s ease-out forwards;
     pointer-events: none;
-    z-index: 2;
+    z-index: 3;
 }
 
 /* ===== MOBILE MOVIES PAGE ===== */

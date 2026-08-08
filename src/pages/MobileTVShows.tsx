@@ -212,14 +212,27 @@ const MobileTVShows: React.FC = () => {
             )
 
             if (success) {
+                // Start sweep immediately to cover all data transitions
                 setSweepId(show.id)
                 setTimeout(async () => {
+                    // Update data behind the sweep
                     if (show.tmdb_id) {
                         await checkAndUpdateCompleted(show.id, show.tmdb_id)
                     }
                     await useLibraryStore.getState().refreshItem(show.id)
+
+                    // Update nextEpisodes cache so getEpisodeInfo is correct
+                    const nextEp = await getNextEpisodeToWatch(show.id)
+                    if (nextEp) {
+                        setNextEpisodes(prev => ({
+                            ...prev,
+                            [show.id]: { season_number: nextEp.season_number, episode_number: nextEp.episode_number }
+                        }))
+                    }
+
+                    // Clear sweep — all data is now correct
                     setSweepId(null)
-                }, 500)
+                }, 10)
             }
         } catch (err) {
             console.error('Failed to add episode:', err)
