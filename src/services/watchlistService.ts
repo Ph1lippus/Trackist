@@ -558,12 +558,16 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
             const newStatus = showEnded ? 'completed' : 'caught_up'
             
             if (currentItem?.status !== newStatus) {
+                // Count episodes in the current season for per-season episode number
+                const watchedEps = await getWatchedEpisodes(watchlistId)
+                const episodesInCurrentSeason = watchedEps.filter(ep => ep.season_number === currentSeason).length
+                
                 await supabase
                     .from('watchlist')
                     .update({
                         status: newStatus,
                         current_season: currentSeason,
-                        current_episode: watchedCount,
+                        current_episode: episodesInCurrentSeason,
                         completed_at: showEnded ? new Date().toISOString() : null,
                         updated_at: new Date().toISOString()
                     })
@@ -591,12 +595,16 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
         } else {
             // Some episodes watched but not all - set to watching
             if (currentItem?.status !== 'watching') {
+                // Count episodes in the current season for per-season episode number
+                const watchedEps = await getWatchedEpisodes(watchlistId)
+                const episodesInCurrentSeason = watchedEps.filter(ep => ep.season_number === currentSeason).length
+                
                 await supabase
                     .from('watchlist')
                     .update({
                         status: 'watching',
                         current_season: currentSeason,
-                        current_episode: watchedCount,
+                        current_episode: episodesInCurrentSeason,
                         updated_at: new Date().toISOString()
                     })
                     .eq('id', watchlistId)
@@ -725,18 +733,23 @@ export const recalculateProgress = async (showId: string): Promise<{ fixed: bool
             newCurrentEpisode = totalReleasedEpisodes
             const watchedEps = await getWatchedEpisodes(showId)
             if (watchedEps.length > 0) {
-                const lastWatched = watchedEps.reduce((max, ep) =>
-                    ep.season_number > max.season_number ? ep : max
-                , watchedEps[0])
+                const lastWatched = watchedEps.reduce((max, ep) => {
+                    if (ep.season_number > max.season_number) return ep
+                    if (ep.season_number === max.season_number && ep.episode_number > max.episode_number) return ep
+                    return max
+                }, watchedEps[0])
                 newCurrentSeason = lastWatched.season_number
             }
         } else if (watchedCount > 0) {
             newStatus = 'watching'
             const watchedEps = await getWatchedEpisodes(showId)
             if (watchedEps.length > 0) {
-                const lastWatched = watchedEps.reduce((max, ep) =>
-                    ep.season_number > max.season_number ? ep : max
-                , watchedEps[0])
+                // Find the actual last watched episode (highest season, then highest episode in that season)
+                const lastWatched = watchedEps.reduce((max, ep) => {
+                    if (ep.season_number > max.season_number) return ep
+                    if (ep.season_number === max.season_number && ep.episode_number > max.episode_number) return ep
+                    return max
+                }, watchedEps[0])
                 newCurrentSeason = lastWatched.season_number
                 // Count episodes in the current season to get per-season episode number
                 const episodesInCurrentSeason = watchedEps.filter(ep => ep.season_number === newCurrentSeason).length
@@ -1087,6 +1100,9 @@ export const fixAllProgress = async (
 
         progress.currentShow = undefined
         onProgress?.({ ...progress })
+
+        // Invalidate cache so all pages show updated data
+        await invalidateUserCache()
 
         return progress
     } catch (err) {
