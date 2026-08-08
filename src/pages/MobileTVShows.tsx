@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { imageUrl } from '../services/tmdbService'
-import { markEpisodeWatched } from '../services/watchlistService'
+import { markEpisodeWatched, getNextEpisodeToWatch } from '../services/watchlistService'
+
 import { useLibraryStore } from '../stores/useLibraryStore'
 import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -13,10 +14,7 @@ const MobileTVShows: React.FC = () => {
     const { committedQuery } = useSearch()
     const tvShows = useLibraryStore((state) => state.tvShows)
     const [addingEpisode, setAddingEpisode] = useState<string | null>(null)
-
-    useEffect(() => {
-        window.scrollTo(0, 0)
-    }, [])
+    const [nextEpisodes, setNextEpisodes] = useState<Record<string, { season_number: number; episode_number: number }>>({})
 
     const watching = useMemo(() => {
         const filtered = committedQuery
@@ -40,18 +38,47 @@ const MobileTVShows: React.FC = () => {
         })
     }, [tvShows, committedQuery])
 
-    // Get the episode label for a show
-    // current_episode is now the episode number WITHIN the current season
+    useEffect(() => {
+        window.scrollTo(0, 0)
+    }, [])
+
+    useEffect(() => {
+        const fetchNextEpisodes = async () => {
+            if (watching.length === 0) return
+            const results: Record<string, { season_number: number; episode_number: number }> = {}
+            for (const show of watching) {
+                if (!show.id || !show.tmdb_id) continue
+                try {
+                    const nextEp = await getNextEpisodeToWatch(show.id)
+                    if (nextEp) {
+                        results[show.id] = { season_number: nextEp.season_number, episode_number: nextEp.episode_number }
+                    }
+                } catch (err) {
+                    console.error(`Failed to fetch next episode for ${show.title}:`, err)
+                }
+            }
+            setNextEpisodes(results)
+        }
+
+        fetchNextEpisodes()
+    }, [watching])
+
+    // Fetch actual next episodes from the episode catalog (watchlist_episodes)
+    // This correctly handles season transitions, unlike the old current_episode + 1 logic
     const getEpisodeLabel = (show: WatchlistItem): string => {
         if (show.status === 'planning') {
             return 'S1 E1'
         }
 
+        const cached = nextEpisodes[show.id]
+        if (cached) {
+            return `S${cached.season_number} E${cached.episode_number}`
+        }
         const currentSeason = show.current_season || 1
         const currentEpisode = show.current_episode || 0
         const nextEpisode = currentEpisode + 1
-        
         return `S${currentSeason} E${nextEpisode}`
+        
     }
 
     const getEpisodeSubtitle = (show: WatchlistItem): string => {
@@ -66,9 +93,30 @@ const MobileTVShows: React.FC = () => {
 
         setAddingEpisode(show.id)
         try {
-            // Only NOW do we fetch the next episode details from TMDB
-            const { getNextEpisodeToWatch } = await import('../services/watchlistService')
-            const nextEp = await getNextEpisodeToWatch(show.id)
+            // Use the cached next episode if available, otherwise fetch from TMDB
+            const cached = nextEpisodes[show.id]
+            let nextEp: { season_number: number; episode_number: number; tmdb_episode_id?: number; title?: string; still_path?: string; overview?: string; air_date?: string; runtime?: number } | null = null
+            if (cached) {
+                const { getTVSeasonDetails } = await import('../services/tmdbService')
+                const seasonData = await getTVSeasonDetails(show.tmdb_id, cached.season_number)
+                const ep = seasonData.episodes?.find(e => e.episode_number === cached.episode_number)
+                if (ep) {
+                    nextEp = {
+                        season_number: cached.season_number,
+                        episode_number: cached.episode_number,
+                        tmdb_episode_id: ep.id,
+                        title: ep.name,
+                        still_path: ep.still_path,
+                        overview: ep.overview,
+                        air_date: ep.air_date,
+                        runtime: ep.runtime
+                    }
+                }
+            }
+            if (!nextEp) {
+                const { getNextEpisodeToWatch } = await import('../services/watchlistService')
+                nextEp = await getNextEpisodeToWatch(show.id)
+            }
 
             if (!nextEp) {
                 setAddingEpisode(null)
