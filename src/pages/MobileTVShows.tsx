@@ -1,22 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../services/supabaseClient'
-import { imageUrl, getTVSeasonDetails } from '../services/tmdbService'
-import { markEpisodeWatched } from '../services/watchlistService'
+import { imageUrl } from '../services/tmdbService'
+import { markEpisodeWatched, getNextEpisodeToWatch } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useSearch } from '../hooks/useSearch'
 
-interface EpisodeInfo {
+interface NextEpisodeInfo {
     season_number: number
     episode_number: number
-    tmdb_episode_id?: number
     title?: string
     still_path?: string
     overview?: string
     air_date?: string
     runtime?: number
+    tmdb_episode_id?: number
 }
 
 const MobileTVShows: React.FC = () => {
@@ -25,66 +24,37 @@ const MobileTVShows: React.FC = () => {
     const { committedQuery } = useSearch()
     const tvShows = useLibraryStore((state) => state.tvShows)
     const [addingEpisode, setAddingEpisode] = useState<string | null>(null)
-    const [episodesMap, setEpisodesMap] = useState<Map<string, EpisodeInfo[]>>(new Map())
-    const [watchedSet, setWatchedSet] = useState<Set<string>>(new Set())
+    const [nextEpisodesMap, setNextEpisodesMap] = useState<Map<string, NextEpisodeInfo>>(new Map())
 
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
 
+    // Load next episode data for all watching shows from the watchlist_episodes table
     useEffect(() => {
-        const loadEpisodes = async () => {
-            const watching = tvShows.filter(s => s.status === 'watching' && s.tmdb_id)
+        const loadNextEpisodes = async () => {
+            const watching = tvShows.filter(s => s.status === 'watching' && s.id)
             if (watching.length === 0) return
 
-            const newEpisodesMap = new Map<string, EpisodeInfo[]>()
-            const newWatchedSet = new Set<string>()
+            const newMap = new Map<string, NextEpisodeInfo>()
 
             for (const show of watching) {
-                if (!show.id || !show.tmdb_id) continue
+                if (!show.id) continue
 
                 try {
-                    const seasonData = await getTVSeasonDetails(show.tmdb_id, show.current_season || 1)
-                    const eps: EpisodeInfo[] = (seasonData.episodes || []).map((ep: {
-                        episode_number: number
-                        id?: number
-                        name?: string
-                        still_path?: string
-                        overview?: string
-                        air_date?: string
-                        runtime?: number
-                    }) => ({
-                        season_number: show.current_season || 1,
-                        episode_number: ep.episode_number,
-                        tmdb_episode_id: ep.id,
-                        title: ep.name,
-                        still_path: ep.still_path,
-                        overview: ep.overview,
-                        air_date: ep.air_date,
-                        runtime: ep.runtime
-                    }))
-                    newEpisodesMap.set(show.id, eps)
-
-                    const { data: watchedData } = await supabase
-                        .from('watchlist_episodes')
-                        .select('season_number, episode_number')
-                        .eq('watchlist_id', show.id)
-
-                    if (watchedData) {
-                        watchedData.forEach(ep => {
-                            newWatchedSet.add(`${show.id}-${ep.season_number}-${ep.episode_number}`)
-                        })
+                    const nextEp = await getNextEpisodeToWatch(show.id)
+                    if (nextEp) {
+                        newMap.set(show.id, nextEp)
                     }
                 } catch (err) {
-                    console.error(`Failed to load episodes for ${show.title}:`, err)
+                    console.error(`Failed to load next episode for ${show.title}:`, err)
                 }
             }
 
-            setEpisodesMap(newEpisodesMap)
-            setWatchedSet(newWatchedSet)
+            setNextEpisodesMap(newMap)
         }
 
-        loadEpisodes()
+        loadNextEpisodes()
     }, [tvShows])
 
     const handleAddEpisode = async (show: WatchlistItem) => {
@@ -92,8 +62,7 @@ const MobileTVShows: React.FC = () => {
 
         setAddingEpisode(show.id)
         try {
-            const showEpisodes = episodesMap.get(show.id) || []
-            const nextEpisode = showEpisodes.find(ep => !watchedSet.has(`${show.id}-${ep.season_number}-${ep.episode_number}`))
+            const nextEpisode = nextEpisodesMap.get(show.id)
 
             if (!nextEpisode) {
                 setAddingEpisode(null)
@@ -115,7 +84,6 @@ const MobileTVShows: React.FC = () => {
             )
 
             if (success) {
-                setWatchedSet(prev => new Set([...prev, `${show.id}-${nextEpisode.season_number}-${nextEpisode.episode_number}`]))
                 await useLibraryStore.getState().refreshItem(show.id)
             }
         } catch (err) {
@@ -148,42 +116,26 @@ const MobileTVShows: React.FC = () => {
     }, [tvShows, committedQuery])
 
     const getEpisodeLabel = (show: WatchlistItem): string => {
-        const showEpisodes = episodesMap.get(show.id) || []
-        const nextEpisode = showEpisodes.find(ep => !watchedSet.has(`${show.id}-${ep.season_number}-${ep.episode_number}`))
-
-        if (nextEpisode) {
-            return `S${nextEpisode.season_number} E${nextEpisode.episode_number}`
+        const nextEp = nextEpisodesMap.get(show.id)
+        if (nextEp) {
+            return `S${nextEp.season_number} E${nextEp.episode_number}`
         }
-
-        // If all episodes in the currently loaded season are watched, show the next season
-        if (showEpisodes.length > 0) {
-            const allWatchedInSeason = showEpisodes.every(ep => watchedSet.has(`${show.id}-${ep.season_number}-${ep.episode_number}`))
-            if (allWatchedInSeason) {
-                const season = (show.current_season || 1) + 1
-                return `S${season} E1`
-            }
-        }
-
+        // Never show the total episode count - it's misleading
         const season = show.current_season || 1
-        const episode = show.current_episode || 1
-        return `S${season} E${episode}`
+        return `S${season} E1`
     }
 
     const getEpisodeSubtitle = (show: WatchlistItem): string => {
-        const showEpisodes = episodesMap.get(show.id) || []
-        const watchedCount = showEpisodes.filter(ep => watchedSet.has(`${show.id}-${ep.season_number}-${ep.episode_number}`)).length
-        const totalEpisodes = showEpisodes.length
-
         if (show.status === 'planning') {
             return 'First episode'
         }
 
-        if (totalEpisodes > 0 && watchedCount >= totalEpisodes) {
-            return 'Final episode'
+        const nextEp = nextEpisodesMap.get(show.id)
+        if (nextEp?.title) {
+            return nextEp.title
         }
 
-        const nextEpisode = showEpisodes.find(ep => !watchedSet.has(`${show.id}-${ep.season_number}-${ep.episode_number}`))
-        return nextEpisode?.title || `Episode ${watchedCount + 1}`
+        return 'Next episode'
     }
 
     const renderShowCard = (show: WatchlistItem, showFirstEpisode: boolean = false) => {

@@ -31,6 +31,78 @@ export const getCurrentSeasonFromWatchedEpisodes = async (watchlistId: string): 
 }
 
 /**
+ * Get the CURRENT (non-watched) episode count for a watchlist item.
+ * This filters watchlist_episodes to only count entries where watched = true,
+ * unlike getWatchedEpisodeCount which counts ALL rows in the table.
+ */
+export const getWatchedEpisodeCountFiltered = async (watchlistId: string): Promise<number> => {
+    const { count, error } = await supabase
+        .from('watchlist_episodes')
+        .select('*', { count: 'exact', head: true })
+        .eq('watchlist_id', watchlistId)
+        .eq('watched', true)
+
+    if (error) {
+        console.error('Failed to count watched episodes (filtered):', error)
+        return 0
+    }
+    return count || 0
+}
+
+/**
+ * Get the next unwatched released episode for a TV show.
+ * This queries the watchlist_episodes table (which stores the full episode
+ * catalog with watched flags) to find the first episode that:
+ * 1. Has watched = false
+ * 2. Has been released (air_date <= today or no air_date)
+ * Returns the episode data including title, season, episode number, etc.
+ */
+export const getNextEpisodeToWatch = async (watchlistId: string): Promise<{
+    season_number: number
+    episode_number: number
+    title?: string
+    still_path?: string
+    overview?: string
+    air_date?: string
+    runtime?: number
+    tmdb_episode_id?: number
+} | null> => {
+    try {
+        const { data: episodes, error } = await supabase
+            .from('watchlist_episodes')
+            .select('*')
+            .eq('watchlist_id', watchlistId)
+            .eq('watched', false)
+            .order('season_number', { ascending: true })
+            .order('episode_number', { ascending: true })
+
+        if (error || !episodes) return null
+
+        // Find the first released episode
+        for (const ep of episodes) {
+            // Skip if not released yet
+            if (ep.air_date && new Date(ep.air_date) > new Date()) continue
+
+            return {
+                season_number: ep.season_number,
+                episode_number: ep.episode_number,
+                title: ep.title,
+                still_path: ep.still_path,
+                overview: ep.overview,
+                air_date: ep.air_date,
+                runtime: ep.runtime,
+                tmdb_episode_id: ep.tmdb_episode_id
+            }
+        }
+
+        return null
+    } catch (err) {
+        console.error(`Failed to get next episode for watchlist ${watchlistId}:`, err)
+        return null
+    }
+}
+
+/**
  * Save all episodes for a TV show to the watchlist_episodes table.
  * Called when a new show is added to the watchlist to pre-populate
  * all episodes so users can mark individual episodes as watched.
@@ -93,7 +165,7 @@ export const markEpisodeWatched = async (
 ): Promise<boolean> => {
     const { error } = await supabase
         .from('watchlist_episodes')
-        .insert({
+        .upsert({
             watchlist_id: watchlistId,
             season_number: seasonNumber,
             episode_number: episodeNumber,
@@ -103,17 +175,19 @@ export const markEpisodeWatched = async (
             overview: episodeData.overview,
             vote_average: episodeData.vote_average,
             air_date: episodeData.air_date,
-            runtime: episodeData.runtime
+            runtime: episodeData.runtime,
+            watched: true,
+            watched_at: new Date().toISOString()
+        }, {
+            onConflict: 'watchlist_id,season_number,episode_number'
         })
 
     if (error) {
-        // If it's a duplicate (already watched), that's fine
-        if (error.code === '23505') return true
         console.error('Failed to mark episode as watched:', error)
         return false
     }
 
-    // Get the actual count of watched episodes after insertion
+    // Get the actual count of watched episodes after insertion (filtered by watched = true)
     const watchedCount = await getWatchedEpisodeCount(watchlistId)
 
     // Calculate the current season from the last watched episode
@@ -148,9 +222,14 @@ export const unmarkEpisodeWatched = async (
     seasonNumber: number,
     episodeNumber: number
 ): Promise<boolean> => {
+    // Update the episode's watched flag to false instead of deleting it,
+    // so the episode catalog data is preserved
     const { error } = await supabase
         .from('watchlist_episodes')
-        .delete()
+        .update({ 
+            watched: false,
+            watched_at: null
+        })
         .eq('watchlist_id', watchlistId)
         .eq('season_number', seasonNumber)
         .eq('episode_number', episodeNumber)
@@ -160,7 +239,7 @@ export const unmarkEpisodeWatched = async (
         return false
     }
 
-    // Get the actual count of watched episodes after deletion
+    // Get the actual count of watched episodes after deletion (filtered by watched = true)
     const watchedCount = await getWatchedEpisodeCount(watchlistId)
 
     // Calculate the current season from the last remaining watched episode
@@ -183,13 +262,16 @@ export const unmarkEpisodeWatched = async (
 }
 
 /**
- * Get all watched episodes for a watchlist item.
+ * Get all WATCHED episodes for a watchlist item.
+ * This filters by watched = true because watchlist_episodes also stores
+ * the full episode catalog (with watched = false for unwatched episodes).
  */
 export const getWatchedEpisodes = async (watchlistId: string) => {
     const { data, error } = await supabase
         .from('watchlist_episodes')
         .select('*')
         .eq('watchlist_id', watchlistId)
+        .eq('watched', true)
 
     if (error) {
         console.error('Failed to fetch watched episodes:', error)
@@ -202,14 +284,18 @@ export const getWatchedEpisodes = async (watchlistId: string) => {
  * Remove all watched episodes for a TV show and reset to planning status
  */
 export const removeAllWatchedEpisodes = async (watchlistId: string): Promise<boolean> => {
-    // Delete all watched episodes
+    // Update all episodes to watched = false instead of deleting them,
+    // so the episode catalog data is preserved
     const { error: deleteError } = await supabase
         .from('watchlist_episodes')
-        .delete()
+        .update({ 
+            watched: false,
+            watched_at: null
+        })
         .eq('watchlist_id', watchlistId)
 
     if (deleteError) {
-        console.error('Failed to delete all watched episodes:', deleteError)
+        console.error('Failed to reset all watched episodes:', deleteError)
         return false
     }
 
@@ -232,13 +318,16 @@ export const removeAllWatchedEpisodes = async (watchlistId: string): Promise<boo
 }
 
 /**
- * Get the count of watched episodes for a watchlist item.
+ * Get the count of WATCHED episodes for a watchlist item.
+ * This filters by watched = true because watchlist_episodes also stores
+ * the full episode catalog (with watched = false for unwatched episodes).
  */
 export const getWatchedEpisodeCount = async (watchlistId: string): Promise<number> => {
     const { count, error } = await supabase
         .from('watchlist_episodes')
         .select('*', { count: 'exact', head: true })
         .eq('watchlist_id', watchlistId)
+        .eq('watched', true)
 
     if (error) {
         console.error('Failed to count watched episodes:', error)
@@ -303,7 +392,18 @@ export const markShowAsFullyWatched = async (watchlistId: string, tmdbId: number
 
         // 2. Save all episodes in the background (fire and forget)
         // This ensures individual episode tracking still works
-        saveAllEpisodesForShow(tmdbId, watchlistId).catch(err => {
+        saveAllEpisodesForShow(tmdbId, watchlistId).then(async () => {
+            // Mark ALL saved episodes as watched in the DB so
+            // getWatchedEpisodeCount and getWatchedEpisodes return correct results
+            await supabase
+                .from('watchlist_episodes')
+                .update({ 
+                    watched: true,
+                    watched_at: new Date().toISOString()
+                })
+                .eq('watchlist_id', watchlistId)
+
+        }).catch(err => {
             console.error('Failed to save episodes in background:', err)
         })
 
@@ -342,6 +442,7 @@ export const checkAndUpdateCaughtUp = async (watchlistId: string, tmdbId: number
             .select('*', { count: 'exact', head: true })
             .eq('watchlist_id', watchlistId)
             .eq('season_number', latestSeasonNumber)
+            .eq('watched', true)
 
         if (error) return
 
@@ -574,6 +675,17 @@ export const recalculateProgress = async (showId: string): Promise<{ fixed: bool
 
         // Backfill tmdb_episode_id for episodes that are missing it
         await backfillTmdbEpisodeIds(show.tmdb_id, showId)
+
+        // Ensure the episode catalog exists so getNextEpisodeToWatch can work
+        // (shows added before the catalog system may not have rows)
+        const { count: catalogCount } = await supabase
+            .from('watchlist_episodes')
+            .select('*', { count: 'exact', head: true })
+            .eq('watchlist_id', showId)
+
+        if (!catalogCount || catalogCount === 0) {
+            await saveAllEpisodesForShow(show.tmdb_id, showId)
+        }
 
         // Count only released episodes across all seasons
         let totalReleasedEpisodes = 0
