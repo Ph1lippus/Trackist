@@ -3692,6 +3692,14 @@ body::after {
     text-decoration: underline;
 }
 
+.tmdb-attribution {
+    margin-top: 2rem;
+    padding: 1rem;
+    text-align: center;
+    font-size: 0.875rem;
+    color: var(--color-platinum, #aaa);
+}
+
 /* ===== MORE PAGE ===== */
 .more-page {
     width: 100%;

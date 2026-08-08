@@ -399,6 +399,13 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                         <i className="fa-solid fa-gear"></i>
                                         Settings
                                     </button>
+                                    <button className="t-dropdown-item" onClick={() => {
+                                        closeMenu();
+                                        navigate('/Credits');
+                                    }}>
+                                        <i className="fa-solid fa-trophy"></i>
+                                        Credits
+                                    </button>
                                     <button className="t-dropdown-item" onClick={handleLogout}>
                                         <i className="fa-solid fa-right-from-bracket"></i>
                                         Logout
