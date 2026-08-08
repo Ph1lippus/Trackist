@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
-import { markShowAsFullyWatched } from '../services/watchlistService'
+import { markShowAsFullyWatched, getWatchedEpisodeCount } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
@@ -21,6 +21,7 @@ const TVShows: React.FC = () => {
 
     const [markAllModal, setMarkAllModal] = useState<WatchlistItem | null>(null)
     const [markingAllWatched, setMarkingAllWatched] = useState(false)
+    const [watchedCounts, setWatchedCounts] = useState<Record<string, number>>({})
 
     const [selectionMode, setSelectionMode] = useState(() => {
         try {
@@ -71,6 +72,24 @@ const TVShows: React.FC = () => {
         window.scrollTo(0, 0)
     }, [])
 
+    // Fetch watched counts for TV shows
+    useEffect(() => {
+        const fetchWatchedCounts = async () => {
+            if (!isInitialized || tvShows.length === 0) return
+            const counts: Record<string, number> = {}
+            for (const show of tvShows) {
+                if (!show.id) continue
+                try {
+                    counts[show.id] = await getWatchedEpisodeCount(show.id)
+                } catch {
+                    counts[show.id] = 0
+                }
+            }
+            setWatchedCounts(counts)
+        }
+        fetchWatchedCounts()
+    }, [tvShows, isInitialized])
+
     const toggleSelection = (id: string) => {
         setSelectedIds(prev => {
             const newSet = new Set(prev)
@@ -111,16 +130,14 @@ const TVShows: React.FC = () => {
         setSelectionMode(false)
     }
 
-    // Use current_episode from store data instead of fetching from database
-    // This prevents infinite loops caused by repeated API calls
-
-    // Calculate episode progress for TV shows
+    // Use actual watched episode count instead of current_episode
+    // current_episode is the episode number within the current season, not the total watched count
     const tvShowsWithProgress = useMemo(() => {
         return tvShows.map(show => ({
             ...show,
-            total_episodes_watched: show.current_episode ?? 0
+            total_episodes_watched: watchedCounts[show.id] ?? show.current_episode ?? 0
         }))
-    }, [tvShows])
+    }, [tvShows, watchedCounts])
 
     // Listen for watchlist-refresh event from the Fix Progress modal
     useEffect(() => {
@@ -154,9 +171,9 @@ const TVShows: React.FC = () => {
                     item.status === 'watching' &&
                     item.total_episodes !== undefined &&
                     item.total_episodes > 0 &&
-                    item.total_episodes_watched >= item.total_episodes
+                    (watchedCounts[item.id] ?? item.total_episodes_watched) >= item.total_episodes
                 )) &&
-                item.total_episodes_watched > 0 &&
+                (watchedCounts[item.id] ?? item.total_episodes_watched) > 0 &&
                 item.total_episodes !== undefined
             )
 
@@ -235,7 +252,7 @@ const TVShows: React.FC = () => {
             clearInterval(interval)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
         }
-    }, [isInitialized]) // Only depend on initialization
+    }, [isInitialized, watchedCounts])
 
     // Filter items based on global search (strict TV-type lock)
     const filteredItems = useMemo(() => {

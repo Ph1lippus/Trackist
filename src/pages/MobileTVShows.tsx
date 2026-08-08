@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails, imageUrl } from '../services/tmdbService'
-import { markEpisodeWatched, getNextEpisodeToWatch, checkAndUpdateCompleted } from '../services/watchlistService'
+import { markEpisodeWatched, getNextEpisodeToWatch, checkAndUpdateCompleted, getWatchedEpisodeCount } from '../services/watchlistService'
 
 import { useLibraryStore } from '../stores/useLibraryStore'
 import type { WatchlistItem } from '../types'
@@ -18,6 +18,7 @@ const MobileTVShows: React.FC = () => {
     const [addingEpisode, setAddingEpisode] = useState<string | null>(null)
     const [sweepId, setSweepId] = useState<string | null>(null)
     const [nextEpisodes, setNextEpisodes] = useState<Record<string, { season_number: number; episode_number: number }>>({})
+    const [watchedCounts, setWatchedCounts] = useState<Record<string, number>>({})
 
     const watching = useMemo(() => {
         const filtered = committedQuery
@@ -58,9 +59,9 @@ const MobileTVShows: React.FC = () => {
                     item.status === 'watching' &&
                     item.total_episodes !== undefined &&
                     item.total_episodes > 0 &&
-                    (item.current_episode ?? 0) >= item.total_episodes
+                    (watchedCounts[item.id] ?? (item.current_episode ?? 0)) >= item.total_episodes
                 )) &&
-                (item.current_episode ?? 0) > 0 &&
+                (watchedCounts[item.id] ?? item.current_episode ?? 0) > 0 &&
                 item.total_episodes !== undefined
             )
 
@@ -120,12 +121,13 @@ const MobileTVShows: React.FC = () => {
             clearInterval(interval)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
         }
-    }, [isInitialized])
+    }, [isInitialized, watchedCounts])
 
     useEffect(() => {
         const fetchNextEpisodes = async () => {
             if (watching.length === 0) return
             const results: Record<string, { season_number: number; episode_number: number }> = {}
+            const counts: Record<string, number> = {}
             for (const show of watching) {
                 if (!show.id || !show.tmdb_id) continue
                 try {
@@ -133,11 +135,13 @@ const MobileTVShows: React.FC = () => {
                     if (nextEp) {
                         results[show.id] = { season_number: nextEp.season_number, episode_number: nextEp.episode_number }
                     }
+                    counts[show.id] = await getWatchedEpisodeCount(show.id)
                 } catch (err) {
                     console.error(`Failed to fetch next episode for ${show.title}:`, err)
                 }
             }
             setNextEpisodes(results)
+            setWatchedCounts(counts)
         }
 
         fetchNextEpisodes()
@@ -145,7 +149,7 @@ const MobileTVShows: React.FC = () => {
 
     const getEpisodesLeft = (show: WatchlistItem): number | undefined => {
         if (show.total_episodes === undefined) return undefined
-        const watched = show.current_episode ?? 0
+        const watched = watchedCounts[show.id] ?? show.current_episode ?? 0
         return Math.max(0, show.total_episodes - watched)
     }
 
@@ -229,6 +233,13 @@ const MobileTVShows: React.FC = () => {
                             [show.id]: { season_number: nextEp.season_number, episode_number: nextEp.episode_number }
                         }))
                     }
+
+                    // Update watched count so episodesLeft is correct
+                    const newCount = await getWatchedEpisodeCount(show.id)
+                    setWatchedCounts(prev => ({
+                        ...prev,
+                        [show.id]: newCount
+                    }))
 
                     // Clear sweep — all data is now correct
                     setSweepId(null)

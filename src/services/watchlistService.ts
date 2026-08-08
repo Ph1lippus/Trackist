@@ -17,17 +17,29 @@ export interface FixProgress {
  * This ensures current_season reflects where the user actually is in the show.
  */
 export const getCurrentSeasonFromWatchedEpisodes = async (watchlistId: string): Promise<number> => {
+    const { season } = await getCurrentSeasonAndEpisodeFromWatched(watchlistId)
+    return season
+}
+
+/**
+ * Get the current season and episode from the last watched episode across all seasons.
+ * This ensures current_season and current_episode reflect where the user actually is
+ * in the show, based on the actual episode numbers — not a count of watched episodes.
+ */
+export const getCurrentSeasonAndEpisodeFromWatched = async (watchlistId: string): Promise<{ season: number; episode: number }> => {
     const watchedEps = await getWatchedEpisodes(watchlistId)
-    let currentSeason = 1
-    if (watchedEps.length > 0) {
-        const lastWatched = watchedEps.reduce((max, ep) => {
-            if (ep.season_number > max.season_number) return ep
-            if (ep.season_number === max.season_number && ep.episode_number > max.episode_number) return ep
-            return max
-        }, watchedEps[0])
-        currentSeason = lastWatched.season_number || 1
+    if (watchedEps.length === 0) {
+        return { season: 1, episode: 0 }
     }
-    return currentSeason
+    const lastWatched = watchedEps.reduce((max, ep) => {
+        if (ep.season_number > max.season_number) return ep
+        if (ep.season_number === max.season_number && ep.episode_number > max.episode_number) return ep
+        return max
+    }, watchedEps[0])
+    return {
+        season: lastWatched.season_number || 1,
+        episode: lastWatched.episode_number || 0
+    }
 }
 
 /**
@@ -77,9 +89,15 @@ export const getNextEpisodeToWatch = async (watchlistId: string): Promise<{
 
         const currentSeason = watchlistItem.current_season || 1
         const currentEpisode = watchlistItem.current_episode || 0
-        // If all episodes are watched, there's no next episode
-        if (currentEpisode >= (watchlistItem.total_episodes || 0) && watchlistItem.total_episodes > 0) {
-            return null
+
+        // Fetch all watched episodes to build a set for skipping already-watched episodes
+        const { data: watchlistEps } = await supabase
+            .from('watchlist_episodes')
+            .select('season_number, episode_number')
+            .eq('watchlist_id', watchlistId)
+        const watchedSet = new Set<string>()
+        for (const ep of watchlistEps || []) {
+            watchedSet.add(`${ep.season_number}-${ep.episode_number}`)
         }
 
         // Get the next episode from TMDB
@@ -103,6 +121,9 @@ export const getNextEpisodeToWatch = async (watchlistId: string): Promise<{
 
             for (const ep of episodes) {
                 if (ep.episode_number < startEpisode) continue
+
+                // Skip if this episode is already watched
+                if (watchedSet.has(`${seasonNum}-${ep.episode_number}`)) continue
 
                 // Skip if not released yet
                 if (ep.air_date && new Date(ep.air_date) > new Date()) continue
@@ -172,7 +193,7 @@ export const saveAllEpisodesForShow = async (tmdbId: number, watchlistId: string
  * Mark an episode as watched by INSERTING it into watchlist_episodes.
  * If it already exists (unique constraint), this is a no-op.
  * Also updates the watchlist item's updated_at timestamp to reflect the change.
- * Recalculates current_episode based on actual watched count to ensure accuracy.
+ * Recalculates current_episode based on the actual last watched episode number.
  */
 export const markEpisodeWatched = async (
     watchlistId: string,
@@ -210,21 +231,20 @@ export const markEpisodeWatched = async (
         return false
     }
 
-    // Count episodes in the season that was just marked to get the correct episode number
-    const { count: episodesInSeason } = await supabase
-        .from('watchlist_episodes')
-        .select('*', { count: 'exact', head: true })
-        .eq('watchlist_id', watchlistId)
-        .eq('season_number', seasonNumber)
+    // Recalculate current_season and current_episode from actual watched episodes
+    // Using the real episode number (not a count) ensures correct progress tracking
+    // even when episodes are watched out of order
+    const { season: newCurrentSeason, episode: newCurrentEpisode } =
+        await getCurrentSeasonAndEpisodeFromWatched(watchlistId)
 
     // Update the watchlist item's updated_at timestamp, current_episode, and current_season
-    // current_episode is the episode number WITHIN the current season, not total across all seasons
+    // current_episode is the actual episode number of the last watched episode in the current season
     await supabase
         .from('watchlist')
         .update({ 
             updated_at: new Date().toISOString(),
-            current_episode: episodesInSeason || 0,
-            current_season: seasonNumber
+            current_episode: newCurrentEpisode,
+            current_season: newCurrentSeason
         })
         .eq('id', watchlistId)
 
@@ -240,7 +260,7 @@ export const markEpisodeWatched = async (
 /**
  * Unmark an episode as watched by DELETING it from watchlist_episodes.
  * Also updates the watchlist item's updated_at timestamp to reflect the change.
- * Recalculates current_episode based on actual watched count to ensure accuracy.
+ * Recalculates current_episode based on the actual last watched episode number.
  */
 export const unmarkEpisodeWatched = async (
     watchlistId: string,
@@ -260,24 +280,20 @@ export const unmarkEpisodeWatched = async (
         return false
     }
 
-    // Count episodes in the season that was just unmarked to get the correct episode number
-    const { count: episodesInSeason } = await supabase
-        .from('watchlist_episodes')
-        .select('*', { count: 'exact', head: true })
-        .eq('watchlist_id', watchlistId)
-        .eq('season_number', seasonNumber)
-
-    // Calculate the current season from the last remaining watched episode
-    const currentSeason = await getCurrentSeasonFromWatchedEpisodes(watchlistId)
+    // Recalculate current_season and current_episode from actual watched episodes
+    // Using the real episode number (not a count) ensures correct progress tracking
+    // even when episodes are watched out of order
+    const { season: newCurrentSeason, episode: newCurrentEpisode } =
+        await getCurrentSeasonAndEpisodeFromWatched(watchlistId)
 
     // Update the watchlist item's updated_at timestamp, current_episode, and current_season
-    // current_episode is the episode number WITHIN the current season, not total across all seasons
+    // current_episode is the actual episode number of the last watched episode in the current season
     await supabase
         .from('watchlist')
         .update({ 
             updated_at: new Date().toISOString(),
-            current_episode: episodesInSeason || 0,
-            current_season: currentSeason
+            current_episode: newCurrentEpisode,
+            current_season: newCurrentSeason
         })
         .eq('id', watchlistId)
 
@@ -549,8 +565,9 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
             .eq('id', watchlistId)
             .single()
 
-        // Calculate the current season from the last watched episode
-        const currentSeason = await getCurrentSeasonFromWatchedEpisodes(watchlistId)
+        // Calculate the current season and episode from the actual last watched episode
+        const { season: currentSeason, episode: currentEpisode } =
+            await getCurrentSeasonAndEpisodeFromWatched(watchlistId)
 
         if (watchedCount >= totalReleasedEpisodes) {
             // Check TMDB show status to determine if truly completed or just caught up
@@ -558,16 +575,12 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
             const newStatus = showEnded ? 'completed' : 'caught_up'
             
             if (currentItem?.status !== newStatus) {
-                // Count episodes in the current season for per-season episode number
-                const watchedEps = await getWatchedEpisodes(watchlistId)
-                const episodesInCurrentSeason = watchedEps.filter(ep => ep.season_number === currentSeason).length
-                
                 await supabase
                     .from('watchlist')
                     .update({
                         status: newStatus,
                         current_season: currentSeason,
-                        current_episode: episodesInCurrentSeason,
+                        current_episode: currentEpisode,
                         completed_at: showEnded ? new Date().toISOString() : null,
                         updated_at: new Date().toISOString()
                     })
@@ -594,21 +607,19 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
             }
         } else {
             // Some episodes watched but not all - set to watching
-            if (currentItem?.status !== 'watching') {
-                // Count episodes in the current season for per-season episode number
-                const watchedEps = await getWatchedEpisodes(watchlistId)
-                const episodesInCurrentSeason = watchedEps.filter(ep => ep.season_number === currentSeason).length
-                
-                await supabase
-                    .from('watchlist')
-                    .update({
-                        status: 'watching',
-                        current_season: currentSeason,
-                        current_episode: episodesInCurrentSeason,
-                        updated_at: new Date().toISOString()
-                    })
-                    .eq('id', watchlistId)
-
+            const needsStatusUpdate = currentItem?.status !== 'watching'
+            
+            await supabase
+                .from('watchlist')
+                .update({
+                    status: 'watching',
+                    current_season: currentSeason,
+                    current_episode: currentEpisode,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', watchlistId)
+            
+            if (needsStatusUpdate) {
                 // Invalidate cache when status changes away from completed/caught_up
                 await invalidateUserCache()
             }
@@ -730,34 +741,16 @@ export const recalculateProgress = async (showId: string): Promise<{ fixed: bool
             // Check TMDB show status to determine if truly completed or just caught up
             const showEnded = details.status === 'Ended' || details.status === 'Canceled'
             newStatus = showEnded ? 'completed' : 'caught_up'
-            newCurrentEpisode = totalReleasedEpisodes
-            const watchedEps = await getWatchedEpisodes(showId)
-            if (watchedEps.length > 0) {
-                const lastWatched = watchedEps.reduce((max, ep) => {
-                    if (ep.season_number > max.season_number) return ep
-                    if (ep.season_number === max.season_number && ep.episode_number > max.episode_number) return ep
-                    return max
-                }, watchedEps[0])
-                newCurrentSeason = lastWatched.season_number
-            }
+            const { season: calcSeason, episode: calcEpisode } =
+                await getCurrentSeasonAndEpisodeFromWatched(showId)
+            newCurrentSeason = calcSeason
+            newCurrentEpisode = calcEpisode
         } else if (watchedCount > 0) {
             newStatus = 'watching'
-            const watchedEps = await getWatchedEpisodes(showId)
-            if (watchedEps.length > 0) {
-                // Find the actual last watched episode (highest season, then highest episode in that season)
-                const lastWatched = watchedEps.reduce((max, ep) => {
-                    if (ep.season_number > max.season_number) return ep
-                    if (ep.season_number === max.season_number && ep.episode_number > max.episode_number) return ep
-                    return max
-                }, watchedEps[0])
-                newCurrentSeason = lastWatched.season_number
-                // Count episodes in the current season to get per-season episode number
-                const episodesInCurrentSeason = watchedEps.filter(ep => ep.season_number === newCurrentSeason).length
-                newCurrentEpisode = episodesInCurrentSeason
-            } else {
-                newCurrentEpisode = 0
-                newCurrentSeason = 1
-            }
+            const { season: calcSeason, episode: calcEpisode } =
+                await getCurrentSeasonAndEpisodeFromWatched(showId)
+            newCurrentSeason = calcSeason
+            newCurrentEpisode = calcEpisode
         } else {
             // No episodes watched, set to planning
             newStatus = 'planning'
