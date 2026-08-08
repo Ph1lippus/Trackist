@@ -21,8 +21,30 @@ const Movies: React.FC = () => {
         item: TMDBResult
     } | null>(null)
 
-    const [selectionMode, setSelectionMode] = useState(false)
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+    const [selectionMode, setSelectionMode] = useState(() => {
+        try {
+            const cached = localStorage.getItem('trackist-selection:movies')
+            if (cached) {
+                const parsed = JSON.parse(cached)
+                return parsed.selectionMode || false
+            }
+        } catch {
+            // ignore localStorage errors
+        }
+        return false
+    })
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
+        try {
+            const cached = localStorage.getItem('trackist-selection:movies')
+            if (cached) {
+                const parsed = JSON.parse(cached)
+                return new Set(parsed.selectedIds || [])
+            }
+        } catch {
+            // ignore localStorage errors
+        }
+        return new Set()
+    })
     const [batchLoading, setBatchLoading] = useState(false)
 
     const { isMobile } = useMobile()
@@ -30,6 +52,18 @@ const Movies: React.FC = () => {
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
+
+    useEffect(() => {
+        const cacheKey = 'trackist-selection:movies'
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify({
+                selectionMode,
+                selectedIds: Array.from(selectedIds)
+            }))
+        } catch {
+            // ignore storage errors
+        }
+    }, [selectionMode, selectedIds])
 
     const updateStatus = async (id: string, status: string) => {
         await useLibraryStore.getState().updateStatus(id, status as WatchlistItem['status'])
@@ -59,15 +93,20 @@ const Movies: React.FC = () => {
     }
 
     const handleConfirmAction = async () => {
-        if (!confirmModal) return
+        if (!confirmModal || actionLoading) return
         
-        if (confirmModal.action === 'watch') {
-            await markAsWatched(confirmModal.item)
-        } else {
-            await markAsUnwatched(confirmModal.item)
+        setActionLoading(true)
+        try {
+            if (confirmModal.action === 'watch') {
+                await markAsWatched(confirmModal.item)
+            } else {
+                await markAsUnwatched(confirmModal.item)
+            }
+            
+            setConfirmModal(null)
+        } finally {
+            setActionLoading(false)
         }
-        
-        setConfirmModal(null)
     }
 
     const toggleSelection = (id: string) => {
@@ -182,7 +221,10 @@ const Movies: React.FC = () => {
                                         onClick={handleBatchMarkWatched}
                                         disabled={selectedIds.size === 0 || batchLoading}
                                     >
-                                        {batchLoading ? '...' : 'Mark as Watched'}
+                                        {batchLoading ? (
+                                            <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '6px' }}></i>
+                                        ) : null}
+                                        {batchLoading ? '' : 'Mark as Watched'}
                                     </button>
                                 </>
                             )}
@@ -294,6 +336,7 @@ const Movies: React.FC = () => {
                     confirmText={confirmModal.action === 'watch' ? 'Mark as Watched' : 'Mark as Unwatched'}
                     cancelText="Cancel"
                     confirmColor={confirmModal.action === 'watch' ? 'success' : 'danger'}
+                    confirmLoading={actionLoading}
                 />
             )}
         </div>

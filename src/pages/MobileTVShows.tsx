@@ -99,7 +99,7 @@ const MobileTVShows: React.FC = () => {
             if (cached) {
                 const { getTVSeasonDetails } = await import('../services/tmdbService')
                 const seasonData = await getTVSeasonDetails(show.tmdb_id, cached.season_number)
-                const ep = seasonData.episodes?.find(e => e.episode_number === cached.episode_number)
+                const ep = seasonData.episodes?.find((e: { episode_number: number; id?: number; name?: string; still_path?: string; overview?: string; air_date?: string; runtime?: number }) => e.episode_number === cached.episode_number)
                 if (ep) {
                     nextEp = {
                         season_number: cached.season_number,

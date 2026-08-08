@@ -22,11 +22,49 @@ const TVShows: React.FC = () => {
     const [markAllModal, setMarkAllModal] = useState<WatchlistItem | null>(null)
     const [markingAllWatched, setMarkingAllWatched] = useState(false)
 
-    const [selectionMode, setSelectionMode] = useState(false)
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+    const [selectionMode, setSelectionMode] = useState(() => {
+        try {
+            const cached = localStorage.getItem('trackist-selection:tvshows')
+            if (cached) {
+                const parsed = JSON.parse(cached)
+                return parsed.selectionMode || false
+            }
+        } catch {
+            // ignore localStorage errors
+        }
+        return false
+    })
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
+        try {
+            const cached = localStorage.getItem('trackist-selection:tvshows')
+            if (cached) {
+                const parsed = JSON.parse(cached)
+                return new Set(parsed.selectedIds || [])
+            }
+        } catch {
+            // ignore localStorage errors
+        }
+        return new Set()
+    })
     const [batchLoading, setBatchLoading] = useState(false)
 
     const { isMobile } = useMobile()
+
+    useEffect(() => {
+        window.scrollTo(0, 0)
+    }, [])
+
+    useEffect(() => {
+        const cacheKey = 'trackist-selection:tvshows'
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify({
+                selectionMode,
+                selectedIds: Array.from(selectedIds)
+            }))
+        } catch {
+            // ignore storage errors
+        }
+    }, [selectionMode, selectedIds])
 
     // Scroll to top when page loads
     useEffect(() => {
@@ -306,7 +344,10 @@ const TVShows: React.FC = () => {
                                         onClick={handleBatchMarkWatched}
                                         disabled={selectedIds.size === 0 || batchLoading}
                                     >
-                                        {batchLoading ? '...' : 'Mark as Watched'}
+                                        {batchLoading ? (
+                                            <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '6px' }}></i>
+                                        ) : null}
+                                        {batchLoading ? '' : 'Mark as Watched'}
                                     </button>
                                 </>
                             )}
@@ -392,7 +433,10 @@ const TVShows: React.FC = () => {
                                         onClick={handleBatchMarkWatched}
                                         disabled={selectedIds.size === 0 || batchLoading}
                                     >
-                                        {batchLoading ? '...' : 'Mark as Watched'}
+                                        {batchLoading ? (
+                                            <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '6px' }}></i>
+                                        ) : null}
+                                        {batchLoading ? '' : 'Mark as Watched'}
                                     </button>
                                 </>
                             )}
@@ -457,6 +501,7 @@ const TVShows: React.FC = () => {
                     confirmText={markingAllWatched ? 'Marking...' : 'Yes, Fully Watched'}
                     cancelText="Cancel"
                     confirmColor="success"
+                    confirmLoading={markingAllWatched}
                 />
             )}
         </div>

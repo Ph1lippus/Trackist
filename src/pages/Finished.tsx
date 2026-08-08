@@ -23,16 +23,49 @@ const Finished: React.FC = () => {
     } | null>(null)
     const [unwatchLoading, setUnwatchLoading    ] = useState(false)
 
-    const [selectionMode, setSelectionMode] = useState(false)
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+    const [selectionMode, setSelectionMode] = useState(() => {
+        try {
+            const cached = localStorage.getItem('trackist-selection:finished')
+            if (cached) {
+                const parsed = JSON.parse(cached)
+                return parsed.selectionMode || false
+            }
+        } catch {
+            // ignore localStorage errors
+        }
+        return false
+    })
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
+        try {
+            const cached = localStorage.getItem('trackist-selection:finished')
+            if (cached) {
+                const parsed = JSON.parse(cached)
+                return new Set(parsed.selectedIds || [])
+            }
+        } catch {
+            // ignore localStorage errors
+        }
+        return new Set()
+    })
     const [batchLoading, setBatchLoading] = useState(false)
 
     const { isMobile } = useMobile()
 
-    // Scroll to top when page loads
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
+
+    useEffect(() => {
+        const cacheKey = 'trackist-selection:finished'
+        try {
+            localStorage.setItem(cacheKey, JSON.stringify({
+                selectionMode,
+                selectedIds: Array.from(selectedIds)
+            }))
+        } catch {
+            // ignore storage errors
+        }
+    }, [selectionMode, selectedIds])
 
     // DEBUG: Log finished items order
     useEffect(() => {
@@ -189,7 +222,10 @@ const Finished: React.FC = () => {
                                         onClick={handleBatchUnwatch}
                                         disabled={selectedIds.size === 0 || batchLoading}
                                     >
-                                        {batchLoading ? '...' : 'Move to Watchlist'}
+                                        {batchLoading ? (
+                                            <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '6px' }}></i>
+                                        ) : null}
+                                        {batchLoading ? '' : 'Move to Watchlist'}
                                     </button>
                                 </>
                             )}
@@ -271,7 +307,10 @@ const Finished: React.FC = () => {
                                         onClick={handleBatchUnwatch}
                                         disabled={selectedIds.size === 0 || batchLoading}
                                     >
-                                        {batchLoading ? '...' : 'Move to Watchlist'}
+                                        {batchLoading ? (
+                                            <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '6px' }}></i>
+                                        ) : null}
+                                        {batchLoading ? '' : 'Move to Watchlist'}
                                     </button>
                                 </>
                             )}
