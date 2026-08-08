@@ -21,6 +21,8 @@ const Movies: React.FC = () => {
         item: TMDBResult
     } | null>(null)
 
+    const [actionLoading, setActionLoading] = useState(false)
+
     const [selectionMode, setSelectionMode] = useState(() => {
         try {
             const cached = localStorage.getItem('trackist-selection:movies')
