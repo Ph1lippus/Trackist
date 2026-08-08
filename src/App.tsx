@@ -5,7 +5,6 @@ import { updateLastActive } from './services/profileService'
 import type { User } from '@supabase/supabase-js'
 import { SearchProvider } from './contexts/SearchContext'
 import { MobileProvider } from './contexts/MobileProvider'
-import { useMobile } from './contexts/useMobile'
 import { useLibraryStore } from './stores/useLibraryStore'
 import { registerSW } from 'virtual:pwa-register'
 import { invalidateCalendarCache } from './services/calendarService'
@@ -51,7 +50,6 @@ const LegacyListRedirect: React.FC = () => {
 
 const AppContent: React.FC = () => {
     const location = useLocation()
-    const { isMobile } = useMobile()
     const [user, setUser] = useState<User | null>(null)
     const [loading, setLoading] = useState(true)
     const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -60,7 +58,16 @@ const AppContent: React.FC = () => {
     const [updateLoading, setUpdateLoading] = useState(false)
     const [updateSW, setUpdateSW] = useState<((reloadPage?: boolean) => Promise<void>) | null>(null)
 
-    const defaultRoute = isMobile ? '/MobileTVShows' : '/Tvshows'
+    // Determine if running as a PWA (standalone mode)
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+        // @ts-expect-error - iOS Safari specific property
+        (window.navigator.standalone === true) ||
+        document.referrer.includes('android-app://')
+
+    // Default route based on app context:
+    // - PWA: open Mobile TV Shows by default
+    // - Website: open Discover page by default
+    const defaultRoute = isPWA ? '/MobileTVShows' : '/Discover'
 
     const isDetailPage = location.pathname.match(/^\/(movie|tv|person)\/\d+$/) || location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/)
 
@@ -123,12 +130,6 @@ const AppContent: React.FC = () => {
     // PWA service worker registration - only for PWA context
     useEffect(() => {
         const registerServiceWorker = async () => {
-            // Check if running in PWA mode (standalone mode)
-            const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
-                         // @ts-expect-error - iOS Safari specific property
-                         (window.navigator.standalone === true) ||
-                         document.referrer.includes('android-app://')
-
             // Only register service worker and show updates in PWA mode
             if (!isPWA) {
                 console.log('Not running in PWA mode, skipping service worker registration')
@@ -225,7 +226,7 @@ const AppContent: React.FC = () => {
             />
             <main className={`page-main flex-grow-1 ${hideFooter ? 'page-main--no-footer' : ''}`}>
                 <Routes>
-                    <Route path="/" element={user ? <MobileTVShows key="mobiletvshows" /> : <Home />} />
+                    <Route path="/" element={user ? <Navigate to={defaultRoute} replace /> : <Home />} />
                     <Route path="/Discover" element={user ? <Discover key="discover" /> : <Navigate to="/login" replace />} />
                     <Route path="/Movies" element={user ? <Movies /> : <Navigate to="/login" replace />} />
                     <Route path="/MobileMovies" element={user ? <MobileMovies /> : <Navigate to="/login" replace />} />

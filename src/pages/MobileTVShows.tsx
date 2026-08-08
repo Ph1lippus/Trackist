@@ -148,6 +148,22 @@ const MobileTVShows: React.FC = () => {
     }, [tvShows, committedQuery])
 
     const getEpisodeLabel = (show: WatchlistItem): string => {
+        const showEpisodes = episodesMap.get(show.id) || []
+        const nextEpisode = showEpisodes.find(ep => !watchedSet.has(`${show.id}-${ep.season_number}-${ep.episode_number}`))
+
+        if (nextEpisode) {
+            return `S${nextEpisode.season_number} E${nextEpisode.episode_number}`
+        }
+
+        // If all episodes in the currently loaded season are watched, show the next season
+        if (showEpisodes.length > 0) {
+            const allWatchedInSeason = showEpisodes.every(ep => watchedSet.has(`${show.id}-${ep.season_number}-${ep.episode_number}`))
+            if (allWatchedInSeason) {
+                const season = (show.current_season || 1) + 1
+                return `S${season} E1`
+            }
+        }
+
         const season = show.current_season || 1
         const episode = show.current_episode || 1
         return `S${season} E${episode}`
