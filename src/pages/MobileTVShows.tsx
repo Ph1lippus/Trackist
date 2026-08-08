@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
 import { markEpisodeWatched } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
@@ -14,41 +13,10 @@ const MobileTVShows: React.FC = () => {
     const { committedQuery } = useSearch()
     const tvShows = useLibraryStore((state) => state.tvShows)
     const [addingEpisode, setAddingEpisode] = useState<string | null>(null)
-    const [episodeCounts, setEpisodeCounts] = useState<Map<string, number>>(new Map())
 
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
-
-    // Load episode counts for all watching shows (one query per show)
-    useEffect(() => {
-        const loadEpisodeCounts = async () => {
-            const watching = tvShows.filter(s => s.status === 'watching' && s.id)
-            if (watching.length === 0) return
-
-            const counts = new Map<string, number>()
-
-            for (const show of watching) {
-                if (!show.id) continue
-
-                try {
-                    const { count } = await supabase
-                        .from('watchlist_episodes')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('watchlist_id', show.id)
-                        .eq('season_number', show.current_season || 1)
-
-                    counts.set(show.id, count || 0)
-                } catch (err) {
-                    console.error(`Failed to load episode count for ${show.title}:`, err)
-                }
-            }
-
-            setEpisodeCounts(counts)
-        }
-
-        loadEpisodeCounts()
-    }, [tvShows])
 
     const watching = useMemo(() => {
         const filtered = committedQuery
@@ -73,16 +41,15 @@ const MobileTVShows: React.FC = () => {
     }, [tvShows, committedQuery])
 
     // Get the episode label for a show
+    // current_episode is now the episode number WITHIN the current season
     const getEpisodeLabel = (show: WatchlistItem): string => {
-        const currentSeason = show.current_season || 1
-        
         if (show.status === 'planning') {
             return 'S1 E1'
         }
 
-        // Get the watched count in the current season from the pre-loaded map
-        const watchedCount = episodeCounts.get(show.id) || 0
-        const nextEpisode = watchedCount + 1
+        const currentSeason = show.current_season || 1
+        const currentEpisode = show.current_episode || 0
+        const nextEpisode = currentEpisode + 1
         
         return `S${currentSeason} E${nextEpisode}`
     }

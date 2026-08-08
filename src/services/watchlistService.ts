@@ -210,19 +210,21 @@ export const markEpisodeWatched = async (
         return false
     }
 
-    // Get the actual count of watched episodes after insertion (filtered by watched = true)
-    const watchedCount = await getWatchedEpisodeCount(watchlistId)
-
-    // Calculate the current season from the last watched episode
-    const currentSeason = await getCurrentSeasonFromWatchedEpisodes(watchlistId)
+    // Count episodes in the season that was just marked to get the correct episode number
+    const { count: episodesInSeason } = await supabase
+        .from('watchlist_episodes')
+        .select('*', { count: 'exact', head: true })
+        .eq('watchlist_id', watchlistId)
+        .eq('season_number', seasonNumber)
 
     // Update the watchlist item's updated_at timestamp, current_episode, and current_season
+    // current_episode is the episode number WITHIN the current season, not total across all seasons
     await supabase
         .from('watchlist')
         .update({ 
             updated_at: new Date().toISOString(),
-            current_episode: watchedCount,
-            current_season: currentSeason
+            current_episode: episodesInSeason || 0,
+            current_season: seasonNumber
         })
         .eq('id', watchlistId)
 
@@ -258,18 +260,23 @@ export const unmarkEpisodeWatched = async (
         return false
     }
 
-    // Get the actual count of watched episodes after deletion (filtered by watched = true)
-    const watchedCount = await getWatchedEpisodeCount(watchlistId)
+    // Count episodes in the season that was just unmarked to get the correct episode number
+    const { count: episodesInSeason } = await supabase
+        .from('watchlist_episodes')
+        .select('*', { count: 'exact', head: true })
+        .eq('watchlist_id', watchlistId)
+        .eq('season_number', seasonNumber)
 
     // Calculate the current season from the last remaining watched episode
     const currentSeason = await getCurrentSeasonFromWatchedEpisodes(watchlistId)
 
     // Update the watchlist item's updated_at timestamp, current_episode, and current_season
+    // current_episode is the episode number WITHIN the current season, not total across all seasons
     await supabase
         .from('watchlist')
         .update({ 
             updated_at: new Date().toISOString(),
-            current_episode: watchedCount,
+            current_episode: episodesInSeason || 0,
             current_season: currentSeason
         })
         .eq('id', watchlistId)
@@ -725,13 +732,18 @@ export const recalculateProgress = async (showId: string): Promise<{ fixed: bool
             }
         } else if (watchedCount > 0) {
             newStatus = 'watching'
-            newCurrentEpisode = watchedCount
             const watchedEps = await getWatchedEpisodes(showId)
             if (watchedEps.length > 0) {
                 const lastWatched = watchedEps.reduce((max, ep) =>
                     ep.season_number > max.season_number ? ep : max
                 , watchedEps[0])
                 newCurrentSeason = lastWatched.season_number
+                // Count episodes in the current season to get per-season episode number
+                const episodesInCurrentSeason = watchedEps.filter(ep => ep.season_number === newCurrentSeason).length
+                newCurrentEpisode = episodesInCurrentSeason
+            } else {
+                newCurrentEpisode = 0
+                newCurrentSeason = 1
             }
         } else {
             // No episodes watched, set to planning
