@@ -23,6 +23,10 @@ const Finished: React.FC = () => {
     } | null>(null)
     const [unwatchLoading, setUnwatchLoading    ] = useState(false)
 
+    const [selectionMode, setSelectionMode] = useState(false)
+    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+    const [batchLoading, setBatchLoading] = useState(false)
+
     const { isMobile } = useMobile()
 
     // Scroll to top when page loads
@@ -100,13 +104,96 @@ const Finished: React.FC = () => {
         }
     }
 
+    const toggleSelection = (id: string) => {
+        setSelectedIds(prev => {
+            const newSet = new Set(prev)
+            if (newSet.has(id)) {
+                newSet.delete(id)
+            } else {
+                newSet.add(id)
+            }
+            return newSet
+        })
+    }
+
+    const clearSelection = () => {
+        setSelectedIds(new Set())
+        setSelectionMode(false)
+    }
+
+    const handleBatchUnwatch = async () => {
+        if (selectedIds.size === 0) return
+
+        setBatchLoading(true)
+        try {
+            const selectedTVShows = finishedTVShows.filter(item => selectedIds.has(item.id))
+            const selectedMovies = finishedMovies.filter(item => selectedIds.has(item.id))
+
+            for (const item of selectedTVShows) {
+                await removeAllWatchedEpisodes(item.id)
+                await useLibraryStore.getState().refreshItem(item.id)
+            }
+
+            for (const item of selectedMovies) {
+                await useLibraryStore.getState().updateStatus(item.id, 'planning')
+                await useLibraryStore.getState().refreshItem(item.id)
+            }
+            
+            setSelectedIds(new Set())
+            setSelectionMode(false)
+        } catch (err) {
+            console.error('Failed to batch unwatch:', err)
+        } finally {
+            setBatchLoading(false)
+        }
+    }
+
     return (
         <div className="discover-page">
             <div className="discover-container" style={{ width: '85%' }}>
                 {/* Finished TV Shows */}
                 <div className="watchlist-section">
-                    <div className="watchlist-section__header">
+                    <div className="watchlist-section__header" style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        marginBottom: '1rem'
+                    }}>
                         <h3 className="watchlist-section__title">Finished TV Shows</h3>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            {!selectionMode ? (
+                                <button
+                                    className="discover-filter-select discover-filter-select--btn"
+                                    onClick={() => setSelectionMode(true)}
+                                    disabled={finishedTVShows.length === 0}
+                                >
+                                    Select
+                                </button>
+                            ) : (
+                                <>
+                                    <span style={{ 
+                                        color: 'rgba(255,255,255,0.6)', 
+                                        fontSize: '0.85rem',
+                                        marginRight: '0.5rem'
+                                    }}>
+                                        {selectedIds.size} selected
+                                    </span>
+                                    <button
+                                        className="discover-filter-select discover-filter-select--btn"
+                                        onClick={clearSelection}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        className="discover-filter-select discover-filter-select--btn"
+                                        onClick={handleBatchUnwatch}
+                                        disabled={selectedIds.size === 0 || batchLoading}
+                                    >
+                                        {batchLoading ? '...' : 'Move to Watchlist'}
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     </div>
                     {finishedTVShows.length > 0 ? (
                         <VirtuosoGrid
@@ -122,11 +209,20 @@ const Finished: React.FC = () => {
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = finishedTVShows[index]
+                                const isSelected = selectedIds.has(item.id)
+                                
                                 return (
-                                    <MediaCard
-                                        item={buildTmdbItem(item)}
-                                        onMarkUnwatched={() => setUnwatchModal({ isOpen: true, item, isTV: true })}
-                                    />
+                                    <div style={{ position: 'relative' }}>
+                                        <MediaCard
+                                            item={buildTmdbItem(item)}
+                                            selected={selectionMode && isSelected}
+                                            selectable={selectionMode}
+                                            onSelect={() => toggleSelection(item.id)}
+                                            isInWatchlist={true}
+                                            onAdd={selectionMode ? undefined : () => {}}
+                                            onMarkUnwatched={selectionMode ? undefined : () => setUnwatchModal({ isOpen: true, item, isTV: true })}
+                                        />
+                                    </div>
                                 )
                             }}
                         />
@@ -139,8 +235,47 @@ const Finished: React.FC = () => {
 
                 {/* Finished Movies */}
                 <div className="watchlist-section">
-                    <div className="watchlist-section__header">
+                    <div className="watchlist-section__header" style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center',
+                        marginBottom: '1rem'
+                    }}>
                         <h3 className="watchlist-section__title">Finished Movies</h3>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                            {!selectionMode ? (
+                                <button
+                                    className="discover-filter-select discover-filter-select--btn"
+                                    onClick={() => setSelectionMode(true)}
+                                    disabled={finishedMovies.length === 0}
+                                >
+                                    Select
+                                </button>
+                            ) : (
+                                <>
+                                    <span style={{ 
+                                        color: 'rgba(255,255,255,0.6)', 
+                                        fontSize: '0.85rem',
+                                        marginRight: '0.5rem'
+                                    }}>
+                                        {selectedIds.size} selected
+                                    </span>
+                                    <button
+                                        className="discover-filter-select discover-filter-select--btn"
+                                        onClick={clearSelection}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        className="discover-filter-select discover-filter-select--btn"
+                                        onClick={handleBatchUnwatch}
+                                        disabled={selectedIds.size === 0 || batchLoading}
+                                    >
+                                        {batchLoading ? '...' : 'Move to Watchlist'}
+                                    </button>
+                                </>
+                            )}
+                        </div>
                     </div>
                     {finishedMovies.length > 0 ? (
                         <VirtuosoGrid
@@ -156,11 +291,20 @@ const Finished: React.FC = () => {
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = finishedMovies[index]
+                                const isSelected = selectedIds.has(item.id)
+                                
                                 return (
-                                    <MediaCard
-                                        item={buildTmdbItem(item)}
-                                        onMarkUnwatched={() => setUnwatchModal({ isOpen: true, item, isTV: false })}
-                                    />
+                                    <div style={{ position: 'relative' }}>
+                                        <MediaCard
+                                            item={buildTmdbItem(item)}
+                                            selected={selectionMode && isSelected}
+                                            selectable={selectionMode}
+                                            onSelect={() => toggleSelection(item.id)}
+                                            isInWatchlist={true}
+                                            onAdd={selectionMode ? undefined : () => {}}
+                                            onMarkUnwatched={selectionMode ? undefined : () => setUnwatchModal({ isOpen: true, item, isTV: false })}
+                                        />
+                                    </div>
                                 )
                             }}
                         />
