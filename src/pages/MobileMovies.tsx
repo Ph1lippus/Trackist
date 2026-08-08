@@ -126,11 +126,6 @@ const MobileMovies: React.FC = () => {
     return (
         <section className="dashboard-page mobile-tvshows-page">
             <div className="dashboard-shell mobile-tvshows-shell">
-                <div className="mobile-page-tabs">
-                    <button className="mobile-page-tab active">Mobile</button>
-                    <button className="mobile-page-tab" onClick={() => navigate('/Movies')}>Normal</button>
-                </div>
-
                 {toWatch.length === 0 && watched.length === 0 ? (
                     <div className="mobile-tvshows-empty">
                         <i className="fa-solid fa-film"></i>
