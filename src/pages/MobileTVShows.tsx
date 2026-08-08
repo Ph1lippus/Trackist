@@ -1,22 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
-import { markEpisodeWatched, getNextEpisodeToWatch } from '../services/watchlistService'
+import { markEpisodeWatched } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useSearch } from '../hooks/useSearch'
-
-interface NextEpisodeInfo {
-    season_number: number
-    episode_number: number
-    title?: string
-    still_path?: string
-    overview?: string
-    air_date?: string
-    runtime?: number
-    tmdb_episode_id?: number
-}
 
 const MobileTVShows: React.FC = () => {
     usePageTitle('Trackist - TV Shows')
@@ -24,74 +14,41 @@ const MobileTVShows: React.FC = () => {
     const { committedQuery } = useSearch()
     const tvShows = useLibraryStore((state) => state.tvShows)
     const [addingEpisode, setAddingEpisode] = useState<string | null>(null)
-    const [nextEpisodesMap, setNextEpisodesMap] = useState<Map<string, NextEpisodeInfo>>(new Map())
+    const [episodeCounts, setEpisodeCounts] = useState<Map<string, number>>(new Map())
 
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
 
-    // Load next episode data for all watching shows from the watchlist_episodes table
+    // Load episode counts for all watching shows (one query per show)
     useEffect(() => {
-        const loadNextEpisodes = async () => {
+        const loadEpisodeCounts = async () => {
             const watching = tvShows.filter(s => s.status === 'watching' && s.id)
             if (watching.length === 0) return
 
-            const newMap = new Map<string, NextEpisodeInfo>()
+            const counts = new Map<string, number>()
 
             for (const show of watching) {
                 if (!show.id) continue
 
                 try {
-                    const nextEp = await getNextEpisodeToWatch(show.id)
-                    if (nextEp) {
-                        newMap.set(show.id, nextEp)
-                    }
+                    const { count } = await supabase
+                        .from('watchlist_episodes')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('watchlist_id', show.id)
+                        .eq('season_number', show.current_season || 1)
+
+                    counts.set(show.id, count || 0)
                 } catch (err) {
-                    console.error(`Failed to load next episode for ${show.title}:`, err)
+                    console.error(`Failed to load episode count for ${show.title}:`, err)
                 }
             }
 
-            setNextEpisodesMap(newMap)
+            setEpisodeCounts(counts)
         }
 
-        loadNextEpisodes()
+        loadEpisodeCounts()
     }, [tvShows])
-
-    const handleAddEpisode = async (show: WatchlistItem) => {
-        if (!show.id || !show.tmdb_id) return
-
-        setAddingEpisode(show.id)
-        try {
-            const nextEpisode = nextEpisodesMap.get(show.id)
-
-            if (!nextEpisode) {
-                setAddingEpisode(null)
-                return
-            }
-
-            const success = await markEpisodeWatched(
-                show.id,
-                nextEpisode.season_number,
-                nextEpisode.episode_number,
-                {
-                    tmdb_episode_id: nextEpisode.tmdb_episode_id,
-                    title: nextEpisode.title,
-                    still_path: nextEpisode.still_path,
-                    overview: nextEpisode.overview,
-                    air_date: nextEpisode.air_date,
-                    runtime: nextEpisode.runtime
-                }
-            )
-
-            if (success) {
-                await useLibraryStore.getState().refreshItem(show.id)
-            }
-        } catch (err) {
-            console.error('Failed to add episode:', err)
-        } finally {
-            setAddingEpisode(null)
-        }
-    }
 
     const watching = useMemo(() => {
         const filtered = committedQuery
@@ -115,27 +72,64 @@ const MobileTVShows: React.FC = () => {
         })
     }, [tvShows, committedQuery])
 
+    // Get the episode label for a show
     const getEpisodeLabel = (show: WatchlistItem): string => {
-        const nextEp = nextEpisodesMap.get(show.id)
-        if (nextEp) {
-            return `S${nextEp.season_number} E${nextEp.episode_number}`
+        const currentSeason = show.current_season || 1
+        
+        if (show.status === 'planning') {
+            return 'S1 E1'
         }
-        // Never show the total episode count - it's misleading
-        const season = show.current_season || 1
-        return `S${season} E1`
+
+        // Get the watched count in the current season from the pre-loaded map
+        const watchedCount = episodeCounts.get(show.id) || 0
+        const nextEpisode = watchedCount + 1
+        
+        return `S${currentSeason} E${nextEpisode}`
     }
 
     const getEpisodeSubtitle = (show: WatchlistItem): string => {
         if (show.status === 'planning') {
             return 'First episode'
         }
-
-        const nextEp = nextEpisodesMap.get(show.id)
-        if (nextEp?.title) {
-            return nextEp.title
-        }
-
         return 'Next episode'
+    }
+
+    const handleAddEpisode = async (show: WatchlistItem) => {
+        if (!show.id || !show.tmdb_id || addingEpisode) return
+
+        setAddingEpisode(show.id)
+        try {
+            // Only NOW do we fetch the next episode details from TMDB
+            const { getNextEpisodeToWatch } = await import('../services/watchlistService')
+            const nextEp = await getNextEpisodeToWatch(show.id)
+
+            if (!nextEp) {
+                setAddingEpisode(null)
+                return
+            }
+
+            const success = await markEpisodeWatched(
+                show.id,
+                nextEp.season_number,
+                nextEp.episode_number,
+                {
+                    tmdb_episode_id: nextEp.tmdb_episode_id,
+                    title: nextEp.title,
+                    still_path: nextEp.still_path,
+                    overview: nextEp.overview,
+                    air_date: nextEp.air_date,
+                    runtime: nextEp.runtime
+                }
+            )
+
+            if (success) {
+                await useLibraryStore.getState().refreshItem(show.id)
+            }
+        } catch (err) {
+            console.error('Failed to add episode:', err)
+        } finally {
+            setAddingEpisode(null)
+        }
     }
 
     const renderShowCard = (show: WatchlistItem, showFirstEpisode: boolean = false) => {
