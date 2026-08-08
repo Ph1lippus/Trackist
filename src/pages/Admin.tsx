@@ -3,7 +3,6 @@ import { Navigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { usePageTitle } from '../hooks/usePageTitle'
 import ConfirmModal from '../components/modals/ConfirmModal'
-import { fixAllProgress } from '../services/watchlistService'
 import type { User } from '@supabase/supabase-js'
 
 
@@ -73,7 +72,6 @@ const Admin: React.FC = () => {
     const [deleteUserLoading, setDeleteUserLoading] = useState(false)
     const [userStats, setUserStats] = useState<UserStats[]>([])
     const [userStatsLoading, setUserStatsLoading] = useState(false)
-    const [fixAllResult, setFixAllResult] = useState<{ fixed: number; errors: number; message: string } | null>(null)
 
     const isAdmin = profile?.role === 'admin'
 
@@ -443,60 +441,6 @@ const Admin: React.FC = () => {
         }
     }
 
-    const handleFixAllProgress = async () => {
-        if (!user) return
-        setFixAllResult(null)
-        try {
-            // Fetch all users
-            const { data: allUsers, error: usersError } = await supabase
-                .from('profiles')
-                .select('id, display_name')
-            
-            if (usersError || !allUsers || allUsers.length === 0) {
-                setFixAllResult({
-                    fixed: 0,
-                    errors: 0,
-                    message: 'No users found'
-                })
-                return
-            }
-
-            let totalFixed = 0
-            let totalErrors = 0
-
-            // Fix progress for each user
-            for (const userProfile of allUsers) {
-                try {
-                    const result = await fixAllProgress(userProfile.id, (progress) => {
-                        console.log(`Fixing ${userProfile.display_name || 'user'}: ${progress.processed}/${progress.total} - ${progress.currentShow}`)
-                    })
-                    
-                    totalFixed += result.fixed
-                    totalErrors += result.errors
-                } catch (err) {
-                    console.error(`Failed to fix progress for ${userProfile.display_name || 'user'}:`, err)
-                    totalErrors++
-                }
-            }
-            
-            setFixAllResult({
-                fixed: totalFixed,
-                errors: totalErrors,
-                message: totalErrors > 0 
-                    ? `Fixed ${totalFixed} items across ${allUsers.length} users, ${totalErrors} errors` 
-                    : `Successfully fixed ${totalFixed} items across ${allUsers.length} users`
-            })
-        } catch (err) {
-            console.error('Fix all progress error:', err)
-            setFixAllResult({
-                fixed: 0,
-                errors: 1,
-                message: 'Failed to fix progress. Please try again.'
-            })
-        } finally {
-            // Loading complete
-        }
-    }
 
     if (loading) {
         return (
@@ -575,11 +519,6 @@ const Admin: React.FC = () => {
                             <div className="stats-hero-card__icon"><i className="fas fa-users"></i></div>
                             <div className="stats-hero-card__value">{stats.totalUsers}</div>
                             <div className="stats-hero-card__label">Total Users</div>
-                        </div>
-                        <div className="stats-hero-card stats-hero-card--danger" style={{ cursor: 'pointer' }} onClick={handleFixAllProgress}>
-                            <div className="stats-hero-card__icon"><i className="fas fa-wrench"></i></div>
-                            <div className="stats-hero-card__value">{fixAllResult ? `${fixAllResult.fixed} fixed` : 'Fix All'}</div>
-                            <div className="stats-hero-card__label">Progress</div>
                         </div>
                         <div className="stats-hero-card stats-hero-card--mint">
                             <div className="stats-hero-card__icon"><i className="fas fa-bookmark"></i></div>

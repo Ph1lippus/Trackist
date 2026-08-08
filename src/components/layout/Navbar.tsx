@@ -4,7 +4,6 @@ import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../services/supabaseClient';
 import { useSearch } from '../../hooks/useSearch';
 import SearchDropdown from '../search/SearchDropdown';
-import ProgressFixModal from '../modals/ProgressFixModal';
 import ConfirmModal from '../modals/ConfirmModal';
 import { clearAllCache } from '../../services/cacheService';
 
@@ -21,7 +20,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const [user, setUser] = useState<User | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
     const [closing, setClosing] = useState(false);
-    const [showFixModal, setShowFixModal] = useState(false);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [showInstallButton, setShowInstallButton] = useState(false);
@@ -390,13 +388,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                             Install App
                                         </button>
                                     )}
-                                    <button className="t-dropdown-item" onClick={() => {
-                                        closeMenu();
-                                        setShowFixModal(true);
-                                    }}>
-                                        <i className="fa-solid fa-wrench"></i>
-                                        Fix Progress
-                                    </button>
                                     <button className="t-dropdown-item" onClick={handleClearCache}>
                                         <i className="fa-solid fa-trash"></i>
                                         Clear Cache
@@ -437,13 +428,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                     )}
                 </div>
             </div>
-            <ProgressFixModal
-                isOpen={showFixModal}
-                onClose={() => setShowFixModal(false)}
-                onComplete={() => {
-                    window.dispatchEvent(new CustomEvent('watchlist-refresh'))
-                }}
-            />
             <ConfirmModal
                 isOpen={showLogoutModal}
                 title="Logout"
