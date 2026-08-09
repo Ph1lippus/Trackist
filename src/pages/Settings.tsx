@@ -296,13 +296,6 @@ const Settings: React.FC = () => {
         setLetterboxMessage('Preference updated successfully')
     }
 
-    const handleLogout = async () => {
-        if (window.confirm('Are you sure you want to logout?')) {
-            await supabase.auth.signOut()
-            navigate('/login')
-        }
-    }
-
     if (loading) {
         return (
             <section className="dashboard-page">
@@ -348,13 +341,6 @@ const Settings: React.FC = () => {
                                 <span>{section.label}</span>
                             </button>
                         ))}
-                        <button
-                            className="settings-nav-item settings-nav-item--logout"
-                            onClick={handleLogout}
-                        >
-                            <i className="fa-solid fa-right-from-bracket"></i>
-                            <span>Logout</span>
-                        </button>
                     </aside>
 
                     <div className="settings-content">

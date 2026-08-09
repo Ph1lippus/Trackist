@@ -18,6 +18,9 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .media-card__episodes-left {
+        display: none;
+    }
     .detail-page__genres {
         display: none !important;
     }
@@ -8152,7 +8155,7 @@ i.fa-solid.fa-trash:hover {
 
     .settings-sidebar {
         position: static;
-        flex-direction: row;
+        flex-direction: column;
         overflow-x: auto;
         scrollbar-width: none;
         padding-bottom: 0.5rem;
