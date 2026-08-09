@@ -134,6 +134,9 @@ const MobileTVShows: React.FC = () => {
         if (show.next_season_number && show.next_episode_number) {
             return `S${show.next_season_number} E${show.next_episode_number}`
         }
+        if (show.current_season && show.current_episode) {
+            return 'S' + show.current_season + ' E' + show.current_episode
+        }
         return null
     }
 

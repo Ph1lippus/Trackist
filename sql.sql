@@ -23,6 +23,9 @@ CREATE TABLE public.watchlist (
   updated_at timestamp with time zone DEFAULT now(),
   last_season_number integer DEFAULT 1,
   last_season_check timestamp with time zone,
+  watched_episodes_count integer DEFAULT 0,
+  next_season_number integer DEFAULT 1,
+  next_episode_number integer DEFAULT 1,
   CONSTRAINT watchlist_pkey PRIMARY KEY (id),
   CONSTRAINT watchlist_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
@@ -38,8 +41,6 @@ CREATE TABLE public.watchlist_episodes (
   vote_average real,
   air_date date,
   runtime integer,
-  watched boolean DEFAULT false,
-  watched_at timestamp with time zone,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT watchlist_episodes_pkey PRIMARY KEY (id),
@@ -99,66 +100,8 @@ CREATE TABLE public.profiles (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   role text NOT NULL DEFAULT 'user'::text,
-  show_stremio_button boolean DEFAULT false,
-  show_letterbox_button boolean DEFAULT false NOT NULL,
+  show_stremio_button boolean NOT NULL DEFAULT false,
+  show_letterbox_button boolean NOT NULL DEFAULT false,
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
-);
-
--- RLS Policies for Admin access
--- Run these in Supabase SQL Editor to allow admins to view all data
-
-CREATE POLICY "Admins can view all watchlist items"
-ON watchlist FOR SELECT
-TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM profiles
-    WHERE profiles.id = auth.uid()
-    AND profiles.role = 'admin'
-  )
-);
-
-CREATE POLICY "Admins can view all watchlist episodes"
-ON watchlist_episodes FOR SELECT
-TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM profiles
-    WHERE profiles.id = auth.uid()
-    AND profiles.role = 'admin'
-  )
-);
-
-CREATE POLICY "Admins can view all lists"
-ON lists FOR SELECT
-TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM profiles
-    WHERE profiles.id = auth.uid()
-    AND profiles.role = 'admin'
-  )
-);
-
-CREATE POLICY "Admins can view all list items"
-ON list_items FOR SELECT
-TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM profiles
-    WHERE profiles.id = auth.uid()
-    AND profiles.role = 'admin'
-  )
-);
-
-CREATE POLICY "Admins can view all profiles"
-ON profiles FOR SELECT
-TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM profiles
-    WHERE profiles.id = auth.uid()
-    AND profiles.role = 'admin'
-  )
 );
