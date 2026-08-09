@@ -200,7 +200,12 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
         // Optimistic update - update all arrays immediately
         const updateInArray = (items: WatchlistItem[] | TVShowWithProgress[]) =>
-            items.map(item => item.id === id ? { ...item, status: nextStatus, updated_at: new Date().toISOString() } : item)
+            items.map(item => item.id === id ? {
+                ...item,
+                status: nextStatus,
+                updated_at: new Date().toISOString(),
+                ...(nextStatus === 'completed' ? { completed_at: new Date().toISOString() } : {})
+            } : item)
 
         const newAllItems = updateInArray(state.allItems) as WatchlistItem[]
         const newTvShows = updateInArray(state.tvShows) as TVShowWithProgress[]
@@ -216,7 +221,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 const completedItem = { 
                     ...item, 
                     status: nextStatus,
-                    completed_at: item.completed_at
+                    completed_at: nextStatus === 'completed' ? new Date().toISOString() : item.completed_at
                 }
                 newFinished = [completedItem, ...state.finished]
             } else if (item) {
@@ -224,7 +229,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 const completedItem = { 
                     ...item, 
                     status: nextStatus,
-                    completed_at: item.completed_at
+                    completed_at: nextStatus === 'completed' ? new Date().toISOString() : item.completed_at
                 }
                 newFinished = state.finished.map(f => f.id === id ? completedItem : f)
             }
@@ -548,6 +553,11 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             } catch (error) {
                 console.error('Failed to fetch TV details for episode count:', error)
             }
+        }
+
+        // Set completed_at when adding with completed status
+        if (enhancedItem.status === 'completed' && !enhancedItem.completed_at) {
+            enhancedItem.completed_at = new Date().toISOString()
         }
 
         // Store previous state for rollback
