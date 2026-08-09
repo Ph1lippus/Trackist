@@ -18,9 +18,16 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .detail-page__genres {
+        display: none !important;
+    }
+    .detail-page__actions {
+        display: none !important;
+    }
     .detail-page__episode-card {
         padding: 0.5rem !important;
-        gap: 0.5rem;
+        gap: 0.5rem!important;
+        margin-right: 0px!important;
     }
     .navbar-back-btn {
         display: none !important;
@@ -93,6 +100,9 @@
     }
     .detail-page__actions {
         margin: 0 auto ;
+    }
+    .detail-page__actions-mobile {
+        display: flex !important;
     }
     .detail-page__left {
         padding-top: 0 !important;
@@ -2040,7 +2050,7 @@ body::after {
 }
 .detail-page__main--tv {
     display: grid;
-    grid-template-columns: 1fr 30%;
+    grid-template-columns: 1fr 35%;
     gap: 2.5rem;
     align-items: stretch;
     height: 100%;
@@ -2080,6 +2090,28 @@ body::after {
     border-radius: 25px;
     width: fit-content;
     backdrop-filter: blur(12px);
+}
+
+/* Mobile fixed action container */
+.detail-page__actions-mobile {
+    display: none;
+    position: fixed;
+    right: 0rem;
+    top: 50%;
+    transform: translateY(-50%);
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem 0.5rem;
+    background: rgba(22, 22, 22, 0.02);
+    backdrop-filter: blur(50px);
+    border-radius: 25px 0px 0px 25px;
+    z-index: 100;
+}
+
+.detail-page__actions-mobile .detail-page__icon-btn {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
 }
 .detail-page__btn {
     padding: 0.8rem 1.5rem;
@@ -2375,16 +2407,14 @@ body::after {
     opacity: 0.5;
 }
 .detail-page__episode-still {
-    width: 140px;
+    width: 160px;
     height: 100%;
     flex-shrink: 0;
-    border-radius: 8px;
     overflow: hidden;
     aspect-ratio: 16 / 9;
-    background: rgba(255, 255, 255, 0.05);
 }
 .detail-page__episode-still img {
-    border-radius: 15px;
+    border-radius: 20px;
     width: 100%;
     height: 100%;
     object-fit: cover;

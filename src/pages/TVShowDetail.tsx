@@ -799,6 +799,103 @@ const TVShowDetail: React.FC = () => {
                                 )}
                             </div>
 
+                            {/* Mobile fixed action container */}
+                            <div className="detail-page__actions-mobile">
+                                {trailerKey && (
+                                    <button 
+                                        className="detail-page__icon-btn"
+                                        onClick={() => setShowTrailer(!showTrailer)}
+                                        title={showTrailer ? 'Close Trailer' : 'Watch Trailer'}
+                                    >
+                                        <i className="fa-solid fa-clapperboard"></i>
+                                    </button>
+                                )}
+                                {cast.length > 0 && (
+                                    <button 
+                                        className="detail-page__icon-btn"
+                                        onClick={() => setShowCast(!showCast)}
+                                        title={showCast ? 'Hide Cast' : 'Cast'}
+                                    >
+                                        <i className="fa-solid fa-users"></i>
+                                    </button>
+                                )}
+                                {showStremioButton && !stremioLoading && (
+                                    <button
+                                        className="detail-page__icon-btn"
+                                        onClick={() => {
+                                            const nextEp = getNextEpisodeToWatch()
+                                            const sharingLink = nextEp
+                                                ? createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids?.imdb_id)
+                                                : createTVDeepLink(details.id, details.external_ids?.imdb_id)
+                                            openInStremio(sharingLink)
+                                        }}
+                                        title="Open in Stremio"
+                                    >
+                                        <i className="fa-solid fa-play"></i>
+                                    </button>
+                                )}
+                                {!isInWatchlist ? (
+                                    <>
+                                        <button 
+                                            className="detail-page__icon-btn"
+                                            onClick={async () => {
+                                                await handleAddToWatchlist()
+                                            }}
+                                            disabled={adding}
+                                            title="Add to Watchlist"
+                                        >
+                                            <i className="fa-regular fa-bookmark"></i>
+                                        </button>
+                                        <button 
+                                            className="detail-page__icon-btn"
+                                            onClick={async () => {
+                                                setIsUpdatingStatus(true)
+                                                const newWatchlistId = await handleAddToWatchlist()
+                                                if (newWatchlistId && details) {
+                                                    // Gold standard: just set the status directly - no need to insert every episode
+                                                    const newStatus = await markShowAsFullyWatched(newWatchlistId, details.id)
+                                                    // Update local state with the new status
+                                                    setWatchlistStatus(newStatus)
+                                                    // Fire confetti if completed/caught_up
+                                                    if (newStatus === 'completed' || newStatus === 'caught_up') {
+                                                        launchCosmicConfetti()
+                                                    }
+                                                    // Refresh episodes
+                                                    setEpisodes(prev => prev.map(ep => ({ ...ep, watched: true })))
+                                                }
+                                                setIsUpdatingStatus(false)
+                                            }}
+                                            disabled={adding || isUpdatingStatus}
+                                            title="Mark as Watched"
+                                        >
+                                            <i className="fa-solid fa-eye"></i>
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button 
+                                            className="detail-page__icon-btn"
+                                            onClick={() => setRemoveWatchlistModal({ isOpen: true })}
+                                            title="Remove from Watchlist"
+                                        >
+                                            <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
+                                        </button>
+                                        <button 
+                                            className="detail-page__icon-btn"
+                                            onClick={() => {
+                                                if (!watchlistId) return
+                                                const markAsWatched = watchlistStatus !== 'completed'
+                                                setMarkWatchedModal({ isOpen: true, markAsWatched })
+                                            }}
+                                            disabled={isUpdatingStatus || modalLoading}
+                                            title={watchlistStatus === 'completed' ? 'Mark as Unwatched' : 'Mark as Watched'}
+                                        >
+                                            <i className={watchlistStatus === 'completed' ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+
                             {showTrailer && trailerKey && (
                                 <div className="detail-page__trailer-overlay" onClick={() => setShowTrailer(false)}>
                                     <div className="detail-page__trailer-modal" onClick={(e) => e.stopPropagation()}>
