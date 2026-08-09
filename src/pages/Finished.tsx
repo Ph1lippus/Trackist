@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useLibraryStore } from '../stores/useLibraryStore'
+import { useSelectionStore } from '../stores/useSelectionStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
@@ -23,49 +24,17 @@ const Finished: React.FC = () => {
     } | null>(null)
     const [unwatchLoading, setUnwatchLoading    ] = useState(false)
 
-    const [selectionMode, setSelectionMode] = useState(() => {
-        try {
-            const cached = localStorage.getItem('trackist-selection:finished')
-            if (cached) {
-                const parsed = JSON.parse(cached)
-                return parsed.selectionMode || false
-            }
-        } catch {
-            // ignore localStorage errors
-        }
-        return false
-    })
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
-        try {
-            const cached = localStorage.getItem('trackist-selection:finished')
-            if (cached) {
-                const parsed = JSON.parse(cached)
-                return new Set(parsed.selectedIds || [])
-            }
-        } catch {
-            // ignore localStorage errors
-        }
-        return new Set()
-    })
-    const [batchLoading, setBatchLoading] = useState(false)
+    const { 
+        finishedSelectionMode: selectionMode, 
+        finishedSelectedIds: selectedIds, 
+        toggleFinishedSelection: toggleSelection 
+    } = useSelectionStore()
 
     const { isMobile } = useMobile()
 
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
-
-    useEffect(() => {
-        const cacheKey = 'trackist-selection:finished'
-        try {
-            localStorage.setItem(cacheKey, JSON.stringify({
-                selectionMode,
-                selectedIds: Array.from(selectedIds)
-            }))
-        } catch {
-            // ignore storage errors
-        }
-    }, [selectionMode, selectedIds])
 
     // DEBUG: Log finished items order
     useEffect(() => {
@@ -137,99 +106,13 @@ const Finished: React.FC = () => {
         }
     }
 
-    const toggleSelection = (id: string) => {
-        setSelectedIds(prev => {
-            const newSet = new Set(prev)
-            if (newSet.has(id)) {
-                newSet.delete(id)
-            } else {
-                newSet.add(id)
-            }
-            return newSet
-        })
-    }
-
-    const clearSelection = () => {
-        setSelectedIds(new Set())
-        setSelectionMode(false)
-    }
-
-    const handleBatchUnwatch = async () => {
-        if (selectedIds.size === 0) return
-
-        setBatchLoading(true)
-        try {
-            const selectedTVShows = finishedTVShows.filter(item => selectedIds.has(item.id))
-            const selectedMovies = finishedMovies.filter(item => selectedIds.has(item.id))
-
-            for (const item of selectedTVShows) {
-                await removeAllWatchedEpisodes(item.id)
-                await useLibraryStore.getState().refreshItem(item.id)
-            }
-
-            for (const item of selectedMovies) {
-                await useLibraryStore.getState().updateStatus(item.id, 'planning')
-                await useLibraryStore.getState().refreshItem(item.id)
-            }
-            
-            setSelectedIds(new Set())
-            setSelectionMode(false)
-        } catch (err) {
-            console.error('Failed to batch unwatch:', err)
-        } finally {
-            setBatchLoading(false)
-        }
-    }
-
     return (
         <div className="discover-page">
             <div className="discover-container" style={{ width: '85%' }}>
                 {/* Finished TV Shows */}
                 <div className="watchlist-section">
-                    <div className="watchlist-section__header" style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        marginBottom: '1rem'
-                    }}>
+                    <div className="watchlist-section__header">
                         <h3 className="watchlist-section__title">Finished TV Shows</h3>
-                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                            {!selectionMode ? (
-                                <button
-                                    className="discover-filter-select discover-filter-select--btn"
-                                    onClick={() => setSelectionMode(true)}
-                                    disabled={finishedTVShows.length === 0}
-                                >
-                                    Select
-                                </button>
-                            ) : (
-                                <>
-                                    <span style={{ 
-                                        color: 'rgba(255,255,255,0.6)', 
-                                        fontSize: '0.85rem',
-                                        marginRight: '0.5rem'
-                                    }}>
-                                        {selectedIds.size} selected
-                                    </span>
-                                    <button
-                                        className="discover-filter-select discover-filter-select--btn"
-                                        onClick={clearSelection}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        className="discover-filter-select discover-filter-select--btn"
-                                        onClick={handleBatchUnwatch}
-                                        disabled={selectedIds.size === 0 || batchLoading}
-                                    >
-                                        {batchLoading ? (
-                                            <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '6px' }}></i>
-                                        ) : null}
-                                        {batchLoading ? '' : 'Move to Watchlist'}
-                                    </button>
-                                </>
-                            )}
-                        </div>
                     </div>
                     {finishedTVShows.length > 0 ? (
                         <VirtuosoGrid
@@ -271,50 +154,8 @@ const Finished: React.FC = () => {
 
                 {/* Finished Movies */}
                 <div className="watchlist-section">
-                    <div className="watchlist-section__header" style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        marginBottom: '1rem'
-                    }}>
+                    <div className="watchlist-section__header">
                         <h3 className="watchlist-section__title">Finished Movies</h3>
-                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                            {!selectionMode ? (
-                                <button
-                                    className="discover-filter-select discover-filter-select--btn"
-                                    onClick={() => setSelectionMode(true)}
-                                    disabled={finishedMovies.length === 0}
-                                >
-                                    Select
-                                </button>
-                            ) : (
-                                <>
-                                    <span style={{ 
-                                        color: 'rgba(255,255,255,0.6)', 
-                                        fontSize: '0.85rem',
-                                        marginRight: '0.5rem'
-                                    }}>
-                                        {selectedIds.size} selected
-                                    </span>
-                                    <button
-                                        className="discover-filter-select discover-filter-select--btn"
-                                        onClick={clearSelection}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        className="discover-filter-select discover-filter-select--btn"
-                                        onClick={handleBatchUnwatch}
-                                        disabled={selectedIds.size === 0 || batchLoading}
-                                    >
-                                        {batchLoading ? (
-                                            <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '6px' }}></i>
-                                        ) : null}
-                                        {batchLoading ? '' : 'Move to Watchlist'}
-                                    </button>
-                                </>
-                            )}
-                        </div>
                     </div>
                     {finishedMovies.length > 0 ? (
                         <VirtuosoGrid

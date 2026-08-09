@@ -9,7 +9,7 @@ import { clearAllCache } from '../../services/cacheService';
 import { useSelectionStore } from '../../stores/useSelectionStore';
 import { useLibraryStore } from '../../stores/useLibraryStore';
 import { launchCosmicConfetti } from '../../utils/cosmicConfetti';
-import { markShowAsFullyWatched } from '../../services/watchlistService';
+import { markShowAsFullyWatched, removeAllWatchedEpisodes } from '../../services/watchlistService';
 import type { WatchlistItem } from '../../types';
 
 interface NavbarProps {
@@ -45,17 +45,21 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         moviesSelectionMode,
         moviesSelectedIds,
         setMoviesSelectionMode,
-        toggleMovieSelection,
         clearMovieSelection,
         tvShowsSelectionMode,
         tvShowsSelectedIds,
         setTVShowsSelectionMode,
-        toggleTVShowSelection,
         clearTVShowSelection,
+        finishedSelectionMode,
+        finishedSelectedIds,
+        setFinishedSelectionMode,
+        toggleFinishedSelection,
+        clearFinishedSelection,
     } = useSelectionStore();
 
     const movies = useLibraryStore((state) => state.movies);
     const tvShows = useLibraryStore((state) => state.tvShows);
+    const finished = useLibraryStore((state) => state.finished);
 
     // Unified search engine
     const {
@@ -244,14 +248,17 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     // Selection helpers
     const isMoviesPage = location.pathname === '/Movies' || location.pathname === '/MobileMovies';
     const isTVShowsPage = location.pathname === '/Tvshows' || location.pathname === '/MobileTVShows';
-    const isSelectionActive = isMoviesPage ? moviesSelectionMode : (isTVShowsPage ? tvShowsSelectionMode : false);
-    const selectedCount = isMoviesPage ? moviesSelectedIds.size : (isTVShowsPage ? tvShowsSelectedIds.size : 0);
+    const isFinishedPage = location.pathname === '/Finished';
+    const isSelectionActive = isMoviesPage ? moviesSelectionMode : (isTVShowsPage ? tvShowsSelectionMode : (isFinishedPage ? finishedSelectionMode : false));
+    const selectedCount = isMoviesPage ? moviesSelectedIds.size : (isTVShowsPage ? tvShowsSelectedIds.size : (isFinishedPage ? finishedSelectedIds.size : 0));
 
     const handleToggleSelectionMode = () => {
         if (isMoviesPage) {
             setMoviesSelectionMode(!moviesSelectionMode);
         } else if (isTVShowsPage) {
             setTVShowsSelectionMode(!tvShowsSelectionMode);
+        } else if (isFinishedPage) {
+            setFinishedSelectionMode(!finishedSelectionMode);
         }
     };
 
@@ -260,6 +267,8 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
             clearMovieSelection();
         } else if (isTVShowsPage) {
             clearTVShowSelection();
+        } else if (isFinishedPage) {
+            clearFinishedSelection();
         }
     };
 
@@ -295,11 +304,24 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                         await useLibraryStore.getState().refreshItem(item.id);
                     }
                 }
+            } else if (isFinishedPage) {
+                const selectedTVShows = finished.filter(item => (item.media_type === 'tv' || item.media_type === 'anime') && finishedSelectedIds.has(item.id));
+                const selectedMovies = finished.filter(item => item.media_type === 'movie' && finishedSelectedIds.has(item.id));
+
+                for (const item of selectedTVShows) {
+                    await removeAllWatchedEpisodes(item.id);
+                    await useLibraryStore.getState().refreshItem(item.id);
+                }
+
+                for (const item of selectedMovies) {
+                    await useLibraryStore.getState().updateStatus(item.id, 'planning');
+                    await useLibraryStore.getState().refreshItem(item.id);
+                }
             }
             
             handleClearSelection();
         } catch (err) {
-            console.error('Failed to batch mark as watched:', err);
+            console.error('Failed to batch operation:', err);
         } finally {
             setBatchLoading(false);
         }
@@ -469,7 +491,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                         Admin Center
                                     </button>
                                 )}
-                                {(isMoviesPage || isTVShowsPage) && !isSelectionActive && (
+                                {(isMoviesPage || isTVShowsPage || isFinishedPage) && !isSelectionActive && (
                                     <button className="t-dropdown-item" onClick={() => {
                                         closeMenu();
                                         handleToggleSelectionMode();
@@ -552,8 +574,8 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                 <i className="fa-solid fa-spinner fa-spin"></i>
                             ) : (
                                 <>
-                                    <i className="fa-solid fa-check"></i>
-                                    Mark as Watched
+                                    <i className="fa-solid fa-rotate-left"></i>
+                                    {isFinishedPage ? 'Mark as Unwatched' : 'Mark as Watched'}
                                 </>
                             )}
                         </button>

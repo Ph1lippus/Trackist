@@ -28,12 +28,8 @@ const TVShows: React.FC = () => {
     const { 
         tvShowsSelectionMode: selectionMode, 
         tvShowsSelectedIds: selectedIds, 
-        setTVShowsSelectionMode: setSelectionMode, 
-        toggleTVShowSelection: toggleSelection, 
-        clearTVShowSelection: clearSelection 
+        toggleTVShowSelection: toggleSelection 
     } = useSelectionStore()
-
-    const [batchLoading, setBatchLoading] = useState(false)
 
     const { isMobile } = useMobile()
 

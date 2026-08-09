@@ -29,12 +29,8 @@ const Movies: React.FC = () => {
     const { 
         moviesSelectionMode: selectionMode, 
         moviesSelectedIds: selectedIds, 
-        setMoviesSelectionMode: setSelectionMode, 
-        toggleMovieSelection: toggleSelection, 
-        clearMovieSelection: clearSelection 
+        toggleMovieSelection: toggleSelection 
     } = useSelectionStore()
-
-    const [batchLoading, setBatchLoading] = useState(false)
 
     const { isMobile } = useMobile()
 

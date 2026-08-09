@@ -16,6 +16,14 @@ interface SelectionState {
     setTVShowsSelectedIds: (ids: Set<string>) => void
     toggleTVShowSelection: (id: string) => void
     clearTVShowSelection: () => void
+    
+    // Finished selection
+    finishedSelectionMode: boolean
+    finishedSelectedIds: Set<string>
+    setFinishedSelectionMode: (mode: boolean) => void
+    setFinishedSelectedIds: (ids: Set<string>) => void
+    toggleFinishedSelection: (id: string) => void
+    clearFinishedSelection: () => void
 }
 
 export const useSelectionStore = create<SelectionState>((set) => ({
@@ -50,4 +58,20 @@ export const useSelectionStore = create<SelectionState>((set) => ({
         return { tvShowsSelectedIds: newSet }
     }),
     clearTVShowSelection: () => set({ tvShowsSelectedIds: new Set(), tvShowsSelectionMode: false }),
+    
+    // Finished selection
+    finishedSelectionMode: false,
+    finishedSelectedIds: new Set(),
+    setFinishedSelectionMode: (mode) => set({ finishedSelectionMode: mode }),
+    setFinishedSelectedIds: (ids) => set({ finishedSelectedIds: ids }),
+    toggleFinishedSelection: (id) => set((state) => {
+        const newSet = new Set(state.finishedSelectedIds)
+        if (newSet.has(id)) {
+            newSet.delete(id)
+        } else {
+            newSet.add(id)
+        }
+        return { finishedSelectedIds: newSet }
+    }),
+    clearFinishedSelection: () => set({ finishedSelectedIds: new Set(), finishedSelectionMode: false }),
 }))
