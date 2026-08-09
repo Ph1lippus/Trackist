@@ -34,6 +34,7 @@
     }
     .detail-page__overview-section {
         text-align: center;
+        margin-top: 22rem;
     }
     /* .detail-page__overview, .detail-page__section-title {
         display: none;
