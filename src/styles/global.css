@@ -18,6 +18,19 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .detail-page__episode-card {
+        padding: 0.5rem !important;
+        gap: 0.5rem;
+    }
+    .navbar-back-btn {
+        display: none !important;
+    }
+    .detail-page__overview-section {
+        text-align: center;
+    }
+    /* .detail-page__overview, .detail-page__section-title {
+        display: none;
+    } */
     .media-card__icon-btn {
         display: none !important;
     }
@@ -61,10 +74,6 @@
         justify-content: center;
         margin-bottom: 1rem;
     }
-
-    .detail-page__overview-section {
-        margin-top: 12rem ;
-    }
     .stats-hero {
         background: transparent !important;
         border: none !important;
@@ -89,7 +98,7 @@
         padding-top: 0 !important;
     }
     .detail-page__logo{
-        max-width: 250px!important;
+        max-width: 300px!important;
         margin: 0 auto;
     }
     .discover-tabs{
@@ -3258,7 +3267,7 @@ body::after {
     }
 
     .detail-page__episode-still {
-        width: 80px;
+        width: 100px;
     }
     .detail-page__btn {
         width: 100%;
@@ -9193,14 +9202,12 @@ i.fa-solid.fa-trash:hover {
 }
 
 .mobile-tvshow-card-poster {
-    width: 80px;
+    width: 100px;
     height: auto;
     aspect-ratio: 2/3;
     flex-shrink: 0;
-    border-radius: 0px 20px 20px 0px;
+    border-radius: 0px 25px 25px 0px;
     overflow: hidden;
-    background: linear-gradient(135deg, rgba(133, 138, 227, 0.3), rgba(255, 255, 255, 0.05));
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .mobile-tvshow-card-poster img {
@@ -9209,10 +9216,6 @@ i.fa-solid.fa-trash:hover {
     object-fit: cover;
     display: block;
     transition: transform 0.3s ease;
-}
-
-.mobile-tvshow-card:hover .mobile-tvshow-card-poster img {
-    transform: scale(1.03);
 }
 
 .mobile-tvshow-card-no-poster {
@@ -9264,13 +9267,13 @@ i.fa-solid.fa-trash:hover {
 
 .mobile-tvshow-card-add-btn {
     flex-shrink: 0;
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    border: 1px solid rgba(104, 255, 174, 0.3);
+    border: none;
     background: rgba(104, 255, 174, 0.08);
     color: #68ffae;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     cursor: pointer;
     display: flex;
     align-items: center;
