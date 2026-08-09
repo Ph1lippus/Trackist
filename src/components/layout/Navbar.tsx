@@ -53,7 +53,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         finishedSelectionMode,
         finishedSelectedIds,
         setFinishedSelectionMode,
-        toggleFinishedSelection,
         clearFinishedSelection,
     } = useSelectionStore();
 
