@@ -2099,7 +2099,7 @@ body::after {
     position: fixed;
     right: 0rem;
     top: 50%;
-    transform: translateY(-85%);
+    transform: translateY(-75%);
     flex-direction: column;
     gap: 0.75rem;
     padding: 0.75rem 0.5rem;
