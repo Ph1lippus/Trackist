@@ -65,7 +65,7 @@ export const getWatchedEpisodeCountFiltered = async (watchlistId: string): Promi
  * the next episode from the watchlist's current_season/current_episode
  * and fetch episode details from TMDB.
  */
-export const getNextEpisodeToWatch = async (watchlistId: string): Promise<{
+export const getNextEpisodeToWatch = async (watchlistId: string, skipCache: boolean = false): Promise<{
     season_number: number
     episode_number: number
     title?: string
@@ -113,11 +113,12 @@ export const getNextEpisodeToWatch = async (watchlistId: string): Promise<{
         }
         const seasonToCheck = maxWatchedEpisode > 0 ? maxWatchedSeason : 1
 
-        // If we have a cached next episode, use it as the starting point
+        // If we have a cached next episode and we're not skipping cache, use it as the starting point
         // This avoids iterating through all seasons from the beginning
+        // But skip cache when recalculating after episode removal to avoid returning the removed episode
         let cachedNextSeason = watchlistItem.next_season_number
         let cachedNextEpisode = watchlistItem.next_episode_number
-        if (cachedNextSeason && cachedNextEpisode && cachedNextSeason >= seasonToCheck) {
+        if (!skipCache && cachedNextSeason && cachedNextEpisode && cachedNextSeason >= seasonToCheck) {
             // Start from the cached next episode, but verify it's still valid
             const seasonData = await getTVSeasonDetails(watchlistItem.tmdb_id, cachedNextSeason)
             const episodes = seasonData.episodes || []
@@ -338,8 +339,9 @@ export const unmarkEpisodeWatched = async (
         await getCurrentSeasonAndEpisodeFromWatched(watchlistId)
 
     // Get the new watched count and next episode for denormalized columns
+    // Skip cache to ensure we recalculate from scratch after episode removal
     const newWatchedCount = await getWatchedEpisodeCount(watchlistId)
-    const nextEp = await getNextEpisodeToWatch(watchlistId)
+    const nextEp = await getNextEpisodeToWatch(watchlistId, true)
 
     // Update the watchlist item's updated_at timestamp, current_episode, and current_season
     // current_episode is the actual episode number of the last watched episode in the current season

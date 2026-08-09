@@ -654,6 +654,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     // Refresh single item from database
     refreshItem: async (id: string) => {
         try {
+            // Invalidate cache first to ensure we get fresh data and don't serve stale cached data
+            await invalidateUserCache()
+
             const { data, error } = await supabase
                 .from('watchlist')
                 .select(selectColumns)
@@ -696,8 +699,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 if (updateError) {
                     console.error('Failed to update total episodes in database:', updateError)
                 } else {
-                    // Invalidate cache to ensure the updated data is reflected across the app
-                    const { invalidateUserCache } = await import('../services/cacheService')
+                    // Invalidate cache again to ensure the updated data is reflected across the app
                     await invalidateUserCache()
                 }
             }
