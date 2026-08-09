@@ -9165,10 +9165,11 @@ i.fa-solid.fa-trash:hover {
     font-size: 0.9rem;
     font-weight: 400;
     color: var(--color-platinum);
-    margin: 0 auto;
+    margin: 0;
+    width: fit-content;
     padding: 0.6rem 1rem;
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 25px;
+    border-radius: 0px 25px 25px 0px;
     background: rgba(255, 255, 255, 0.02);
 }
 
@@ -9192,7 +9193,7 @@ i.fa-solid.fa-trash:hover {
 }
 
 .mobile-tvshow-card-poster {
-    width: 120px;
+    width: 80px;
     height: auto;
     aspect-ratio: 2/3;
     flex-shrink: 0;
@@ -9277,22 +9278,14 @@ i.fa-solid.fa-trash:hover {
     transition: all 0.25s ease;
 }
 
-.mobile-tvshow-card-add-btn:hover:not(:disabled) {
-    background: rgba(104, 255, 174, 0.2);
-    border-color: rgba(104, 255, 174, 0.5);
-    color: #68ffae;
-    transform: scale(1.15);
-    box-shadow: 0 0 16px rgba(104, 255, 174, 0.35);
-}
+
 
 .mobile-tvshow-card-add-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
 }
 
-.mobile-tvshow-card-add-btn:active:not(:disabled) {
-    transform: scale(0.9);
-}
+
 
 @keyframes sweep {
     0% { transform: translateX(-100%); }
@@ -9378,23 +9371,10 @@ i.fa-solid.fa-trash:hover {
     gap: 0.5rem;
 }
 
-.mobile-tvshow-card-add-btn:active:not(:disabled) {
-    transform: scale(0.95);
-}
-
 .mobile-tvshow-card-add-btn--done {
     background: rgba(104, 255, 174, 0.2);
-    border-color: rgba(104, 255, 174, 0.5);
-    color: #68ffae;
-}
 
-.mobile-tvshow-card-add-btn--done:hover:not(:disabled) {
-    background: rgba(104, 255, 174, 0.3);
-    border-color: rgba(104, 255, 174, 0.6);
-    color: #68ffae;
-    transform: scale(1.1);
 }
-
 
 /* Hide auth links on mobile */
 /* ===== Mobile Bottom Navbar ===== */
