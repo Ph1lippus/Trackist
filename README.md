@@ -20,15 +20,24 @@ Track your movies, TV shows, and anime — all in one place. A modern, privacy-f
 
 ### Desktop
 
-| Discover | TV Show Detail | Statistics |
+| Discover | TV Show Detail | Movie Detail |
 | --- | --- | --- |
-| ![Discover](https://track1st.vercel.app/og-image.png) | ![TV Show Detail](https://track1st.vercel.app/og-image.png) | ![Statistics](https://track1st.vercel.app/og-image.png) |
+| ![Discover](https://track1st.vercel.app/og-image.png) | 
+  ![TV Show Detail](https://track1st.vercel.app/og-image.png) | 
+  ![Movie Detail](https://track1st.vercel.app/og-image.png) | 
 
 ### Mobile
 
-| TV Shows | Episode Marking | Credits |
-| --- | --- | --- |
-| ![Mobile TV Shows](https://track1st.vercel.app/og-image.png) | ![Episode Marking](https://track1st.vercel.app/og-image.png) | ![Credits](https://track1st.vercel.app/og-image.png) |
+| Discover | TV Show Detail | Movie Detail |
+| --- | --- | --- | 
+  ![Discover Mobile](https://track1st.vercel.app/og-image.png) |
+  ![TV Show Mobile](https://track1st.vercel.app/og-image.png) | 
+  ![TV Show Detail Mobile](https://track1st.vercel.app/og-image.png) | 
+  ![Movie Detail Mobile](https://track1st.vercel.app/og-image.png) |
+
+
+### Mobile
+
 
 ## Tech Stack
 
