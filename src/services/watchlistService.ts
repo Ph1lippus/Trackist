@@ -52,9 +52,7 @@ export const getWatchedEpisodeCountFiltered = async (watchlistId: string): Promi
         .from('watchlist_episodes')
         .select('*', { count: 'exact', head: true })
         .eq('watchlist_id', watchlistId)
-        .eq('watched', true)
-
-    if (error) {
+            if (error) {
         console.error('Failed to count watched episodes (filtered):', error)
         return 0
     }
