@@ -421,31 +421,23 @@ export const removeAllWatchedEpisodes = async (watchlistId: string): Promise<boo
 
 /**
  * Get the count of watched episodes for a watchlist item.
- * Uses denormalized column if available, otherwise counts from watchlist_episodes.
+ * Counts directly from watchlist_episodes for accuracy.
  */
 export const getWatchedEpisodeCount = async (watchlistId: string): Promise<number> => {
-    // Try denormalized column first for instant response
-    const { data: watchlistItem, error: itemError } = await supabase
-        .from('watchlist')
-        .select('watched_episodes_count')
-        .eq('id', watchlistId)
-        .single()
-
-    if (!itemError && watchlistItem?.watched_episodes_count != null) {
-        return watchlistItem.watched_episodes_count
-    }
-
-    // Fallback to counting from watchlist_episodes
-    const { count, error } = await supabase
+    const { data, error } = await supabase
         .from('watchlist_episodes')
-        .select('*', { count: 'exact', head: true })
+        .select('season_number, episode_number')
         .eq('watchlist_id', watchlistId)
 
     if (error) {
         console.error('Failed to count watched episodes:', error)
         return 0
     }
-    return count || 0
+
+    const uniqueEpisodes = new Set(
+        (data || []).map(ep => `${ep.season_number}-${ep.episode_number}`)
+    )
+    return uniqueEpisodes.size
 }
 
 /**
