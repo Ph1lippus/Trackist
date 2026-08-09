@@ -20,6 +20,10 @@ const MobileMovies: React.FC = () => {
         item: WatchlistItem
     } | null>(null)
 
+    const handleSwitchToNormal = () => {
+        navigate('/movies')
+    }
+
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
@@ -125,6 +129,13 @@ const MobileMovies: React.FC = () => {
 
     return (
         <section className="dashboard-page mobile-tvshows-page">
+            <button
+                className="mobile-view-toggle-fixed"
+                onClick={handleSwitchToNormal}
+                title="Switch to Normal View"
+            >
+                <i className="fa-solid fa-desktop"></i>
+            </button>
             <div className="dashboard-shell mobile-tvshows-shell">
                 {toWatch.length === 0 && watched.length === 0 ? (
                     <div className="mobile-tvshows-empty">

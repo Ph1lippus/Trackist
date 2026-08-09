@@ -18,6 +18,10 @@ const MobileTVShows: React.FC = () => {
     const [addingEpisode, setAddingEpisode] = useState<string | null>(null)
     const [sweepId, setSweepId] = useState<string | null>(null)
 
+    const handleSwitchToNormal = () => {
+        navigate('/tvshows')
+    }
+
     const watching = useMemo(() => {
         const filtered = committedQuery
             ? tvShows.filter(s => s.status === 'watching' && s.title.toLowerCase().includes(committedQuery.toLowerCase()))
@@ -260,6 +264,13 @@ const MobileTVShows: React.FC = () => {
 
     return (
         <section className="dashboard-page mobile-tvshows-page">
+            <button
+                className="mobile-view-toggle-fixed"
+                onClick={handleSwitchToNormal}
+                title="Switch to Normal View"
+            >
+                <i className="fa-solid fa-desktop"></i>
+            </button>
             <div className="dashboard-shell mobile-tvshows-shell">
                 {watching.length === 0 && toWatch.length === 0 ? (
                     <div className="mobile-tvshows-empty">

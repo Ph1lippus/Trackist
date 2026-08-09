@@ -6,6 +6,11 @@ import { useSearch } from '../../hooks/useSearch';
 import SearchDropdown from '../search/SearchDropdown';
 import ConfirmModal from '../modals/ConfirmModal';
 import { clearAllCache } from '../../services/cacheService';
+import { useSelectionStore } from '../../stores/useSelectionStore';
+import { useLibraryStore } from '../../stores/useLibraryStore';
+import { launchCosmicConfetti } from '../../utils/cosmicConfetti';
+import { markShowAsFullyWatched } from '../../services/watchlistService';
+import type { WatchlistItem } from '../../types';
 
 interface NavbarProps {
     currentMonth?: Date;
@@ -30,9 +35,27 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
             (window.navigator as Navigator & { standalone?: boolean }).standalone === true
     });
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [batchLoading, setBatchLoading] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
     const searchBoxRef = useRef<HTMLDivElement>(null);
+
+    // Selection state
+    const {
+        moviesSelectionMode,
+        moviesSelectedIds,
+        setMoviesSelectionMode,
+        toggleMovieSelection,
+        clearMovieSelection,
+        tvShowsSelectionMode,
+        tvShowsSelectedIds,
+        setTVShowsSelectionMode,
+        toggleTVShowSelection,
+        clearTVShowSelection,
+    } = useSelectionStore();
+
+    const movies = useLibraryStore((state) => state.movies);
+    const tvShows = useLibraryStore((state) => state.tvShows);
 
     // Unified search engine
     const {
@@ -58,7 +81,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const showBackButton = Boolean(isDetailPage || isListDetailPage || isListEditPage);
     
     const showSearchBar = !['/login', '/register'].includes(location.pathname) && 
-        (['/Discover', '/Movies', '/Tvshows', '/', '/Finished', '/Friends', '/Lists', '/MobileTVShows', '/MobileMovies'].includes(location.pathname) || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/'));
+        (['/Discover', '/Movies', '/Tvshows', '/', '/Finished', '/Friends', '/Lists', '/MobileTVShows', '/MobileMovies'].includes(location.pathname) || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname === '/MobileTVShows' || location.pathname === '/MobileMovies');
     
     const showCalendarHeader = location.pathname === '/Upcoming' && currentMonth && navigateMonth && canGoBack;
     
@@ -217,6 +240,70 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const handleSearchClear = () => {
         clear();
     }
+
+    // Selection helpers
+    const isMoviesPage = location.pathname === '/Movies' || location.pathname === '/MobileMovies';
+    const isTVShowsPage = location.pathname === '/Tvshows' || location.pathname === '/MobileTVShows';
+    const isSelectionActive = isMoviesPage ? moviesSelectionMode : (isTVShowsPage ? tvShowsSelectionMode : false);
+    const selectedCount = isMoviesPage ? moviesSelectedIds.size : (isTVShowsPage ? tvShowsSelectedIds.size : 0);
+
+    const handleToggleSelectionMode = () => {
+        if (isMoviesPage) {
+            setMoviesSelectionMode(!moviesSelectionMode);
+        } else if (isTVShowsPage) {
+            setTVShowsSelectionMode(!tvShowsSelectionMode);
+        }
+    };
+
+    const handleClearSelection = () => {
+        if (isMoviesPage) {
+            clearMovieSelection();
+        } else if (isTVShowsPage) {
+            clearTVShowSelection();
+        }
+    };
+
+    const handleBatchMarkWatched = async () => {
+        if (selectedCount === 0) return;
+
+        setBatchLoading(true);
+        try {
+            if (isMoviesPage) {
+                const selectedItems = movies.filter(item => moviesSelectedIds.has(item.id));
+                
+                for (const item of selectedItems) {
+                    const isMovieReleased = (item: WatchlistItem): boolean => {
+                        if (!item.release_date) return true;
+                        const releaseDate = new Date(item.release_date);
+                        const today = new Date();
+                        return releaseDate <= today;
+                    };
+
+                    if (isMovieReleased(item)) {
+                        await useLibraryStore.getState().updateStatus(item.id, 'completed');
+                        if (item.status === 'planning') {
+                            launchCosmicConfetti();
+                        }
+                    }
+                }
+            } else if (isTVShowsPage) {
+                const selectedItems = tvShows.filter(item => tvShowsSelectedIds.has(item.id));
+                
+                for (const item of selectedItems) {
+                    if (item.tmdb_id) {
+                        await markShowAsFullyWatched(item.id, item.tmdb_id);
+                        await useLibraryStore.getState().refreshItem(item.id);
+                    }
+                }
+            }
+            
+            handleClearSelection();
+        } catch (err) {
+            console.error('Failed to batch mark as watched:', err);
+        } finally {
+            setBatchLoading(false);
+        }
+    };
 
     // Context-aware placeholder text
     const searchPlaceholder = (() => {
@@ -382,6 +469,15 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                         Admin Center
                                     </button>
                                 )}
+                                {(isMoviesPage || isTVShowsPage) && !isSelectionActive && (
+                                    <button className="t-dropdown-item" onClick={() => {
+                                        closeMenu();
+                                        handleToggleSelectionMode();
+                                    }}>
+                                        <i className="fa-solid fa-check-square"></i>
+                                        Selection
+                                    </button>
+                                )}
                                 {showInstallButton && (
                                         <button className="t-dropdown-item" onClick={handleInstallClick}>
                                             <i className="fa-solid fa-download"></i>
@@ -435,6 +531,36 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                     )}
                 </div>
             </div>
+            
+            {/* Selection Mode Action Bar */}
+            {isSelectionActive && (
+                <div className="selection-action-bar">
+                    <span className="selection-count">{selectedCount} selected</span>
+                    <div className="selection-actions">
+                        <button
+                            className="selection-action-btn selection-action-btn--cancel"
+                            onClick={handleClearSelection}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            className="selection-action-btn selection-action-btn--confirm"
+                            onClick={handleBatchMarkWatched}
+                            disabled={selectedCount === 0 || batchLoading}
+                        >
+                            {batchLoading ? (
+                                <i className="fa-solid fa-spinner fa-spin"></i>
+                            ) : (
+                                <>
+                                    <i className="fa-solid fa-check"></i>
+                                    Mark as Watched
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            )}
+            
             <ConfirmModal
                 isOpen={showLogoutModal}
                 title="Logout"

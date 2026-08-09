@@ -9213,6 +9213,124 @@ i.fa-solid.fa-trash:hover {
     background: rgba(255, 255, 255, 0.02);
 }
 
+.mobile-view-toggle-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--color-platinum);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.mobile-view-toggle-btn:hover {
+    background: rgba(133, 138, 227, 0.2);
+    border-color: rgba(133, 138, 227, 0.4);
+    color: var(--color-primary);
+}
+
+.mobile-view-toggle-fixed {
+    position: fixed;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(22, 22, 22, 0.02);
+    backdrop-filter: blur(50px);
+    border: none;
+    color: var(--color-platinum);
+    width: 44px;
+    height: 44px;
+    border-radius: 25px 0px 0px 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 1.1rem;
+    z-index: 1000;
+}
+
+.selection-action-bar {
+    position: fixed;
+    top: 4rem;
+    right: 0;
+    background: rgba(22, 22, 22, 0.02);
+    backdrop-filter: blur(20px);
+    border: none;
+    border-radius: 25px 0px 0px 25px;
+    padding: 0.6rem 1rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    z-index: 1001;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+@media (max-width: 768px) {
+    
+    .selection-count {
+        font-size: 0.75rem;
+    }
+    
+    .selection-action-btn {
+        padding: 0.6rem 1rem;
+        font-size: 0.75rem;
+    }
+}
+
+.selection-count {
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 0.875rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.selection-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.selection-action-btn {
+    padding: 0.6rem 1rem;
+    border-radius: 25px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: none;
+}
+
+.selection-action-btn--cancel {
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--color-platinum);
+}
+
+.selection-action-btn--cancel:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.selection-action-btn--confirm {
+    background: var(--color-primary);
+    color: white;
+}
+
+.selection-action-btn--confirm:hover:not(:disabled) {
+    background: rgba(133, 138, 227, 0.8);
+}
+
+.selection-action-btn--confirm:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .mobile-tvshows-cards {
     display: flex;
     flex-direction: column;

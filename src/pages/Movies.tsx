@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useLibraryStore } from '../stores/useLibraryStore'
+import { useSelectionStore } from '../stores/useSelectionStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
@@ -11,6 +13,7 @@ import { useMobile } from '../contexts/useMobile'
 
 const Movies: React.FC = () => {
     usePageTitle('Trackist - Movies')
+    const navigate = useNavigate()
     const { committedQuery } = useSearch()
 
     const movies = useLibraryStore((state) => state.movies)
@@ -23,49 +26,25 @@ const Movies: React.FC = () => {
 
     const [actionLoading, setActionLoading] = useState(false)
 
-    const [selectionMode, setSelectionMode] = useState(() => {
-        try {
-            const cached = localStorage.getItem('trackist-selection:movies')
-            if (cached) {
-                const parsed = JSON.parse(cached)
-                return parsed.selectionMode || false
-            }
-        } catch {
-            // ignore localStorage errors
-        }
-        return false
-    })
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(() => {
-        try {
-            const cached = localStorage.getItem('trackist-selection:movies')
-            if (cached) {
-                const parsed = JSON.parse(cached)
-                return new Set(parsed.selectedIds || [])
-            }
-        } catch {
-            // ignore localStorage errors
-        }
-        return new Set()
-    })
+    const { 
+        moviesSelectionMode: selectionMode, 
+        moviesSelectedIds: selectedIds, 
+        setMoviesSelectionMode: setSelectionMode, 
+        toggleMovieSelection: toggleSelection, 
+        clearMovieSelection: clearSelection 
+    } = useSelectionStore()
+
     const [batchLoading, setBatchLoading] = useState(false)
 
     const { isMobile } = useMobile()
 
+    const handleSwitchToMobile = () => {
+        navigate('/MobileMovies')
+    }
+
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
-
-    useEffect(() => {
-        const cacheKey = 'trackist-selection:movies'
-        try {
-            localStorage.setItem(cacheKey, JSON.stringify({
-                selectionMode,
-                selectedIds: Array.from(selectedIds)
-            }))
-        } catch {
-            // ignore storage errors
-        }
-    }, [selectionMode, selectedIds])
 
     const updateStatus = async (id: string, status: string) => {
         await useLibraryStore.getState().updateStatus(id, status as WatchlistItem['status'])
@@ -111,48 +90,6 @@ const Movies: React.FC = () => {
         }
     }
 
-    const toggleSelection = (id: string) => {
-        setSelectedIds(prev => {
-            const newSet = new Set(prev)
-            if (newSet.has(id)) {
-                newSet.delete(id)
-            } else {
-                newSet.add(id)
-            }
-            return newSet
-        })
-    }
-
-    const handleBatchMarkWatched = async () => {
-        if (selectedIds.size === 0) return
-
-        setBatchLoading(true)
-        try {
-            const selectedItems = movies.filter(item => selectedIds.has(item.id))
-            
-            for (const item of selectedItems) {
-                if (isMovieReleased(item)) {
-                    await updateStatus(item.id, 'completed')
-                    if (item.status === 'planning') {
-                        launchCosmicConfetti()
-                    }
-                }
-            }
-            
-            setSelectedIds(new Set())
-            setSelectionMode(false)
-        } catch (err) {
-            console.error('Failed to batch mark as watched:', err)
-        } finally {
-            setBatchLoading(false)
-        }
-    }
-
-    const clearSelection = () => {
-        setSelectedIds(new Set())
-        setSelectionMode(false)
-    }
-
     // Filter items based on global search (strict movie-type lock)
     const filteredItems = useMemo(() => {
         if (!committedQuery) return movies
@@ -184,53 +121,19 @@ const Movies: React.FC = () => {
 
     return (
         <div className="discover-page">
+            {isMobile && (
+                <button
+                    className="mobile-view-toggle-fixed"
+                    onClick={handleSwitchToMobile}
+                    title="Switch to Mobile View"
+                >
+                    <i className="fa-solid fa-mobile-screen"></i>
+                </button>
+            )}
             <div className="discover-container" style={{ width: '85%' }}>
                 <div className="watchlist-section">
-                    <div className="watchlist-section__header" style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        marginBottom: '1rem'
-                    }}>
+                    <div className="watchlist-section__header">
                         <h3 className="watchlist-section__title">To Watch</h3>
-                        
-                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                            {!selectionMode ? (
-                                <button
-                                    className="discover-filter-select discover-filter-select--btn"
-                                    onClick={() => setSelectionMode(true)}
-                                    disabled={watchlistItems.length === 0}
-                                >
-                                    Select
-                                </button>
-                            ) : (
-                                <>
-                                    <span style={{ 
-                                        color: 'rgba(255,255,255,0.6)', 
-                                        fontSize: '0.85rem',
-                                        marginRight: '0.5rem'
-                                    }}>
-                                        {selectedIds.size} selected
-                                    </span>
-                                    <button
-                                        className="discover-filter-select discover-filter-select--btn"
-                                        onClick={clearSelection}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        className="discover-filter-select discover-filter-select--btn"
-                                        onClick={handleBatchMarkWatched}
-                                        disabled={selectedIds.size === 0 || batchLoading}
-                                    >
-                                        {batchLoading ? (
-                                            <i className="fa-solid fa-spinner fa-spin" style={{ marginRight: '6px' }}></i>
-                                        ) : null}
-                                        {batchLoading ? '' : 'Mark as Watched'}
-                                    </button>
-                                </>
-                            )}
-                        </div>
                     </div>
                     {watchlistItems.length > 0 ? (
                         <VirtuosoGrid
