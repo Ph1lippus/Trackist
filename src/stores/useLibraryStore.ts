@@ -7,6 +7,9 @@ import type { WatchlistItem } from '../types'
 // Extend WatchlistItem to include calculated progress field
 interface TVShowWithProgress extends WatchlistItem {
     total_episodes_watched: number
+    watched_episodes_count?: number
+    next_season_number?: number
+    next_episode_number?: number
 }
 
 interface LibraryState {
@@ -136,7 +139,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 if (item.media_type === 'tv' || item.media_type === 'anime') {
                     tvShows.push({
                         ...item,
-                        total_episodes_watched: 0 // Will be calculated on demand
+                        total_episodes_watched: item.watched_episodes_count ?? 0
                     } as TVShowWithProgress)
                 } else if (item.media_type === 'movie') {
                     movies.push(item)
@@ -574,7 +577,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         let newFinished = state.finished
 
         if (enhancedItem.media_type === 'tv' || enhancedItem.media_type === 'anime') {
-            newTvShows = [enhancedItem as TVShowWithProgress, ...state.tvShows]
+            newTvShows = [{
+                ...enhancedItem,
+                total_episodes_watched: enhancedItem.watched_episodes_count ?? 0
+            } as TVShowWithProgress, ...state.tvShows]
         } else if (enhancedItem.media_type === 'movie') {
             newMovies = [enhancedItem, ...state.movies]
         }
@@ -701,7 +707,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             // Re-categorize based on new status
             const newAllItems = state.allItems.map(item => item.id === id ? enhancedData : item)
 
-            const newTvShows = newAllItems.filter(item => item.media_type === 'tv' || item.media_type === 'anime') as TVShowWithProgress[]
+            const newTvShows = newAllItems.filter(item => item.media_type === 'tv' || item.media_type === 'anime').map(item => ({
+                ...item,
+                total_episodes_watched: (item as TVShowWithProgress).watched_episodes_count ?? 0
+            })) as TVShowWithProgress[]
             const newMovies = newAllItems.filter(item => item.media_type === 'movie')
             const newFinished = newAllItems.filter(item => item.status === 'completed' || item.status === 'caught_up')
 

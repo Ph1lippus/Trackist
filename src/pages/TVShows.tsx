@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
-import { markShowAsFullyWatched, getWatchedEpisodeCount } from '../services/watchlistService'
+import { markShowAsFullyWatched } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
@@ -21,7 +21,6 @@ const TVShows: React.FC = () => {
 
     const [markAllModal, setMarkAllModal] = useState<WatchlistItem | null>(null)
     const [markingAllWatched, setMarkingAllWatched] = useState(false)
-    const [watchedCounts, setWatchedCounts] = useState<Record<string, number>>({})
 
     const [selectionMode, setSelectionMode] = useState(() => {
         try {
@@ -72,24 +71,6 @@ const TVShows: React.FC = () => {
         window.scrollTo(0, 0)
     }, [])
 
-    // Fetch watched counts for TV shows
-    useEffect(() => {
-        const fetchWatchedCounts = async () => {
-            if (!isInitialized || tvShows.length === 0) return
-            const counts: Record<string, number> = {}
-            for (const show of tvShows) {
-                if (!show.id) continue
-                try {
-                    counts[show.id] = await getWatchedEpisodeCount(show.id)
-                } catch {
-                    counts[show.id] = 0
-                }
-            }
-            setWatchedCounts(counts)
-        }
-        fetchWatchedCounts()
-    }, [tvShows, isInitialized])
-
     const toggleSelection = (id: string) => {
         setSelectedIds(prev => {
             const newSet = new Set(prev)
@@ -135,9 +116,9 @@ const TVShows: React.FC = () => {
     const tvShowsWithProgress = useMemo(() => {
         return tvShows.map(show => ({
             ...show,
-            total_episodes_watched: watchedCounts[show.id] ?? show.current_episode ?? 0
+            total_episodes_watched: show.watched_episodes_count ?? 0
         }))
-    }, [tvShows, watchedCounts])
+    }, [tvShows])
 
     // Listen for watchlist-refresh event from the Fix Progress modal
     useEffect(() => {
@@ -171,9 +152,9 @@ const TVShows: React.FC = () => {
                     item.status === 'watching' &&
                     item.total_episodes !== undefined &&
                     item.total_episodes > 0 &&
-                    (watchedCounts[item.id] ?? item.total_episodes_watched) >= item.total_episodes
+                    (item.watched_episodes_count ?? 0) >= item.total_episodes
                 )) &&
-                (watchedCounts[item.id] ?? item.total_episodes_watched) > 0 &&
+                (item.watched_episodes_count ?? 0) > 0 &&
                 item.total_episodes !== undefined
             )
 
@@ -252,7 +233,7 @@ const TVShows: React.FC = () => {
             clearInterval(interval)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
         }
-    }, [isInitialized, watchedCounts])
+    }, [isInitialized])
 
     // Filter items based on global search (strict TV-type lock)
     const filteredItems = useMemo(() => {

@@ -78,17 +78,14 @@ export const getNextEpisodeToWatch = async (watchlistId: string): Promise<{
     tmdb_episode_id?: number
 } | null> => {
     try {
-        // Get the watchlist item to find current progress and tmdb_id
+        // Get the watchlist item to find tmdb_id and cached next episode
         const { data: watchlistItem, error: itemError } = await supabase
             .from('watchlist')
-            .select('current_season, current_episode, tmdb_id, total_episodes, total_seasons')
+            .select('tmdb_id, next_season_number, next_episode_number')
             .eq('id', watchlistId)
             .single()
 
         if (itemError || !watchlistItem || !watchlistItem.tmdb_id) return null
-
-        const currentSeason = watchlistItem.current_season || 1
-        const currentEpisode = watchlistItem.current_episode || 0
 
         // Fetch all watched episodes to build a set for skipping already-watched episodes
         const { data: watchlistEps } = await supabase
@@ -100,14 +97,55 @@ export const getNextEpisodeToWatch = async (watchlistId: string): Promise<{
             watchedSet.add(`${ep.season_number}-${ep.episode_number}`)
         }
 
-        // Get the next episode from TMDB
+        // Find the next episode from TMDB
         const details = await getTVDetails(watchlistItem.tmdb_id)
         const seasonNumbers = (details.seasons || [])
             .filter((s: { season_number: number }) => s.season_number > 0)
             .map((s: { season_number: number }) => s.season_number)
 
-        // Find the season to check (start from current season)
-        const seasonToCheck = currentEpisode > 0 ? currentSeason : 1
+        // Determine the starting season based on actual watched episodes, not the potentially
+        // stale current_season/current_episode from the watchlist item
+        let maxWatchedSeason = 1
+        let maxWatchedEpisode = 0
+        for (const ep of watchlistEps || []) {
+            if (ep.season_number > maxWatchedSeason || (ep.season_number === maxWatchedSeason && ep.episode_number > maxWatchedEpisode)) {
+                maxWatchedSeason = ep.season_number
+                maxWatchedEpisode = ep.episode_number
+            }
+        }
+        const seasonToCheck = maxWatchedEpisode > 0 ? maxWatchedSeason : 1
+
+        // If we have a cached next episode, use it as the starting point
+        // This avoids iterating through all seasons from the beginning
+        let cachedNextSeason = watchlistItem.next_season_number
+        let cachedNextEpisode = watchlistItem.next_episode_number
+        if (cachedNextSeason && cachedNextEpisode && cachedNextSeason >= seasonToCheck) {
+            // Start from the cached next episode, but verify it's still valid
+            const seasonData = await getTVSeasonDetails(watchlistItem.tmdb_id, cachedNextSeason)
+            const episodes = seasonData.episodes || []
+            const startEpisode = cachedNextEpisode
+
+            for (const ep of episodes) {
+                if (ep.episode_number < startEpisode) continue
+
+                // Skip if this episode is already watched
+                if (watchedSet.has(`${cachedNextSeason}-${ep.episode_number}`)) continue
+
+                // Skip if not released yet
+                if (ep.air_date && new Date(ep.air_date) > new Date()) continue
+
+                return {
+                    season_number: cachedNextSeason,
+                    episode_number: ep.episode_number,
+                    title: ep.name,
+                    still_path: ep.still_path,
+                    overview: ep.overview,
+                    air_date: ep.air_date,
+                    runtime: ep.runtime,
+                    tmdb_episode_id: ep.id
+                }
+            }
+        }
 
         for (const seasonNum of seasonNumbers) {
             if (seasonNum < seasonToCheck) continue
@@ -115,9 +153,9 @@ export const getNextEpisodeToWatch = async (watchlistId: string): Promise<{
             const seasonData = await getTVSeasonDetails(watchlistItem.tmdb_id, seasonNum)
             const episodes = seasonData.episodes || []
 
-            // For current season, start from current_episode + 1
+            // For the season where we left off, start from max watched episode + 1
             // For later seasons, start from episode 1
-            const startEpisode = seasonNum === currentSeason && currentEpisode > 0 ? currentEpisode + 1 : 1
+            const startEpisode = seasonNum === maxWatchedSeason && maxWatchedEpisode > 0 ? maxWatchedEpisode + 1 : 1
 
             for (const ep of episodes) {
                 if (ep.episode_number < startEpisode) continue
@@ -237,15 +275,30 @@ export const markEpisodeWatched = async (
     const { season: newCurrentSeason, episode: newCurrentEpisode } =
         await getCurrentSeasonAndEpisodeFromWatched(watchlistId)
 
+    // Get the new watched count and next episode for denormalized columns
+    const newWatchedCount = await getWatchedEpisodeCount(watchlistId)
+    const nextEp = await getNextEpisodeToWatch(watchlistId)
+
     // Update the watchlist item's updated_at timestamp, current_episode, and current_season
     // current_episode is the actual episode number of the last watched episode in the current season
+    const updates: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+        current_episode: newCurrentEpisode,
+        current_season: newCurrentSeason,
+        watched_episodes_count: newWatchedCount
+    }
+
+    if (nextEp) {
+        updates.next_season_number = nextEp.season_number
+        updates.next_episode_number = nextEp.episode_number
+    } else {
+        updates.next_season_number = null
+        updates.next_episode_number = null
+    }
+
     await supabase
         .from('watchlist')
-        .update({ 
-            updated_at: new Date().toISOString(),
-            current_episode: newCurrentEpisode,
-            current_season: newCurrentSeason
-        })
+        .update(updates)
         .eq('id', watchlistId)
 
     // Update status from 'planning' to 'watching' when an episode is marked
@@ -286,15 +339,30 @@ export const unmarkEpisodeWatched = async (
     const { season: newCurrentSeason, episode: newCurrentEpisode } =
         await getCurrentSeasonAndEpisodeFromWatched(watchlistId)
 
+    // Get the new watched count and next episode for denormalized columns
+    const newWatchedCount = await getWatchedEpisodeCount(watchlistId)
+    const nextEp = await getNextEpisodeToWatch(watchlistId)
+
     // Update the watchlist item's updated_at timestamp, current_episode, and current_season
     // current_episode is the actual episode number of the last watched episode in the current season
+    const updates: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+        current_episode: newCurrentEpisode,
+        current_season: newCurrentSeason,
+        watched_episodes_count: newWatchedCount
+    }
+
+    if (nextEp) {
+        updates.next_season_number = nextEp.season_number
+        updates.next_episode_number = nextEp.episode_number
+    } else {
+        updates.next_season_number = null
+        updates.next_episode_number = null
+    }
+
     await supabase
         .from('watchlist')
-        .update({ 
-            updated_at: new Date().toISOString(),
-            current_episode: newCurrentEpisode,
-            current_season: newCurrentSeason
-        })
+        .update(updates)
         .eq('id', watchlistId)
 
     // Invalidate cache to ensure the updated_at change is reflected
@@ -355,9 +423,21 @@ export const removeAllWatchedEpisodes = async (watchlistId: string): Promise<boo
 
 /**
  * Get the count of watched episodes for a watchlist item.
- * All rows in watchlist_episodes are watched episodes.
+ * Uses denormalized column if available, otherwise counts from watchlist_episodes.
  */
 export const getWatchedEpisodeCount = async (watchlistId: string): Promise<number> => {
+    // Try denormalized column first for instant response
+    const { data: watchlistItem, error: itemError } = await supabase
+        .from('watchlist')
+        .select('watched_episodes_count')
+        .eq('id', watchlistId)
+        .single()
+
+    if (!itemError && watchlistItem?.watched_episodes_count != null) {
+        return watchlistItem.watched_episodes_count
+    }
+
+    // Fallback to counting from watchlist_episodes
     const { count, error } = await supabase
         .from('watchlist_episodes')
         .select('*', { count: 'exact', head: true })

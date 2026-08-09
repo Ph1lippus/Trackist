@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails, imageUrl } from '../services/tmdbService'
-import { markEpisodeWatched, getNextEpisodeToWatch, checkAndUpdateCompleted, getWatchedEpisodeCount } from '../services/watchlistService'
+import { markEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
 
 import { useLibraryStore } from '../stores/useLibraryStore'
 import type { WatchlistItem } from '../types'
@@ -17,8 +17,6 @@ const MobileTVShows: React.FC = () => {
     const isInitialized = useLibraryStore((state) => state.isInitialized)
     const [addingEpisode, setAddingEpisode] = useState<string | null>(null)
     const [sweepId, setSweepId] = useState<string | null>(null)
-    const [nextEpisodes, setNextEpisodes] = useState<Record<string, { season_number: number; episode_number: number }>>({})
-    const [watchedCounts, setWatchedCounts] = useState<Record<string, number>>({})
 
     const watching = useMemo(() => {
         const filtered = committedQuery
@@ -59,9 +57,9 @@ const MobileTVShows: React.FC = () => {
                     item.status === 'watching' &&
                     item.total_episodes !== undefined &&
                     item.total_episodes > 0 &&
-                    (watchedCounts[item.id] ?? (item.current_episode ?? 0)) >= item.total_episodes
+                    (item.watched_episodes_count ?? 0) >= item.total_episodes
                 )) &&
-                (watchedCounts[item.id] ?? item.current_episode ?? 0) > 0 &&
+                (item.watched_episodes_count ?? 0) > 0 &&
                 item.total_episodes !== undefined
             )
 
@@ -121,35 +119,11 @@ const MobileTVShows: React.FC = () => {
             clearInterval(interval)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
         }
-    }, [isInitialized, watchedCounts])
-
-    useEffect(() => {
-        const fetchNextEpisodes = async () => {
-            if (watching.length === 0) return
-            const results: Record<string, { season_number: number; episode_number: number }> = {}
-            const counts: Record<string, number> = {}
-            for (const show of watching) {
-                if (!show.id || !show.tmdb_id) continue
-                try {
-                    const nextEp = await getNextEpisodeToWatch(show.id)
-                    if (nextEp) {
-                        results[show.id] = { season_number: nextEp.season_number, episode_number: nextEp.episode_number }
-                    }
-                    counts[show.id] = await getWatchedEpisodeCount(show.id)
-                } catch (err) {
-                    console.error(`Failed to fetch next episode for ${show.title}:`, err)
-                }
-            }
-            setNextEpisodes(results)
-            setWatchedCounts(counts)
-        }
-
-        fetchNextEpisodes()
-    }, [watching])
+    }, [isInitialized])
 
     const getEpisodesLeft = (show: WatchlistItem): number | undefined => {
         if (show.total_episodes === undefined) return undefined
-        const watched = watchedCounts[show.id] ?? show.current_episode ?? 0
+        const watched = show.watched_episodes_count ?? 0
         return Math.max(0, show.total_episodes - watched)
     }
 
@@ -157,13 +131,10 @@ const MobileTVShows: React.FC = () => {
         if (show.status === 'planning') {
             return 'S1 E1'
         }
-        const cached = nextEpisodes[show.id]
-        if (cached) {
-            return `S${cached.season_number} E${cached.episode_number}`
+        if (show.next_season_number && show.next_episode_number) {
+            return `S${show.next_season_number} E${show.next_episode_number}`
         }
-        const currentSeason = show.current_season || 1
-        const currentEpisode = show.current_episode || 0
-        return `S${currentSeason} E${currentEpisode + 1}`
+        return null
     }
 
     const handleAddEpisode = async (show: WatchlistItem) => {
@@ -171,17 +142,16 @@ const MobileTVShows: React.FC = () => {
 
         setAddingEpisode(show.id)
         try {
-            // Use the cached next episode if available, otherwise fetch from TMDB
-            const cached = nextEpisodes[show.id]
+            // Use the cached next episode from store if available, otherwise fetch from TMDB
             let nextEp: { season_number: number; episode_number: number; tmdb_episode_id?: number; title?: string; still_path?: string; overview?: string; air_date?: string; runtime?: number } | null = null
-            if (cached) {
+            if (show.next_season_number && show.next_episode_number) {
                 const { getTVSeasonDetails } = await import('../services/tmdbService')
-                const seasonData = await getTVSeasonDetails(show.tmdb_id, cached.season_number)
-                const ep = seasonData.episodes?.find((e: { episode_number: number; id?: number; name?: string; still_path?: string; overview?: string; air_date?: string; runtime?: number }) => e.episode_number === cached.episode_number)
+                const seasonData = await getTVSeasonDetails(show.tmdb_id, show.next_season_number)
+                const ep = seasonData.episodes?.find((e: { episode_number: number; id?: number; name?: string; still_path?: string; overview?: string; air_date?: string; runtime?: number }) => e.episode_number === show.next_episode_number)
                 if (ep) {
                     nextEp = {
-                        season_number: cached.season_number,
-                        episode_number: cached.episode_number,
+                        season_number: show.next_season_number,
+                        episode_number: show.next_episode_number,
                         tmdb_episode_id: ep.id,
                         title: ep.name,
                         still_path: ep.still_path,
@@ -225,22 +195,6 @@ const MobileTVShows: React.FC = () => {
                     }
                     await useLibraryStore.getState().refreshItem(show.id)
 
-                    // Update nextEpisodes cache so getEpisodeInfo is correct
-                    const nextEp = await getNextEpisodeToWatch(show.id)
-                    if (nextEp) {
-                        setNextEpisodes(prev => ({
-                            ...prev,
-                            [show.id]: { season_number: nextEp.season_number, episode_number: nextEp.episode_number }
-                        }))
-                    }
-
-                    // Update watched count so episodesLeft is correct
-                    const newCount = await getWatchedEpisodeCount(show.id)
-                    setWatchedCounts(prev => ({
-                        ...prev,
-                        [show.id]: newCount
-                    }))
-
                     // Clear sweep — all data is now correct
                     setSweepId(null)
                 }, 10)
@@ -257,6 +211,7 @@ const MobileTVShows: React.FC = () => {
         const isCompleted = show.status === 'completed' || show.status === 'caught_up'
         const hasSweep = sweepId === show.id
         const episodesLeft = getEpisodesLeft(show)
+        const episodeInfo = getEpisodeInfo(show)
 
         return (
             <div
@@ -279,8 +234,8 @@ const MobileTVShows: React.FC = () => {
                     {episodesLeft !== undefined && episodesLeft > 0 && (
                         <span className="mobile-tvshow-card-episode">+{episodesLeft}</span>
                     )}
-                    {!isCompleted && (
-                        <span className="mobile-tvshow-card-episode-info">{getEpisodeInfo(show)}</span>
+                    {!isCompleted && episodeInfo && (
+                        <span className="mobile-tvshow-card-episode-info">{episodeInfo}</span>
                     )}
                 </div>
                 {!isCompleted && (
