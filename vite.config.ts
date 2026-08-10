@@ -18,7 +18,7 @@ export default defineConfig({
         orientation: 'portrait-primary',
         scope: '/',
         start_url: '/', 
-                icons: [
+        icons: [
           {
             src: '/TRACK1ST-FULLNAMELGO.png?v=2',
             sizes: '512x512',
