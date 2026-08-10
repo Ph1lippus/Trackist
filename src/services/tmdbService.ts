@@ -1,9 +1,7 @@
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY
-const FANART_API_KEY = import.meta.env.VITE_FANART_API_KEY
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL?.trim()
 const BASE_URL = 'https://api.themoviedb.org/3'
 const IMAGE_BASE_ORIGINAL = 'https://image.tmdb.org/t/p/original'
-const FANART_BASE = 'https://webservice.fanart.tv/v3'
 
 import type { TMDBResult } from '../types'
 import { getCachedOrFetch } from './cacheService'

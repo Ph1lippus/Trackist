@@ -954,6 +954,13 @@ const TVShowDetail: React.FC = () => {
                                                 className="detail-page__cast-item"
                                                 onClick={() => navigate(`/person/${c.id}`)}
                                             >
+                                                {c.profile_path && (
+                                                    <img 
+                                                        className="detail-page__cast-photo" 
+                                                        src={imageUrl(c.profile_path)} 
+                                                        alt={c.name} 
+                                                    />
+                                                )}
                                                 <div className="detail-page__cast-info">
                                                     <span className="detail-page__cast-name">{c.name}</span>
                                                     {c.character && (

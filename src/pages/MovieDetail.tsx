@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getMovieDetails, imageUrlOriginal, getFanartImages, getBestBackdropPath } from '../services/tmdbService'
+import { getMovieDetails, imageUrl, imageUrlOriginal, getFanartImages, getBestBackdropPath } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { supabase } from '../services/supabaseClient'
 import { invalidateUserCache } from '../services/cacheService'
@@ -553,20 +553,27 @@ const MovieDetail: React.FC = () => {
                         <div className="detail-page__cast-section">
                             {showCast && (
                                 <div className="detail-page__cast-list">
-                                    {cast.map((c: { id: number; name: string; profile_path?: string; character?: string }) => (
-                                        <div 
-                                            key={c.id} 
-                                            className="detail-page__cast-item"
-                                            onClick={() => navigate(`/person/${c.id}`)}
-                                        >
-                                            <div className="detail-page__cast-info">
-                                                <span className="detail-page__cast-name">{c.name}</span>
-                                                {c.character && (
-                                                    <span className="detail-page__cast-character">{c.character}</span>
-                                                )}
-                                            </div>
+                                {cast.map((c: { id: number; name: string; profile_path?: string; character?: string }) => (
+                                    <div 
+                                        key={c.id} 
+                                        className="detail-page__cast-item"
+                                        onClick={() => navigate(`/person/${c.id}`)}
+                                    >
+                                        {c.profile_path && (
+                                            <img 
+                                                className="detail-page__cast-photo" 
+                                                src={imageUrl(c.profile_path)} 
+                                                alt={c.name} 
+                                            />
+                                        )}
+                                        <div className="detail-page__cast-info">
+                                            <span className="detail-page__cast-name">{c.name}</span>
+                                            {c.character && (
+                                                <span className="detail-page__cast-character">{c.character}</span>
+                                            )}
                                         </div>
-                                    ))}
+                                    </div>
+                                ))}
                                 </div>
                             )}
                         </div>
