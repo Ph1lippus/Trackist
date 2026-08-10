@@ -18,27 +18,19 @@ export default defineConfig({
         orientation: 'portrait-primary',
         scope: '/',
         start_url: '/', 
-        icons: [
+                icons: [
           {
-            // SPLASH SCREEN LOGO: Add '?v=1' to force Google's servers to fetch the new image file
-            src: '/TRACK1ST-FULLNAMELGO.png?v=1',
+            src: '/TRACK1ST-FULLNAMELGO.png?v=2',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            // PHONE ICON
-            src: '/android-chrome-512x512.png?v=1', 
+            // By putting it here, Android is forced to use the full name layout on the splash screen
+            src: '/TRACK1ST-FULLNAMELGO.png?v=2', 
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable' 
-          },
-          {
-            // SMALL UI FALLBACK
-            src: '/android-chrome-192x192.png?v=1', 
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'any' 
           }
         ]
 
