@@ -562,8 +562,8 @@ const MovieDetail: React.FC = () => {
                                         {c.profile_path && (
                                             <img 
                                                 className="detail-page__cast-photo" 
-                                                src={imageUrl(c.profile_path)} 
-                                                alt={c.name} 
+                                                src={imageUrl(c.profile_path) ?? ''} 
+                                                alt={c.name ?? ''} 
                                             />
                                         )}
                                         <div className="detail-page__cast-info">
