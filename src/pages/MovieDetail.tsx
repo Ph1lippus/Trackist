@@ -127,6 +127,9 @@ const MovieDetail: React.FC = () => {
     }
 
     const getLogoUrl = (): string | null => {
+        if (fanartImages?.hdmovielogo?.[0]?.url) {
+            return fanartImages.hdmovielogo[0].url
+        }
         if (details?.images?.logos) {
             const logos = details.images.logos as Array<{ file_path: string; iso_639_1?: string | null }>
             const englishLogo = logos.find(
@@ -145,10 +148,6 @@ const MovieDetail: React.FC = () => {
                 return imageUrlOriginal(logos[0].file_path)
             }
         }
-        if (fanartImages?.hdmovielogo?.[0]?.url) {
-            return fanartImages.hdmovielogo[0].url
-        }
-    
         return null
     } 
 

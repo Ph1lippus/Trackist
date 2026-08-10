@@ -79,6 +79,9 @@ const EpisodeDetail: React.FC = () => {
     }, [id, season, episode])
 
     const getLogoUrl = (): string | null => {
+        if (fanartImages?.hdtvlogo?.[0]?.url) {
+            return fanartImages.hdtvlogo[0].url
+        }
         if (tvDetails?.images?.logos) {
             const englishLogo = tvDetails.images.logos.find(
                 (logo: { iso_639_1?: string | null; file_path: string }) => logo.iso_639_1 === 'en'
@@ -95,9 +98,6 @@ const EpisodeDetail: React.FC = () => {
             if (tvDetails.images.logos.length > 0) {
                 return imageUrlOriginal(tvDetails.images.logos[0].file_path)
             }
-        }
-        if (fanartImages?.hdtvlogo?.[0]?.url) {
-            return fanartImages.hdtvlogo[0].url
         }
         return null
     }

@@ -1,5 +1,6 @@
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY
 const FANART_API_KEY = import.meta.env.VITE_FANART_API_KEY
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL?.trim()
 const BASE_URL = 'https://api.themoviedb.org/3'
 const IMAGE_BASE_ORIGINAL = 'https://image.tmdb.org/t/p/original'
 const FANART_BASE = 'https://webservice.fanart.tv/v3'
@@ -187,13 +188,13 @@ export const imageUrlOriginal = (path: string | null) => {
 }
 
 export const getFanartImages = async (tmdbId: number, type: 'movies' | 'tv') => {
-    if (!FANART_API_KEY) return null
+    if (!SUPABASE_URL) return null
     return getCachedOrFetch(
         'fanart',
         `${type}-${tmdbId}`,
         async () => {
             try {
-                const res = await fetch(`${FANART_BASE}/${type}/${tmdbId}?api_key=${FANART_API_KEY}`)
+                const res = await fetch(`${SUPABASE_URL}/functions/v1/fanart-proxy?movieId=${tmdbId}&type=${type}`)
                 if (!res.ok) return null
                 return res.json()
             } catch {
