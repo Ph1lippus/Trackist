@@ -18,16 +18,19 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .discover-page{
+        padding: 0.5rem 1rem 7rem !important;
+    }
     .watchlist-section__title{
-        font-size: 0.9rem;
-        font-weight: 400;
-        color: var(--color-platinum);
-        margin: 0;
-        width: fit-content;
+        font-size: 0.9rem!important;
+        font-weight: 400!important;
+        color: var(--color-platinum)!important;
+        margin: 0!important;
+        width: fit-content!important;
         padding: 0.6rem 1rem;
-        border: 1px solid rgba(255, 255, 255, 0.06);
-        border-radius: 25px;
-        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.06)!important;
+        border-radius: 25px!important;
+        background: rgba(255, 255, 255, 0.02)!important;
     }
     .detail-page__episode-card.watched {
         border: none;
@@ -741,8 +744,7 @@ body::after {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(5, 5, 5, 0.96);
-    backdrop-filter: blur(8px);
+    background: #000;
     animation: loaderFadeIn 0.2s ease-out forwards;
     pointer-events: none;
 }
@@ -9198,7 +9200,7 @@ i.fa-solid.fa-trash:hover {
 
 /* ===== MOBILE TV SHOWS PAGE ===== */
 .mobile-tvshows-page {
-    padding: 1rem 0rem 4rem;
+    padding: 0.5rem 0rem 4rem;
 }
 
 .mobile-tvshows-shell {
@@ -9206,6 +9208,56 @@ i.fa-solid.fa-trash:hover {
     margin: 0 auto;
     display: flex;
     flex-direction: column;
+}
+
+.mobile-page-search {
+    margin: 0 auto 1rem auto;
+    max-width: 500px;
+    width: 100%;
+}
+
+.mobile-page-search-input {
+    width: 100%;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: transparent;
+    border-radius: 25px;
+    padding: 0.65rem 2.5rem 0.65rem 1rem;
+    color: var(--color-platinum);
+    font-size: 1rem;
+    outline: none;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.mobile-page-search-input::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.mobile-page-search-clear {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    padding: 0.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease;
+}
+
+.mobile-page-search-clear:hover {
+    color: var(--color-primary);
+}
+
+.mobile-page-search-clear i {
+    font-size: 0.9rem;
+}
+
+.mobile-page-search {
+    position: relative;
 }
 
 .mobile-page-tabs {
