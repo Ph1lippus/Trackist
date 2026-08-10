@@ -35,6 +35,16 @@ const MovieDetail: React.FC = () => {
     const [markWatchedModal, setMarkWatchedModal] = useState<{ isOpen: boolean; markAsWatched: boolean } | null>(null)
     const [modalLoading, setModalLoading] = useState(false)
 
+    const openExternal = (url: string) => {
+        const a = document.createElement('a')
+        a.href = url
+        a.target = '_blank'
+        a.rel = 'noopener noreferrer'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+    }
+
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [id])
@@ -387,14 +397,14 @@ const MovieDetail: React.FC = () => {
                                     onClick={() => {
                                         const imdbId = details.external_ids?.imdb_id
                                         if (imdbId) {
-                                            window.open(`https://letterboxd.com/imdb/${imdbId}/`, '_blank')
+                                            openExternal(`https://letterboxd.com/imdb/${imdbId}/`)
                                         } else {
                                             const title = details.title || ''
                                             const slug = title
                                                 .toLowerCase()
                                                 .replace(/[^a-z0-9]+/g, '-')
                                                 .replace(/^-+|-+$/g, '')
-                                            window.open(`https://letterboxd.com/film/${slug}/`, '_blank')
+                                            openExternal(`https://letterboxd.com/film/${slug}/`)
                                         }
                                     }}
                                     title="Open in Letterbox"
@@ -501,14 +511,14 @@ const MovieDetail: React.FC = () => {
                                     onClick={() => {
                                         const imdbId = details.external_ids?.imdb_id
                                         if (imdbId) {
-                                            window.open(`https://letterboxd.com/imdb/${imdbId}/`, '_blank')
+                                            openExternal(`https://letterboxd.com/imdb/${imdbId}/`)
                                         } else {
                                             const title = details.title || ''
                                             const slug = title
                                                 .toLowerCase()
                                                 .replace(/[^a-z0-9]+/g, '-')
                                                 .replace(/^-+|-+$/g, '')
-                                            window.open(`https://letterboxd.com/film/${slug}/`, '_blank')
+                                            openExternal(`https://letterboxd.com/film/${slug}/`)
                                         }
                                     }}
                                     title="Open in Letterbox"

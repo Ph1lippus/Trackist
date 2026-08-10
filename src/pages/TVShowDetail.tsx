@@ -12,6 +12,7 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { createEpisodeDeepLink, openInStremio, createTVDeepLink  } from '../utils/stremioUtils'
 import { useShowStremioButton } from '../hooks/useShowStremioButton'
+import { useMobile } from '../contexts/useMobile'
 import stremioIcon from '../assets/stremio-logo-icon-only-fullcolor.svg'
 
 interface LocalEpisode {
@@ -33,6 +34,7 @@ const TVShowDetail: React.FC = () => {
     usePageTitle('Trackist - TV Show Detail')
     const navigate = useNavigate()
     const { showStremioButton, loading: stremioLoading } = useShowStremioButton()
+    const { isMobile } = useMobile()
     const [details, setDetails] = useState<TMDBResult | null>(null)
     const [loading, setLoading] = useState(true)
     const [fanartImages, setFanartImages] = useState<{ hdtvlogo?: Array<{ url: string }> } | null>(null)
@@ -1044,7 +1046,7 @@ const TVShowDetail: React.FC = () => {
                                                     <div className="detail-page__episode-meta">
                                                         {ep.air_date && <span>{ep.air_date}</span>}
                                                         {ep.runtime && <span>{ep.runtime} min</span>}
-                                                        {isEpisodeReleased(ep) && ep.vote_average && ep.vote_average > 0 && <span>★ {ep.vote_average.toFixed(1)}</span>}
+                                                        {!isMobile && isEpisodeReleased(ep) && ep.vote_average && ep.vote_average > 0 && <span>★ {ep.vote_average.toFixed(1)}</span>}
                                                     </div>
                                             </div>
                                         </div>
