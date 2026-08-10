@@ -2463,6 +2463,9 @@ body::after {
     height: 100%;
     object-fit: cover;
 }
+.detail-page__episode-card:not(.watched) .detail-page__episode-still img {
+    filter: blur(5px);
+}
 .detail-page__episode-info {
     flex: 1;
     display: flex;
