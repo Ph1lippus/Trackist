@@ -18,26 +18,32 @@ export default defineConfig({
         orientation: 'portrait-primary',
         scope: '/',
         start_url: '/', 
-        icons: [
+                icons: [
           {
-            src: '/TRACK1ST-FULLNAMELGO.png',
+            // PHONE ICON: Standard fallback icon for smaller displays
+            src: '/android-chrome-192x192.png', 
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any' 
           },
           {
+            // SPLASH SCREEN LOGO: Android pulls this high-res 'any' icon for the opening screen
             src: '/TRACK1ST-FULLNAMELGO.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: '/maskable-icon-512x512.png', 
+            // PHONE ICON: Android strictly uses 'maskable' for the phone home screen app grid
+            // This ensures your compact symbol is what users click on to open the app
+            src: '/android-chrome-512x512.png', 
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable'
           }
         ]
+
+
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
