@@ -80,6 +80,13 @@ const Finished: React.FC = () => {
         return dateB.getTime() - dateA.getTime()
     }), [filteredItems])
 
+    const droppedItems = useMemo(() => filteredItems.filter(item => item.status === 'dropped').sort((a, b) => {
+        // Sort by updated_at (most recent first)
+        const dateA = new Date(a.updated_at || 0)
+        const dateB = new Date(b.updated_at || 0)
+        return dateB.getTime() - dateA.getTime()
+    }), [filteredItems])
+
     const buildTmdbItem = (item: WatchlistItem): TMDBResult => ({
         id: item.tmdb_id as number,
         title: item.title,
@@ -237,7 +244,46 @@ const Finished: React.FC = () => {
                     </div>
                 )}
 
-                {finished.length === 0 && pausedItems.length === 0 && (
+                {/* Dropped */}
+                {droppedItems.length > 0 && (
+                    <div className="watchlist-section">
+                        <div className="watchlist-section__header">
+                            <h3 className="watchlist-section__title">Dropped</h3>
+                        </div>
+                        <VirtuosoGrid
+                            increaseViewportBy={{
+                                top: isMobile ? 600 : 1200,
+                                bottom: isMobile ? 2000 : 3000,
+                            }}
+                            computeItemKey={(index) => droppedItems[index]?.id ?? index}
+                            style={{ height: '100%', width: '100%' }}
+                            useWindowScroll={true}
+                            data={droppedItems}
+                            overscan={isMobile ? 800 : 1500}
+                            listClassName="discover-grid"
+                            itemContent={(index) => {
+                                const item = droppedItems[index]
+                                const isSelected = selectedIds.has(item.id)
+                                
+                                return (
+                                    <div style={{ position: 'relative' }}>
+                                        <MediaCard
+                                            item={buildTmdbItem(item)}
+                                            selected={selectionMode && isSelected}
+                                            selectable={selectionMode}
+                                            onSelect={() => toggleSelection(item.id)}
+                                            isInWatchlist={true}
+                                            onAdd={selectionMode ? undefined : () => {}}
+                                            onMarkUnwatched={selectionMode ? undefined : () => setUnwatchModal({ isOpen: true, item, isTV: item.media_type === 'tv' || item.media_type === 'anime' })}
+                                        />
+                                    </div>
+                                )
+                            }}
+                        />
+                    </div>
+                )}
+
+                {finished.length === 0 && pausedItems.length === 0 && droppedItems.length === 0 && (
                     <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>
                         No finished movies, TV shows, or paused items yet. Complete some from your watchlist!
                     </p>
