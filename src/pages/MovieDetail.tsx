@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getMovieDetails, imageUrl, imageUrlOriginal, getFanartImages, getBestBackdropPath } from '../services/tmdbService'
+import { getMovieDetails, imageUrl, imageUrlOriginal, getBestBackdropPath } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { supabase } from '../services/supabaseClient'
 import { invalidateUserCache } from '../services/cacheService'
@@ -21,7 +21,6 @@ const MovieDetail: React.FC = () => {
     const { showStremioButton, loading: stremioLoading } = useShowStremioButton()
     const { showLetterboxButton, loading: letterboxLoading } = useShowLetterboxButton()
     const [details, setDetails] = useState<TMDBResult | null>(null)
-    const [fanartImages, setFanartImages] = useState<{ hdmovielogo?: Array<{ url: string }> } | null>(null)
     const [isInWatchlist, setIsInWatchlist] = useState(false)
     const [watchlistId, setWatchlistId] = useState<string | null>(null)
     const [watchlistStatus, setWatchlistStatus] = useState<string | null>(null)
@@ -54,12 +53,8 @@ const MovieDetail: React.FC = () => {
             if (!id) return
             setLoading(true)
             try {
-                const [data, fanart] = await Promise.all([
-                    getMovieDetails(Number(id)),
-                    getFanartImages(Number(id), 'movies')
-                ])
+                const data = await getMovieDetails(Number(id))
                 setDetails(data)
-                setFanartImages(fanart)
 
                 // Find trailer from videos
                 if (data.videos?.results) {
@@ -127,9 +122,6 @@ const MovieDetail: React.FC = () => {
     }
 
     const getLogoUrl = (): string | null => {
-        if (fanartImages?.hdmovielogo?.[0]?.url) {
-            return fanartImages.hdmovielogo[0].url
-        }
         if (details?.images?.logos) {
             const logos = details.images.logos as Array<{ file_path: string; iso_639_1?: string | null }>
             const englishLogo = logos.find(

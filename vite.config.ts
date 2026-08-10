@@ -57,21 +57,6 @@ export default defineConfig({
             }
           },
           {
-            urlPattern: /^https:\/\/webservice\.fanart\.tv\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'fanart-api-cache',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 * 7 
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              },
-              networkTimeoutSeconds: 10
-            }
-          },
-          {
             urlPattern: /^https:\/\/image\.tmdb\.org\/.*/i,
             handler: 'CacheFirst',
             options: {

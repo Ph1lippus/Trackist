@@ -46,7 +46,7 @@ Track your movies, TV shows, and anime — all in one place. A modern, privacy-f
 | **Frontend** | React 19, TypeScript, Vite, React Router v7, Zustand (state management) |
 | **UI** | Bootstrap 5, Font Awesome, custom CSS (9,500+ lines) |
 | **Backend & Database** | Supabase (PostgreSQL, Auth, Realtime) |
-| **APIs** | [TMDB](https://www.themoviedb.org/documentation/api) (movies/TV/anime data), [FanArt](https://fanart.tv/) (backdrops/artwork) |
+| **APIs** | [TMDB](https://www.themoviedb.org/documentation/api) (movies/TV/anime data) |
 | **Performance** | React Virtuoso (virtualized lists), SWR-style caching with 6-hour TTL |
 | **Deployment** | Vercel (with Speed Insights & Analytics) |
 | **PWA** | vite-plugin-pwa (offline support, install prompt) |
@@ -58,7 +58,6 @@ Track your movies, TV shows, and anime — all in one place. A modern, privacy-f
 - Node.js 20+
 - npm or yarn
 - A [TMDB API key](https://www.themoviedb.org/settings/api) (free)
-- A [FanArt API key](https://fanart.tv/api/register) (free, optional — for backdrop images)
 - A [Supabase project](https://supabase.com/) with the database schema set up
 
 ### Environment Variables
@@ -69,7 +68,6 @@ Create a `.env` file in the project root:
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_TMDB_API_KEY=your_tmdb_api_key
-VITE_FANART_API_KEY=your_fanart_api_key
 ```
 
 ### Setup

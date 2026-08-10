@@ -35,12 +35,6 @@ const credits = [
         link: 'https://vercel.com/'
     },
     {
-        title: 'Fanart',
-        text: 'HD logos and artwork by Fanart.tv',
-        logo: 'https://fanart.tv/favicon.ico',
-        link: 'https://fanart.tv/'
-    },
-    {
         title: 'Font Awesome',
         text: 'Icons by Font Awesome',
         logo: 'https://fontawesome.com/favicon.ico',

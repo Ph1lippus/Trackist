@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { getTVDetails, getTVSeasonDetails, imageUrlOriginal, getFanartImages } from '../services/tmdbService'
+import { getTVDetails, getTVSeasonDetails, imageUrlOriginal } from '../services/tmdbService'
 import { markEpisodeWatched, unmarkEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { supabase } from '../services/supabaseClient'
@@ -25,7 +25,6 @@ const EpisodeDetail: React.FC = () => {
     const [tvDetails, setTvDetails] = useState<TMDBResult | null>(null)
     const [episodeData, setEpisodeData] = useState<EpisodeData | null>(null)
     const [loading, setLoading] = useState(true)
-    const [fanartImages, setFanartImages] = useState<{ hdtvlogo?: Array<{ url: string }> } | null>(null)
     const [isInWatchlist, setIsInWatchlist] = useState(false)
     const [watchlistId, setWatchlistId] = useState<string | null>(null)
     const [watched, setWatched] = useState(false)
@@ -40,13 +39,11 @@ const EpisodeDetail: React.FC = () => {
             if (!id || !season || !episode) return
             setLoading(true)
             try {
-                const [tvData, seasonData, fanart] = await Promise.all([
+                const [tvData, seasonData] = await Promise.all([
                     getTVDetails(Number(id)),
-                    getTVSeasonDetails(Number(id), Number(season)),
-                    getFanartImages(Number(id), 'tv')
+                    getTVSeasonDetails(Number(id), Number(season))
                 ])
                 setTvDetails(tvData)
-                setFanartImages(fanart)
 
                 const ep = seasonData.episodes?.find((e: EpisodeData) => e.episode_number === Number(episode))
                 setEpisodeData(ep)
@@ -79,9 +76,6 @@ const EpisodeDetail: React.FC = () => {
     }, [id, season, episode])
 
     const getLogoUrl = (): string | null => {
-        if (fanartImages?.hdtvlogo?.[0]?.url) {
-            return fanartImages.hdtvlogo[0].url
-        }
         if (tvDetails?.images?.logos) {
             const englishLogo = tvDetails.images.logos.find(
                 (logo: { iso_639_1?: string | null; file_path: string }) => logo.iso_639_1 === 'en'

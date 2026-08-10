@@ -1,5 +1,4 @@
 const API_KEY = import.meta.env.VITE_TMDB_API_KEY
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL?.trim()
 const BASE_URL = 'https://api.themoviedb.org/3'
 const IMAGE_BASE_ORIGINAL = 'https://image.tmdb.org/t/p/original'
 
@@ -183,24 +182,6 @@ export const imageUrl = (path: string | null, size: string = 'w500') => {
 export const imageUrlOriginal = (path: string | null) => {
     if (!path) return null
     return `${IMAGE_BASE_ORIGINAL}${path}`
-}
-
-export const getFanartImages = async (tmdbId: number, type: 'movies' | 'tv') => {
-    if (!SUPABASE_URL) return null
-    return getCachedOrFetch(
-        'fanart',
-        `${type}-${tmdbId}`,
-        async () => {
-            try {
-                const res = await fetch(`${SUPABASE_URL}/functions/v1/fanart-proxy?movieId=${tmdbId}&type=${type}`)
-                if (!res.ok) return null
-                return res.json()
-            } catch {
-                return null
-            }
-        },
-        { ttl: 24 * 60 * 60 * 1000 } // 24 hours
-    )
 }
 
 export const getPersonMovies = async (id: number): Promise<{ results: TMDBResult[] }> => {

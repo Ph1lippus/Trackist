@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getFanartImages, getBestBackdropPath } from '../services/tmdbService'
+import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getBestBackdropPath } from '../services/tmdbService'
 import { markEpisodeWatched, unmarkEpisodeWatched, getWatchedEpisodes, checkAndUpdateCompleted, markShowAsFullyWatched } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { supabase } from '../services/supabaseClient'
@@ -37,7 +37,6 @@ const TVShowDetail: React.FC = () => {
     const { isMobile } = useMobile()
     const [details, setDetails] = useState<TMDBResult | null>(null)
     const [loading, setLoading] = useState(true)
-    const [fanartImages, setFanartImages] = useState<{ hdtvlogo?: Array<{ url: string }> } | null>(null)
     const [isInWatchlist, setIsInWatchlist] = useState(false)
     const [watchlistId, setWatchlistId] = useState<string | null>(null)
     const [watchlistStatus, setWatchlistStatus] = useState<string | null>(null)
@@ -146,12 +145,8 @@ const TVShowDetail: React.FC = () => {
             if (!id) return
             setLoading(true)
             try {
-                const [data, fanart] = await Promise.all([
-                    getTVDetails(Number(id)),
-                    getFanartImages(Number(id), 'tv')
-                ])
+                const data = await getTVDetails(Number(id))
                 setDetails(data)
-                setFanartImages(fanart)
                 
                 if (data.seasons?.[0]) {
                     // Find the first valid season (not season 0, has episodes)
@@ -364,9 +359,6 @@ const TVShowDetail: React.FC = () => {
     }
 
     const getLogoUrl = (): string | null => {
-        if (fanartImages?.hdtvlogo?.[0]?.url) {
-            return fanartImages.hdtvlogo[0].url
-        }
         if (details?.images?.logos) {
             const logos = details.images.logos as Array<{ file_path: string; iso_639_1?: string | null }>
             const englishLogo = logos.find(
