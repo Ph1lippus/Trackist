@@ -77,15 +77,6 @@ const TVShows: React.FC = () => {
             
             if (!isInitialized || currentTvShows.length === 0) return
             
-            // DEBUG: Log all shows and their updated_at timestamps
-            console.log('🔍 DEBUG - Checking shows order:', currentTvShows.map(s => ({
-                id: s.id,
-                title: s.title,
-                updated_at: s.updated_at,
-                added_at: s.added_at,
-                status: s.status
-            })).sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime()))
-
             const completedShows = currentTvShows.filter(
                 item => (item.status === 'completed' || item.status === 'caught_up' || (
                     item.status === 'watching' &&

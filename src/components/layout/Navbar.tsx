@@ -98,8 +98,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         supabase.auth.getSession().then(({ data: { session } }) => {
             setUser(session?.user || null);
             if (session?.user) {
-                supabase.from('profiles').select('role').eq('id', session.user.id).single().then(({ data, error }) => {
-                    console.log('[Navbar] profile role check:', { data, error, userId: session.user.id })
+                supabase.from('profiles').select('role').eq('id', session.user.id).single().then(({ data }) => {
                     setIsAdmin(data?.role === 'admin')
                 })
             }
@@ -109,8 +108,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user || null);
             if (session?.user) {
-                supabase.from('profiles').select('role').eq('id', session.user.id).single().then(({ data, error }) => {
-                    console.log('[Navbar] profile role check (auth change):', { data, error, userId: session.user.id })
+                supabase.from('profiles').select('role').eq('id', session.user.id).single().then(({ data }) => {
                     setIsAdmin(data?.role === 'admin')
                 })
             } else {

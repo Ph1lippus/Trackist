@@ -132,7 +132,6 @@ const AppContent: React.FC = () => {
         const registerServiceWorker = async () => {
             // Only register service worker and show updates in PWA mode
             if (!isPWA) {
-                console.log('Not running in PWA mode, skipping service worker registration')
                 return
             }
 
@@ -142,10 +141,8 @@ const AppContent: React.FC = () => {
                         setShowUpdateModal(true)
                     },
                     onOfflineReady() {
-                        console.log('App is ready for offline use')
                     },
-                    onRegistered(registration) {
-                        console.log('Service worker registered:', registration)
+                    onRegistered(_registration) {
                     },
                     onRegisterError(error: Error) {
                         console.error('Service worker registration error:', error)

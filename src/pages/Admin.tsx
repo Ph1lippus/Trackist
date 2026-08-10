@@ -263,11 +263,6 @@ const Admin: React.FC = () => {
                         .select('user_id')
                 )
 
-                console.log('Admin debug - profiles:', profilesData.length)
-                console.log('Admin debug - watchlist rows:', watchlistData?.length)
-                console.log('Admin debug - episode rows:', episodesData?.length)
-                console.log('Admin debug - list rows:', listsData?.length)
-
                 const watchlistByUser = new Map<string, { total: number; movies: number; tv: number; completed: number }>()
                 watchlistData?.forEach(item => {
                     const existing = watchlistByUser.get(item.user_id) || { total: 0, movies: 0, tv: 0, completed: 0 }
@@ -294,10 +289,6 @@ const Admin: React.FC = () => {
                     }
                 })
 
-                console.log('Admin debug - watchlistIdToUserId size:', watchlistIdToUserId.size)
-                console.log('Admin debug - episodesByUser map:', Object.fromEntries(episodesByUser))
-                console.log('Admin debug - orphaned episodes (no matching watchlist):', orphanedEpisodes)
-
                 const listsByUser = new Map<string, number>()
                 listsData?.forEach(list => {
                     listsByUser.set(list.user_id, (listsByUser.get(list.user_id) || 0) + 1)
@@ -322,8 +313,6 @@ const Admin: React.FC = () => {
                     if (a.role !== 'admin' && b.role === 'admin') return 1
                     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                 })
-
-                console.log('Admin debug - final user stats:', stats)
 
                 setUserStats(stats)
             } catch (err) {

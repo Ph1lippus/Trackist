@@ -72,15 +72,12 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         set({ isLoading: true, error: null })
 
         try {
-            console.log('Fetching library for user:', userId)
-            
             // Try to get from cache first
             const cachedData = await cacheService.get<WatchlistItem[]>('library', userId)
             
             let items: WatchlistItem[] = []
             
             if (cachedData) {
-                console.log('Using cached library data')
                 items = cachedData
                 // Revalidate in background with fresh data
                 ;(async () => {
@@ -98,7 +95,6 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                     }
                 })()
             } else {
-                console.log('Fetching fresh library data from database')
                 const { data, error } = await supabase
                     .from('watchlist')
                     .select(selectColumns)
@@ -121,8 +117,6 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                     await cacheService.set('library', userId, items, 5 * 60 * 1000)
                 }
             }
-
-            console.log('Fetched items:', items.length)
 
             // Categorize items by status and media type
             const tvShows: TVShowWithProgress[] = []

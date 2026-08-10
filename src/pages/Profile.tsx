@@ -77,12 +77,10 @@ const ProfilePage: React.FC = () => {
                     const { data } = await getProfileByUsername(username)
                     profileData = data as ProfileData | null
                     targetUserId = profileData?.id || null
-                    console.log('[Profile] getProfileByUsername result:', { username, profileData, targetUserId })
                 } else if (currentUser) {
                     const { data } = await getProfile(currentUser.id)
                     profileData = data as ProfileData | null
                     targetUserId = currentUser.id
-                    console.log('[Profile] getProfile result:', { userId: currentUser.id, profileData, targetUserId })
                 }
 
                 setProfile(profileData)
@@ -91,7 +89,6 @@ const ProfilePage: React.FC = () => {
                     if (currentUser && currentUser.id !== targetUserId) {
                         const following = await isFollowing(currentUser.id, targetUserId)
                         setIsFollowingUser(following)
-                        console.log('[Profile] isFollowing:', following)
                     }
 
                     // Load followers and following counts
@@ -101,10 +98,8 @@ const ProfilePage: React.FC = () => {
                     ])
                     setFollowersCount(followersCountData || 0)
                     setFollowingCount(followingCountData || 0)
-                    console.log('[Profile] counts:', { followers: followersCountData, following: followingCountData })
 
                     // Load watchlist
-                    console.log('[Profile] Loading watchlist for user:', targetUserId)
                     const { data: watchlistData, error: watchlistError } = await supabase
                         .from('watchlist')
                         .select('*')
@@ -114,7 +109,6 @@ const ProfilePage: React.FC = () => {
                     if (watchlistError) {
                         console.error('[Profile] Failed to load watchlist:', watchlistError)
                     } else {
-                        console.log('[Profile] Watchlist loaded:', watchlistData?.length || 0, 'items')
                     }
                     
                     const items = (watchlistData || []) as WatchlistItem[]
@@ -132,13 +126,11 @@ const ProfilePage: React.FC = () => {
                         listsQuery = listsQuery.eq('is_public', true)
                     }
 
-                    console.log('[Profile] Loading lists for user:', targetUserId, 'isOwn:', isOwn)
                     const { data: listsData, error: listsError } = await listsQuery
                     
                     if (listsError) {
                         console.error('[Profile] Failed to load lists:', listsError)
                     } else {
-                        console.log('[Profile] Lists loaded:', listsData?.length || 0, 'lists')
                     }
                     
                     const rawLists = (listsData || []) as UserList[]
@@ -154,7 +146,6 @@ const ProfilePage: React.FC = () => {
                         if (listItemsError) {
                             console.error('[Profile] Failed to load list_items:', listItemsError)
                         } else {
-                            console.log('[Profile] List items loaded:', listItems?.length || 0, 'items')
                         }
 
                         const counts: Record<string, { item_count: number; watched_count: number }> = {}
