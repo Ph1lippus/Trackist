@@ -18,6 +18,17 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .watchlist-section__title{
+        font-size: 0.9rem;
+        font-weight: 400;
+        color: var(--color-platinum);
+        margin: 0;
+        width: fit-content;
+        padding: 0.6rem 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 25px;
+        background: rgba(255, 255, 255, 0.02);
+    }
     .detail-page__episode-card.watched {
         border: none;
     }
@@ -3696,11 +3707,9 @@ body::after {
 }
 
 .page-loader__logo {
-    font-family: var(--font-title);
-    font-size: 2rem;
-    letter-spacing: 0.3em;
-    color: var(--color-primary);
-    text-shadow: 0 0 18px rgba(133, 138, 227, 0.25);
+    max-width: 80vw;
+    max-height: 40vh;
+    object-fit: contain;
     animation: loaderPulse 1.2s ease-in-out infinite alternate;
 }
 
@@ -5278,7 +5287,6 @@ i.fa-solid.fa-trash:hover {
     color: var(--color-platinum);
     margin: 0 0 1rem 0;
     padding-bottom: 0.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .watchlist-grid--watched {
