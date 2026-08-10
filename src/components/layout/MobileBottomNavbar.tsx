@@ -7,7 +7,7 @@ const MobileBottomNavbar: React.FC = () => {
 
     const navItems = [
         { to: '/MobileTVShows', icon: 'fa-tv'},
-        { to: '/movies', icon: 'fa-film'},
+        { to: '/Movies', icon: 'fa-film'},
         { to: '/Discover', icon: 'fa-compass'},
         { to: '/UpcomingNew', icon: 'fa-calendar'},
         { to: '/Profile', icon: 'fa-user'},

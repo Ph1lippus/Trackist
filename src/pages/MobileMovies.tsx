@@ -11,7 +11,7 @@ import ConfirmModal from '../components/modals/ConfirmModal'
 const MobileMovies: React.FC = () => {
     usePageTitle('Trackist - Movies')
     const navigate = useNavigate()
-    const { inputValue, setInputValue, commitQuery, clear, committedQuery } = useSearch()
+    const { committedQuery } = useSearch()
     const movies = useLibraryStore((state) => state.movies)
     const [updatingId, setUpdatingId] = useState<string | null>(null)
     const [confirmModal, setConfirmModal] = useState<{
@@ -21,7 +21,7 @@ const MobileMovies: React.FC = () => {
     } | null>(null)
 
     const handleSwitchToNormal = () => {
-        navigate('/movies')
+        navigate('/Movies')
     }
 
     const scrollToTop = () => {
@@ -140,25 +140,7 @@ const MobileMovies: React.FC = () => {
             >
                 <i className="fa-solid fa-desktop"></i>
             </button>
-            <div className="mobile-page-search">
-                <form onSubmit={(e) => { e.preventDefault(); commitQuery(); }}>
-                    <input
-                        type="text"
-                        className="mobile-page-search-input"
-                        placeholder="Search movies..."
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        autoComplete="off"
-                        spellCheck="false"
-                    />
-                    {inputValue && (
-                        <button type="button" className="mobile-page-search-clear" onClick={clear} aria-label="Clear search">
-                            <i className="fa-solid fa-xmark"></i>
-                        </button>
-                    )}
-                </form>
-            </div>
-            <div className="dashboard-shell mobile-tvshows-shell">
+<div className="dashboard-shell mobile-tvshows-shell">
                 {toWatch.length === 0 && watched.length === 0 ? (
                     <div className="mobile-tvshows-empty">
                         <i className="fa-solid fa-film"></i>

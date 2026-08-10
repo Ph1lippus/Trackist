@@ -13,7 +13,7 @@ import ConfirmModal from '../components/modals/ConfirmModal'
 const MobileTVShows: React.FC = () => {
     usePageTitle('Trackist - TV Shows')
     const navigate = useNavigate()
-    const { inputValue, setInputValue, commitQuery, clear, committedQuery } = useSearch()
+    const { committedQuery } = useSearch()
     const tvShows = useLibraryStore((state) => state.tvShows)
     const isInitialized = useLibraryStore((state) => state.isInitialized)
     const [addingEpisode, setAddingEpisode] = useState<string | null>(null)
@@ -25,7 +25,7 @@ const MobileTVShows: React.FC = () => {
     } | null>(null)
 
     const handleSwitchToNormal = () => {
-        navigate('/tvshows')
+        navigate('/Tvshows')
     }
 
     const scrollToTop = () => {
@@ -377,25 +377,7 @@ const MobileTVShows: React.FC = () => {
             >
                 <i className="fa-solid fa-desktop"></i>
             </button>
-            <div className="mobile-page-search">
-                <form onSubmit={(e) => { e.preventDefault(); commitQuery(); }}>
-                    <input
-                        type="text"
-                        className="mobile-page-search-input"
-                        placeholder="Search TV shows..."
-                        value={inputValue}
-                        onChange={(e) => setInputValue(e.target.value)}
-                        autoComplete="off"
-                        spellCheck="false"
-                    />
-                    {inputValue && (
-                        <button type="button" className="mobile-page-search-clear" onClick={clear} aria-label="Clear search">
-                            <i className="fa-solid fa-xmark"></i>
-                        </button>
-                    )}
-                </form>
-            </div>
-            <div className="dashboard-shell mobile-tvshows-shell">
+<div className="dashboard-shell mobile-tvshows-shell">
                 {watching.length === 0 && toWatch.length === 0 && paused.length === 0 ? (
                     <div className="mobile-tvshows-empty">
                         <i className="fa-solid fa-tv"></i>

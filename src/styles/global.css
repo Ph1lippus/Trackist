@@ -9210,56 +9210,6 @@ i.fa-solid.fa-trash:hover {
     flex-direction: column;
 }
 
-.mobile-page-search {
-    margin: 0 auto 1rem auto;
-    max-width: 500px;
-    width: 100%;
-}
-
-.mobile-page-search-input {
-    width: 100%;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    background-color: transparent;
-    border-radius: 25px;
-    padding: 0.65rem 2.5rem 0.65rem 1rem;
-    color: var(--color-platinum);
-    font-size: 1rem;
-    outline: none;
-    transition: border-color 0.2s ease, background-color 0.2s ease;
-}
-
-.mobile-page-search-input::placeholder {
-    color: rgba(255, 255, 255, 0.35);
-}
-
-.mobile-page-search-clear {
-    position: absolute;
-    right: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    background: transparent;
-    border: none;
-    color: rgba(255, 255, 255, 0.5);
-    cursor: pointer;
-    padding: 0.25rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.2s ease;
-}
-
-.mobile-page-search-clear:hover {
-    color: var(--color-primary);
-}
-
-.mobile-page-search-clear i {
-    font-size: 0.9rem;
-}
-
-.mobile-page-search {
-    position: relative;
-}
-
 .mobile-page-tabs {
     display: flex;
     gap: 0.25rem;
