@@ -20,22 +20,22 @@ export default defineConfig({
         start_url: '/', 
         icons: [
           {
-            // SPLASH LOGO ONLY: Explicitly set to 'any' so it controls the splash screen
-            src: '/TRACK1ST-FULLNAMELGO.png',
+            // SPLASH SCREEN LOGO: Add '?v=1' to force Google's servers to fetch the new image file
+            src: '/TRACK1ST-FULLNAMELGO.png?v=1',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            // HOME SCREEN ICON ONLY: Explicitly set to 'maskable' so it only stays on the app grid
-            src: '/android-chrome-512x512.png', 
+            // PHONE ICON
+            src: '/android-chrome-512x512.png?v=1', 
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'maskable' // Removing 'any' from here forces the browser NOT to use it for splash screens
+            purpose: 'maskable' 
           },
           {
-            // Small system menu fallback
-            src: '/android-chrome-192x192.png', 
+            // SMALL UI FALLBACK
+            src: '/android-chrome-192x192.png?v=1', 
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any' 
