@@ -44,6 +44,9 @@
     .detail-page__genres {
         display: none !important;
     }
+    .detail-page__cast-photo {
+        display: none;
+    }
     .detail-page__actions {
         display: none !important;
     }
