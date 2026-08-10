@@ -290,6 +290,10 @@ const Discover: React.FC = () => {
                     confirmColor="danger"
                 />
             )}
+
+            <button className="upcoming-new-scroll-top" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Scroll to top" title="Back to top">
+                <i className="fas fa-arrow-up"></i>
+            </button>
         </div>
     )
 }

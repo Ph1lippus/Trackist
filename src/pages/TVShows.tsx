@@ -37,6 +37,10 @@ const TVShows: React.FC = () => {
         navigate('/MobileTVShows')
     }
 
+    const scrollToTop = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
@@ -196,6 +200,16 @@ const TVShows: React.FC = () => {
         return dateA.getTime() - dateB.getTime()
     }), [filteredItems])
 
+    // Container C: Paused - shows with 'paused' status
+    const paused = useMemo(() => filteredItems.filter(
+        item => item.status === 'paused'
+    ).sort((a, b) => {
+        // Sort by updated_at (most recent first)
+        const dateA = new Date(a.updated_at || 0)
+        const dateB = new Date(b.updated_at || 0)
+        return dateB.getTime() - dateA.getTime()
+    }), [filteredItems])
+
     const buildTmdbItem = (item: WatchlistItem): TMDBResult => ({
         id: item.tmdb_id as number,
         title: item.title,
@@ -249,11 +263,11 @@ const TVShows: React.FC = () => {
             )}
             <div className="discover-container" style={{ width: '85%' }}>
                 {/* Container A (Top): Currently Watching */}
-                <div className="watchlist-section">
-                    <div className="watchlist-section__header">
-                        <h3 className="watchlist-section__title">Currently Watching</h3>
-                    </div>
-                    {currentlyWatching.length > 0 ? (
+                {currentlyWatching.length > 0 && (
+                    <div className="watchlist-section">
+                        <div className="watchlist-section__header">
+                            <h3 className="watchlist-section__title">Currently Watching</h3>
+                        </div>
                         <VirtuosoGrid
                             increaseViewportBy={{
                                 top: isMobile ? 600 : 1200,
@@ -288,19 +302,54 @@ const TVShows: React.FC = () => {
                                 )
                             }}
                         />
-                    ) : (
-                        <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
-                            No shows currently in progress
-                        </p>
-                    )}
-                </div>
+                    </div>
+                )}
+
+                {/* Container C: Paused */}
+                {paused.length > 0 && (
+                    <div className="watchlist-section">
+                        <div className="watchlist-section__header">
+                            <h3 className="watchlist-section__title">Paused</h3>
+                        </div>
+                        <VirtuosoGrid
+                            increaseViewportBy={{
+                                top: isMobile ? 600 : 1200,
+                                bottom: isMobile ? 2000 : 3000,
+                            }}
+                            computeItemKey={(index) => paused[index]?.id ?? index}
+                            style={{ height: '100%', width: '100%' }}
+                            useWindowScroll={true}
+                            data={paused}
+                            overscan={isMobile ? 800 : 1500}
+                            listClassName="discover-grid"
+                            itemContent={(index) => {
+                                const item = paused[index]
+                                const isSelected = selectedIds.has(item.id)
+                                
+                                return (
+                                    <div style={{ position: 'relative' }}>
+                                        <MediaCard
+                                            item={buildTmdbItem(item)}
+                                            selected={selectionMode && isSelected}
+                                            selectable={selectionMode}
+                                            onSelect={() => toggleSelection(item.id)}
+                                            isInWatchlist={true}
+                                            onAdd={selectionMode ? undefined : () => {}}
+                                            onMarkWatched={selectionMode ? undefined : () => setMarkAllModal(item)}
+                                        />
+                                    </div>
+                                )
+                            }}
+                        />
+                    </div>
+                )}
 
                 {/* Container B (Bottom): Watchlist (Not Started) */}
-                <div className="watchlist-section">
-                    <div className="watchlist-section__header">
-                        <h3 className="watchlist-section__title">Watchlist (Not Started)</h3>
-                    </div>
-                    {notStarted.length > 0 ? (
+                {notStarted.length > 0 && (
+                    <div className="watchlist-section">
+                        <div className="watchlist-section__header">
+                            <h3 className="watchlist-section__title">Watchlist (Not Started)</h3>
+                        </div>
                         <VirtuosoGrid
                             increaseViewportBy={{
                                 top: isMobile ? 600 : 1200,
@@ -331,19 +380,19 @@ const TVShows: React.FC = () => {
                                 )
                             }}
                         />
-                    ) : (
-                        <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
-                            No shows queued to start
-                        </p>
-                    )}
-                </div>
+                    </div>
+                )}
 
-                {filteredItems.length === 0 && (
+                {currentlyWatching.length === 0 && notStarted.length === 0 && paused.length === 0 && (
                     <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>
                         No TV shows or anime in your watchlist. Discover some!
                     </p>
                 )}
             </div>
+
+            <button className="upcoming-new-scroll-top" onClick={scrollToTop} aria-label="Scroll to top" title="Back to top">
+                <i className="fas fa-arrow-up"></i>
+            </button>
 
             {markAllModal && (
                 <ConfirmModal

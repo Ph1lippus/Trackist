@@ -24,6 +24,10 @@ const MobileMovies: React.FC = () => {
         navigate('/movies')
     }
 
+    const scrollToTop = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
@@ -165,6 +169,10 @@ const MobileMovies: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            <button className="upcoming-new-scroll-top" onClick={scrollToTop} aria-label="Scroll to top" title="Back to top">
+                <i className="fas fa-arrow-up"></i>
+            </button>
 
             <ConfirmModal
                 isOpen={Boolean(confirmModal?.isOpen && confirmModal.action === 'watch')}

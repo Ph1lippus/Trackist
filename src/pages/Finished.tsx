@@ -32,6 +32,10 @@ const Finished: React.FC = () => {
 
     const { isMobile } = useMobile()
 
+    const scrollToTop = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
@@ -56,16 +60,23 @@ const Finished: React.FC = () => {
         return finished.filter(item => item.title.toLowerCase().includes(committedQuery.toLowerCase()))
     }, [finished, committedQuery])
 
-    const finishedMovies = useMemo(() => filteredItems.filter(item => item.media_type === 'movie').sort((a, b) => {
+    const finishedMovies = useMemo(() => filteredItems.filter(item => item.media_type === 'movie' && item.status !== 'dropped').sort((a, b) => {
         // Sort by completed_at, falling back to updated_at (most recent first)
         const dateA = new Date(a.completed_at || a.updated_at || 0)
         const dateB = new Date(b.completed_at || b.updated_at || 0)
         return dateB.getTime() - dateA.getTime()
     }), [filteredItems])
-    const finishedTVShows = useMemo(() => filteredItems.filter(item => item.media_type === 'tv' || item.media_type === 'anime').sort((a, b) => {
+    const finishedTVShows = useMemo(() => filteredItems.filter(item => (item.media_type === 'tv' || item.media_type === 'anime') && item.status !== 'dropped').sort((a, b) => {
         // Sort by completed_at, falling back to updated_at (most recent first)
         const dateA = new Date(a.completed_at || a.updated_at || 0)
         const dateB = new Date(b.completed_at || b.updated_at || 0)
+        return dateB.getTime() - dateA.getTime()
+    }), [filteredItems])
+
+    const pausedItems = useMemo(() => filteredItems.filter(item => item.status === 'paused').sort((a, b) => {
+        // Sort by updated_at (most recent first)
+        const dateA = new Date(a.updated_at || 0)
+        const dateB = new Date(b.updated_at || 0)
         return dateB.getTime() - dateA.getTime()
     }), [filteredItems])
 
@@ -110,11 +121,11 @@ const Finished: React.FC = () => {
         <div className="discover-page">
             <div className="discover-container" style={{ width: '85%' }}>
                 {/* Finished TV Shows */}
-                <div className="watchlist-section">
-                    <div className="watchlist-section__header">
-                        <h3 className="watchlist-section__title">Finished TV Shows</h3>
-                    </div>
-                    {finishedTVShows.length > 0 ? (
+                {finishedTVShows.length > 0 && (
+                    <div className="watchlist-section">
+                        <div className="watchlist-section__header">
+                            <h3 className="watchlist-section__title">Finished TV Shows</h3>
+                        </div>
                         <VirtuosoGrid
                             increaseViewportBy={{
                                 top: isMobile ? 600 : 1200,
@@ -145,19 +156,15 @@ const Finished: React.FC = () => {
                                 )
                             }}
                         />
-                    ) : (
-                        <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
-                            No finished TV shows yet
-                        </p>
-                    )}
-                </div>
+                    </div>
+                )}
 
                 {/* Finished Movies */}
-                <div className="watchlist-section">
-                    <div className="watchlist-section__header">
-                        <h3 className="watchlist-section__title">Finished Movies</h3>
-                    </div>
-                    {finishedMovies.length > 0 ? (
+                {finishedMovies.length > 0 && (
+                    <div className="watchlist-section">
+                        <div className="watchlist-section__header">
+                            <h3 className="watchlist-section__title">Finished Movies</h3>
+                        </div>
                         <VirtuosoGrid
                             increaseViewportBy={{
                                 top: isMobile ? 600 : 1200,
@@ -188,19 +195,58 @@ const Finished: React.FC = () => {
                                 )
                             }}
                         />
-                    ) : (
-                        <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
-                            No finished movies yet
-                        </p>
-                    )}
-                </div>
+                    </div>
+                )}
 
-                {finished.length === 0 && (
+                {/* Paused Shows */}
+                {pausedItems.length > 0 && (
+                    <div className="watchlist-section">
+                        <div className="watchlist-section__header">
+                            <h3 className="watchlist-section__title">Paused</h3>
+                        </div>
+                        <VirtuosoGrid
+                            increaseViewportBy={{
+                                top: isMobile ? 600 : 1200,
+                                bottom: isMobile ? 2000 : 3000,
+                            }}
+                            computeItemKey={(index) => pausedItems[index]?.id ?? index}
+                            style={{ height: '100%', width: '100%' }}
+                            useWindowScroll={true}
+                            data={pausedItems}
+                            overscan={isMobile ? 800 : 1500}
+                            listClassName="discover-grid"
+                            itemContent={(index) => {
+                                const item = pausedItems[index]
+                                const isSelected = selectedIds.has(item.id)
+                                
+                                return (
+                                    <div style={{ position: 'relative' }}>
+                                        <MediaCard
+                                            item={buildTmdbItem(item)}
+                                            selected={selectionMode && isSelected}
+                                            selectable={selectionMode}
+                                            onSelect={() => toggleSelection(item.id)}
+                                            isInWatchlist={true}
+                                            onAdd={selectionMode ? undefined : () => {}}
+                                            onMarkUnwatched={selectionMode ? undefined : () => setUnwatchModal({ isOpen: true, item, isTV: item.media_type === 'tv' || item.media_type === 'anime' })}
+                                        />
+                                    </div>
+                                )
+                            }}
+                        />
+                    </div>
+                )}
+
+                {finished.length === 0 && pausedItems.length === 0 && (
                     <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>
-                        No finished movies or TV shows yet. Complete some from your watchlist!
+                        No finished movies, TV shows, or paused items yet. Complete some from your watchlist!
                     </p>
                 )}
             </div>
+
+            <button className="upcoming-new-scroll-top" onClick={scrollToTop} aria-label="Scroll to top" title="Back to top">
+                <i className="fas fa-arrow-up"></i>
+            </button>
 
             {unwatchModal && (
                 <ConfirmModal

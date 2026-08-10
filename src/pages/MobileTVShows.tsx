@@ -8,6 +8,7 @@ import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useSearch } from '../hooks/useSearch'
 import { supabase } from '../services/supabaseClient'
+import ConfirmModal from '../components/modals/ConfirmModal'
 
 const MobileTVShows: React.FC = () => {
     usePageTitle('Trackist - TV Shows')
@@ -17,9 +18,18 @@ const MobileTVShows: React.FC = () => {
     const isInitialized = useLibraryStore((state) => state.isInitialized)
     const [addingEpisode, setAddingEpisode] = useState<string | null>(null)
     const [sweepId, setSweepId] = useState<string | null>(null)
+    const [confirmModal, setConfirmModal] = useState<{
+        isOpen: boolean
+        action: 'resume' | null
+        item: WatchlistItem | null
+    } | null>(null)
 
     const handleSwitchToNormal = () => {
         navigate('/tvshows')
+    }
+
+    const scrollToTop = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
     const watching = useMemo(() => {
@@ -41,6 +51,17 @@ const MobileTVShows: React.FC = () => {
             const dateA = new Date(a.added_at || 0)
             const dateB = new Date(b.added_at || 0)
             return dateA.getTime() - dateB.getTime()
+        })
+    }, [tvShows, committedQuery])
+
+    const paused = useMemo(() => {
+        const filtered = committedQuery
+            ? tvShows.filter(s => s.status === 'paused' && s.title.toLowerCase().includes(committedQuery.toLowerCase()))
+            : tvShows.filter(s => s.status === 'paused')
+        return filtered.sort((a, b) => {
+            const dateA = new Date(a.updated_at || 0)
+            const dateB = new Date(b.updated_at || 0)
+            return dateB.getTime() - dateA.getTime()
         })
     }, [tvShows, committedQuery])
 
@@ -132,7 +153,7 @@ const MobileTVShows: React.FC = () => {
     }
 
     const getEpisodeInfo = (show: WatchlistItem): string | null => {
-        if (show.status === 'planning') {
+        if (show.status === 'planning' || show.status === 'paused') {
             return 'S1 E1'
         }
         if (show.next_season_number && show.next_episode_number) {
@@ -147,11 +168,25 @@ const MobileTVShows: React.FC = () => {
     const handleAddEpisode = async (show: WatchlistItem) => {
         if (!show.id || !show.tmdb_id || addingEpisode) return
 
+        // Check if show is dropped or paused
+        if (show.status === 'dropped' || show.status === 'paused') {
+            setConfirmModal({
+                isOpen: true,
+                action: 'resume',
+                item: show
+            })
+            return
+        }
+
         setAddingEpisode(show.id)
+        await handleAddEpisodeInternal(show)
+    }
+
+    const handleAddEpisodeInternal = async (show: WatchlistItem) => {
         try {
             // Use the cached next episode from store if available, otherwise fetch from TMDB
             let nextEp: { season_number: number; episode_number: number; tmdb_episode_id?: number; title?: string; still_path?: string; overview?: string; air_date?: string; runtime?: number } | null = null
-            if (show.next_season_number && show.next_episode_number) {
+            if (show.next_season_number && show.next_episode_number && show.tmdb_id) {
                 const { getTVSeasonDetails } = await import('../services/tmdbService')
                 const seasonData = await getTVSeasonDetails(show.tmdb_id, show.next_season_number)
                 const ep = seasonData.episodes?.find((e: { episode_number: number; id?: number; name?: string; still_path?: string; overview?: string; air_date?: string; runtime?: number }) => e.episode_number === show.next_episode_number)
@@ -213,9 +248,80 @@ const MobileTVShows: React.FC = () => {
         }
     }
 
+    const handleConfirmResume = async () => {
+        if (!confirmModal?.item?.id) return
+
+        setAddingEpisode(confirmModal.item.id)
+        try {
+            // First update status to watching
+            await useLibraryStore.getState().updateStatus(confirmModal.item.id, 'watching')
+
+            // Then proceed with episode addition logic (reuse the same logic)
+            const show = confirmModal.item
+            let nextEp: { season_number: number; episode_number: number; tmdb_episode_id?: number; title?: string; still_path?: string; overview?: string; air_date?: string; runtime?: number } | null = null
+            if (show.next_season_number && show.next_episode_number && show.tmdb_id) {
+                const { getTVSeasonDetails } = await import('../services/tmdbService')
+                const seasonData = await getTVSeasonDetails(show.tmdb_id, show.next_season_number)
+                const ep = seasonData.episodes?.find((e: { episode_number: number; id?: number; name?: string; still_path?: string; overview?: string; air_date?: string; runtime?: number }) => e.episode_number === show.next_episode_number)
+                if (ep) {
+                    nextEp = {
+                        season_number: show.next_season_number,
+                        episode_number: show.next_episode_number,
+                        tmdb_episode_id: ep.id,
+                        title: ep.name,
+                        still_path: ep.still_path,
+                        overview: ep.overview,
+                        air_date: ep.air_date,
+                        runtime: ep.runtime
+                    }
+                }
+            }
+            if (!nextEp) {
+                const { getNextEpisodeToWatch } = await import('../services/watchlistService')
+                nextEp = await getNextEpisodeToWatch(show.id)
+            }
+
+            if (!nextEp) {
+                setAddingEpisode(null)
+                return
+            }
+
+            const success = await markEpisodeWatched(
+                show.id,
+                nextEp.season_number,
+                nextEp.episode_number,
+                {
+                    tmdb_episode_id: nextEp.tmdb_episode_id,
+                    title: nextEp.title,
+                    still_path: nextEp.still_path,
+                    overview: nextEp.overview,
+                    air_date: nextEp.air_date,
+                    runtime: nextEp.runtime
+                }
+            )
+
+            if (success) {
+                setSweepId(show.id)
+                setTimeout(async () => {
+                    if (show.tmdb_id) {
+                        await checkAndUpdateCompleted(show.id, show.tmdb_id)
+                    }
+                    await useLibraryStore.getState().refreshItem(show.id)
+                    setSweepId(null)
+                }, 10)
+            }
+        } catch (err) {
+            console.error('Failed to resume show:', err)
+        } finally {
+            setAddingEpisode(null)
+            setConfirmModal(null)
+        }
+    }
+
     const renderShowCard = (show: WatchlistItem) => {
         const isAdding = addingEpisode === show.id
         const isCompleted = show.status === 'completed' || show.status === 'caught_up'
+        const isDroppedOrPaused = show.status === 'dropped' || show.status === 'paused'
         const hasSweep = sweepId === show.id
         const episodesLeft = getEpisodesLeft(show)
         const episodeInfo = getEpisodeInfo(show)
@@ -241,11 +347,11 @@ const MobileTVShows: React.FC = () => {
                     {episodesLeft !== undefined && episodesLeft > 0 && (
                         <span className="mobile-tvshow-card-episode">+{episodesLeft}</span>
                     )}
-                    {!isCompleted && episodeInfo && (
+                    {(!isCompleted || isDroppedOrPaused) && episodeInfo && (
                         <span className="mobile-tvshow-card-episode-info">{episodeInfo}</span>
                     )}
                 </div>
-                {!isCompleted && (
+                {(!isCompleted || isDroppedOrPaused) && (
                     <button
                         className="mobile-tvshow-card-add-btn"
                         onClick={(e) => {
@@ -272,7 +378,7 @@ const MobileTVShows: React.FC = () => {
                 <i className="fa-solid fa-desktop"></i>
             </button>
             <div className="dashboard-shell mobile-tvshows-shell">
-                {watching.length === 0 && toWatch.length === 0 ? (
+                {watching.length === 0 && toWatch.length === 0 && paused.length === 0 ? (
                     <div className="mobile-tvshows-empty">
                         <i className="fa-solid fa-tv"></i>
                         <h3>No TV shows yet</h3>
@@ -289,6 +395,15 @@ const MobileTVShows: React.FC = () => {
                             </div>
                         )}
 
+                        {paused.length > 0 && (
+                            <div className="mobile-tvshows-section">
+                                <h2 className="mobile-tvshows-section-title">Paused</h2>
+                                <div className="mobile-tvshows-cards">
+                                    {paused.map(show => renderShowCard(show))}
+                                </div>
+                            </div>
+                        )}
+
                         {toWatch.length > 0 && (
                             <div className="mobile-tvshows-section">
                                 <h2 className="mobile-tvshows-section-title">To Watch</h2>
@@ -300,6 +415,20 @@ const MobileTVShows: React.FC = () => {
                     </div>
                 )}
             </div>
+
+            <button className="upcoming-new-scroll-top" onClick={scrollToTop} aria-label="Scroll to top" title="Back to top">
+                <i className="fas fa-arrow-up"></i>
+            </button>
+
+            <ConfirmModal
+                isOpen={Boolean(confirmModal?.isOpen && confirmModal.action === 'resume')}
+                title="Resume Watching"
+                message={`This show is currently ${confirmModal?.item?.status || 'dropped/paused'}. Adding an episode will move it back to "Watching". Continue?`}
+                onConfirm={handleConfirmResume}
+                onCancel={() => setConfirmModal(null)}
+                confirmText="Resume"
+                confirmColor="success"
+            />
         </section>
     )
 }

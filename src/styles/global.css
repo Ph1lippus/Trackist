@@ -18,6 +18,9 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .detail-page__age-rating {
+        display: none;
+    }
     .media-card__episodes-left {
         display: none;
     }
@@ -27,10 +30,18 @@
     .detail-page__actions {
         display: none !important;
     }
+    .detail-page__episode-still img {
+        border-radius: 0px!important;
+    }
+    .detail-page__episode-still {
+        border-radius: 0px 25px 25px 0px;
+    }
     .detail-page__episode-card {
-        padding: 0.5rem !important;
+        height: 90px;
+        padding: 0.5rem 0.5rem 0.5rem 0rem !important;
         gap: 0.5rem!important;
         margin-right: 0px!important;
+        border-radius: 0px!important;
     }
     .navbar-back-btn {
         display: none !important;
@@ -104,6 +115,12 @@
     }
     .detail-page__actions {
         margin: 0 auto ;
+    }
+    .detail-page__status {
+        justify-content: center;
+    }
+    .upcoming-new-scroll-top {
+        display: flex !important;
     }
     .detail-page__actions-mobile {
         display: flex !important;
@@ -2054,7 +2071,7 @@ body::after {
 }
 .detail-page__main--tv {
     display: grid;
-    grid-template-columns: 1fr 35%;
+    grid-template-columns: 1fr 34%;
     gap: 2.5rem;
     align-items: stretch;
     height: 100%;
@@ -2085,6 +2102,25 @@ body::after {
     line-height: 1.7;
     margin: 0 0 1.5rem 0;
     padding: 0rem 1rem;
+}
+.detail-page__status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 1rem 0 1.5rem 0;
+    padding: 0rem 1rem;
+}
+.detail-page__status-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-platinum);
+    opacity: 0.8;
+}
+.detail-page__status-value {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--color-platinum);
+    text-transform: capitalize;
 }
 .detail-page__actions {
     display: flex;
@@ -2185,6 +2221,10 @@ body::after {
     color: #00ff66;
 }
 .detail-page__letterbox-logo {
+    width: 20px;
+    height: 20px;
+}
+.detail-page__stremio-logo {
     width: 20px;
     height: 20px;
 }
@@ -3292,7 +3332,7 @@ body::after {
 
 @media (max-width: 480px) {
     .detail-page__content {
-        padding: 0.3rem;
+        padding: 0rem;
     }
 
     .detail-page__title {
@@ -9099,10 +9139,10 @@ i.fa-solid.fa-trash:hover {
 .upcoming-new-scroll-top {
     position: fixed;
     bottom: calc(var(--bottom-nav-height) + 1rem);
-    right: 1rem;
+    right: 0rem;
     width: 48px;
     height: 48px;
-    border-radius: 50%;
+    border-radius: 25px 0px 0px 25px;
     border: none;
     background: transparent;
     backdrop-filter: blur(50px);
@@ -9110,12 +9150,21 @@ i.fa-solid.fa-trash:hover {
     font-size: 1rem;
     cursor: pointer;
     z-index: 9998;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(12px);
-    transition: all 0.25s ease;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+@media (max-width: 768px) {
+    .upcoming-new-scroll-top {
+        display: flex;
+    }
+}
+
+@media (max-width: 768px) {
+    .upcoming-new-scroll-top {
+        display: flex !important;
+    }
 }
 
 /* ===== MOBILE TV SHOWS PAGE ===== */
@@ -9630,7 +9679,6 @@ i.fa-solid.fa-trash:hover {
         overflow: visible !important;
     }
     .detail-page__left {
-        height: 100dvh !important;
         overflow: visible !important;
         padding-right: 0;
     }

@@ -11,6 +11,8 @@ import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { createMovieDeepLink, openInStremio } from '../utils/stremioUtils'
 import { useShowStremioButton } from '../hooks/useShowStremioButton'
 import { useShowLetterboxButton } from '../hooks/useShowLetterboxButton'
+import stremioIcon from '../assets/stremio-logo-icon-only-fullcolor.svg'
+import letterboxdIcon from '../assets/letterboxd-decal-dots-pos-rgb-500px.png'
 
 const MovieDetail: React.FC = () => {
     usePageTitle('Trackist - Movie Detail')
@@ -282,60 +284,14 @@ const MovieDetail: React.FC = () => {
                         <h2 className="detail-page__section-title">Overview</h2>
                         <p className="detail-page__overview">{overview}</p>
                         
+                        {isInWatchlist && watchlistStatus && (
+                            <div className="detail-page__status">
+                                <span className="detail-page__status-label">Status:</span>
+                                <span className="detail-page__status-value">{watchlistStatus}</span>
+                            </div>
+                        )}
+                        
                         <div className="detail-page__actions">
-                            {trailerKey && (
-                                <button 
-                                    className="detail-page__icon-btn"
-                                    onClick={() => setShowTrailer(!showTrailer)}
-                                    title={showTrailer ? 'Close Trailer' : 'Watch Trailer'}
-                                >
-                                    <i className="fa-solid fa-clapperboard"></i>
-                                </button>
-                            )}
-                            {cast.length > 0 && (
-                                <button 
-                                    className="detail-page__icon-btn"
-                                    onClick={() => setShowCast(!showCast)}
-                                    title={showCast ? 'Hide Cast' : 'Cast'}
-                                >
-                                    <i className="fa-solid fa-users"></i>
-                                </button>
-                            )}
-                            {showStremioButton && !stremioLoading && (
-                                <button 
-                                    className="detail-page__icon-btn"
-                                    onClick={() => {
-                                        const sharingLink = createMovieDeepLink(details.id, (details.external_ids as { imdb_id?: string })?.imdb_id)
-                                        openInStremio(sharingLink)
-                                    }}
-                                    title="Open in Stremio"
-                                >
-                                    <i className="fa-solid fa-play"></i>
-                                </button>
-                            )}
-                            {showLetterboxButton && !letterboxLoading && (
-                                <button 
-                                    className="detail-page__icon-btn detail-page__icon-btn--letterbox"
-                                    onClick={() => {
-                                        const imdbId = details.external_ids?.imdb_id
-                                        if (imdbId) {
-                                            window.open(`https://letterboxd.com/imdb/${imdbId}/`, '_blank')
-                                        } else {
-                                            const title = details.title || ''
-                                            const slug = title
-                                                .toLowerCase()
-                                                .replace(/[^a-z0-9]+/g, '-')
-                                                .replace(/^-+|-+$/g, '')
-                                            window.open(`https://letterboxd.com/film/${slug}/`, '_blank')
-                                        }
-                                    }}
-                                    title="Open in Letterbox"
-                                >
-                                    <svg className="detail-page__letterbox-logo" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                                        <path d="M8.28 3.03L6.5 4.8v14.4l1.78 1.78L12 19.17l3.72 3.81 1.78-1.78V4.8L15.72 3.03 12 6.75z"/>
-                                    </svg>
-                                </button>
-                            )}
                             {!isInWatchlist ? (
                                 <>
                                     <button 
@@ -394,64 +350,62 @@ const MovieDetail: React.FC = () => {
                                         <i className={watchlistStatus === 'completed' ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
                                     </button>
                                 </>
+                            )}
+                            {trailerKey && (
+                                <button 
+                                    className="detail-page__icon-btn"
+                                    onClick={() => setShowTrailer(!showTrailer)}
+                                    title={showTrailer ? 'Close Trailer' : 'Watch Trailer'}
+                                >
+                                    <i className="fa-solid fa-clapperboard"></i>
+                                </button>
+                            )}
+                            {cast.length > 0 && (
+                                <button 
+                                    className="detail-page__icon-btn"
+                                    onClick={() => setShowCast(!showCast)}
+                                    title={showCast ? 'Hide Cast' : 'Cast'}
+                                >
+                                    <i className="fa-solid fa-users"></i>
+                                </button>
+                            )}
+                            {showStremioButton && !stremioLoading && (
+                                <button 
+                                    className="detail-page__icon-btn"
+                                    onClick={() => {
+                                        const sharingLink = createMovieDeepLink(details.id, (details.external_ids as { imdb_id?: string })?.imdb_id)
+                                        openInStremio(sharingLink)
+                                    }}
+                                    title="Open in Stremio"
+                                >
+                                    <img src={stremioIcon} alt="Stremio" className="detail-page__stremio-logo" />
+                                </button>
+                            )}
+                            {showLetterboxButton && !letterboxLoading && (
+                                <button 
+                                    className="detail-page__icon-btn detail-page__icon-btn--letterbox"
+                                    onClick={() => {
+                                        const imdbId = details.external_ids?.imdb_id
+                                        if (imdbId) {
+                                            window.open(`https://letterboxd.com/imdb/${imdbId}/`, '_blank')
+                                        } else {
+                                            const title = details.title || ''
+                                            const slug = title
+                                                .toLowerCase()
+                                                .replace(/[^a-z0-9]+/g, '-')
+                                                .replace(/^-+|-+$/g, '')
+                                            window.open(`https://letterboxd.com/film/${slug}/`, '_blank')
+                                        }
+                                    }}
+                                    title="Open in Letterbox"
+                                >
+                                    <img src={letterboxdIcon} alt="Letterboxd" className="detail-page__letterbox-logo" />
+                                </button>
                             )}
                         </div>
 
                         {/* Mobile fixed action container */}
                         <div className="detail-page__actions-mobile">
-                            {trailerKey && (
-                                <button 
-                                    className="detail-page__icon-btn"
-                                    onClick={() => setShowTrailer(!showTrailer)}
-                                    title={showTrailer ? 'Close Trailer' : 'Watch Trailer'}
-                                >
-                                    <i className="fa-solid fa-clapperboard"></i>
-                                </button>
-                            )}
-                            {cast.length > 0 && (
-                                <button 
-                                    className="detail-page__icon-btn"
-                                    onClick={() => setShowCast(!showCast)}
-                                    title={showCast ? 'Hide Cast' : 'Cast'}
-                                >
-                                    <i className="fa-solid fa-users"></i>
-                                </button>
-                            )}
-                            {showStremioButton && !stremioLoading && (
-                                <button 
-                                    className="detail-page__icon-btn"
-                                    onClick={() => {
-                                        const sharingLink = createMovieDeepLink(details.id, (details.external_ids as { imdb_id?: string })?.imdb_id)
-                                        openInStremio(sharingLink)
-                                    }}
-                                    title="Open in Stremio"
-                                >
-                                    <i className="fa-solid fa-play"></i>
-                                </button>
-                            )}
-                            {showLetterboxButton && !letterboxLoading && (
-                                <button 
-                                    className="detail-page__icon-btn detail-page__icon-btn--letterbox"
-                                    onClick={() => {
-                                        const imdbId = details.external_ids?.imdb_id
-                                        if (imdbId) {
-                                            window.open(`https://letterboxd.com/imdb/${imdbId}/`, '_blank')
-                                        } else {
-                                            const title = details.title || ''
-                                            const slug = title
-                                                .toLowerCase()
-                                                .replace(/[^a-z0-9]+/g, '-')
-                                                .replace(/^-+|-+$/g, '')
-                                            window.open(`https://letterboxd.com/film/${slug}/`, '_blank')
-                                        }
-                                    }}
-                                    title="Open in Letterbox"
-                                >
-                                    <svg className="detail-page__letterbox-logo" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                                        <path d="M8.28 3.03L6.5 4.8v14.4l1.78 1.78L12 19.17l3.72 3.81 1.78-1.78V4.8L15.72 3.03 12 6.75z"/>
-                                    </svg>
-                                </button>
-                            )}
                             {!isInWatchlist ? (
                                 <>
                                     <button 
@@ -510,6 +464,57 @@ const MovieDetail: React.FC = () => {
                                         <i className={watchlistStatus === 'completed' ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
                                     </button>
                                 </>
+                            )}
+                            {trailerKey && (
+                                <button 
+                                    className="detail-page__icon-btn"
+                                    onClick={() => setShowTrailer(!showTrailer)}
+                                    title={showTrailer ? 'Close Trailer' : 'Watch Trailer'}
+                                >
+                                    <i className="fa-solid fa-clapperboard"></i>
+                                </button>
+                            )}
+                            {cast.length > 0 && (
+                                <button 
+                                    className="detail-page__icon-btn"
+                                    onClick={() => setShowCast(!showCast)}
+                                    title={showCast ? 'Hide Cast' : 'Cast'}
+                                >
+                                    <i className="fa-solid fa-users"></i>
+                                </button>
+                            )}
+                            {showStremioButton && !stremioLoading && (
+                                <button 
+                                    className="detail-page__icon-btn"
+                                    onClick={() => {
+                                        const sharingLink = createMovieDeepLink(details.id, (details.external_ids as { imdb_id?: string })?.imdb_id)
+                                        openInStremio(sharingLink)
+                                    }}
+                                    title="Open in Stremio"
+                                >
+                                    <img src={stremioIcon} alt="Stremio" className="detail-page__stremio-logo" />
+                                </button>
+                            )}
+                            {showLetterboxButton && !letterboxLoading && (
+                                <button 
+                                    className="detail-page__icon-btn detail-page__icon-btn--letterbox"
+                                    onClick={() => {
+                                        const imdbId = details.external_ids?.imdb_id
+                                        if (imdbId) {
+                                            window.open(`https://letterboxd.com/imdb/${imdbId}/`, '_blank')
+                                        } else {
+                                            const title = details.title || ''
+                                            const slug = title
+                                                .toLowerCase()
+                                                .replace(/[^a-z0-9]+/g, '-')
+                                                .replace(/^-+|-+$/g, '')
+                                            window.open(`https://letterboxd.com/film/${slug}/`, '_blank')
+                                        }
+                                    }}
+                                    title="Open in Letterbox"
+                                >
+                                    <img src={letterboxdIcon} alt="Letterboxd" className="detail-page__letterbox-logo" />
+                                </button>
                             )}
                         </div>
 

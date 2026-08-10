@@ -42,6 +42,10 @@ const Movies: React.FC = () => {
         window.scrollTo(0, 0)
     }, [])
 
+    const scrollToTop = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
     const updateStatus = async (id: string, status: string) => {
         await useLibraryStore.getState().updateStatus(id, status as WatchlistItem['status'])
     }
@@ -240,6 +244,10 @@ const Movies: React.FC = () => {
                     confirmLoading={actionLoading}
                 />
             )}
+
+            <button className="upcoming-new-scroll-top" onClick={scrollToTop} aria-label="Scroll to top" title="Back to top">
+                <i className="fas fa-arrow-up"></i>
+            </button>
         </div>
     )
 }

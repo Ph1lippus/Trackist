@@ -82,7 +82,7 @@ export interface WatchlistItem {
     total_episodes?: number
     current_season?: number
     current_episode?: number
-    status: 'planning' | 'watching' | 'completed' | 'dropped' | 'caught_up'
+    status: 'planning' | 'watching' | 'paused' | 'completed' | 'dropped' | 'caught_up'
     rating?: number
     notes?: string
     added_at: string

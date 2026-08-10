@@ -130,8 +130,8 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             const finished: WatchlistItem[] = []
 
             items.forEach(item => {
-                // Add to finished if status is completed or caught_up
-                if (item.status === 'completed' || item.status === 'caught_up') {
+                // Add to finished if status is completed, caught_up, or dropped
+                if (item.status === 'completed' || item.status === 'caught_up' || item.status === 'dropped') {
                     finished.push(item)
                 }
                 
@@ -215,7 +215,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         const newMovies = updateInArray(state.movies) as WatchlistItem[]
         
         // Handle finished array - move item in/out based on status
-        const isFinishedStatus = nextStatus === 'completed' || nextStatus === 'caught_up'
+        const isFinishedStatus = nextStatus === 'completed' || nextStatus === 'caught_up' || nextStatus === 'dropped'
         let newFinished = state.finished
         if (isFinishedStatus) {
             // Add to finished if not already there - add to beginning for most recent first
@@ -237,7 +237,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 newFinished = state.finished.map(f => f.id === id ? completedItem : f)
             }
         } else {
-            // Remove from finished if status changed away from completed/caught_up
+            // Remove from finished if status changed away from completed/caught_up/dropped
             newFinished = state.finished.filter(item => item.id !== id)
         }
 
@@ -288,10 +288,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 throw error
             }
 
-            // Invalidate cache when status changes to/from completed/caught_up to ensure Finished page shows updated data
+            // Invalidate cache when status changes to/from completed/caught_up/dropped to ensure Finished page shows updated data
             const previousItem = previousAllItems.find(i => i.id === id)
-            const wasFinished = previousItem?.status === 'completed' || previousItem?.status === 'caught_up'
-            const isFinished = nextStatus === 'completed' || nextStatus === 'caught_up'
+            const wasFinished = previousItem?.status === 'completed' || previousItem?.status === 'caught_up' || previousItem?.status === 'dropped'
+            const isFinished = nextStatus === 'completed' || nextStatus === 'caught_up' || nextStatus === 'dropped'
             if (wasFinished !== isFinished) {
                 await invalidateUserCache()
             }
