@@ -18,6 +18,9 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .detail-page__episode-card.watched {
+        border: none;
+    }
     .detail-page__age-rating {
         display: none;
     }
@@ -357,6 +360,21 @@ body::after {
     text-decoration: underline;
 }
 
+.detail-page__stremio-logo{
+    transition: transform 0.6s ease;
+}
+
+.detail-page__letterbox-logo{
+    transition: transform 0.6s ease;
+}
+
+.detail-page__stremio-logo:hover{
+    scale: 1.15;
+}
+
+.detail-page__letterbox-logo:hover{
+    scale: 1.15;
+}
 
 /* ===== NAVBAR STYLE ===== */
 .navbar-brand-row {
@@ -2464,7 +2482,7 @@ body::after {
     object-fit: cover;
 }
 .detail-page__episode-card:not(.watched) .detail-page__episode-still img {
-    filter: blur(5px);
+    filter: blur(2px);
 }
 .detail-page__episode-info {
     flex: 1;
