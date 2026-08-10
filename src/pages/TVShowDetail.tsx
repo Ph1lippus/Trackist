@@ -1028,13 +1028,7 @@ const TVShowDetail: React.FC = () => {
                                                     setAddEpisodeModal({ isOpen: true, episode: ep })
                                                 } else if (!ep.watched) {
                                                     // Mark as watched
-                                                    markEpisodeAsWatched(ep, false).then(() => {
-                                                        const nextEp = getNextEpisodeToWatch()
-                                                        if (nextEp && details?.external_ids?.imdb_id) {
-                                                            const sharingLink = createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids.imdb_id)
-                                                            openInStremio(sharingLink)
-                                                        }
-                                                    })
+                                                    markEpisodeAsWatched(ep, false)
                                                 } else {
                                                     // Toggle to unwatched
                                                     markEpisodeAsWatched(ep, false)
@@ -1080,13 +1074,7 @@ const TVShowDetail: React.FC = () => {
                         if (confirmModal.isUnwatch) {
                             markEpisodeAsWatched(confirmModal.episode, false)
                         } else {
-                            markEpisodeAsWatched(confirmModal.episode, confirmModal.markAll).then(() => {
-                                const nextEp = getNextEpisodeToWatch()
-                                if (nextEp && details?.external_ids?.imdb_id) {
-                                    const sharingLink = createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids.imdb_id)
-                                    openInStremio(sharingLink)
-                                }
-                            })
+                            markEpisodeAsWatched(confirmModal.episode, confirmModal.markAll)
                         }
                         setConfirmModal(null)
                     }}
