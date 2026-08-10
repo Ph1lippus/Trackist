@@ -20,27 +20,28 @@ export default defineConfig({
         start_url: '/', 
         icons: [
           {
-            // SPLASH SCREEN LOGO: Placed at the top so the browser picks this high-res file first for launching
+            // SPLASH LOGO ONLY: Explicitly set to 'any' so it controls the splash screen
             src: '/TRACK1ST-FULLNAMELGO.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            // PHONE ICON: Android uses this 'maskable' format for the phone home screen app grid
+            // HOME SCREEN ICON ONLY: Explicitly set to 'maskable' so it only stays on the app grid
             src: '/android-chrome-512x512.png', 
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'maskable'
+            purpose: 'maskable' // Removing 'any' from here forces the browser NOT to use it for splash screens
           },
           {
-            // PHONE ICON: Standard fallback icon for smaller system UI display menus
+            // Small system menu fallback
             src: '/android-chrome-192x192.png', 
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any' 
           }
         ]
+
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
