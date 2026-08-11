@@ -2172,7 +2172,7 @@ body::after {
     position: fixed;
     right: 0rem;
     top: 50%;
-    transform: translateY(-75%);
+    transform: translateY(-80%);
     flex-direction: column;
     gap: 0.75rem;
     padding: 0.75rem 0.5rem;
@@ -2575,50 +2575,26 @@ body::after {
 }
 
 /* Person Detail Page */
-.detail-page--person {
-    padding-bottom: 0;
-}
-.detail-page__person-hero {
-    position: relative;
-    min-height: 50vh;
-    padding-bottom: 2rem;
-}
-.detail-page__person-backdrop {
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background: linear-gradient(to bottom, rgba(5,5,5,0.2) 0%, var(--color-bg) 100%);
-}
-.detail-page__person-backdrop img {
-    width: 100%;
+.detail-page__main--person {
+    display: grid;
+    grid-template-columns: 1fr 34%;
+    gap: 2.5rem;
+    align-items: stretch;
     height: 100%;
-    object-fit: cover;
-    object-position: center top;
-    filter: blur(20px);
-    transform: scale(1.1);
-}
-.detail-page__person-header {
-    display: flex;
-    gap: 2rem;
-    align-items: flex-start;
-    padding-top: 2rem;
+    overflow: hidden;
 }
 .detail-page__person-photo {
-    width: 200px;
-    flex-shrink: 0;
-    border-radius: 25px;
-    overflow: hidden;
-    background: rgba(255, 255, 255, 0.1);
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 3px solid rgba(255, 255, 255, 0.15);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
-.detail-page__person-photo img {
-    width: 100%;
-    height: auto;
-    display: block;
-}
 .detail-page__person-no-photo {
-    width: 100%;
-    aspect-ratio: 2 / 3;
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2627,29 +2603,16 @@ body::after {
     font-size: 3rem;
     font-weight: 700;
 }
-.detail-page__person-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-.detail-page__person-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem;
-    font-size: 1rem;
-    color: rgba(255, 255, 255, 0.7);
-}
 .detail-page__person-location {
     font-size: 0.95rem;
     color: rgba(255, 255, 255, 0.6);
     margin: 0;
 }
-.detail-page__biography-section {
-    margin-bottom: 2rem;
-}
 .detail-page__filmography-section {
     margin-bottom: 2rem;
+}
+.detail-page__filmography-section .discover-grid {
+    margin-top: 1rem;
 }
 
 /* Loading and error states */
@@ -2672,7 +2635,8 @@ body::after {
 }
 /* Responsive */
 @media (max-width: 992px) {
-    .detail-page__main--tv {
+    .detail-page__main--tv,
+    .detail-page__main--person {
         grid-template-columns: 1fr;
     }
 
@@ -3317,16 +3281,13 @@ body::after {
     .detail-page__person-meta {
         justify-content: center;
     }
-    .detail-page__person-header {
-        flex-direction: column;
-        align-items: center;
+    .detail-page__person-photo,
+    .detail-page__person-no-photo {
+        width: 120px;
+        height: 120px;
+    }
+    .detail-page__person-location {
         text-align: center;
-    }
-    .detail-page__person-photo {
-        width: 150px;
-    }
-    .detail-page__person-info {
-        align-items: center;
     }
     .detail-page__cast-list {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));

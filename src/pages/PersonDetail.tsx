@@ -77,9 +77,13 @@ const PersonDetail: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="detail-page-loading">
-                <div className="discover-spinner" />
-                <p>Loading...</p>
+            <div className="detail-page">
+                <div className="detail-page__content">
+                    <div className="discover-loading">
+                        <div className="discover-spinner" />
+                        <p>Loading person details...</p>
+                    </div>
+                </div>
             </div>
         )
     }
@@ -102,25 +106,27 @@ const PersonDetail: React.FC = () => {
     }
 
     return (
-        <div className="detail-page detail-page--person">
-            <div className="detail-page__person-hero">
-                <div className="detail-page__person-backdrop" style={{ background: 'linear-gradient(to bottom, rgba(5,5,5,0.3) 0%, var(--color-bg) 100%)' }} />
-                <div className="detail-page__content">
-                    <div className="detail-page__person-header">
-                        <div className="detail-page__person-photo">
-                            {profileUrl ? (
-                                <img src={profileUrl} alt={title} loading="lazy" />
-                            ) : (
-                                <div className="detail-page__person-no-photo">
-                                    <span>{title.charAt(0)}</span>
-                                </div>
-                            )}
-                        </div>
-                        
-                        <div className="detail-page__person-info">
-                            <h1 className="detail-page__title">{title}</h1>
-                            
-                            <div className="detail-page__person-meta">
+        <div className="detail-page detail-page--no-scroll">
+            {profileUrl && (
+                <div className="detail-page__backdrop">
+                    <img src={profileUrl} alt={title} loading="lazy" />
+                    <div className="detail-page__backdrop-overlay" />
+                </div>
+            )}
+
+            <div className="detail-page__content detail-page__content--split">
+                <div className="detail-page__main detail-page__main--person">
+                    <div className="detail-page__left">
+                        <div className="detail-page__title-section">
+                            <div className="detail-page__logo-section">
+                                {profileUrl ? (
+                                    <img src={profileUrl} alt={title} className="detail-page__person-photo" />
+                                ) : (
+                                    <h1 className="detail-page__title">{title}</h1>
+                                )}
+                            </div>
+
+                            <div className="detail-page__meta">
                                 {knownForDepartment && <span>{knownForDepartment}</span>}
                                 {getGender(details.gender) && <span>· {getGender(details.gender)}</span>}
                                 {birthday && <span>· Born {birthday}</span>}
@@ -132,46 +138,50 @@ const PersonDetail: React.FC = () => {
                                 </p>
                             )}
                         </div>
+
+                        <div className="detail-page__overview-section">
+                            <h2 className="detail-page__section-title">Biography</h2>
+                            <p className="detail-page__overview">{biography}</p>
+                        </div>
                     </div>
+
+                    <div className="detail-page__right" style={{ display: 'none' }} />
                 </div>
             </div>
 
-            <div className="detail-page__content">
-                <div className="detail-page__main">
-                    <div className="detail-page__biography-section">
-                        <h2 className="detail-page__section-title">Biography</h2>
-                        <p className="detail-page__overview">{biography}</p>
+            {(movies.length > 0 || tvShows.length > 0) && (
+                <div className="detail-page__content">
+                    <div className="detail-page__main">
+                        {movies.length > 0 && (
+                            <div className="detail-page__filmography-section">
+                                <h2 className="detail-page__section-title">Movies</h2>
+                                <div className="discover-grid">
+                                    {movies.map((movie) => (
+                                        <MediaCard
+                                            key={movie.id}
+                                            item={movie}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {tvShows.length > 0 && (
+                            <div className="detail-page__filmography-section">
+                                <h2 className="detail-page__section-title">TV Shows</h2>
+                                <div className="discover-grid">
+                                    {tvShows.map((show) => (
+                                        <MediaCard
+                                            key={show.id}
+                                            item={show}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
-
-                    {movies.length > 0 && (
-                        <div className="detail-page__filmography-section">
-                            <h2 className="detail-page__section-title">Movies</h2>
-                            <div className="discover-grid">
-                                {movies.map((movie) => (
-                                    <MediaCard
-                                        key={movie.id}
-                                        item={movie}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {tvShows.length > 0 && (
-                        <div className="detail-page__filmography-section">
-                            <h2 className="detail-page__section-title">TV Shows</h2>
-                            <div className="discover-grid">
-                                {tvShows.map((show) => (
-                                    <MediaCard
-                                        key={show.id}
-                                        item={show}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-                    )}
                 </div>
-            </div>
+            )}
         </div>
     )
 }
