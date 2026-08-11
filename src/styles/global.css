@@ -2576,8 +2576,8 @@ body::after {
     margin-bottom: 2rem;
 }
 .detail-page__person-photo {
-    width: 200px;
-    height: 200px;
+    width: 180px;
+    height: 180px;
     border-radius: 50%;
     object-fit: cover;
     border: 3px solid rgba(255, 255, 255, 0.15);
@@ -2585,17 +2585,26 @@ body::after {
     flex-shrink: 0;
 }
 .detail-page__person-no-photo {
-    width: 200px;
-    height: 200px;
+    width: 180px;
+    height: 180px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     background: rgba(133, 138, 227, 0.2);
+    flex-shrink: 0;
+}
+.detail-page__person-initial {
     color: var(--color-primary);
     font-size: 4rem;
     font-weight: 700;
-    flex-shrink: 0;
+}
+.detail-page__person-name {
+    font-size: 2.2rem;
+    font-weight: 600;
+    color: var(--color-platinum);
+    margin: 0;
+    line-height: 1.2;
 }
 .detail-page__person-info {
     flex: 1;
@@ -3295,8 +3304,8 @@ body::after {
     }
     .detail-page__person-photo,
     .detail-page__person-no-photo {
-        width: 150px;
-        height: 150px;
+        width: 160px;
+        height: 160px;
     }
     .detail-page__person-location {
         text-align: center;

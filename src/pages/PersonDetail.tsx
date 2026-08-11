@@ -115,12 +115,12 @@ const PersonDetail: React.FC = () => {
                                 <img src={profileUrl} alt={title} />
                             ) : (
                                 <div className="detail-page__person-no-photo">
-                                    <span>{title.charAt(0)}</span>
+                                    <span className="detail-page__person-initial">{title.charAt(0)}</span>
                                 </div>
                             )}
                         </div>
                         <div className="detail-page__person-info">
-                            <h1 className="detail-page__title">{title}</h1>
+                            <h1 className="detail-page__person-name">{title}</h1>
                             <div className="detail-page__person-meta">
                                 {knownForDepartment && <span>{knownForDepartment}</span>}
                                 {getGender(details.gender) && <span>· {getGender(details.gender)}</span>}
