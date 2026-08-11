@@ -231,12 +231,10 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                             >
                                                 <div className="calendar-episode-poster">
                                                     {item.item.poster_path ? (
-                                                        <img 
-                                                            src={item.item.media_type === 'anime' 
-                                                                ? item.item.poster_path 
-                                                                : (imageUrl as (path: string) => string)(item.item.poster_path)} 
-                                                            alt={item.item.title} 
-                                                        />
+                                                            <img 
+                                                                src={(imageUrl as (path: string) => string)(item.item.poster_path)} 
+                                                                alt={item.item.title} 
+                                                            />
                                                     ) : (
                                                         <div className="calendar-episode-no-poster">
                                                             <span>{item.item.title}</span>
@@ -302,9 +300,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                     <div className="upcoming-episode-card-poster">
                                         {item.item.poster_path ? (
                                             <img 
-                                                src={item.item.media_type === 'anime' 
-                                                    ? item.item.poster_path 
-                                                    : (imageUrl as (path: string) => string)(item.item.poster_path)} 
+                                                src={(imageUrl as (path: string) => string)(item.item.poster_path)} 
                                                 alt={item.item.title}
                                             />
                                         ) : (

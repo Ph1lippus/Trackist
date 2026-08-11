@@ -193,13 +193,11 @@ const UpcomingNew: React.FC = () => {
                                         >
                                             <div className="upcoming-new-card-poster">
                                                 {item.item.poster_path ? (
-                                                    <img
-                                                        src={item.item.media_type === 'anime'
-                                                            ? item.item.poster_path
-                                                            : (imageUrl as (path: string) => string)(item.item.poster_path)}
-                                                        alt={item.item.title}
-                                                        loading="lazy"
-                                                    />
+                                                        <img
+                                                            src={(imageUrl as (path: string) => string)(item.item.poster_path)}
+                                                            alt={item.item.title}
+                                                            loading="lazy"
+                                                        />
                                                 ) : (
                                                     <div className="upcoming-new-card-no-poster">
                                                         <span>{item.item.title}</span>
