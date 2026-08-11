@@ -1849,12 +1849,6 @@ body::after {
     display: flex;
     flex-direction: column;
 }
-.detail-page__content_person {
-    position: relative;
-    max-width: 90%;
-    margin: 0 auto;
-    padding: 0 2rem;
-}
 .detail-page__back {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.2);
@@ -2575,33 +2569,46 @@ body::after {
 }
 
 /* Person Detail Page */
-.detail-page__main--person {
-    display: grid;
-    grid-template-columns: 1fr 34%;
-    gap: 2.5rem;
-    align-items: stretch;
-    height: 100%;
-    overflow: hidden;
+.detail-page__person-header {
+    display: flex;
+    gap: 2rem;
+    align-items: flex-start;
+    margin-bottom: 2rem;
 }
 .detail-page__person-photo {
-    width: 150px;
-    height: 150px;
+    width: 200px;
+    height: 200px;
     border-radius: 50%;
     object-fit: cover;
     border: 3px solid rgba(255, 255, 255, 0.15);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    flex-shrink: 0;
 }
 .detail-page__person-no-photo {
-    width: 150px;
-    height: 150px;
+    width: 200px;
+    height: 200px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     background: rgba(133, 138, 227, 0.2);
     color: var(--color-primary);
-    font-size: 3rem;
+    font-size: 4rem;
     font-weight: 700;
+    flex-shrink: 0;
+}
+.detail-page__person-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.detail-page__person-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.7);
 }
 .detail-page__person-location {
     font-size: 0.95rem;
@@ -3281,10 +3288,15 @@ body::after {
     .detail-page__person-meta {
         justify-content: center;
     }
+    .detail-page__person-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
     .detail-page__person-photo,
     .detail-page__person-no-photo {
-        width: 120px;
-        height: 120px;
+        width: 150px;
+        height: 150px;
     }
     .detail-page__person-location {
         text-align: center;

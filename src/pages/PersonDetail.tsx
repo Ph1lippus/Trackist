@@ -106,46 +106,38 @@ const PersonDetail: React.FC = () => {
     }
 
     return (
-        <div className="detail-page detail-page--no-scroll">
-            {profileUrl && (
-                <div className="detail-page__backdrop">
-                    <img src={profileUrl} alt={title} loading="lazy" />
-                    <div className="detail-page__backdrop-overlay" />
-                </div>
-            )}
-
-            <div className="detail-page__content detail-page__content--split">
-                <div className="detail-page__main detail-page__main--person">
-                    <div className="detail-page__left">
-                        <div className="detail-page__title-section">
-                            <div className="detail-page__logo-section">
-                                {profileUrl ? (
-                                    <img src={profileUrl} alt={title} className="detail-page__person-photo" />
-                                ) : (
-                                    <h1 className="detail-page__title">{title}</h1>
-                                )}
-                            </div>
-
-                            <div className="detail-page__meta">
+        <div className="detail-page">
+            <div className="detail-page__content">
+                <div className="detail-page__main">
+                    <div className="detail-page__person-header">
+                        <div className="detail-page__person-photo">
+                            {profileUrl ? (
+                                <img src={profileUrl} alt={title} />
+                            ) : (
+                                <div className="detail-page__person-no-photo">
+                                    <span>{title.charAt(0)}</span>
+                                </div>
+                            )}
+                        </div>
+                        <div className="detail-page__person-info">
+                            <h1 className="detail-page__title">{title}</h1>
+                            <div className="detail-page__person-meta">
                                 {knownForDepartment && <span>{knownForDepartment}</span>}
                                 {getGender(details.gender) && <span>· {getGender(details.gender)}</span>}
                                 {birthday && <span>· Born {birthday}</span>}
                             </div>
-
                             {placeOfBirth && (
                                 <p className="detail-page__person-location">
                                     📍 {placeOfBirth}
                                 </p>
                             )}
                         </div>
-
-                        <div className="detail-page__overview-section">
-                            <h2 className="detail-page__section-title">Biography</h2>
-                            <p className="detail-page__overview">{biography}</p>
-                        </div>
                     </div>
 
-                    <div className="detail-page__right" style={{ display: 'none' }} />
+                    <div className="detail-page__overview-section">
+                        <h2 className="detail-page__section-title">Biography</h2>
+                        <p className="detail-page__overview">{biography}</p>
+                    </div>
                 </div>
             </div>
 
