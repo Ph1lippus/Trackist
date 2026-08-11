@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
+import type { User } from '@supabase/supabase-js'
 import {
     getProfile,
     getProfileByUsername,
@@ -10,7 +11,7 @@ import {
     unfollowUser,
     isFollowing
 } from '../services/profileService'
-import type { User } from '@supabase/supabase-js'
+import { useAuthStore } from '../stores/useAuthStore'
 import type { WatchlistItem, TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { VirtuosoGrid } from 'react-virtuoso'
@@ -57,7 +58,7 @@ const ProfilePage: React.FC = () => {
 
     useEffect(() => {
         const loadUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
+            const user = useAuthStore.getState().user
             setCurrentUser(user)
         }
         void loadUser()
@@ -390,14 +391,14 @@ const ProfilePage: React.FC = () => {
                                 <div className="profile-watchlist-category">
                                     <VirtuosoGrid
                                         increaseViewportBy={{
-                                            top: isMobile ? 600 : 1200,
-                                            bottom: isMobile ? 2000 : 3000,
+                                            top: isMobile ? 200 : 400,
+                                            bottom: isMobile ? 400 : 800,
                                         }}
                                         computeItemKey={(index) => watchingTVShows[index]?.id ?? index}
                                         style={{ height: '100%', width: '100%' }}
                                         useWindowScroll={true}
                                         data={watchingTVShows}
-                                        overscan={isMobile ? 800 : 1500}
+                                        overscan={isMobile ? 50 : 100}
                                         listClassName="discover-grid"
                                         itemContent={(index) => {
                                             const item = watchingTVShows[index]
@@ -432,14 +433,14 @@ const ProfilePage: React.FC = () => {
                                 <div className="profile-watchlist-category">
                                     <VirtuosoGrid
                                         increaseViewportBy={{
-                                            top: isMobile ? 600 : 1200,
-                                            bottom: isMobile ? 2000 : 3000,
+                                            top: isMobile ? 200 : 400,
+                                            bottom: isMobile ? 400 : 800,
                                         }}
                                         computeItemKey={(index) => moviesToWatch[index]?.id ?? index}
                                         style={{ height: '100%', width: '100%' }}
                                         useWindowScroll={true}
                                         data={moviesToWatch}
-                                        overscan={isMobile ? 800 : 1500}
+                                        overscan={isMobile ? 50 : 100}
                                         listClassName="discover-grid"
                                         itemContent={(index) => {
                                             const item = moviesToWatch[index]
@@ -474,14 +475,14 @@ const ProfilePage: React.FC = () => {
                                 <div className="profile-watchlist-category">
                                     <VirtuosoGrid
                                         increaseViewportBy={{
-                                            top: isMobile ? 600 : 1200,
-                                            bottom: isMobile ? 2000 : 3000,
+                                            top: isMobile ? 200 : 400,
+                                            bottom: isMobile ? 400 : 800,
                                         }}
                                         computeItemKey={(index) => finishedItems[index]?.id ?? index}
                                         style={{ height: '100%', width: '100%' }}
                                         useWindowScroll={true}
                                         data={finishedItems}
-                                        overscan={isMobile ? 800 : 1500}
+                                        overscan={isMobile ? 50 : 100}
                                         listClassName="discover-grid"
                                         itemContent={(index) => {
                                             const item = finishedItems[index]

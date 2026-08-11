@@ -106,25 +106,21 @@ const Admin: React.FC = () => {
     useEffect(() => {
         const checkAuth = async () => {
             try {
-                const { data } = await supabase.auth.getUser()
-                setUser(data.user)
+                const { data: { session } } = await supabase.auth.getSession()
+                setUser(session?.user ?? null)
 
-                if (data.user) {
-                    const { data: profileData, error: profileError } = await supabase
-                        .from('profiles')
-                        .select('role')
-                        .eq('id', data.user.id)
-                        .single()
-
-                    if (profileError) {
-                        console.error('Admin page: profile fetch error', profileError)
-                        setAuthError('Unable to verify permissions.')
+                if (session?.access_token) {
+                    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin`, {
+                        headers: { 'Authorization': `Bearer ${session.access_token}` }
+                    })
+                    if (res.ok) {
+                        const data = await res.json()
+                        setProfile({ role: data.isAdmin ? 'admin' : 'user' })
                     } else {
-                        setProfile(profileData)
+                        setProfile({ role: 'user' })
                     }
                 }
-            } catch (err) {
-                console.error('Admin page: auth error', err)
+            } catch {
                 setAuthError('Authentication check failed.')
             } finally {
                 setLoading(false)

@@ -127,14 +127,14 @@ const ListsDetail: React.FC = () => {
         {filteredListItems.length > 0 && (
             <VirtuosoGrid
                 increaseViewportBy={{
-                    top: isMobile ? 600 : 1200,
-                    bottom: isMobile ? 2000 : 3000,
+                    top: isMobile ? 200 : 400,
+                    bottom: isMobile ? 400 : 800,
                 }}
                 computeItemKey={(index) => filteredListItems[index]?.id ?? index}
                 style={{ height: '100%', width: '100%' }}
                 useWindowScroll={true}
                 data={filteredListItems}
-                overscan={isMobile ? 800 : 1500}
+                overscan={isMobile ? 50 : 100}
                 listClassName="discover-grid"
                 itemContent={(index) => {
                     const item = filteredListItems[index]
@@ -176,7 +176,7 @@ const ListsDetail: React.FC = () => {
                     style={{ height: '100%', width: '100%' }}
                     useWindowScroll={true}
                     data={filteredWatchedItems}
-                    overscan={isMobile ? 800 : 1500}
+                    overscan={isMobile ? 50 : 100}
                     listClassName="discover-grid"
                     itemContent={(index) => {
                         const item = filteredWatchedItems[index]

@@ -9,8 +9,19 @@ export const signOutUser = async () => {
 }
 
 export const requestPasswordReset = async (email: string) => {
+    const allowedOrigins = [
+        'https://trackist.vercel.app',
+        'http://localhost:5173',
+        'http://localhost:3000'
+    ]
+    
+    const currentOrigin = window.location.origin
+    const redirectTo = allowedOrigins.includes(currentOrigin) 
+        ? `${currentOrigin}/login` 
+        : 'https://trackist.vercel.app/login'
+
     return supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/login`
+        redirectTo
     })
 }
 
@@ -18,11 +29,10 @@ export const updateUserEmail = async (email: string) => {
     return supabase.auth.updateUser({ email })
 }
 
-export const updateLastActive = async () => {
-    const { data: { user }, error } = await supabase.auth.getUser()
-
-    if (error || !user) {
-        return { data: null, error }
+export const updateLastActive = async (userId?: string) => {
+    const targetUserId = userId || (await supabase.auth.getUser()).data.user?.id
+    if (!targetUserId) {
+        return { data: null, error: { message: 'No user' } }
     }
 
     return supabase.auth.updateUser({
@@ -69,7 +79,7 @@ export const updateProfile = async (userId: string, updates: { display_name?: st
 }
 
 // Avatar upload function
-export const uploadAvatar = async (file: File): Promise<{ url: string | null; error: string | null }> => {
+export const uploadAvatar = async (file: File, userId?: string): Promise<{ url: string | null; error: string | null }> => {
     // Validate file type
     if (!file.type.startsWith('image/')) {
         return { url: null, error: 'File must be an image' }
@@ -80,12 +90,30 @@ export const uploadAvatar = async (file: File): Promise<{ url: string | null; er
         return { url: null, error: 'Image must be smaller than 4MB' }
     }
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return { url: null, error: 'Not authenticated' }
+    // Verify magic bytes
+    const buffer = await file.slice(0, 12).arrayBuffer()
+    const bytes = new Uint8Array(buffer)
+    const signature = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('')
+
+    const validSignatures = [
+        'ffd8ffe0', 'ffd8ffe1', 'ffd8ffe2', 'ffd8ffe3', 'ffd8ffe8',
+        '89504e47',
+        '47494638',
+        '52494646',
+        '00000100',
+    ]
+
+    const isValidImage = validSignatures.some(sig => signature.startsWith(sig))
+    if (!isValidImage) {
+        return { url: null, error: 'Invalid image file. Please upload a valid JPEG, PNG, GIF, or WebP.' }
+    }
+
+    const targetUserId = userId || (await supabase.auth.getUser()).data.user?.id
+    if (!targetUserId) return { url: null, error: 'Not authenticated' }
 
     // Generate unique filename with timestamp to avoid conflicts
     const fileExt = file.name.split('.').pop()
-    const filePath = `${user.id}/${Date.now()}.${fileExt}`
+    const filePath = `${targetUserId}/${Date.now()}.${fileExt}`
 
     // Upload new file to Supabase Storage
     const { error: uploadError } = await supabase.storage
@@ -109,7 +137,7 @@ export const uploadAvatar = async (file: File): Promise<{ url: string | null; er
     const { error: updateError } = await supabase
         .from('profiles')
         .update({ avatar_url: urlData.publicUrl })
-        .eq('id', user.id)
+        .eq('id', targetUserId)
 
     if (updateError) return { url: null, error: updateError.message }
 

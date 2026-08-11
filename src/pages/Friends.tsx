@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
-import { getFollowingList, getProfile, followUser, unfollowUser, isFollowing } from '../services/profileService'
+import { useAuthStore } from '../stores/useAuthStore'
+import { getFollowingList, getProfile, followUser, unfollowUser } from '../services/profileService'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
 
@@ -21,7 +22,7 @@ const FriendsPage = () => {
                 // Yield to the microtask queue so setState calls happen after an await,
                 // satisfying the react-hooks/set-state-in-effect rule.
                 await Promise.resolve()
-                const { data: { user } } = await supabase.auth.getUser()
+                const user = useAuthStore.getState().user
                 if (!user || !active) return
                 
                 setCurrentUser(user)
@@ -63,13 +64,18 @@ const FriendsPage = () => {
                 .limit(20)
 
             if (!error && data) {
-                // Check following status for each result
-                const resultsWithStatus = await Promise.all(
-                    data.map(async (user) => ({
-                        ...user,
-                        is_following: await isFollowing(currentUser.id, user.id)
-                    }))
-                )
+                const { data: follows } = await supabase
+                    .from('user_follows')
+                    .select('followed_id')
+                    .eq('follower_id', currentUser.id)
+                    .in('followed_id', data.map(u => u.id))
+
+                const followingSet = new Set(follows?.map(f => f.followed_id) ?? [])
+
+                const resultsWithStatus = data.map(user => ({
+                    ...user,
+                    is_following: followingSet.has(user.id)
+                }))
                 setSearchResults(resultsWithStatus)
             }
             setIsSearching(false)

@@ -18,6 +18,7 @@ class CacheService {
     private db: IDBDatabase | null = null
     private initPromise: Promise<void> | null = null
     private maxMemoryEntries = 100
+    private accessOrder: string[] = []
 
     constructor() {
         this.initPromise = this.initDB()
@@ -54,13 +55,27 @@ class CacheService {
         return `${type}:${identifier}`
     }
 
+    private recordAccess(key: string): void {
+        this.accessOrder = this.accessOrder.filter(k => k !== key)
+        this.accessOrder.push(key)
+    }
+
+    private evictLRU(): void {
+        while (this.accessOrder.length > this.maxMemoryEntries) {
+            const lruKey = this.accessOrder.shift()
+            if (lruKey) {
+                this.memoryCache.delete(lruKey)
+            }
+        }
+    }
+
     async get<T>(type: string, identifier: string | number): Promise<T | null> {
         const key = this.generateKey(type, identifier)
 
         // 1. Check memory cache first
         const memoryEntry = this.memoryCache.get(key)
         if (memoryEntry && this.isValid(memoryEntry)) {
-            this.updateAccessTime(key)
+            this.recordAccess(key)
             return memoryEntry.data as T
         }
 
@@ -71,7 +86,7 @@ class CacheService {
             if (entry && this.isValid(entry)) {
                 // Promote to memory cache
                 this.setMemoryCache(key, entry)
-                this.updateAccessTime(key)
+                this.recordAccess(key)
                 return entry.data
             }
         } catch (err) {
@@ -91,6 +106,8 @@ class CacheService {
 
         // Update memory cache
         this.setMemoryCache(key, entry)
+        this.recordAccess(key)
+        this.evictLRU()
 
         // Update IndexedDB
         try {
@@ -141,30 +158,8 @@ class CacheService {
     }
 
     private setMemoryCache<T>(key: string, entry: CacheEntry<T>): void {
-        // LRU eviction if memory cache is full
-        if (this.memoryCache.size >= this.maxMemoryEntries) {
-            const oldestKey = this.memoryCache.keys().next().value
-            if (oldestKey) this.memoryCache.delete(oldestKey)
-        }
-        this.memoryCache.set(key, entry)
-    }
-
-    private updateAccessTime(key: string): void {
-        try {
-            const db = this.db
-            if (!db) return
-            const transaction = db.transaction('cache', 'readwrite')
-            const store = transaction.objectStore('cache')
-            const request = store.get(key)
-            request.onsuccess = () => {
-                const result = request.result
-                if (result) {
-                    result.lastAccessed = Date.now()
-                    store.put(result)
-                }
-            }
-        } catch {
-            // Silent fail for access time updates
+        if (!this.accessOrder.includes(key)) {
+            this.memoryCache.set(key, entry)
         }
     }
 
@@ -287,7 +282,6 @@ export const cacheService = new CacheService()
 export async function invalidateUserCache(): Promise<void> {
     await cacheService.clearPattern('watchlist')
     await cacheService.clearPattern('library')
-    await cacheService.clearPattern('library') // Clear library cache specifically
 }
 
 // Helper function for cached fetching

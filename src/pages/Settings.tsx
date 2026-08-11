@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
+import type { User } from '@supabase/supabase-js'
 import { requestPasswordReset, updateUserEmail, getProfile, updateProfile } from '../services/profileService'
 import { useCache } from '../hooks/useCache'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { validateDisplayName, validateEmail } from '../utils/validation'
 import { getUTCTodayString } from '../utils/dateUtils'
-import type { User } from '@supabase/supabase-js'
+import { useAuthStore } from '../stores/useAuthStore'
 
 type SettingsSection = 'account' | 'profile' | 'privacy' | 'notifications' | 'data' | 'danger' | 'additions'
 
@@ -56,7 +57,7 @@ const Settings: React.FC = () => {
 
     useEffect(() => {
         const loadSettings = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
+            const user = useAuthStore.getState().user
             setCurrentUser(user)
 
             if (user) {
@@ -241,11 +242,21 @@ const Settings: React.FC = () => {
         setDeleteLoading(true)
 
         try {
-            await supabase.from('watchlist').delete().eq('user_id', currentUser.id)
-            await supabase.from('lists').delete().eq('user_id', currentUser.id)
-            await supabase.from('user_follows').delete().eq('follower_id', currentUser.id)
-            await supabase.from('user_follows').delete().eq('followed_id', currentUser.id)
-            await supabase.from('profiles').delete().eq('id', currentUser.id)
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session?.access_token) throw new Error('No session')
+
+            const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                }
+            })
+
+            if (!res.ok) {
+                const data = await res.json()
+                throw new Error(data.error || 'Failed to delete account')
+            }
 
             await supabase.auth.signOut()
             navigate('/login')

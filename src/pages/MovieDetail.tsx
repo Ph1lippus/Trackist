@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getMovieDetails, imageUrl, imageUrlOriginal, getBestBackdropPath } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
-import { supabase } from '../services/supabaseClient'
 import { invalidateUserCache } from '../services/cacheService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult, WatchlistItem } from '../types'
@@ -11,6 +10,7 @@ import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { createMovieDeepLink, openInStremio } from '../utils/stremioUtils'
 import { useShowStremioButton } from '../hooks/useShowStremioButton'
 import { useShowLetterboxButton } from '../hooks/useShowLetterboxButton'
+import { useAuthStore } from '../stores/useAuthStore'
 import stremioIcon from '../assets/stremio-logo-icon-only-fullcolor.svg'
 import letterboxdIcon from '../assets/letterboxd-decal-dots-pos-rgb-500px.png'
 
@@ -144,7 +144,7 @@ const MovieDetail: React.FC = () => {
     } 
 
     const handleAddToWatchlist = async () => {
-        const { data: { user } } = await supabase.auth.getUser()
+        const user = useAuthStore.getState().user
         if (!user || !details) {
             alert('Please log in')
             return null
@@ -234,7 +234,7 @@ const MovieDetail: React.FC = () => {
         <div className="detail-page detail-page--no-scroll">
             {backdropUrl && (
                 <div className="detail-page__backdrop">
-                    <img src={backdropUrl} alt={title} />
+                    <img src={backdropUrl} alt={title} loading="lazy" />
                     <div className="detail-page__backdrop-overlay" />
                 </div>
             )}
@@ -556,6 +556,7 @@ const MovieDetail: React.FC = () => {
                                                 className="detail-page__cast-photo" 
                                                 src={imageUrl(c.profile_path) ?? ''} 
                                                 alt={c.name ?? ''} 
+                                                loading="lazy"
                                             />
                                         )}
                                         <div className="detail-page__cast-info">

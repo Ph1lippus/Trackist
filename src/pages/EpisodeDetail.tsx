@@ -183,7 +183,7 @@ const EpisodeDetail: React.FC = () => {
         <div className="detail-page detail-page--no-scroll">
             {backdropUrl && (
                 <div className="detail-page__backdrop">
-                    <img src={backdropUrl} alt={episodeTitle} />
+                    <img src={backdropUrl} alt={episodeTitle} loading="lazy" />
                     <div className="detail-page__backdrop-overlay" />
                 </div>
             )}

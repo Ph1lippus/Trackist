@@ -79,24 +79,38 @@ const UpcomingNew: React.FC = () => {
 
             // If there are stale shows, trigger the Edge Function to check for new seasons
             if (staleShows && staleShows.length > 0) {
+                let seasonCheckOk = false
                 try {
                     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim()
                     const { data: { session } } = await supabase.auth.getSession()
 
                     if (session?.access_token) {
-                        fetch(`${supabaseUrl}/functions/v1/check-new-seasons`, {
+                        const res = await fetch(`${supabaseUrl}/functions/v1/check-new-seasons`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
                                 'Authorization': `Bearer ${session.access_token}`
                             },
                             body: JSON.stringify({ userId: user.id })
-                        }).catch(err => {
-                            console.error('Failed to trigger season check:', err)
                         })
+                        if (res.ok) {
+                            seasonCheckOk = true
+                        } else {
+                            const text = await res.text()
+                            let errorMessage = text
+                            try {
+                                const json = JSON.parse(text)
+                                errorMessage = json.error || text
+                            } catch {}
+                            console.error(`Season check failed (${res.status}):`, errorMessage)
+                        }
                     }
                 } catch (err) {
                     console.error('Failed to trigger season check:', err)
+                }
+
+                if (!seasonCheckOk) {
+                    await new Promise(resolve => setTimeout(resolve, 1500))
                 }
             }
 

@@ -115,7 +115,7 @@ const PersonDetail: React.FC = () => {
                 <div className="detail-page__person-header">
                     <div className="detail-page__person-photo">
                         {profileUrl ? (
-                            <img src={profileUrl} alt={title} />
+                            <img src={profileUrl} alt={title} loading="lazy" />
                         ) : (
                             <div className="detail-page__person-no-photo">
                                 <span>{title.charAt(0)}</span>
@@ -159,11 +159,12 @@ const PersonDetail: React.FC = () => {
                                         onClick={() => handleMediaClick(movie)}
                                     >
                                         {movie.poster_path && (
-                                            <img
-                                                src={imageUrl(movie.poster_path) || ''}
-                                                alt={movie.title || 'Movie'}
-                                                className="detail-page__filmography-poster"
-                                            />
+                                                <img
+                                                    src={imageUrl(movie.poster_path) || ''}
+                                                    alt={movie.title || 'Movie'}
+                                                    className="detail-page__filmography-poster"
+                                                    loading="lazy"
+                                                />
                                         )}
                                         <div className="detail-page__filmography-info">
                                             <span className="detail-page__filmography-title">
@@ -192,11 +193,12 @@ const PersonDetail: React.FC = () => {
                                         onClick={() => handleMediaClick(show)}
                                     >
                                         {show.poster_path && (
-                                            <img
-                                                src={imageUrl(show.poster_path) || ''}
-                                                alt={show.name || 'TV Show'}
-                                                className="detail-page__filmography-poster"
-                                            />
+                                                <img
+                                                    src={imageUrl(show.poster_path) || ''}
+                                                    alt={show.name || 'TV Show'}
+                                                    className="detail-page__filmography-poster"
+                                                    loading="lazy"
+                                                />
                                         )}
                                         <div className="detail-page__filmography-info">
                                             <span className="detail-page__filmography-title">

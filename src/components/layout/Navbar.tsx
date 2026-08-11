@@ -94,27 +94,47 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     }) : '';
 
     useEffect(() => {
-        // Get initial session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setUser(session?.user || null);
-            if (session?.user) {
-                supabase.from('profiles').select('role').eq('id', session.user.id).single().then(({ data }) => {
-                    setIsAdmin(data?.role === 'admin')
-                })
-            }
-        });
+        const checkAdmin = async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession()
+                setUser(session?.user || null)
 
-        // Listen for auth changes
+                if (session?.access_token) {
+                    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin`, {
+                        headers: { 'Authorization': `Bearer ${session.access_token}` }
+                    })
+                    if (res.ok) {
+                        const data = await res.json()
+                        setIsAdmin(data.isAdmin === true)
+                    } else {
+                        setIsAdmin(false)
+                    }
+                }
+            } catch {
+                setIsAdmin(false)
+            }
+        }
+
+        checkAdmin()
+
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user || null);
-            if (session?.user) {
-                supabase.from('profiles').select('role').eq('id', session.user.id).single().then(({ data }) => {
-                    setIsAdmin(data?.role === 'admin')
+            setUser(session?.user || null)
+            if (session?.access_token) {
+                fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin`, {
+                    headers: { 'Authorization': `Bearer ${session.access_token}` }
                 })
+                .then(res => {
+                    if (res.ok) {
+                        return res.json()
+                    }
+                    throw new Error('Not admin')
+                })
+                .then(data => setIsAdmin(data.isAdmin === true))
+                .catch(() => setIsAdmin(false))
             } else {
                 setIsAdmin(false)
             }
-        });
+        })
 
         return () => subscription.unsubscribe();
     }, []);

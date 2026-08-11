@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getBestBackdropPath } from '../services/tmdbService'
 import { markEpisodeWatched, unmarkEpisodeWatched, getWatchedEpisodes, checkAndUpdateCompleted, markShowAsFullyWatched } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
-import { supabase } from '../services/supabaseClient'
 import { invalidateUserCache } from '../services/cacheService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import EpisodeChoiceModal from '../components/modals/EpisodeChoiceModal'
@@ -13,6 +12,7 @@ import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { createEpisodeDeepLink, openInStremio, createTVDeepLink  } from '../utils/stremioUtils'
 import { useShowStremioButton } from '../hooks/useShowStremioButton'
 import { useMobile } from '../contexts/useMobile'
+import { useAuthStore } from '../stores/useAuthStore'
 import stremioIcon from '../assets/stremio-logo-icon-only-fullcolor.svg'
 
 interface LocalEpisode {
@@ -279,7 +279,7 @@ const TVShowDetail: React.FC = () => {
     }, [details, id, isInWatchlist, watchlistId])
 
     const handleAddToWatchlist = async () => {
-        const { data: { user } } = await supabase.auth.getUser()
+        const user = useAuthStore.getState().user
         if (!user || !details) {
             alert('Please log in')
             return null
@@ -649,7 +649,7 @@ const TVShowDetail: React.FC = () => {
         <div className="detail-page detail-page--no-scroll">
             {backdropUrl && (
                 <div className="detail-page__backdrop">
-                    <img src={backdropUrl} alt={title} />
+                    <img src={backdropUrl} alt={title} loading="lazy" />
                     <div className="detail-page__backdrop-overlay" />
                 </div>
             )}
@@ -950,7 +950,8 @@ const TVShowDetail: React.FC = () => {
                                                     <img 
                                                         className="detail-page__cast-photo" 
                                                         src={imageUrl(c.profile_path) ?? ''} 
-                                                        alt={c.name ?? ''} 
+                                                        alt={c.name ?? ''}
+                                                        loading="lazy"
                                                     />
                                                 )}
                                                 <div className="detail-page__cast-info">
@@ -1017,7 +1018,7 @@ const TVShowDetail: React.FC = () => {
                                     >
                                         {ep.still_path && (
                                             <div className="detail-page__episode-still">
-                                                <img src={imageUrl(ep.still_path) || ''} alt={ep.title || `Episode ${ep.episode_number}`} />
+                                                <img src={imageUrl(ep.still_path) || ''} alt={ep.title || `Episode ${ep.episode_number}`} loading="lazy" />
                                             </div>
                                         )}
                                         <div className="detail-page__episode-info" onClick={() => {

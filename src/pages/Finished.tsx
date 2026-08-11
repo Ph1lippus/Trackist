@@ -121,14 +121,14 @@ const Finished: React.FC = () => {
                         </div>
                         <VirtuosoGrid
                             increaseViewportBy={{
-                                top: isMobile ? 600 : 1200,
-                                bottom: isMobile ? 2000 : 3000,
+                                top: isMobile ? 200 : 400,
+                                bottom: isMobile ? 400 : 800,
                             }}
                             computeItemKey={(index) => finishedTVShows[index]?.id ?? index}
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={finishedTVShows}
-                            overscan={isMobile ? 800 : 1500}
+                            overscan={isMobile ? 50 : 100}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = finishedTVShows[index]
@@ -160,14 +160,14 @@ const Finished: React.FC = () => {
                         </div>
                         <VirtuosoGrid
                             increaseViewportBy={{
-                                top: isMobile ? 600 : 1200,
-                                bottom: isMobile ? 2000 : 3000,
+                                top: isMobile ? 200 : 400,
+                                bottom: isMobile ? 400 : 800,
                             }}
                             computeItemKey={(index) => finishedMovies[index]?.id ?? index}
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={finishedMovies}
-                            overscan={isMobile ? 800 : 1500}
+                            overscan={isMobile ? 50 : 100}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = finishedMovies[index]
@@ -199,14 +199,14 @@ const Finished: React.FC = () => {
                         </div>
                         <VirtuosoGrid
                             increaseViewportBy={{
-                                top: isMobile ? 600 : 1200,
-                                bottom: isMobile ? 2000 : 3000,
+                                top: isMobile ? 200 : 400,
+                                bottom: isMobile ? 400 : 800,
                             }}
                             computeItemKey={(index) => pausedItems[index]?.id ?? index}
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={pausedItems}
-                            overscan={isMobile ? 800 : 1500}
+                            overscan={isMobile ? 50 : 100}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = pausedItems[index]
@@ -238,14 +238,14 @@ const Finished: React.FC = () => {
                         </div>
                         <VirtuosoGrid
                             increaseViewportBy={{
-                                top: isMobile ? 600 : 1200,
-                                bottom: isMobile ? 2000 : 3000,
+                                top: isMobile ? 200 : 400,
+                                bottom: isMobile ? 400 : 800,
                             }}
                             computeItemKey={(index) => droppedItems[index]?.id ?? index}
                             style={{ height: '100%', width: '100%' }}
                             useWindowScroll={true}
                             data={droppedItems}
-                            overscan={isMobile ? 800 : 1500}
+                            overscan={isMobile ? 50 : 100}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = droppedItems[index]

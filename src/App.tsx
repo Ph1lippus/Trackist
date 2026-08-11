@@ -1,8 +1,7 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
-import { supabase } from './services/supabaseClient'
 import { updateLastActive } from './services/profileService'
-import type { User } from '@supabase/supabase-js'
+import { initializeAuth, useAuthStore } from './stores/useAuthStore'
 import { SearchProvider } from './contexts/SearchContext'
 import { MobileProvider } from './contexts/MobileProvider'
 import { useLibraryStore } from './stores/useLibraryStore'
@@ -50,8 +49,8 @@ const LegacyListRedirect: React.FC = () => {
 
 const AppContent: React.FC = () => {
     const location = useLocation()
-    const [user, setUser] = useState<User | null>(null)
-    const [loading, setLoading] = useState(true)
+    const user = useAuthStore((state) => state.user)
+    const loading = useAuthStore((state) => state.loading)
     const [currentMonth, setCurrentMonth] = useState(new Date())
     const hasUpdatedLastActive = useRef(false)
     const [showUpdateModal, setShowUpdateModal] = useState(false)
@@ -72,54 +71,13 @@ const AppContent: React.FC = () => {
     const isDetailPage = location.pathname.match(/^\/(movie|tv|person)\/\d+$/) || location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/)
 
     useEffect(() => {
-        let active = true
-        let subscription: { unsubscribe: () => void } | undefined
-
-        const initialiseAuth = async () => {
-            try {
-                const { data: { session } } = await supabase.auth.getSession()
-
-                if (!active) return
-                setUser(session?.user || null)
-
-                const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-                    if (!active) return
-                    setUser(nextSession?.user || null)
-                    
-                    // Reset library store on logout
-                    if (!nextSession?.user) {
-                        useLibraryStore.getState().reset()
-                        hasUpdatedLastActive.current = false
-                    } else if (nextSession?.user) {
-                        // Invalidate calendar cache on login to ensure fresh data
-                        void invalidateCalendarCache(nextSession.user.id)
-                    }
-                })
-
-                subscription = authSubscription
-            } catch {
-                if (active) {
-                    setUser(null)
-                }
-            } finally {
-                if (active) {
-                    setLoading(false)
-                }
-            }
-        }
-
-        void initialiseAuth()
-
-        return () => {
-            active = false
-            subscription?.unsubscribe()
-        }
+        void initializeAuth()
     }, [])
 
     useEffect(() => {
         if (!loading && user && !hasUpdatedLastActive.current) {
             hasUpdatedLastActive.current = true
-            void updateLastActive()
+            void updateLastActive(user.id)
             // Initialize library store once at app startup
             void useLibraryStore.getState().fetchInitialLibrary(user.id)
             // Invalidate calendar cache on login to ensure fresh data
