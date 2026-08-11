@@ -2587,6 +2587,7 @@ body::after {
     position: absolute;
     inset: 0;
     z-index: -1;
+    background: linear-gradient(to bottom, rgba(5,5,5,0.2) 0%, var(--color-bg) 100%);
 }
 .detail-page__person-backdrop img {
     width: 100%;
@@ -2649,49 +2650,6 @@ body::after {
 }
 .detail-page__filmography-section {
     margin-bottom: 2rem;
-}
-.detail-page__filmography-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 1rem;
-}
-.detail-page__filmography-item {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    padding: 0.75rem;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 10px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-.detail-page__filmography-item:hover {
-    background: rgba(133, 138, 227, 0.15);
-    border-color: rgba(133, 138, 227, 0.3);
-    transform: translateY(-2px);
-}
-.detail-page__filmography-poster {
-    width: 100%;
-    aspect-ratio: 2 / 3;
-    border-radius: 8px;
-    object-fit: cover;
-    background: rgba(255, 255, 255, 0.05);
-}
-.detail-page__filmography-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-}
-.detail-page__filmography-title {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--color-platinum);
-    line-height: 1.3;
-}
-.detail-page__filmography-year {
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.5);
 }
 
 /* Loading and error states */
@@ -3359,10 +3317,18 @@ body::after {
     .detail-page__person-meta {
         justify-content: center;
     }
-    .detail-page__cast-list {
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    .detail-page__person-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
     }
-    .detail-page__filmography-list {
+    .detail-page__person-photo {
+        width: 150px;
+    }
+    .detail-page__person-info {
+        align-items: center;
+    }
+    .detail-page__cast-list {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
 }
@@ -9250,10 +9216,6 @@ i.fa-solid.fa-trash:hover {
 
 .mobile-tvshows-empty {
     text-align: center;
-    padding: 4rem 1rem;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 25px;
 }
 
 .mobile-tvshows-empty i {
@@ -9554,10 +9516,6 @@ i.fa-solid.fa-trash:hover {
 
 .mobile-movies-empty {
     text-align: center;
-    padding: 4rem 1rem;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 25px;
 }
 
 .mobile-movies-empty i {
