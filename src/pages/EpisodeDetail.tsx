@@ -172,7 +172,7 @@ const EpisodeDetail: React.FC = () => {
         return <div className="detail-page-error">Episode not found</div>
     }
 
-    const backdropUrl = episodeData.still_path ? `https://image.tmdb.org/t/p/original${episodeData.still_path}` : null
+    const backdropUrl = episodeData.still_path ? imageUrlOriginal(episodeData.still_path) : null
     const logoUrl = getLogoUrl()
     const title = tvDetails.name || 'Untitled'
     const episodeTitle = episodeData.name || `Episode ${episodeData.episode_number}`
