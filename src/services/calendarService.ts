@@ -119,24 +119,27 @@ export const loadCalendar = (
     return new Promise((resolve) => {
         const cached = readCache(userId)
 
-        // 1. Serve cached data instantly
+        if (cached && !isCacheStale(cached)) {
+            resolve(cached.upcoming)
+            return
+        }
+
         if (cached) {
             resolve(cached.upcoming)
         }
 
-        // 2. Revalidate in the background if stale or missing
-        if (isCacheStale(cached)) {
-            fetchFromEdgeFunction(userId)
-                .then((fresh) => {
-                    writeCache(userId, fresh)
-                    onFreshData(fresh)
-                })
-                .catch((err) => {
-                    console.error('Calendar background revalidation failed:', err)
-                    if (!cached) onFreshData([])
-                })
-        } else if (!cached) {
-            onFreshData([])
-        }
+        fetchFromEdgeFunction(userId)
+            .then((fresh) => {
+                writeCache(userId, fresh)
+                onFreshData(fresh)
+                if (!cached) resolve(fresh)
+            })
+            .catch((err) => {
+                console.error('Calendar background revalidation failed:', err)
+                if (!cached) {
+                    onFreshData([])
+                    resolve([])
+                }
+            })
     })
 }
