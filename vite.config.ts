@@ -9,7 +9,7 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icons.svg'],
       manifest: {
-        name: '\u200b',
+        name: 'Trackist',
         short_name: 'Trackist',
         description: 'Track your movies, TV shows, and anime — all in one place.',
         theme_color: '#050505',
@@ -20,17 +20,16 @@ export default defineConfig({
         start_url: '/', 
         icons: [
           {
-            src: '/TRACK1ST-FULLNAMELGO.png?v=2',
+            src: '/TRACK1ST-FULLNAMELGO.png?v=3',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            // By putting it here, Android is forced to use the full name layout on the splash screen
-            src: '/TRACK1ST-FULLNAMELGO.png?v=2', 
+            src: '/TRACK1ST-FULLNAMELGO.png?v=3',
             sizes: '512x512',
             type: 'image/png',
-            purpose: 'maskable' 
+            purpose: 'maskable'
           }
         ]
 

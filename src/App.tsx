@@ -137,7 +137,7 @@ const AppContent: React.FC = () => {
         return (
             <div className="page-loader" aria-live="polite">
                 <div className="page-loader__content">
-                    <img src="/TRACK1ST-FULLNAMELGO.png" alt="Trackist" className="page-loader__logo" />
+                    <img src="/TRACK1ST-FULLNAMELGO.png?v=3" alt="Trackist" className="page-loader__logo" />
                 </div>
             </div>
         )

@@ -1,5 +1,5 @@
 {
-  "name": "\u200b",
+  "name": "Trackist",
   "short_name": "Trackist",
   "description": "Track your movies, TV shows, and anime — all in one place.",
   "theme_color": "#050505",
@@ -10,16 +10,16 @@
   "start_url": "/",
   "icons": [
           {
-            "src": "/TRACK1ST-FULLNAMELGO.png?v=2",
+            "src": "/TRACK1ST-FULLNAMELGO.png?v=3",
             "sizes": "512x512",
             "type": "image/png",
             "purpose": "any"
           },
           {
-            "src": "/TRACK1ST-FULLNAMELGO.png?v=2", 
+            "src": "/TRACK1ST-FULLNAMELGO.png?v=3",
             "sizes": "512x512",
             "type": "image/png",
-            "purpose": "maskable" 
+            "purpose": "maskable"
           }
         ]
 }
