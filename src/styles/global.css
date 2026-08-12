@@ -18,8 +18,12 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
-    .media-card__icon-btn {
-        display: none;
+    .detail-page__overview-section {
+        margin-top: 16rem;
+        text-align: center;
+    }
+    .media-card__icon-btn, .detail-page__genres, .detail-page__actions, .detail-page__age-rating {
+        display: none!important;
     }
     .detail-page{
         padding:0.5rem;
@@ -3365,8 +3369,7 @@ body::after {
 }
 
 .calendar-day {
-    min-height: 130px;
-    padding: 0.3rem;
+        padding: 0.3rem;
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 10px;

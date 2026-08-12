@@ -551,23 +551,12 @@ const ProfilePage: React.FC = () => {
                                         >
                                             <div className="profile-list-card__header">
                                                 <h3 className="profile-list-card__title">{list.title}</h3>
-                                                {!list.is_public && (
-                                                    <span className="profile-list-card__badge profile-list-card__badge--private">
-                                                        <i className="fa-solid fa-lock"></i> Private
-                                                    </span>
-                                                )}
-                                                {list.is_public && (
-                                                    <span className="profile-list-card__badge profile-list-card__badge--public">
-                                                        <i className="fa-solid fa-globe"></i> Public
-                                                    </span>
-                                                )}
                                             </div>
                                             {list.description && (
                                                 <p className="profile-list-card__desc">{list.description}</p>
                                             )}
                                             <div className="profile-list-card__stats">
-                                                <span><i className="fa-solid fa-layer-group"></i> {list.item_count} items</span>
-                                                <span><i className="fa-solid fa-check-circle"></i> {list.watched_count || 0} watched</span>
+                                                <span> {list.item_count} items</span>
                                             </div>
                                         </Link>
                                     ))}
