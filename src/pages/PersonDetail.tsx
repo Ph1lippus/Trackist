@@ -128,7 +128,7 @@ const PersonDetail: React.FC = () => {
                             </div>
                             {placeOfBirth && (
                                 <p className="detail-page__person-location">
-                                    📍 {placeOfBirth}
+                                    {placeOfBirth}
                                 </p>
                             )}
                         </div>
