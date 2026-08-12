@@ -18,6 +18,15 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .dashboard-shell.mobile-tvshows-shell{
+        padding: 0rem!important;
+    }
+    .discover-page, .dashboard-shell {
+        padding: 1.5rem 0.5rem 7rem!important;
+    }
+    .dashboard-shell {
+        max-width: 100%!important;
+    }
     .detail-page__overview-section {
         margin-top: 16rem;
         text-align: center;
