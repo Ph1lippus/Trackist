@@ -298,6 +298,7 @@ const ProfilePage: React.FC = () => {
                                     src={profile.avatar_url}
                                     alt={profile.display_name || 'User'}
                                     className="profile-hero__avatar"
+                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                                 />
                             ) : (
                                 <div className="profile-hero__avatar profile-hero__avatar--placeholder">
