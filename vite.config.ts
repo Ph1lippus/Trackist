@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icons.svg'],
       manifest: {
-        name: 'Trackist',
-        short_name: 'Trackist',
+        name: 'Track1st',
+        short_name: 'Track1st',
         description: 'Track your movies, TV shows, and anime — all in one place.',
         theme_color: '#050505',
         background_color: '#050505',
