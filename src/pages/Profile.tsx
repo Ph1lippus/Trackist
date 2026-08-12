@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import type { User } from '@supabase/supabase-js'
@@ -12,6 +12,7 @@ import {
     isFollowing
 } from '../services/profileService'
 import { useAuthStore } from '../stores/useAuthStore'
+import { useLibraryStore } from '../stores/useLibraryStore'
 import type { WatchlistItem, TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { VirtuosoGrid } from 'react-virtuoso'
@@ -54,8 +55,7 @@ const ProfilePage: React.FC = () => {
     const [loading, setLoading] = useState(true)
     const [watchlistItems, setWatchlistItems] = useState<WatchlistItem[]>([])
     const [userLists, setUserLists] = useState<UserList[]>([])
-    const [activeTab, setActiveTab] = useState<TabType | null>(null)
-    const initialTabSet = useRef(false)
+    const [activeTab, setActiveTab] = useState<TabType>('watching')
     const [currentUserWatchlistIds, setCurrentUserWatchlistIds] = useState<Set<number>>(new Set())
 
     useEffect(() => {
@@ -228,20 +228,41 @@ const ProfilePage: React.FC = () => {
 
     const isOwnProfile = currentUser?.id === profile?.id
 
-    useEffect(() => {
-        if (initialTabSet.current || activeTab !== null) return
-        initialTabSet.current = true
+    const handleAddToWatchlist = async (tmdbItem: TMDBResult) => {
+        if (!currentUser) return
 
-        const hasWatching = watchlistItems.some(item => (item.media_type === 'tv' || item.media_type === 'anime') && item.status === 'watching')
-        const hasMovies = watchlistItems.some(item => item.media_type === 'movie' && item.status === 'planning')
-        const hasFinished = watchlistItems.some(item => item.status === 'completed' || item.status === 'caught_up')
-        const hasLists = userLists.length > 0
+        const tmdbId = tmdbItem.id as number
+        const isInWatchlist = currentUserWatchlistIds.has(tmdbId)
 
-        if (hasWatching) setActiveTab('watching')
-        else if (hasMovies) setActiveTab('movies')
-        else if (hasFinished) setActiveTab('finished')
-        else if (hasLists) setActiveTab('lists')
-    }, [watchlistItems, userLists, activeTab])
+        if (isInWatchlist) {
+            const libraryItem = useLibraryStore.getState().allItems.find(item => item.tmdb_id === tmdbId)
+            if (libraryItem) {
+                await useLibraryStore.getState().removeItem(libraryItem.id)
+                setCurrentUserWatchlistIds(prev => {
+                    const next = new Set(prev)
+                    next.delete(tmdbId)
+                    return next
+                })
+            }
+        } else {
+            const newItem: WatchlistItem = {
+                id: crypto.randomUUID(),
+                user_id: currentUser.id,
+                media_type: tmdbItem.media_type === 'person' ? 'movie' : (tmdbItem.media_type as 'movie' | 'tv' | 'anime'),
+                tmdb_id: tmdbId,
+                title: tmdbItem.title || tmdbItem.name || '',
+                poster_path: tmdbItem.poster_path || undefined,
+                overview: tmdbItem.overview || undefined,
+                release_date: tmdbItem.release_date || tmdbItem.first_air_date || undefined,
+                vote_average: tmdbItem.vote_average || undefined,
+                status: 'planning',
+                added_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            }
+            await useLibraryStore.getState().addItem(newItem)
+            setCurrentUserWatchlistIds(prev => new Set(prev).add(tmdbId))
+        }
+    }
 
     const watchingTVShows = useMemo(() => watchlistItems.filter(item =>
         (item.media_type === 'tv' || item.media_type === 'anime') && item.status === 'watching'
@@ -387,8 +408,7 @@ const ProfilePage: React.FC = () => {
                 </div>
 
                 {/* Tab Content */}
-                {activeTab !== null && (
-                    <div className="profile-tab-content">
+                <div className="profile-tab-content">
                     {/* Watching Tab */}
                     {activeTab === 'watching' && (
                         <div className="profile-watchlist-section">
@@ -417,6 +437,7 @@ const ProfilePage: React.FC = () => {
                                                 <MediaCard
                                                     item={tmdbItem}
                                                     isInWatchlist={currentUserWatchlistIds.has(tmdbItem.id)}
+                                                    onAdd={handleAddToWatchlist}
                                                 />
                                             )
                                         }}
@@ -459,6 +480,7 @@ const ProfilePage: React.FC = () => {
                                                 <MediaCard
                                                     item={tmdbItem}
                                                     isInWatchlist={currentUserWatchlistIds.has(tmdbItem.id)}
+                                                    onAdd={handleAddToWatchlist}
                                                 />
                                             )
                                         }}
@@ -501,6 +523,7 @@ const ProfilePage: React.FC = () => {
                                                 <MediaCard
                                                     item={tmdbItem}
                                                     isInWatchlist={currentUserWatchlistIds.has(tmdbItem.id)}
+                                                    onAdd={handleAddToWatchlist}
                                                 />
                                             )
                                         }}
@@ -561,7 +584,6 @@ const ProfilePage: React.FC = () => {
                         </div>
                     )}
                 </div>
-                )}
 
                 {/* Unfollow Confirmation Modal */}
                 {showUnfollowModal && (
