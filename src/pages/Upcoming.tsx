@@ -66,9 +66,11 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
     const calendarGridRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
+        if (loading) return
+        const grid = calendarGridRef.current
+        if (!grid) return
+
         const measure = () => {
-            const grid = calendarGridRef.current
-            if (!grid) return
             const gridRect = grid.getBoundingClientRect()
             const gridWidth = gridRect.width
             const style = getComputedStyle(grid)
@@ -87,12 +89,12 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
         }
         const raf = requestAnimationFrame(() => measure())
         const observer = new ResizeObserver(measure)
-        if (calendarGridRef.current) observer.observe(calendarGridRef.current)
+        observer.observe(grid)
         return () => {
             cancelAnimationFrame(raf)
             observer.disconnect()
         }
-    }, [])
+    }, [loading])
 
     useEffect(() => {
         const fetchUpcoming = async () => {

@@ -1081,7 +1081,7 @@ body::after {
 /* Smaller cards on phones */
 @media (max-width: 480px) {
     .discover-grid {
-        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
         gap: 0.6rem;
         padding: 0.5rem 0;
     }
