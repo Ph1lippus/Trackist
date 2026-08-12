@@ -48,6 +48,7 @@ const Statistics: React.FC = () => {
         const totalPlanning = items.filter(i => i.status === 'planning').length
         const totalDropped = items.filter(i => i.status === 'dropped').length
         const totalCaughtUp = items.filter(i => i.status === 'caught_up').length
+        const totalPaused = items.filter(i => i.status === 'paused').length
 
         const moviesCompleted = movies.filter(i => i.status === 'completed').length
         const tvCompleted = tvShows.filter(i => i.status === 'completed').length
@@ -129,6 +130,7 @@ const Statistics: React.FC = () => {
             totalPlanning,
             totalDropped,
             totalCaughtUp,
+            totalPaused,
             moviesCompleted,
             tvCompleted,
             avgScore,
@@ -158,6 +160,7 @@ const Statistics: React.FC = () => {
             { label: 'Watching', count: stats.totalWatching, color: '#ffc107' },
             { label: 'Planning', count: stats.totalPlanning, color: '#b0b0b0' },
             { label: 'Caught Up', count: stats.totalCaughtUp, color: '#0096ff' },
+            { label: 'Paused', count: stats.totalPaused, color: '#9c27b0' },
             { label: 'Dropped', count: stats.totalDropped, color: '#f44336' },
         ].filter(s => s.count > 0)
     }, [stats])
@@ -222,6 +225,7 @@ const Statistics: React.FC = () => {
                                 <div className="stats-completion__row"><span>Completed</span><strong>{stats.totalCompleted}</strong></div>
                                 <div className="stats-completion__row"><span>In Progress</span><strong>{stats.totalWatching + stats.totalCaughtUp}</strong></div>
                                 <div className="stats-completion__row"><span>Planned</span><strong>{stats.totalPlanning}</strong></div>
+                                <div className="stats-completion__row"><span>Paused</span><strong>{stats.totalPaused}</strong></div>
                                 <div className="stats-completion__row"><span>Dropped</span><strong>{stats.totalDropped}</strong></div>
                             </div>
                         </div>
