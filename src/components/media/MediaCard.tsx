@@ -225,7 +225,14 @@ const MediaCard: React.FC<MediaCardProps> = ({
                     </button>
                 )}
                 {showInWatchlistIndicator && (
-                    <div className="media-card__icon-btn" title={isInWatchlist ? 'In watchlist' : 'Add to watchlist'}>
+                    <div
+                        className="media-card__icon-btn"
+                        title={isInWatchlist ? 'In watchlist' : 'Add to watchlist'}
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            e.preventDefault()
+                        }}
+                    >
                         {isInWatchlist ? (
                             <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
                         ) : (

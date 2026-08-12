@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo, useRef } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import type { User } from '@supabase/supabase-js'
@@ -55,6 +55,7 @@ const ProfilePage: React.FC = () => {
     const [watchlistItems, setWatchlistItems] = useState<WatchlistItem[]>([])
     const [userLists, setUserLists] = useState<UserList[]>([])
     const [activeTab, setActiveTab] = useState<TabType | null>(null)
+    const initialTabSet = useRef(false)
     const [currentUserWatchlistIds, setCurrentUserWatchlistIds] = useState<Set<number>>(new Set())
 
     useEffect(() => {
@@ -226,6 +227,21 @@ const ProfilePage: React.FC = () => {
     }
 
     const isOwnProfile = currentUser?.id === profile?.id
+
+    useEffect(() => {
+        if (initialTabSet.current || activeTab !== null) return
+        initialTabSet.current = true
+
+        const hasWatching = watchlistItems.some(item => (item.media_type === 'tv' || item.media_type === 'anime') && item.status === 'watching')
+        const hasMovies = watchlistItems.some(item => item.media_type === 'movie' && item.status === 'planning')
+        const hasFinished = watchlistItems.some(item => item.status === 'completed' || item.status === 'caught_up')
+        const hasLists = userLists.length > 0
+
+        if (hasWatching) setActiveTab('watching')
+        else if (hasMovies) setActiveTab('movies')
+        else if (hasFinished) setActiveTab('finished')
+        else if (hasLists) setActiveTab('lists')
+    }, [watchlistItems, userLists, activeTab])
 
     const watchingTVShows = useMemo(() => watchlistItems.filter(item =>
         (item.media_type === 'tv' || item.media_type === 'anime') && item.status === 'watching'
