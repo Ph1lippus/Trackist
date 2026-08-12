@@ -276,6 +276,8 @@ const ProfilePage: React.FC = () => {
         item.status === 'completed' || item.status === 'caught_up'
     ), [watchlistItems])
 
+    const pausedCount = useMemo(() => watchlistItems.filter(item => item.status === 'paused').length, [watchlistItems])
+
     if (loading) {
         return (
             <section className="dashboard-page">
@@ -344,6 +346,10 @@ const ProfilePage: React.FC = () => {
                                     <span className="profile-stat__value">{followingCount}</span>
                                     <span className="profile-stat__label"> Following</span>
                                 </Link>
+                                <div className="profile-stat">
+                                    <span className="profile-stat__value">{pausedCount}</span>
+                                    <span className="profile-stat__label"> Paused</span>
+                                </div>
                             </div>
 
                             <div className="profile-hero__actions">
