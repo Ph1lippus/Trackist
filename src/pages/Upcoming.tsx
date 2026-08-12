@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
@@ -62,6 +62,23 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
     const [upcomingItems, setUpcomingItems] = useState<UpcomingItem[]>([])
     const [loading, setLoading] = useState(true)
     const [selectedDate, setSelectedDate] = useState<{dateKey: string, items: UpcomingItem[]} | null>(null)
+    const [dayCellInnerWidth, setDayCellInnerWidth] = useState(0)
+    const calendarGridRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        const measure = () => {
+            const dayEl = calendarGridRef.current?.querySelector('.calendar-day')
+            if (dayEl) {
+                const style = window.getComputedStyle(dayEl)
+                const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight)
+                setDayCellInnerWidth(dayEl.clientWidth - paddingX)
+            }
+        }
+        measure()
+        const observer = new ResizeObserver(measure)
+        if (calendarGridRef.current) observer.observe(calendarGridRef.current)
+        return () => observer.disconnect()
+    }, [])
 
     useEffect(() => {
         const fetchUpcoming = async () => {
@@ -186,7 +203,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
             <div className="dashboard-shell" style={{ height: '100%', overflow: 'hidden' }}>
                 <div className="upcoming-layout" style={{ height: '100%' }}>
                     <main className="upcoming-main" style={{ overflowY: 'auto' }}>
-                        <div className="calendar-grid">
+                        <div className="calendar-grid" ref={calendarGridRef}>
                         {weekDays.map(day => (
                             <div key={day} className="calendar-weekday">{day}</div>
                         ))}
@@ -199,10 +216,20 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                             const dayItems = groupedItems[dateKey] || []
                             const isTodayDate = isToday(dateKey)
 
-                            // Show max 2 episodes, rest go into "+" button
-                            const maxVisible = 2
-                            const visibleItems = dayItems.slice(0, maxVisible)
-                            const hasMore = dayItems.length > maxVisible
+                            const cardWidth = 72
+                            const overlap = 20
+                            const effectiveSlot = cardWidth - overlap
+                            const maxCards = dayCellInnerWidth > 0
+                                ? Math.max(1, Math.floor((dayCellInnerWidth - overlap) / effectiveSlot))
+                                : 2
+
+                            const hasMore = dayItems.length > maxCards
+                            const showMoreButton = hasMore && maxCards > 1
+                            const visibleCount = hasMore
+                                ? Math.max(1, maxCards - 1)
+                                : Math.min(dayItems.length, maxCards)
+
+                            const visibleItems = dayItems.slice(0, visibleCount)
 
                             return (
                                 <div 
@@ -243,7 +270,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                                 </div>
                                             </div>
                                         ))}
-                                        {hasMore && (
+                                        {showMoreButton && (
                                             <div 
                                                 className="calendar-episode-more"
                                                 onClick={(e) => {
@@ -256,7 +283,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                                     zIndex: 0
                                                 }}
                                             >
-                                                +{dayItems.length - maxVisible}
+                                                +{dayItems.length - visibleCount}
                                             </div>
                                         )}
                                     </div>
