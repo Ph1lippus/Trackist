@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { useAuthStore } from '../stores/useAuthStore'
-import { getProfileByUsername, getFollowingList, followUser, unfollowUser, isFollowing } from '../services/profileService'
+import { getProfileByUsername, getFollowingList, followUser, unfollowUser } from '../services/profileService'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
 
@@ -16,7 +16,6 @@ const FollowingPage = () => {
     const [loading, setLoading] = useState(true)
     const [searchResults, setSearchResults] = useState<any[]>([])
     const [isSearching, setIsSearching] = useState(false)
-    const [refreshKey, setRefreshKey] = useState(0)
     const { committedQuery } = useSearch()
 
     useEffect(() => {
@@ -93,21 +92,33 @@ const FollowingPage = () => {
         searchUsers()
     }, [committedQuery, currentUser])
 
-    const handleFollow = async (userId: string) => {
+    const followingSet = useMemo(() => {
+        if (!currentUser) return new Set<string>()
+        return new Set(following.map(f => f.id))
+    }, [following, currentUser])
+
+    const handleFollow = useCallback(async (userId: string) => {
         if (!currentUser) return
 
         setFollowLoading(prev => ({ ...prev, [userId]: true }))
-        const currentlyFollowing = await isFollowing(currentUser.id, userId)
 
-        if (currentlyFollowing) {
+        const isCurrentlyFollowing = followingSet.has(userId)
+
+        if (isCurrentlyFollowing) {
             await unfollowUser(currentUser.id, userId)
+            setFollowing(prev => prev.filter(f => f.id !== userId))
+            followingSet.delete(userId)
         } else {
             await followUser(currentUser.id, userId)
+            const { data } = await getProfileByUsername(userId)
+            if (data) {
+                setFollowing(prev => [...prev, data])
+                followingSet.add(userId)
+            }
         }
 
         setFollowLoading(prev => ({ ...prev, [userId]: false }))
-        setRefreshKey(prev => prev + 1)
-    }
+    }, [currentUser, followingSet])
 
     if (loading) {
         return (
@@ -185,13 +196,39 @@ const FollowingPage = () => {
                 {following.length > 0 ? (
                     <div className="friends-results">
                         {following.map((user) => (
-                            <UserCard
-                                key={user.id + '-' + refreshKey}
-                                user={user}
-                                currentUser={currentUser}
-                                onFollow={handleFollow}
-                                followLoading={!!followLoading[user.id]}
-                            />
+                            <div key={user.id} className="friend-card">
+                                <Link
+                                    to={`/Profile/${user.display_name}`}
+                                    className="friend-card__avatar"
+                                >
+                                    {user.avatar_url ? (
+                                        <img src={user.avatar_url} alt={user.display_name || 'User'} />
+                                    ) : (
+                                        <div className="friend-card__avatar-placeholder">
+                                            {(user.display_name || 'U')[0].toUpperCase()}
+                                        </div>
+                                    )}
+                                </Link>
+
+                                <div className="friend-card__info">
+                                    <Link
+                                        to={`/Profile/${user.display_name}`}
+                                        className="friend-card__name"
+                                    >
+                                        {user.display_name || 'Anonymous'}
+                                    </Link>
+                                </div>
+
+                                {currentUser && currentUser.id !== user.id && (
+                                    <button
+                                        className={`friend-card__follow-btn ${followingSet.has(user.id) ? 'friend-card__follow-btn--following' : ''}`}
+                                        onClick={() => handleFollow(user.id)}
+                                        disabled={!!followLoading[user.id]}
+                                    >
+                                        {followLoading[user.id] ? 'Loading...' : followingSet.has(user.id) ? 'Following' : 'Follow'}
+                                    </button>
+                                )}
+                            </div>
                         ))}
                     </div>
                 ) : (
@@ -202,56 +239,6 @@ const FollowingPage = () => {
                 )}
             </div>
         </section>
-    )
-}
-
-const UserCard = ({ user, currentUser, onFollow, followLoading }: { user: any; currentUser: any; onFollow: (id: string) => void; followLoading: boolean }) => {
-    const [isFollowingUser, setIsFollowingUser] = useState(false)
-
-    useEffect(() => {
-        const check = async () => {
-            if (currentUser && currentUser.id !== user.id) {
-                const result = await isFollowing(currentUser.id, user.id)
-                setIsFollowingUser(result)
-            }
-        }
-        check()
-    }, [currentUser, user.id])
-
-    return (
-        <div className="friend-card">
-            <Link
-                to={`/Profile/${user.display_name}`}
-                className="friend-card__avatar"
-            >
-                {user.avatar_url ? (
-                    <img src={user.avatar_url} alt={user.display_name || 'User'} />
-                ) : (
-                    <div className="friend-card__avatar-placeholder">
-                        {(user.display_name || 'U')[0].toUpperCase()}
-                    </div>
-                )}
-            </Link>
-
-            <div className="friend-card__info">
-                <Link
-                    to={`/Profile/${user.display_name}`}
-                    className="friend-card__name"
-                >
-                    {user.display_name || 'Anonymous'}
-                </Link>
-            </div>
-
-            {currentUser && currentUser.id !== user.id && (
-                <button
-                    className={`friend-card__follow-btn ${isFollowingUser ? 'friend-card__follow-btn--following' : ''}`}
-                    onClick={() => onFollow(user.id)}
-                    disabled={followLoading}
-                >
-                    {followLoading ? 'Loading...' : isFollowingUser ? 'Following' : 'Follow'}
-                </button>
-            )}
-        </div>
     )
 }
 
