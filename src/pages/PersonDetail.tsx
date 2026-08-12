@@ -66,8 +66,14 @@ const PersonDetail: React.FC = () => {
                         const dateB = (b as FilmographyItem).first_air_date || ''
                         return dateB.localeCompare(dateA)
                     })
+                const seen = new Set<number>()
+                const uniqueTV = sortedTV.filter((item) => {
+                    if (seen.has(item.id)) return false
+                    seen.add(item.id)
+                    return true
+                })
                 setMovies(sortedMovies)
-                setTVShows(sortedTV)
+                setTVShows(uniqueTV)
             } catch (err) {
                 console.error('Failed to load credits:', err)
             }

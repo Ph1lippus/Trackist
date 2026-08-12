@@ -149,9 +149,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
             >
                 {imgUrl && <img src={imgUrl} alt={displayTitle} loading="lazy" fetchPriority={priority ? "high" : "auto"} decoding="async" />}
                 {!imgUrl && (
-                    <div className="media-card__no-poster">
-                        <span>{displayTitle}</span>
-                    </div>
+                    <div className="media-card__no-poster" />
                 )}
                 {episodesLeft !== undefined && episodesLeft > 0 && (
                     <span className="media-card__episodes-left">+{episodesLeft}</span>
