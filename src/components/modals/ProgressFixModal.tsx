@@ -65,11 +65,13 @@ const ProgressFixModal: React.FC<ProgressFixModalProps> = ({ isOpen, onClose, on
                         </div>
                         <h3 className="progress-fix-modal-title">Fix Progress</h3>
                         <p className="progress-fix-modal-message">
-                            This will scan your watchlist and fix status issues for both TV shows and movies.
+                            This will scan your watchlist and fix status and season tracking issues for both TV shows and movies.
                             This may take a few moments. The operation cannot be undone once started.
                         </p>
                         <p className="progress-fix-modal-submessage">
                             <strong>For TV Shows & Anime:</strong>
+                            <br />
+                            • Shows with <strong>incorrect current season</strong> will be recalculated from watched episodes.
                             <br />
                             • Shows with <strong>no episodes watched</strong> will be set to "Planning" status.
                             <br />

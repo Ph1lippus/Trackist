@@ -1,9 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getFanartImages, getBestBackdropPath } from '../services/tmdbService'
+import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getBestBackdropPath } from '../services/tmdbService'
 import { markEpisodeWatched, unmarkEpisodeWatched, getWatchedEpisodes, checkAndUpdateCompleted, markShowAsFullyWatched } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
-import { supabase } from '../services/supabaseClient'
 import { invalidateUserCache } from '../services/cacheService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import EpisodeChoiceModal from '../components/modals/EpisodeChoiceModal'
@@ -12,6 +11,9 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { createEpisodeDeepLink, openInStremio, createTVDeepLink  } from '../utils/stremioUtils'
 import { useShowStremioButton } from '../hooks/useShowStremioButton'
+import { useMobile } from '../contexts/useMobile'
+import { useAuthStore } from '../stores/useAuthStore'
+import stremioIcon from '../assets/stremio-logo-icon-only-fullcolor.svg'
 
 interface LocalEpisode {
     id: string
@@ -32,9 +34,9 @@ const TVShowDetail: React.FC = () => {
     usePageTitle('Trackist - TV Show Detail')
     const navigate = useNavigate()
     const { showStremioButton, loading: stremioLoading } = useShowStremioButton()
+    const { isMobile } = useMobile()
     const [details, setDetails] = useState<TMDBResult | null>(null)
     const [loading, setLoading] = useState(true)
-    const [fanartImages, setFanartImages] = useState<{ hdtvlogo?: Array<{ url: string }> } | null>(null)
     const [isInWatchlist, setIsInWatchlist] = useState(false)
     const [watchlistId, setWatchlistId] = useState<string | null>(null)
     const [watchlistStatus, setWatchlistStatus] = useState<string | null>(null)
@@ -58,6 +60,7 @@ const TVShowDetail: React.FC = () => {
     } | null>(null)
     const [removeWatchlistModal, setRemoveWatchlistModal] = useState<{ isOpen: boolean } | null>(null)
     const [markWatchedModal, setMarkWatchedModal] = useState<{ isOpen: boolean; markAsWatched: boolean } | null>(null)
+    const [statusChangeModal, setStatusChangeModal] = useState<{ isOpen: boolean } | null>(null)
     const [addEpisodeModal, setAddEpisodeModal] = useState<{
         isOpen: boolean
         episode: LocalEpisode
@@ -142,12 +145,8 @@ const TVShowDetail: React.FC = () => {
             if (!id) return
             setLoading(true)
             try {
-                const [data, fanart] = await Promise.all([
-                    getTVDetails(Number(id)),
-                    getFanartImages(Number(id), 'tv')
-                ])
+                const data = await getTVDetails(Number(id))
                 setDetails(data)
-                setFanartImages(fanart)
                 
                 if (data.seasons?.[0]) {
                     // Find the first valid season (not season 0, has episodes)
@@ -280,7 +279,7 @@ const TVShowDetail: React.FC = () => {
     }, [details, id, isInWatchlist, watchlistId])
 
     const handleAddToWatchlist = async () => {
-        const { data: { user } } = await supabase.auth.getUser()
+        const user = useAuthStore.getState().user
         if (!user || !details) {
             alert('Please log in')
             return null
@@ -378,10 +377,6 @@ const TVShowDetail: React.FC = () => {
                 return imageUrlOriginal(logos[0].file_path)
             }
         }
-        if (fanartImages?.hdtvlogo?.[0]?.url) {
-            return fanartImages.hdtvlogo[0].url
-        }
-    
         return null
     }  
 
@@ -654,7 +649,7 @@ const TVShowDetail: React.FC = () => {
         <div className="detail-page detail-page--no-scroll">
             {backdropUrl && (
                 <div className="detail-page__backdrop">
-                    <img src={backdropUrl} alt={title} />
+                    <img src={backdropUrl} alt={title} loading="lazy" />
                     <div className="detail-page__backdrop-overlay" />
                 </div>
             )}
@@ -703,40 +698,14 @@ const TVShowDetail: React.FC = () => {
                             <h2 className="detail-page__section-title">Overview</h2>
                             <p className="detail-page__overview">{overview}</p>
                             
+                            {isInWatchlist && watchlistStatus && (
+                                <div className="detail-page__status">
+                                    <span className="detail-page__status-label">Status:</span>
+                                    <span className="detail-page__status-value">{watchlistStatus}</span>
+                                </div>
+                            )}
+                            
                             <div className="detail-page__actions">
-                                {trailerKey && (
-                                    <button 
-                                        className="detail-page__icon-btn"
-                                        onClick={() => setShowTrailer(!showTrailer)}
-                                        title={showTrailer ? 'Close Trailer' : 'Watch Trailer'}
-                                    >
-                                        <i className="fa-solid fa-clapperboard"></i>
-                                    </button>
-                                )}
-                                {cast.length > 0 && (
-                                    <button 
-                                        className="detail-page__icon-btn"
-                                        onClick={() => setShowCast(!showCast)}
-                                        title={showCast ? 'Hide Cast' : 'Cast'}
-                                    >
-                                        <i className="fa-solid fa-users"></i>
-                                    </button>
-                                )}
-                                {showStremioButton && !stremioLoading && (
-                                    <button
-                                        className="detail-page__icon-btn"
-                                        onClick={() => {
-                                            const nextEp = getNextEpisodeToWatch()
-                                            const sharingLink = nextEp
-                                                ? createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids?.imdb_id)
-                                                : createTVDeepLink(details.id, details.external_ids?.imdb_id)
-                                            openInStremio(sharingLink)
-                                        }}
-                                        title="Open in Stremio"
-                                    >
-                                        <i className="fa-solid fa-play"></i>
-                                    </button>
-                                )}
                                 {!isInWatchlist ? (
                                     <>
                                         <button 
@@ -795,7 +764,153 @@ const TVShowDetail: React.FC = () => {
                                         >
                                             <i className={watchlistStatus === 'completed' ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
                                         </button>
+                                        <button 
+                                            className="detail-page__icon-btn"
+                                            onClick={() => setStatusChangeModal({ isOpen: true })}
+                                            disabled={isUpdatingStatus || modalLoading}
+                                            title="Change Status"
+                                        >
+                                            <i className="fa-solid fa-ellipsis"></i>
+                                        </button>
                                     </>
+                                )}
+                                {trailerKey && (
+                                    <button 
+                                        className="detail-page__icon-btn"
+                                        onClick={() => setShowTrailer(!showTrailer)}
+                                        title={showTrailer ? 'Close Trailer' : 'Watch Trailer'}
+                                    >
+                                        <i className="fa-solid fa-clapperboard"></i>
+                                    </button>
+                                )}
+                                {cast.length > 0 && (
+                                    <button 
+                                        className="detail-page__icon-btn"
+                                        onClick={() => setShowCast(!showCast)}
+                                        title={showCast ? 'Hide Cast' : 'Cast'}
+                                    >
+                                        <i className="fa-solid fa-users"></i>
+                                    </button>
+                                )}
+                                {showStremioButton && !stremioLoading && (
+                                    <button
+                                        className="detail-page__icon-btn"
+                                        onClick={() => {
+                                            const nextEp = getNextEpisodeToWatch()
+                                            const sharingLink = nextEp
+                                                ? createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids?.imdb_id)
+                                                : createTVDeepLink(details.id, details.external_ids?.imdb_id)
+                                            openInStremio(sharingLink)
+                                        }}
+                                        title="Open in Stremio"
+                                    >
+                                        <img src={stremioIcon} alt="Stremio" className="detail-page__stremio-logo" />
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Mobile fixed action container */}
+                            <div className="detail-page__actions-mobile">
+                                {!isInWatchlist ? (
+                                    <>
+                                        <button 
+                                            className="detail-page__icon-btn"
+                                            onClick={async () => {
+                                                await handleAddToWatchlist()
+                                            }}
+                                            disabled={adding}
+                                            title="Add to Watchlist"
+                                        >
+                                            <i className="fa-regular fa-bookmark"></i>
+                                        </button>
+                                        <button 
+                                            className="detail-page__icon-btn"
+                                            onClick={async () => {
+                                                setIsUpdatingStatus(true)
+                                                const newWatchlistId = await handleAddToWatchlist()
+                                                if (newWatchlistId && details) {
+                                                    // Gold standard: just set the status directly - no need to insert every episode
+                                                    const newStatus = await markShowAsFullyWatched(newWatchlistId, details.id)
+                                                    // Update local state with the new status
+                                                    setWatchlistStatus(newStatus)
+                                                    // Fire confetti if completed/caught_up
+                                                    if (newStatus === 'completed' || newStatus === 'caught_up') {
+                                                        launchCosmicConfetti()
+                                                    }
+                                                    // Refresh episodes
+                                                    setEpisodes(prev => prev.map(ep => ({ ...ep, watched: true })))
+                                                }
+                                                setIsUpdatingStatus(false)
+                                            }}
+                                            disabled={adding || isUpdatingStatus}
+                                            title="Mark as Watched"
+                                        >
+                                            <i className="fa-solid fa-eye"></i>
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button 
+                                            className="detail-page__icon-btn"
+                                            onClick={() => setRemoveWatchlistModal({ isOpen: true })}
+                                            title="Remove from Watchlist"
+                                        >
+                                            <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
+                                        </button>
+                                        <button 
+                                            className="detail-page__icon-btn"
+                                            onClick={() => {
+                                                if (!watchlistId) return
+                                                const markAsWatched = watchlistStatus !== 'completed'
+                                                setMarkWatchedModal({ isOpen: true, markAsWatched })
+                                            }}
+                                            disabled={isUpdatingStatus || modalLoading}
+                                            title={watchlistStatus === 'completed' ? 'Mark as Unwatched' : 'Mark as Watched'}
+                                        >
+                                            <i className={watchlistStatus === 'completed' ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
+                                        </button>
+                                        <button 
+                                            className="detail-page__icon-btn"
+                                            onClick={() => setStatusChangeModal({ isOpen: true })}
+                                            disabled={isUpdatingStatus || modalLoading}
+                                            title="Change Status"
+                                        >
+                                            <i className="fa-solid fa-ellipsis"></i>
+                                        </button>
+                                    </>
+                                )}
+                                {trailerKey && (
+                                    <button 
+                                        className="detail-page__icon-btn"
+                                        onClick={() => setShowTrailer(!showTrailer)}
+                                        title={showTrailer ? 'Close Trailer' : 'Watch Trailer'}
+                                    >
+                                        <i className="fa-solid fa-clapperboard"></i>
+                                    </button>
+                                )}
+                                {cast.length > 0 && (
+                                    <button 
+                                        className="detail-page__icon-btn"
+                                        onClick={() => setShowCast(!showCast)}
+                                        title={showCast ? 'Hide Cast' : 'Cast'}
+                                    >
+                                        <i className="fa-solid fa-users"></i>
+                                    </button>
+                                )}
+                                {showStremioButton && !stremioLoading && (
+                                    <button
+                                        className="detail-page__icon-btn"
+                                        onClick={() => {
+                                            const nextEp = getNextEpisodeToWatch()
+                                            const sharingLink = nextEp
+                                                ? createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids?.imdb_id)
+                                                : createTVDeepLink(details.id, details.external_ids?.imdb_id)
+                                            openInStremio(sharingLink)
+                                        }}
+                                        title="Open in Stremio"
+                                    >
+                                        <img src={stremioIcon} alt="Stremio" className="detail-page__stremio-logo" />
+                                    </button>
                                 )}
                             </div>
 
@@ -831,6 +946,14 @@ const TVShowDetail: React.FC = () => {
                                                 className="detail-page__cast-item"
                                                 onClick={() => navigate(`/person/${c.id}`)}
                                             >
+                                                {c.profile_path && (
+                                                    <img 
+                                                        className="detail-page__cast-photo" 
+                                                        src={imageUrl(c.profile_path) ?? ''} 
+                                                        alt={c.name ?? ''}
+                                                        loading="lazy"
+                                                    />
+                                                )}
                                                 <div className="detail-page__cast-info">
                                                     <span className="detail-page__cast-name">{c.name}</span>
                                                     {c.character && (
@@ -895,7 +1018,7 @@ const TVShowDetail: React.FC = () => {
                                     >
                                         {ep.still_path && (
                                             <div className="detail-page__episode-still">
-                                                <img src={imageUrl(ep.still_path) || ''} alt={ep.title || `Episode ${ep.episode_number}`} />
+                                                <img src={imageUrl(ep.still_path) || ''} alt={ep.title || `Episode ${ep.episode_number}`} loading="lazy" />
                                             </div>
                                         )}
                                         <div className="detail-page__episode-info" onClick={() => {
@@ -904,13 +1027,7 @@ const TVShowDetail: React.FC = () => {
                                                     setAddEpisodeModal({ isOpen: true, episode: ep })
                                                 } else if (!ep.watched) {
                                                     // Mark as watched
-                                                    markEpisodeAsWatched(ep, false).then(() => {
-                                                        const nextEp = getNextEpisodeToWatch()
-                                                        if (nextEp && details?.external_ids?.imdb_id) {
-                                                            const sharingLink = createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids.imdb_id)
-                                                            openInStremio(sharingLink)
-                                                        }
-                                                    })
+                                                    markEpisodeAsWatched(ep, false)
                                                 } else {
                                                     // Toggle to unwatched
                                                     markEpisodeAsWatched(ep, false)
@@ -922,7 +1039,7 @@ const TVShowDetail: React.FC = () => {
                                                     <div className="detail-page__episode-meta">
                                                         {ep.air_date && <span>{ep.air_date}</span>}
                                                         {ep.runtime && <span>{ep.runtime} min</span>}
-                                                        {isEpisodeReleased(ep) && ep.vote_average && ep.vote_average > 0 && <span>★ {ep.vote_average.toFixed(1)}</span>}
+                                                        {!isMobile && isEpisodeReleased(ep) && ep.vote_average && ep.vote_average > 0 && <span>★ {ep.vote_average.toFixed(1)}</span>}
                                                     </div>
                                             </div>
                                         </div>
@@ -956,13 +1073,7 @@ const TVShowDetail: React.FC = () => {
                         if (confirmModal.isUnwatch) {
                             markEpisodeAsWatched(confirmModal.episode, false)
                         } else {
-                            markEpisodeAsWatched(confirmModal.episode, confirmModal.markAll).then(() => {
-                                const nextEp = getNextEpisodeToWatch()
-                                if (nextEp && details?.external_ids?.imdb_id) {
-                                    const sharingLink = createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids.imdb_id)
-                                    openInStremio(sharingLink)
-                                }
-                            })
+                            markEpisodeAsWatched(confirmModal.episode, confirmModal.markAll)
                         }
                         setConfirmModal(null)
                     }}
@@ -1093,6 +1204,100 @@ const TVShowDetail: React.FC = () => {
                         setAddEpisodeModal(null)
                     }}
                     loadingAction={episodeModalLoading}
+                />
+            )}
+            {statusChangeModal && (
+                <ConfirmModal
+                    isOpen={statusChangeModal.isOpen}
+                    title="Change Status"
+                    message="Choose a new status for this TV show. Paused shows will appear in your TV shows list, while dropped shows will appear in your finished list."
+                    onConfirm={() => {}}
+                    onCancel={() => setStatusChangeModal(null)}
+                    confirmText=""
+                    cancelText=""
+                    confirmColor="success"
+                    customContent={
+                        <div className="confirm-modal-actions" style={{ gap: '0.5rem' }}>
+                            <button
+                                onClick={async () => {
+                                    if (!watchlistId) return
+                                    setModalLoading(true)
+                                    try {
+                                        await useLibraryStore.getState().updateStatus(watchlistId, 'paused')
+                                        setWatchlistStatus('paused')
+                                        setStatusChangeModal(null)
+                                    } catch (err) {
+                                        console.error('Failed to update status:', err)
+                                    } finally {
+                                        setModalLoading(false)
+                                    }
+                                }}
+                                disabled={modalLoading}
+                                className="confirm-modal-btn"
+                                style={{
+                                    borderColor: 'rgba(245, 158, 11, 0.3)',
+                                    color: '#f59e0b',
+                                    opacity: modalLoading ? 0.5 : 1,
+                                    cursor: modalLoading ? 'not-allowed' : 'pointer'
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (!modalLoading) {
+                                        e.currentTarget.style.background = 'rgba(245, 158, 11, 0.15)'
+                                        e.currentTarget.style.borderColor = '#f59e0b'
+                                        e.currentTarget.style.boxShadow = '0 0 8px rgba(245, 158, 11, 0.3)'
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (!modalLoading) {
+                                        e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+                                        e.currentTarget.style.borderColor = 'rgba(245, 158, 11, 0.3)'
+                                        e.currentTarget.style.boxShadow = 'none'
+                                    }
+                                }}
+                            >
+                                {modalLoading ? 'Updating...' : 'Paused'}
+                            </button>
+                            <button
+                                onClick={async () => {
+                                    if (!watchlistId) return
+                                    setModalLoading(true)
+                                    try {
+                                        await useLibraryStore.getState().updateStatus(watchlistId, 'dropped')
+                                        setWatchlistStatus('dropped')
+                                        setStatusChangeModal(null)
+                                    } catch (err) {
+                                        console.error('Failed to update status:', err)
+                                    } finally {
+                                        setModalLoading(false)
+                                    }
+                                }}
+                                disabled={modalLoading}
+                                className="confirm-modal-btn"
+                                style={{
+                                    borderColor: 'rgba(239, 68, 68, 0.3)',
+                                    color: '#ef4444',
+                                    opacity: modalLoading ? 0.5 : 1,
+                                    cursor: modalLoading ? 'not-allowed' : 'pointer'
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (!modalLoading) {
+                                        e.currentTarget.style.background = 'rgba(239, 68, 68, 0.15)'
+                                        e.currentTarget.style.borderColor = '#ef4444'
+                                        e.currentTarget.style.boxShadow = '0 0 8px rgba(239, 68, 68, 0.3)'
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (!modalLoading) {
+                                        e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+                                        e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.3)'
+                                        e.currentTarget.style.boxShadow = 'none'
+                                    }
+                                }}
+                            >
+                                {modalLoading ? 'Updating...' : 'Dropped'}
+                            </button>
+                        </div>
+                    }
                 />
             )}
         </div>

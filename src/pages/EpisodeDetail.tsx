@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { getTVDetails, getTVSeasonDetails, imageUrlOriginal, getFanartImages } from '../services/tmdbService'
+import { getTVDetails, getTVSeasonDetails, imageUrlOriginal } from '../services/tmdbService'
 import { markEpisodeWatched, unmarkEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { supabase } from '../services/supabaseClient'
@@ -25,7 +25,6 @@ const EpisodeDetail: React.FC = () => {
     const [tvDetails, setTvDetails] = useState<TMDBResult | null>(null)
     const [episodeData, setEpisodeData] = useState<EpisodeData | null>(null)
     const [loading, setLoading] = useState(true)
-    const [fanartImages, setFanartImages] = useState<{ hdtvlogo?: Array<{ url: string }> } | null>(null)
     const [isInWatchlist, setIsInWatchlist] = useState(false)
     const [watchlistId, setWatchlistId] = useState<string | null>(null)
     const [watched, setWatched] = useState(false)
@@ -40,13 +39,11 @@ const EpisodeDetail: React.FC = () => {
             if (!id || !season || !episode) return
             setLoading(true)
             try {
-                const [tvData, seasonData, fanart] = await Promise.all([
+                const [tvData, seasonData] = await Promise.all([
                     getTVDetails(Number(id)),
-                    getTVSeasonDetails(Number(id), Number(season)),
-                    getFanartImages(Number(id), 'tv')
+                    getTVSeasonDetails(Number(id), Number(season))
                 ])
                 setTvDetails(tvData)
-                setFanartImages(fanart)
 
                 const ep = seasonData.episodes?.find((e: EpisodeData) => e.episode_number === Number(episode))
                 setEpisodeData(ep)
@@ -95,9 +92,6 @@ const EpisodeDetail: React.FC = () => {
             if (tvDetails.images.logos.length > 0) {
                 return imageUrlOriginal(tvDetails.images.logos[0].file_path)
             }
-        }
-        if (fanartImages?.hdtvlogo?.[0]?.url) {
-            return fanartImages.hdtvlogo[0].url
         }
         return null
     }
@@ -178,7 +172,7 @@ const EpisodeDetail: React.FC = () => {
         return <div className="detail-page-error">Episode not found</div>
     }
 
-    const backdropUrl = episodeData.still_path ? `https://image.tmdb.org/t/p/original${episodeData.still_path}` : null
+    const backdropUrl = episodeData.still_path ? imageUrlOriginal(episodeData.still_path) : null
     const logoUrl = getLogoUrl()
     const title = tvDetails.name || 'Untitled'
     const episodeTitle = episodeData.name || `Episode ${episodeData.episode_number}`
@@ -189,7 +183,7 @@ const EpisodeDetail: React.FC = () => {
         <div className="detail-page detail-page--no-scroll">
             {backdropUrl && (
                 <div className="detail-page__backdrop">
-                    <img src={backdropUrl} alt={episodeTitle} />
+                    <img src={backdropUrl} alt={episodeTitle} loading="lazy" />
                     <div className="detail-page__backdrop-overlay" />
                 </div>
             )}

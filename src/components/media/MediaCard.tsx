@@ -117,12 +117,11 @@ const MediaCard: React.FC<MediaCardProps> = ({
     )
     const showAddButton = !compact && onAdd && !(isInWatchlist && (onMarkWatched || onMarkUnwatched)) && !listMode
     const showAddToListButton = !compact && onAddToList && !isPerson && !listMode
-    // Show watch/unwatch icons for watchlist items regardless of listMode, but keep delete button only in listMode
     const showMarkWatched = !compact && !isPerson && onMarkWatched && !onMarkUnwatched
     const showMarkUnwatched = !compact && !isPerson && onMarkUnwatched && !onMarkWatched
     const showDeleteButton = !compact && onDelete && !isPerson && listMode
     const showInWatchlistIndicator =
-        !compact && !isPerson && isInWatchlist && !onMarkWatched && !onMarkUnwatched && !onAdd && !onDelete && !listMode && !onAddToList && !selectable
+        !compact && !isPerson && !onMarkWatched && !onMarkUnwatched && !onAdd && !onDelete && !listMode && !onAddToList && !selectable
 
     return (
         <article 
@@ -148,7 +147,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
                     }
                 }}
             >
-                {imgUrl && <img src={imgUrl} alt={displayTitle} fetchPriority={priority ? "high" : "auto"} decoding="async" />}
+                {imgUrl && <img src={imgUrl} alt={displayTitle} loading="lazy" fetchPriority={priority ? "high" : "auto"} decoding="async" />}
                 {!imgUrl && (
                     <div className="media-card__no-poster">
                         <span>{displayTitle}</span>
@@ -226,8 +225,19 @@ const MediaCard: React.FC<MediaCardProps> = ({
                     </button>
                 )}
                 {showInWatchlistIndicator && (
-                    <div className="media-card__icon-btn" title="In watchlist">
-                        <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
+                    <div
+                        className="media-card__icon-btn"
+                        title={isInWatchlist ? 'In watchlist' : 'Add to watchlist'}
+                        onClick={(e) => {
+                            e.stopPropagation()
+                            e.preventDefault()
+                        }}
+                    >
+                        {isInWatchlist ? (
+                            <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
+                        ) : (
+                            <i className="fa-regular fa-bookmark"></i>
+                        )}
                     </div>
                 )}
             </Link>

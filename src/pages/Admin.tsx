@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { Navigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { uploadAvatar } from '../services/profileService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { User } from '@supabase/supabase-js'
 
@@ -10,6 +11,7 @@ import type { User } from '@supabase/supabase-js'
 interface ProfileRow {
     id: string
     display_name: string | null
+    avatar_url: string | null
     role: string | null
     created_at: string
     updated_at: string
@@ -72,6 +74,10 @@ const Admin: React.FC = () => {
     const [deleteUserLoading, setDeleteUserLoading] = useState(false)
     const [userStats, setUserStats] = useState<UserStats[]>([])
     const [userStatsLoading, setUserStatsLoading] = useState(false)
+    const [avatarUploading, setAvatarUploading] = useState(false)
+    const [avatarMessage, setAvatarMessage] = useState<{ userId: string; text: string; type: 'success' | 'error' } | null>(null)
+    const [pendingAvatarUserId, setPendingAvatarUserId] = useState<string | null>(null)
+    const avatarInputRef = useRef<HTMLInputElement>(null)
 
     const isAdmin = profile?.role === 'admin'
 
@@ -106,25 +112,21 @@ const Admin: React.FC = () => {
     useEffect(() => {
         const checkAuth = async () => {
             try {
-                const { data } = await supabase.auth.getUser()
-                setUser(data.user)
+                const { data: { session } } = await supabase.auth.getSession()
+                setUser(session?.user ?? null)
 
-                if (data.user) {
-                    const { data: profileData, error: profileError } = await supabase
-                        .from('profiles')
-                        .select('role')
-                        .eq('id', data.user.id)
-                        .single()
-
-                    if (profileError) {
-                        console.error('Admin page: profile fetch error', profileError)
-                        setAuthError('Unable to verify permissions.')
+                if (session?.access_token) {
+                    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin`, {
+                        headers: { 'Authorization': `Bearer ${session.access_token}` }
+                    })
+                    if (res.ok) {
+                        const data = await res.json()
+                        setProfile({ role: data.isAdmin ? 'admin' : 'user' })
                     } else {
-                        setProfile(profileData)
+                        setProfile({ role: 'user' })
                     }
                 }
-            } catch (err) {
-                console.error('Admin page: auth error', err)
+            } catch {
                 setAuthError('Authentication check failed.')
             } finally {
                 setLoading(false)
@@ -141,7 +143,7 @@ const Admin: React.FC = () => {
                 const profilesData = await fetchAll<ProfileRow>(
                     supabase
                         .from('profiles')
-                        .select('id, display_name, role, created_at, updated_at')
+                        .select('id, display_name, avatar_url, role, created_at, updated_at')
                         .order('created_at', { ascending: false })
                 )
 
@@ -263,11 +265,6 @@ const Admin: React.FC = () => {
                         .select('user_id')
                 )
 
-                console.log('Admin debug - profiles:', profilesData.length)
-                console.log('Admin debug - watchlist rows:', watchlistData?.length)
-                console.log('Admin debug - episode rows:', episodesData?.length)
-                console.log('Admin debug - list rows:', listsData?.length)
-
                 const watchlistByUser = new Map<string, { total: number; movies: number; tv: number; completed: number }>()
                 watchlistData?.forEach(item => {
                     const existing = watchlistByUser.get(item.user_id) || { total: 0, movies: 0, tv: 0, completed: 0 }
@@ -294,10 +291,6 @@ const Admin: React.FC = () => {
                     }
                 })
 
-                console.log('Admin debug - watchlistIdToUserId size:', watchlistIdToUserId.size)
-                console.log('Admin debug - episodesByUser map:', Object.fromEntries(episodesByUser))
-                console.log('Admin debug - orphaned episodes (no matching watchlist):', orphanedEpisodes)
-
                 const listsByUser = new Map<string, number>()
                 listsData?.forEach(list => {
                     listsByUser.set(list.user_id, (listsByUser.get(list.user_id) || 0) + 1)
@@ -322,8 +315,6 @@ const Admin: React.FC = () => {
                     if (a.role !== 'admin' && b.role === 'admin') return 1
                     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                 })
-
-                console.log('Admin debug - final user stats:', stats)
 
                 setUserStats(stats)
             } catch (err) {
@@ -440,6 +431,41 @@ const Admin: React.FC = () => {
             setDeleteUserConfirm(null)
         }
     }
+
+    const handleAvatarClick = (userId: string) => {
+        if (avatarUploading) return
+        setPendingAvatarUserId(userId)
+        setAvatarMessage(null)
+        avatarInputRef.current?.click()
+    }
+
+    const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (!file || !pendingAvatarUserId) return
+
+        setAvatarUploading(true)
+        setAvatarMessage(null)
+
+        try {
+            const { url, error } = await uploadAvatar(file, pendingAvatarUserId)
+
+            if (error) {
+                setAvatarMessage({ userId: pendingAvatarUserId, text: error, type: 'error' })
+            } else if (url) {
+                setProfiles(prev => prev.map(p => p.id === pendingAvatarUserId ? { ...p, avatar_url: url } : p))
+                setAvatarMessage({ userId: pendingAvatarUserId, text: 'Avatar updated successfully', type: 'success' })
+            }
+        } catch {
+            setAvatarMessage({ userId: pendingAvatarUserId, text: 'Failed to upload avatar', type: 'error' })
+        } finally {
+            setAvatarUploading(false)
+            setPendingAvatarUserId(null)
+            if (avatarInputRef.current) {
+                avatarInputRef.current.value = ''
+            }
+        }
+    }
+
 
     if (loading) {
         return (
@@ -583,7 +609,31 @@ const Admin: React.FC = () => {
                                 <tbody>
                                     {profiles.map(profile => (
                                         <tr key={profile.id}>
-                                            <td>{profile.display_name || '—'}</td>
+                                            <td>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                                    <div
+                                                        className="admin-avatar"
+                                                        onClick={() => handleAvatarClick(profile.id)}
+                                                        title="Click to change avatar"
+                                                    >
+                                                        {profile.avatar_url ? (
+                                                            <img src={profile.avatar_url} alt={profile.display_name || 'User'} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                                                        ) : (
+                                                            <span>{(profile.display_name || '?')[0].toUpperCase()}</span>
+                                                        )}
+                                                    </div>
+                                                    {profile.display_name || '—'}
+                                                </div>
+                                                {avatarMessage?.userId === profile.id && (
+                                                    <div style={{
+                                                        fontSize: '0.75rem',
+                                                        marginTop: '0.25rem',
+                                                        color: avatarMessage.type === 'success' ? '#68ffae' : '#ff6b6b'
+                                                    }}>
+                                                        {avatarMessage.text}
+                                                    </div>
+                                                )}
+                                            </td>
                                             <td>
                                                 <span className={`admin-role-badge admin-role-badge--${profile.role || 'user'}`}>
                                                     {profile.role || 'user'}
@@ -641,11 +691,33 @@ const Admin: React.FC = () => {
                             {profiles.map(profile => (
                                 <div key={profile.id} className="admin-user-card">
                                     <div className="admin-user-card__header">
-                                        <div className="admin-user-card__name">{profile.display_name || '—'}</div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                            <div
+                                                className="admin-avatar admin-avatar--sm"
+                                                onClick={() => handleAvatarClick(profile.id)}
+                                                title="Click to change avatar"
+                                            >
+                                                {profile.avatar_url ? (
+                                                    <img src={profile.avatar_url} alt={profile.display_name || 'User'} />
+                                                ) : (
+                                                    <span>{(profile.display_name || '?')[0].toUpperCase()}</span>
+                                                )}
+                                            </div>
+                                            <div className="admin-user-card__name">{profile.display_name || '—'}</div>
+                                        </div>
                                         <span className={`admin-role-badge admin-role-badge--${profile.role || 'user'}`}>
                                             {profile.role || 'user'}
                                         </span>
                                     </div>
+                                    {avatarMessage?.userId === profile.id && (
+                                        <div style={{
+                                            fontSize: '0.75rem',
+                                            margin: '0 0 0.5rem 1rem',
+                                            color: avatarMessage.type === 'success' ? '#68ffae' : '#ff6b6b'
+                                        }}>
+                                            {avatarMessage.text}
+                                        </div>
+                                    )}
                                     <div className="admin-user-card__meta">
                                         <div className="admin-user-card__meta-item">
                                             <i className="fas fa-calendar-plus"></i>
@@ -804,6 +876,14 @@ const Admin: React.FC = () => {
                 confirmColor="danger"
                 disabled={deleteUserLoading}
                 confirmLoading={deleteUserLoading}
+            />
+
+            <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={handleAvatarFileChange}
             />
         </div>
     )

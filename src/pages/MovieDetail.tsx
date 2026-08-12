@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getMovieDetails, imageUrlOriginal, getFanartImages, getBestBackdropPath } from '../services/tmdbService'
+import { getMovieDetails, imageUrl, imageUrlOriginal, getBestBackdropPath } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
-import { supabase } from '../services/supabaseClient'
 import { invalidateUserCache } from '../services/cacheService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult, WatchlistItem } from '../types'
@@ -11,6 +10,9 @@ import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { createMovieDeepLink, openInStremio } from '../utils/stremioUtils'
 import { useShowStremioButton } from '../hooks/useShowStremioButton'
 import { useShowLetterboxButton } from '../hooks/useShowLetterboxButton'
+import { useAuthStore } from '../stores/useAuthStore'
+import stremioIcon from '../assets/stremio-logo-icon-only-fullcolor.svg'
+import letterboxdIcon from '../assets/letterboxd-decal-dots-pos-rgb-500px.png'
 
 const MovieDetail: React.FC = () => {
     usePageTitle('Trackist - Movie Detail')
@@ -19,7 +21,6 @@ const MovieDetail: React.FC = () => {
     const { showStremioButton, loading: stremioLoading } = useShowStremioButton()
     const { showLetterboxButton, loading: letterboxLoading } = useShowLetterboxButton()
     const [details, setDetails] = useState<TMDBResult | null>(null)
-    const [fanartImages, setFanartImages] = useState<{ hdmovielogo?: Array<{ url: string }> } | null>(null)
     const [isInWatchlist, setIsInWatchlist] = useState(false)
     const [watchlistId, setWatchlistId] = useState<string | null>(null)
     const [watchlistStatus, setWatchlistStatus] = useState<string | null>(null)
@@ -33,6 +34,16 @@ const MovieDetail: React.FC = () => {
     const [markWatchedModal, setMarkWatchedModal] = useState<{ isOpen: boolean; markAsWatched: boolean } | null>(null)
     const [modalLoading, setModalLoading] = useState(false)
 
+    const openExternal = (url: string) => {
+        const a = document.createElement('a')
+        a.href = url
+        a.target = '_blank'
+        a.rel = 'noopener noreferrer'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+    }
+
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [id])
@@ -42,12 +53,8 @@ const MovieDetail: React.FC = () => {
             if (!id) return
             setLoading(true)
             try {
-                const [data, fanart] = await Promise.all([
-                    getMovieDetails(Number(id)),
-                    getFanartImages(Number(id), 'movies')
-                ])
+                const data = await getMovieDetails(Number(id))
                 setDetails(data)
-                setFanartImages(fanart)
 
                 // Find trailer from videos
                 if (data.videos?.results) {
@@ -133,15 +140,11 @@ const MovieDetail: React.FC = () => {
                 return imageUrlOriginal(logos[0].file_path)
             }
         }
-        if (fanartImages?.hdmovielogo?.[0]?.url) {
-            return fanartImages.hdmovielogo[0].url
-        }
-    
         return null
     } 
 
     const handleAddToWatchlist = async () => {
-        const { data: { user } } = await supabase.auth.getUser()
+        const user = useAuthStore.getState().user
         if (!user || !details) {
             alert('Please log in')
             return null
@@ -231,7 +234,7 @@ const MovieDetail: React.FC = () => {
         <div className="detail-page detail-page--no-scroll">
             {backdropUrl && (
                 <div className="detail-page__backdrop">
-                    <img src={backdropUrl} alt={title} />
+                    <img src={backdropUrl} alt={title} loading="lazy" />
                     <div className="detail-page__backdrop-overlay" />
                 </div>
             )}
@@ -282,60 +285,14 @@ const MovieDetail: React.FC = () => {
                         <h2 className="detail-page__section-title">Overview</h2>
                         <p className="detail-page__overview">{overview}</p>
                         
+                        {isInWatchlist && watchlistStatus && (
+                            <div className="detail-page__status">
+                                <span className="detail-page__status-label">Status:</span>
+                                <span className="detail-page__status-value">{watchlistStatus}</span>
+                            </div>
+                        )}
+                        
                         <div className="detail-page__actions">
-                            {trailerKey && (
-                                <button 
-                                    className="detail-page__icon-btn"
-                                    onClick={() => setShowTrailer(!showTrailer)}
-                                    title={showTrailer ? 'Close Trailer' : 'Watch Trailer'}
-                                >
-                                    <i className="fa-solid fa-clapperboard"></i>
-                                </button>
-                            )}
-                            {cast.length > 0 && (
-                                <button 
-                                    className="detail-page__icon-btn"
-                                    onClick={() => setShowCast(!showCast)}
-                                    title={showCast ? 'Hide Cast' : 'Cast'}
-                                >
-                                    <i className="fa-solid fa-users"></i>
-                                </button>
-                            )}
-                            {showStremioButton && !stremioLoading && (
-                                <button 
-                                    className="detail-page__icon-btn"
-                                    onClick={() => {
-                                        const sharingLink = createMovieDeepLink(details.id, (details.external_ids as { imdb_id?: string })?.imdb_id)
-                                        openInStremio(sharingLink)
-                                    }}
-                                    title="Open in Stremio"
-                                >
-                                    <i className="fa-solid fa-play"></i>
-                                </button>
-                            )}
-                            {showLetterboxButton && !letterboxLoading && (
-                                <button 
-                                    className="detail-page__icon-btn detail-page__icon-btn--letterbox"
-                                    onClick={() => {
-                                        const imdbId = details.external_ids?.imdb_id
-                                        if (imdbId) {
-                                            window.open(`https://letterboxd.com/imdb/${imdbId}/`, '_blank')
-                                        } else {
-                                            const title = details.title || ''
-                                            const slug = title
-                                                .toLowerCase()
-                                                .replace(/[^a-z0-9]+/g, '-')
-                                                .replace(/^-+|-+$/g, '')
-                                            window.open(`https://letterboxd.com/film/${slug}/`, '_blank')
-                                        }
-                                    }}
-                                    title="Open in Letterbox"
-                                >
-                                    <svg className="detail-page__letterbox-logo" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                                        <path d="M8.28 3.03L6.5 4.8v14.4l1.78 1.78L12 19.17l3.72 3.81 1.78-1.78V4.8L15.72 3.03 12 6.75z"/>
-                                    </svg>
-                                </button>
-                            )}
                             {!isInWatchlist ? (
                                 <>
                                     <button 
@@ -395,6 +352,171 @@ const MovieDetail: React.FC = () => {
                                     </button>
                                 </>
                             )}
+                            {trailerKey && (
+                                <button 
+                                    className="detail-page__icon-btn"
+                                    onClick={() => setShowTrailer(!showTrailer)}
+                                    title={showTrailer ? 'Close Trailer' : 'Watch Trailer'}
+                                >
+                                    <i className="fa-solid fa-clapperboard"></i>
+                                </button>
+                            )}
+                            {cast.length > 0 && (
+                                <button 
+                                    className="detail-page__icon-btn"
+                                    onClick={() => setShowCast(!showCast)}
+                                    title={showCast ? 'Hide Cast' : 'Cast'}
+                                >
+                                    <i className="fa-solid fa-users"></i>
+                                </button>
+                            )}
+                            {showStremioButton && !stremioLoading && (
+                                <button 
+                                    className="detail-page__icon-btn"
+                                    onClick={() => {
+                                        const sharingLink = createMovieDeepLink(details.id, (details.external_ids as { imdb_id?: string })?.imdb_id)
+                                        openInStremio(sharingLink)
+                                    }}
+                                    title="Open in Stremio"
+                                >
+                                    <img src={stremioIcon} alt="Stremio" className="detail-page__stremio-logo" />
+                                </button>
+                            )}
+                            {showLetterboxButton && !letterboxLoading && (
+                                <button 
+                                    className="detail-page__icon-btn detail-page__icon-btn--letterbox"
+                                    onClick={() => {
+                                        const imdbId = details.external_ids?.imdb_id
+                                        if (imdbId) {
+                                            openExternal(`https://letterboxd.com/imdb/${imdbId}/`)
+                                        } else {
+                                            const title = details.title || ''
+                                            const slug = title
+                                                .toLowerCase()
+                                                .replace(/[^a-z0-9]+/g, '-')
+                                                .replace(/^-+|-+$/g, '')
+                                            openExternal(`https://letterboxd.com/film/${slug}/`)
+                                        }
+                                    }}
+                                    title="Open in Letterbox"
+                                >
+                                    <img src={letterboxdIcon} alt="Letterboxd" className="detail-page__letterbox-logo" />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Mobile fixed action container */}
+                        <div className="detail-page__actions-mobile">
+                            {!isInWatchlist ? (
+                                <>
+                                    <button 
+                                        className="detail-page__icon-btn"
+                                        onClick={handleAddToWatchlist}
+                                        disabled={adding}
+                                        title="Add to Watchlist"
+                                    >
+                                        <i className="fa-regular fa-bookmark"></i>
+                                    </button>
+                                    <button 
+                                        className="detail-page__icon-btn"
+                                        onClick={async () => {
+                                            setIsUpdatingStatus(true)
+                                            const newWatchlistId = await handleAddToWatchlist()
+                                            if (newWatchlistId) {
+                                                // Capture previous status from store
+                                                const previousStatus = useLibraryStore.getState().allItems.find(item => item.id === newWatchlistId)?.status
+                                                // Update status to completed via store
+                                                await useLibraryStore.getState().updateStatus(newWatchlistId, 'completed')
+                                                setWatchlistStatus('completed')
+                                                // Trigger Cosmic Confetti when transitioning from 'planning' to 'completed'
+                                                if (previousStatus === 'planning') {
+                                                    launchCosmicConfetti()
+                                                    // Invalidate cache to ensure Finished page shows updated data immediately
+                                                    await invalidateUserCache()
+                                                }
+                                            }
+                                            setIsUpdatingStatus(false)
+                                        }}
+                                        disabled={adding || isUpdatingStatus}
+                                        title="Mark as Watched"
+                                    >
+                                        <i className="fa-solid fa-eye"></i>
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button 
+                                        className="detail-page__icon-btn"
+                                        onClick={() => setConfirmModal({ isOpen: true })}
+                                        title="Remove from Watchlist"
+                                    >
+                                        <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
+                                    </button>
+                                    <button 
+                                        className="detail-page__icon-btn"
+                                        onClick={() => {
+                                            if (!watchlistId) return
+                                            const markAsWatched = watchlistStatus !== 'completed'
+                                            setMarkWatchedModal({ isOpen: true, markAsWatched })
+                                        }}
+                                        disabled={isUpdatingStatus}
+                                        title={watchlistStatus === 'completed' ? 'Mark as Unwatched' : 'Mark as Watched'}
+                                    >
+                                        <i className={watchlistStatus === 'completed' ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
+                                    </button>
+                                </>
+                            )}
+                            {trailerKey && (
+                                <button 
+                                    className="detail-page__icon-btn"
+                                    onClick={() => setShowTrailer(!showTrailer)}
+                                    title={showTrailer ? 'Close Trailer' : 'Watch Trailer'}
+                                >
+                                    <i className="fa-solid fa-clapperboard"></i>
+                                </button>
+                            )}
+                            {cast.length > 0 && (
+                                <button 
+                                    className="detail-page__icon-btn"
+                                    onClick={() => setShowCast(!showCast)}
+                                    title={showCast ? 'Hide Cast' : 'Cast'}
+                                >
+                                    <i className="fa-solid fa-users"></i>
+                                </button>
+                            )}
+                            {showStremioButton && !stremioLoading && (
+                                <button 
+                                    className="detail-page__icon-btn"
+                                    onClick={() => {
+                                        const sharingLink = createMovieDeepLink(details.id, (details.external_ids as { imdb_id?: string })?.imdb_id)
+                                        openInStremio(sharingLink)
+                                    }}
+                                    title="Open in Stremio"
+                                >
+                                    <img src={stremioIcon} alt="Stremio" className="detail-page__stremio-logo" />
+                                </button>
+                            )}
+                            {showLetterboxButton && !letterboxLoading && (
+                                <button 
+                                    className="detail-page__icon-btn detail-page__icon-btn--letterbox"
+                                    onClick={() => {
+                                        const imdbId = details.external_ids?.imdb_id
+                                        if (imdbId) {
+                                            openExternal(`https://letterboxd.com/imdb/${imdbId}/`)
+                                        } else {
+                                            const title = details.title || ''
+                                            const slug = title
+                                                .toLowerCase()
+                                                .replace(/[^a-z0-9]+/g, '-')
+                                                .replace(/^-+|-+$/g, '')
+                                            openExternal(`https://letterboxd.com/film/${slug}/`)
+                                        }
+                                    }}
+                                    title="Open in Letterbox"
+                                >
+                                    <img src={letterboxdIcon} alt="Letterboxd" className="detail-page__letterbox-logo" />
+                                </button>
+                            )}
                         </div>
 
                         {showTrailer && trailerKey && (
@@ -423,20 +545,28 @@ const MovieDetail: React.FC = () => {
                         <div className="detail-page__cast-section">
                             {showCast && (
                                 <div className="detail-page__cast-list">
-                                    {cast.map((c: { id: number; name: string; profile_path?: string; character?: string }) => (
-                                        <div 
-                                            key={c.id} 
-                                            className="detail-page__cast-item"
-                                            onClick={() => navigate(`/person/${c.id}`)}
-                                        >
-                                            <div className="detail-page__cast-info">
-                                                <span className="detail-page__cast-name">{c.name}</span>
-                                                {c.character && (
-                                                    <span className="detail-page__cast-character">{c.character}</span>
-                                                )}
-                                            </div>
+                                {cast.map((c: { id: number; name: string; profile_path?: string; character?: string }) => (
+                                    <div 
+                                        key={c.id} 
+                                        className="detail-page__cast-item"
+                                        onClick={() => navigate(`/person/${c.id}`)}
+                                    >
+                                        {c.profile_path && (
+                                            <img 
+                                                className="detail-page__cast-photo" 
+                                                src={imageUrl(c.profile_path) ?? ''} 
+                                                alt={c.name ?? ''} 
+                                                loading="lazy"
+                                            />
+                                        )}
+                                        <div className="detail-page__cast-info">
+                                            <span className="detail-page__cast-name">{c.name}</span>
+                                            {c.character && (
+                                                <span className="detail-page__cast-character">{c.character}</span>
+                                            )}
                                         </div>
-                                    ))}
+                                    </div>
+                                ))}
                                 </div>
                             )}
                         </div>

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
 import { getPersonDetails, getPersonMovies, getPersonTV, imageUrl } from '../services/tmdbService'
 import type { TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
+import MediaCard from '../components/media/MediaCard'
 
 interface PersonDetails {
     id: number
@@ -23,7 +24,6 @@ interface FilmographyItem extends TMDBResult {
 const PersonDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>()
     usePageTitle('Trackist - Person Detail')
-    const navigate = useNavigate()
     const [details, setDetails] = useState<PersonDetails | null>(null)
     const [loading, setLoading] = useState(true)
     const [movies, setMovies] = useState<FilmographyItem[]>([])
@@ -77,9 +77,13 @@ const PersonDetail: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="detail-page-loading">
-                <div className="discover-spinner" />
-                <p>Loading...</p>
+            <div className="detail-page">
+                <div className="detail-page__content">
+                    <div className="discover-loading">
+                        <div className="discover-spinner" />
+                        <p>Loading person details...</p>
+                    </div>
+                </div>
             </div>
         )
     }
@@ -101,120 +105,75 @@ const PersonDetail: React.FC = () => {
         return ''
     }
 
-    const handleMediaClick = (item: FilmographyItem) => {
-        if (item.media_type === 'movie') {
-            navigate(`/movie/${item.id}`)
-        } else {
-            navigate(`/tv/${item.id}`)
-        }
-    }
-
     return (
-        <div className="detail-page detail-page--person">
+        <div className="detail-page">
             <div className="detail-page__content">
-                <div className="detail-page__person-header">
-                    <div className="detail-page__person-photo">
-                        {profileUrl ? (
-                            <img src={profileUrl} alt={title} />
-                        ) : (
-                            <div className="detail-page__person-no-photo">
-                                <span>{title.charAt(0)}</span>
-                            </div>
-                        )}
-                    </div>
-                    
-                    <div className="detail-page__person-info">
-                        <h1 className="detail-page__title">{title}</h1>
-                        
-                        <div className="detail-page__person-meta">
-                            {knownForDepartment && <span>{knownForDepartment}</span>}
-                            {getGender(details.gender) && <span>· {getGender(details.gender)}</span>}
-                            {birthday && <span>· Born {birthday}</span>}
-                        </div>
-
-                        {placeOfBirth && (
-                            <p className="detail-page__person-location">
-                                📍 {placeOfBirth}
-                            </p>
-                        )}
-                    </div>
-                </div>
-            </div>
-
-            <div className="detail-page__content_person">
                 <div className="detail-page__main">
-                    <div className="detail-page__biography-section">
+                    <div className="detail-page__person-header">
+                        <div className="detail-page__person-photo">
+                            {profileUrl ? (
+                                <img src={profileUrl} alt={title} />
+                            ) : (
+                                <div className="detail-page__person-no-photo">
+                                    <span className="detail-page__person-initial">{title.charAt(0)}</span>
+                                </div>
+                            )}
+                        </div>
+                        <div className="detail-page__person-info">
+                            <h1 className="detail-page__person-name">{title}</h1>
+                            <div className="detail-page__person-meta">
+                                {knownForDepartment && <span>{knownForDepartment}</span>}
+                                {getGender(details.gender) && <span>· {getGender(details.gender)}</span>}
+                                {birthday && <span>· Born {birthday}</span>}
+                            </div>
+                            {placeOfBirth && (
+                                <p className="detail-page__person-location">
+                                    {placeOfBirth}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="detail-page__overview-section">
                         <h2 className="detail-page__section-title">Biography</h2>
                         <p className="detail-page__overview">{biography}</p>
                     </div>
-
-                    {movies.length > 0 && (
-                        <div className="detail-page__filmography-section">
-                            <h2 className="detail-page__section-title">Movies</h2>
-                            <div className="detail-page__filmography-list">
-                                {movies.slice(0, 20).map((movie) => (
-                                    <div
-                                        key={movie.id}
-                                        className="detail-page__filmography-item"
-                                        onClick={() => handleMediaClick(movie)}
-                                    >
-                                        {movie.poster_path && (
-                                            <img
-                                                src={imageUrl(movie.poster_path) || ''}
-                                                alt={movie.title || 'Movie'}
-                                                className="detail-page__filmography-poster"
-                                            />
-                                        )}
-                                        <div className="detail-page__filmography-info">
-                                            <span className="detail-page__filmography-title">
-                                                {movie.title || 'Untitled'}
-                                            </span>
-                                            {movie.release_date && (
-                                                <span className="detail-page__filmography-year">
-                                                    {movie.release_date.slice(0, 4)}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
-                    {tvShows.length > 0 && (
-                        <div className="detail-page__filmography-section">
-                            <h2 className="detail-page__section-title">TV Shows</h2>
-                            <div className="detail-page__filmography-list">
-                                {tvShows.slice(0, 20).map((show) => (
-                                    <div
-                                        key={show.id}
-                                        className="detail-page__filmography-item"
-                                        onClick={() => handleMediaClick(show)}
-                                    >
-                                        {show.poster_path && (
-                                            <img
-                                                src={imageUrl(show.poster_path) || ''}
-                                                alt={show.name || 'TV Show'}
-                                                className="detail-page__filmography-poster"
-                                            />
-                                        )}
-                                        <div className="detail-page__filmography-info">
-                                            <span className="detail-page__filmography-title">
-                                                {show.name || 'Untitled'}
-                                            </span>
-                                            {show.first_air_date && (
-                                                <span className="detail-page__filmography-year">
-                                                    {show.first_air_date.slice(0, 4)}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
+
+            {(movies.length > 0 || tvShows.length > 0) && (
+                <div className="detail-page__content">
+                    <div className="detail-page__main">
+                        {movies.length > 0 && (
+                            <div className="detail-page__filmography-section">
+                                <h2 className="detail-page__section-title">Movies</h2>
+                                <div className="discover-grid">
+                                    {movies.map((movie) => (
+                                        <MediaCard
+                                            key={movie.id}
+                                            item={movie}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {tvShows.length > 0 && (
+                            <div className="detail-page__filmography-section">
+                                <h2 className="detail-page__section-title">TV Shows</h2>
+                                <div className="discover-grid">
+                                    {tvShows.map((show) => (
+                                        <MediaCard
+                                            key={show.id}
+                                            item={show}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
         </div>
     )
 }

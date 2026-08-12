@@ -94,6 +94,17 @@ const AddModal: React.FC<AddModalProps> = ({ item, onClose, onAdd, onAddWatchlis
         }
 
         const itemTitle = item.title || item.name || ''
+
+        // Determine current_season from the last selected episode
+        let currentSeason = 1
+        if (selectedEpisodes.size > 0) {
+            const seasonNumbers = Array.from(selectedEpisodes).map(key => {
+                const [season] = key.split('-').map(Number)
+                return season
+            })
+            currentSeason = Math.max(...seasonNumbers)
+        }
+
         const { data, error } = await supabase.from('watchlist').insert({
             user_id: user.id,
             media_type: 'tv',
@@ -105,8 +116,8 @@ const AddModal: React.FC<AddModalProps> = ({ item, onClose, onAdd, onAddWatchlis
             vote_average: item.vote_average,
             total_seasons: item.number_of_seasons || 1,
             total_episodes: item.number_of_episodes || 0,
-            current_season: 1,
-            current_episode: 0,
+            current_season: currentSeason,
+            current_episode: selectedEpisodes.size,
             last_season_number: item.number_of_seasons || 1,
             last_season_check: new Date().toISOString(),
             status: 'watching'

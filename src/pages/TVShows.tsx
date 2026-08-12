@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
 import { markShowAsFullyWatched } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
+import { useSelectionStore } from '../stores/useSelectionStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
@@ -13,6 +15,7 @@ import { useMobile } from '../contexts/useMobile'
 
 const TVShows: React.FC = () => {
     usePageTitle('Trackist - TV Shows')
+    const navigate = useNavigate()
     const { committedQuery } = useSearch()
 
     // Use global store with proper selectors
@@ -22,65 +25,37 @@ const TVShows: React.FC = () => {
     const [markAllModal, setMarkAllModal] = useState<WatchlistItem | null>(null)
     const [markingAllWatched, setMarkingAllWatched] = useState(false)
 
-    const [selectionMode, setSelectionMode] = useState(false)
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-    const [batchLoading, setBatchLoading] = useState(false)
+    const { 
+        tvShowsSelectionMode: selectionMode, 
+        tvShowsSelectedIds: selectedIds, 
+        toggleTVShowSelection: toggleSelection 
+    } = useSelectionStore()
 
     const { isMobile } = useMobile()
+
+    const handleSwitchToMobile = () => {
+        navigate('/MobileTVShows')
+    }
+
+    const scrollToTop = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    useEffect(() => {
+        window.scrollTo(0, 0)
+    }, [])
 
     // Scroll to top when page loads
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
 
-    const toggleSelection = (id: string) => {
-        setSelectedIds(prev => {
-            const newSet = new Set(prev)
-            if (newSet.has(id)) {
-                newSet.delete(id)
-            } else {
-                newSet.add(id)
-            }
-            return newSet
-        })
-    }
-
-    const handleBatchMarkWatched = async () => {
-        if (selectedIds.size === 0) return
-
-        setBatchLoading(true)
-        try {
-            const selectedItems = tvShows.filter(item => selectedIds.has(item.id))
-            
-            for (const item of selectedItems) {
-                if (item.tmdb_id) {
-                    await markShowAsFullyWatched(item.id, item.tmdb_id)
-                    await useLibraryStore.getState().refreshItem(item.id)
-                }
-            }
-            
-            setSelectedIds(new Set())
-            setSelectionMode(false)
-        } catch (err) {
-            console.error('Failed to batch mark shows as watched:', err)
-        } finally {
-            setBatchLoading(false)
-        }
-    }
-
-    const clearSelection = () => {
-        setSelectedIds(new Set())
-        setSelectionMode(false)
-    }
-
-    // Use current_episode from store data instead of fetching from database
-    // This prevents infinite loops caused by repeated API calls
-
-    // Calculate episode progress for TV shows
+    // Use actual watched episode count instead of current_episode
+    // current_episode is the episode number within the current season, not the total watched count
     const tvShowsWithProgress = useMemo(() => {
         return tvShows.map(show => ({
             ...show,
-            total_episodes_watched: show.current_episode ?? 0
+            total_episodes_watched: show.watched_episodes_count ?? 0
         }))
     }, [tvShows])
 
@@ -102,23 +77,14 @@ const TVShows: React.FC = () => {
             
             if (!isInitialized || currentTvShows.length === 0) return
             
-            // DEBUG: Log all shows and their updated_at timestamps
-            console.log('🔍 DEBUG - Checking shows order:', currentTvShows.map(s => ({
-                id: s.id,
-                title: s.title,
-                updated_at: s.updated_at,
-                added_at: s.added_at,
-                status: s.status
-            })).sort((a, b) => new Date(b.updated_at || 0).getTime() - new Date(a.updated_at || 0).getTime()))
-
             const completedShows = currentTvShows.filter(
                 item => (item.status === 'completed' || item.status === 'caught_up' || (
                     item.status === 'watching' &&
                     item.total_episodes !== undefined &&
                     item.total_episodes > 0 &&
-                    item.total_episodes_watched >= item.total_episodes
+                    (item.watched_episodes_count ?? 0) >= item.total_episodes
                 )) &&
-                item.total_episodes_watched > 0 &&
+                (item.watched_episodes_count ?? 0) > 0 &&
                 item.total_episodes !== undefined
             )
 
@@ -197,7 +163,7 @@ const TVShows: React.FC = () => {
             clearInterval(interval)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
         }
-    }, [isInitialized]) // Only depend on initialization
+    }, [isInitialized])
 
     // Filter items based on global search (strict TV-type lock)
     const filteredItems = useMemo(() => {
@@ -223,6 +189,16 @@ const TVShows: React.FC = () => {
         const dateA = new Date(a.added_at || 0)
         const dateB = new Date(b.added_at || 0)
         return dateA.getTime() - dateB.getTime()
+    }), [filteredItems])
+
+    // Container C: Paused - shows with 'paused' status
+    const paused = useMemo(() => filteredItems.filter(
+        item => item.status === 'paused'
+    ).sort((a, b) => {
+        // Sort by updated_at (most recent first)
+        const dateA = new Date(a.updated_at || 0)
+        const dateB = new Date(b.updated_at || 0)
+        return dateB.getTime() - dateA.getTime()
     }), [filteredItems])
 
     const buildTmdbItem = (item: WatchlistItem): TMDBResult => ({
@@ -267,52 +243,22 @@ const TVShows: React.FC = () => {
 
     return (
         <div className="discover-page">
+            {isMobile && (
+                <button
+                    className="mobile-view-toggle-fixed"
+                    onClick={handleSwitchToMobile}
+                    title="Switch to Mobile View"
+                >
+                    <i className="fa-solid fa-mobile-screen"></i>
+                </button>
+            )}
             <div className="discover-container" style={{ width: '85%' }}>
                 {/* Container A (Top): Currently Watching */}
-                <div className="watchlist-section">
-                    <div className="watchlist-section__header" style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        marginBottom: '1rem'
-                    }}>
-                        <h3 className="watchlist-section__title">Currently Watching</h3>
-                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                            {!selectionMode ? (
-                                <button
-                                    className="discover-filter-select discover-filter-select--btn"
-                                    onClick={() => setSelectionMode(true)}
-                                    disabled={currentlyWatching.length === 0}
-                                >
-                                    Select
-                                </button>
-                            ) : (
-                                <>
-                                    <span style={{ 
-                                        color: 'rgba(255,255,255,0.6)', 
-                                        fontSize: '0.85rem',
-                                        marginRight: '0.5rem'
-                                    }}>
-                                        {selectedIds.size} selected
-                                    </span>
-                                    <button
-                                        className="discover-filter-select discover-filter-select--btn"
-                                        onClick={clearSelection}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        className="discover-filter-select discover-filter-select--btn"
-                                        onClick={handleBatchMarkWatched}
-                                        disabled={selectedIds.size === 0 || batchLoading}
-                                    >
-                                        {batchLoading ? '...' : 'Mark as Watched'}
-                                    </button>
-                                </>
-                            )}
+                {currentlyWatching.length > 0 && (
+                    <div className="watchlist-section">
+                        <div className="watchlist-section__header">
+                            <h3 className="watchlist-section__title">Currently Watching</h3>
                         </div>
-                    </div>
-                    {currentlyWatching.length > 0 ? (
                         <VirtuosoGrid
                             increaseViewportBy={{
                                 top: isMobile ? 600 : 1200,
@@ -347,58 +293,54 @@ const TVShows: React.FC = () => {
                                 )
                             }}
                         />
-                    ) : (
-                        <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
-                            No shows currently in progress
-                        </p>
-                    )}
-                </div>
+                    </div>
+                )}
+
+                {/* Container C: Paused */}
+                {paused.length > 0 && (
+                    <div className="watchlist-section">
+                        <div className="watchlist-section__header">
+                            <h3 className="watchlist-section__title">Paused</h3>
+                        </div>
+                        <VirtuosoGrid
+                            increaseViewportBy={{
+                                top: isMobile ? 600 : 1200,
+                                bottom: isMobile ? 2000 : 3000,
+                            }}
+                            computeItemKey={(index) => paused[index]?.id ?? index}
+                            style={{ height: '100%', width: '100%' }}
+                            useWindowScroll={true}
+                            data={paused}
+                            overscan={isMobile ? 800 : 1500}
+                            listClassName="discover-grid"
+                            itemContent={(index) => {
+                                const item = paused[index]
+                                const isSelected = selectedIds.has(item.id)
+                                
+                                return (
+                                    <div style={{ position: 'relative' }}>
+                                        <MediaCard
+                                            item={buildTmdbItem(item)}
+                                            selected={selectionMode && isSelected}
+                                            selectable={selectionMode}
+                                            onSelect={() => toggleSelection(item.id)}
+                                            isInWatchlist={true}
+                                            onAdd={selectionMode ? undefined : () => {}}
+                                            onMarkWatched={selectionMode ? undefined : () => setMarkAllModal(item)}
+                                        />
+                                    </div>
+                                )
+                            }}
+                        />
+                    </div>
+                )}
 
                 {/* Container B (Bottom): Watchlist (Not Started) */}
-                <div className="watchlist-section">
-                    <div className="watchlist-section__header" style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        marginBottom: '1rem'
-                    }}>
-                        <h3 className="watchlist-section__title">Watchlist (Not Started)</h3>
-                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                            {!selectionMode ? (
-                                <button
-                                    className="discover-filter-select discover-filter-select--btn"
-                                    onClick={() => setSelectionMode(true)}
-                                    disabled={notStarted.length === 0}
-                                >
-                                    Select
-                                </button>
-                            ) : (
-                                <>
-                                    <span style={{ 
-                                        color: 'rgba(255,255,255,0.6)', 
-                                        fontSize: '0.85rem',
-                                        marginRight: '0.5rem'
-                                    }}>
-                                        {selectedIds.size} selected
-                                    </span>
-                                    <button
-                                        className="discover-filter-select discover-filter-select--btn"
-                                        onClick={clearSelection}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        className="discover-filter-select discover-filter-select--btn"
-                                        onClick={handleBatchMarkWatched}
-                                        disabled={selectedIds.size === 0 || batchLoading}
-                                    >
-                                        {batchLoading ? '...' : 'Mark as Watched'}
-                                    </button>
-                                </>
-                            )}
+                {notStarted.length > 0 && (
+                    <div className="watchlist-section">
+                        <div className="watchlist-section__header">
+                            <h3 className="watchlist-section__title">Watchlist (Not Started)</h3>
                         </div>
-                    </div>
-                    {notStarted.length > 0 ? (
                         <VirtuosoGrid
                             increaseViewportBy={{
                                 top: isMobile ? 600 : 1200,
@@ -429,19 +371,19 @@ const TVShows: React.FC = () => {
                                 )
                             }}
                         />
-                    ) : (
-                        <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
-                            No shows queued to start
-                        </p>
-                    )}
-                </div>
+                    </div>
+                )}
 
-                {filteredItems.length === 0 && (
+                {currentlyWatching.length === 0 && notStarted.length === 0 && paused.length === 0 && (
                     <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>
                         No TV shows or anime in your watchlist. Discover some!
                     </p>
                 )}
             </div>
+
+            <button className="upcoming-new-scroll-top" onClick={scrollToTop} aria-label="Scroll to top" title="Back to top">
+                <i className="fas fa-arrow-up"></i>
+            </button>
 
             {markAllModal && (
                 <ConfirmModal
@@ -457,6 +399,7 @@ const TVShows: React.FC = () => {
                     confirmText={markingAllWatched ? 'Marking...' : 'Yes, Fully Watched'}
                     cancelText="Cancel"
                     confirmColor="success"
+                    confirmLoading={markingAllWatched}
                 />
             )}
         </div>

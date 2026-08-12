@@ -82,7 +82,7 @@ export interface WatchlistItem {
     total_episodes?: number
     current_season?: number
     current_episode?: number
-    status: 'planning' | 'watching' | 'completed' | 'dropped' | 'caught_up'
+    status: 'planning' | 'watching' | 'paused' | 'completed' | 'dropped' | 'caught_up'
     rating?: number
     notes?: string
     added_at: string
@@ -92,6 +92,9 @@ export interface WatchlistItem {
     last_watched_at?: string
     last_season_number?: number
     last_season_check?: string
+    watched_episodes_count?: number
+    next_season_number?: number
+    next_episode_number?: number
     next_episode_to_watch?: {
         season_number: number
         episode_number: number

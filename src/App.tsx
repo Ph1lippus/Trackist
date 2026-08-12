@@ -1,8 +1,7 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
-import { supabase } from './services/supabaseClient'
 import { updateLastActive } from './services/profileService'
-import type { User } from '@supabase/supabase-js'
+import { initializeAuth, useAuthStore } from './stores/useAuthStore'
 import { SearchProvider } from './contexts/SearchContext'
 import { MobileProvider } from './contexts/MobileProvider'
 import { useLibraryStore } from './stores/useLibraryStore'
@@ -26,6 +25,8 @@ import Credits from './pages/Credits'
 import ForgotPassword from './pages/ForgotPassword'
 import Profile from './pages/Profile'
 import Friends from './pages/Friends'
+import Followers from './pages/Followers'
+import Following from './pages/Following'
 import Statistics from './pages/Statistics'
 import EditProfile from './pages/EditProfile'
 import Admin from './pages/Admin'
@@ -38,6 +39,8 @@ import ListsDetail from './pages/ListsDetail'
 import ListsEditPage from './pages/ListsEditPage'
 import ListsCreatePage from './pages/ListsCreatePage'
 import Finished from './pages/Finished'
+import MobileTVShows from './pages/MobileTVShows'
+import MobileMovies from './pages/MobileMovies'
 import DetailLayout from './components/layout/DetailLayout'
 
 // Legacy redirect component for /Lists/:id -> /ListsDetail/:id
@@ -48,65 +51,35 @@ const LegacyListRedirect: React.FC = () => {
 
 const AppContent: React.FC = () => {
     const location = useLocation()
-    const [user, setUser] = useState<User | null>(null)
-    const [loading, setLoading] = useState(true)
+    const user = useAuthStore((state) => state.user)
+    const loading = useAuthStore((state) => state.loading)
     const [currentMonth, setCurrentMonth] = useState(new Date())
     const hasUpdatedLastActive = useRef(false)
     const [showUpdateModal, setShowUpdateModal] = useState(false)
     const [updateLoading, setUpdateLoading] = useState(false)
     const [updateSW, setUpdateSW] = useState<((reloadPage?: boolean) => Promise<void>) | null>(null)
 
+    // Determine if running as a PWA (standalone mode)
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
+        // @ts-expect-error - iOS Safari specific property
+        (window.navigator.standalone === true) ||
+        document.referrer.includes('android-app://')
+
+    // Default route based on app context:
+    // - PWA: open Mobile TV Shows by default
+    // - Website: open Discover page by default
+    const defaultRoute = isPWA ? '/MobileTVShows' : '/Discover'
+
     const isDetailPage = location.pathname.match(/^\/(movie|tv|person)\/\d+$/) || location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/)
 
     useEffect(() => {
-        let active = true
-        let subscription: { unsubscribe: () => void } | undefined
-
-        const initialiseAuth = async () => {
-            try {
-                const { data: { session } } = await supabase.auth.getSession()
-
-                if (!active) return
-                setUser(session?.user || null)
-
-                const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-                    if (!active) return
-                    setUser(nextSession?.user || null)
-                    
-                    // Reset library store on logout
-                    if (!nextSession?.user) {
-                        useLibraryStore.getState().reset()
-                        hasUpdatedLastActive.current = false
-                    } else if (nextSession?.user) {
-                        // Invalidate calendar cache on login to ensure fresh data
-                        void invalidateCalendarCache(nextSession.user.id)
-                    }
-                })
-
-                subscription = authSubscription
-            } catch {
-                if (active) {
-                    setUser(null)
-                }
-            } finally {
-                if (active) {
-                    setLoading(false)
-                }
-            }
-        }
-
-        void initialiseAuth()
-
-        return () => {
-            active = false
-            subscription?.unsubscribe()
-        }
+        void initializeAuth()
     }, [])
 
     useEffect(() => {
         if (!loading && user && !hasUpdatedLastActive.current) {
             hasUpdatedLastActive.current = true
-            void updateLastActive()
+            void updateLastActive(user.id)
             // Initialize library store once at app startup
             void useLibraryStore.getState().fetchInitialLibrary(user.id)
             // Invalidate calendar cache on login to ensure fresh data
@@ -117,15 +90,8 @@ const AppContent: React.FC = () => {
     // PWA service worker registration - only for PWA context
     useEffect(() => {
         const registerServiceWorker = async () => {
-            // Check if running in PWA mode (standalone mode)
-            const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
-                         // @ts-expect-error - iOS Safari specific property
-                         (window.navigator.standalone === true) ||
-                         document.referrer.includes('android-app://')
-
             // Only register service worker and show updates in PWA mode
             if (!isPWA) {
-                console.log('Not running in PWA mode, skipping service worker registration')
                 return
             }
 
@@ -135,10 +101,8 @@ const AppContent: React.FC = () => {
                         setShowUpdateModal(true)
                     },
                     onOfflineReady() {
-                        console.log('App is ready for offline use')
                     },
-                    onRegistered(registration) {
-                        console.log('Service worker registered:', registration)
+                    onRegistered(_registration) {
                     },
                     onRegisterError(error: Error) {
                         console.error('Service worker registration error:', error)
@@ -175,14 +139,14 @@ const AppContent: React.FC = () => {
         return (
             <div className="page-loader" aria-live="polite">
                 <div className="page-loader__content">
-                    <div className="page-loader__logo">TRACKIST</div>
+                    <img src="/TRACK1ST-FULLNAMELGO.png?v=3" alt="Trackist" className="page-loader__logo" />
                 </div>
             </div>
         )
     }
 
-    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Friends', '/Statistics', '/Finished', '/Lists', '/Profile', '/Admin']
-    const hideFooter = Boolean(user) && (mediaPages.includes(location.pathname) || location.pathname === '/Settings' || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname.startsWith('/Lists/') || location.pathname.startsWith('/Profile/')) || location.pathname === '/login' || location.pathname === '/register'
+    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Friends', '/Statistics', '/Finished', '/Lists', '/Profile', '/Admin', '/MobileTVShows', '/MobileMovies', '/Followers', '/Following']
+    const hideFooter = Boolean(user) && (mediaPages.includes(location.pathname) || location.pathname === '/Settings' || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname.startsWith('/Lists/') || location.pathname.startsWith('/Profile/') || location.pathname.startsWith('/Movies/') || location.pathname.startsWith('/Followers') || location.pathname.startsWith('/Following'))
     
     const navigateMonth = (direction: number) => {
         setCurrentMonth(prev => {
@@ -219,17 +183,23 @@ const AppContent: React.FC = () => {
             />
             <main className={`page-main flex-grow-1 ${hideFooter ? 'page-main--no-footer' : ''}`}>
                 <Routes>
-                    <Route path="/" element={user ? <TVShows key="tvshows" /> : <Home />} />
+                    <Route path="/" element={user ? <Navigate to={defaultRoute} replace /> : <Home />} />
                     <Route path="/Discover" element={user ? <Discover key="discover" /> : <Navigate to="/login" replace />} />
                     <Route path="/Movies" element={user ? <Movies /> : <Navigate to="/login" replace />} />
+                    <Route path="/MobileMovies" element={user ? <MobileMovies /> : <Navigate to="/login" replace />} />
                     <Route path="/Tvshows" element={user ? <TVShows /> : <Navigate to="/login" replace />} />
+                    <Route path="/MobileTVShows" element={user ? <MobileTVShows /> : <Navigate to="/login" replace />} />
                     <Route path="/Friends" element={user ? <Friends /> : <Navigate to="/login" replace />} />
+                    <Route path="/Followers" element={user ? <Followers /> : <Navigate to="/login" replace />} />
+                    <Route path="/Following" element={user ? <Following /> : <Navigate to="/login" replace />} />
+                    <Route path="/Followers/:username" element={user ? <Followers /> : <Navigate to="/login" replace />} />
+                    <Route path="/Following/:username" element={user ? <Following /> : <Navigate to="/login" replace />} />
                     <Route path="/Statistics" element={user ? <Statistics /> : <Navigate to="/login" replace />} />
                     <Route path="/Settings" element={user ? <Settings /> : <Navigate to="/login" replace />} />
                     <Route path="/Admin" element={<Admin />} />
                     <Route path="/Credits" element={<Credits />} />
-                    <Route path="/login" element={user ? <Navigate to="/Tvshows" replace /> : <Login />} />
-                    <Route path="/register" element={user ? <Navigate to="/Tvshows" replace /> : <Register />} />
+                    <Route path="/login" element={user ? <Navigate to={defaultRoute} replace /> : <Login />} />
+                    <Route path="/register" element={user ? <Navigate to={defaultRoute} replace /> : <Register />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/EditProfile" element={user ? <EditProfile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile/:username" element={user ? <Profile /> : <Navigate to="/login" replace />} />

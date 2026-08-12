@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
+import type { User } from '@supabase/supabase-js'
 import {
     getProfile,
     getProfileByUsername,
@@ -10,7 +11,8 @@ import {
     unfollowUser,
     isFollowing
 } from '../services/profileService'
-import type { User } from '@supabase/supabase-js'
+import { useAuthStore } from '../stores/useAuthStore'
+import { useLibraryStore } from '../stores/useLibraryStore'
 import type { WatchlistItem, TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { VirtuosoGrid } from 'react-virtuoso'
@@ -54,14 +56,38 @@ const ProfilePage: React.FC = () => {
     const [watchlistItems, setWatchlistItems] = useState<WatchlistItem[]>([])
     const [userLists, setUserLists] = useState<UserList[]>([])
     const [activeTab, setActiveTab] = useState<TabType>('watching')
+    const [currentUserWatchlistIds, setCurrentUserWatchlistIds] = useState<Set<number>>(new Set())
 
     useEffect(() => {
         const loadUser = async () => {
-            const { data: { user } } = await supabase.auth.getUser()
+            const user = useAuthStore.getState().user
             setCurrentUser(user)
         }
         void loadUser()
     }, [])
+
+    useEffect(() => {
+        const fetchCurrentUserWatchlist = async () => {
+            if (!currentUser) {
+                setCurrentUserWatchlistIds(new Set())
+                return
+            }
+
+            const { data } = await supabase
+                .from('watchlist')
+                .select('tmdb_id')
+                .eq('user_id', currentUser.id)
+
+            if (data) {
+                const ids = new Set(data.map(item => item.tmdb_id).filter((id): id is number => id != null))
+                setCurrentUserWatchlistIds(ids)
+            } else {
+                setCurrentUserWatchlistIds(new Set())
+            }
+        }
+
+        void fetchCurrentUserWatchlist()
+    }, [currentUser])
 
     useEffect(() => {
         if (!username && !currentUser) return
@@ -77,12 +103,10 @@ const ProfilePage: React.FC = () => {
                     const { data } = await getProfileByUsername(username)
                     profileData = data as ProfileData | null
                     targetUserId = profileData?.id || null
-                    console.log('[Profile] getProfileByUsername result:', { username, profileData, targetUserId })
                 } else if (currentUser) {
                     const { data } = await getProfile(currentUser.id)
                     profileData = data as ProfileData | null
                     targetUserId = currentUser.id
-                    console.log('[Profile] getProfile result:', { userId: currentUser.id, profileData, targetUserId })
                 }
 
                 setProfile(profileData)
@@ -91,7 +115,6 @@ const ProfilePage: React.FC = () => {
                     if (currentUser && currentUser.id !== targetUserId) {
                         const following = await isFollowing(currentUser.id, targetUserId)
                         setIsFollowingUser(following)
-                        console.log('[Profile] isFollowing:', following)
                     }
 
                     // Load followers and following counts
@@ -101,10 +124,8 @@ const ProfilePage: React.FC = () => {
                     ])
                     setFollowersCount(followersCountData || 0)
                     setFollowingCount(followingCountData || 0)
-                    console.log('[Profile] counts:', { followers: followersCountData, following: followingCountData })
 
                     // Load watchlist
-                    console.log('[Profile] Loading watchlist for user:', targetUserId)
                     const { data: watchlistData, error: watchlistError } = await supabase
                         .from('watchlist')
                         .select('*')
@@ -113,8 +134,6 @@ const ProfilePage: React.FC = () => {
                     
                     if (watchlistError) {
                         console.error('[Profile] Failed to load watchlist:', watchlistError)
-                    } else {
-                        console.log('[Profile] Watchlist loaded:', watchlistData?.length || 0, 'items')
                     }
                     
                     const items = (watchlistData || []) as WatchlistItem[]
@@ -132,13 +151,10 @@ const ProfilePage: React.FC = () => {
                         listsQuery = listsQuery.eq('is_public', true)
                     }
 
-                    console.log('[Profile] Loading lists for user:', targetUserId, 'isOwn:', isOwn)
                     const { data: listsData, error: listsError } = await listsQuery
                     
                     if (listsError) {
                         console.error('[Profile] Failed to load lists:', listsError)
-                    } else {
-                        console.log('[Profile] Lists loaded:', listsData?.length || 0, 'lists')
                     }
                     
                     const rawLists = (listsData || []) as UserList[]
@@ -153,13 +169,11 @@ const ProfilePage: React.FC = () => {
 
                         if (listItemsError) {
                             console.error('[Profile] Failed to load list_items:', listItemsError)
-                        } else {
-                            console.log('[Profile] List items loaded:', listItems?.length || 0, 'items')
                         }
 
                         const counts: Record<string, { item_count: number; watched_count: number }> = {}
                         if (listItems) {
-                            listItems.forEach(item => {
+                            listItems.forEach((item: { list_id: string; watched_at: string | null }) => {
                                 if (!counts[item.list_id]) {
                                     counts[item.list_id] = { item_count: 0, watched_count: 0 }
                                 }
@@ -214,22 +228,53 @@ const ProfilePage: React.FC = () => {
 
     const isOwnProfile = currentUser?.id === profile?.id
 
-    const watchingTVShows = useMemo(() => watchlistItems.filter(item => 
+    const handleAddToWatchlist = async (tmdbItem: TMDBResult) => {
+        if (!currentUser) return
+
+        const tmdbId = tmdbItem.id as number
+        const isInWatchlist = currentUserWatchlistIds.has(tmdbId)
+
+        if (isInWatchlist) {
+            const libraryItem = useLibraryStore.getState().allItems.find(item => item.tmdb_id === tmdbId)
+            if (libraryItem) {
+                await useLibraryStore.getState().removeItem(libraryItem.id)
+                setCurrentUserWatchlistIds(prev => {
+                    const next = new Set(prev)
+                    next.delete(tmdbId)
+                    return next
+                })
+            }
+        } else {
+            const newItem: WatchlistItem = {
+                id: crypto.randomUUID(),
+                user_id: currentUser.id,
+                media_type: tmdbItem.media_type === 'person' ? 'movie' : (tmdbItem.media_type as 'movie' | 'tv' | 'anime'),
+                tmdb_id: tmdbId,
+                title: tmdbItem.title || tmdbItem.name || '',
+                poster_path: tmdbItem.poster_path || undefined,
+                overview: tmdbItem.overview || undefined,
+                release_date: tmdbItem.release_date || tmdbItem.first_air_date || undefined,
+                vote_average: tmdbItem.vote_average || undefined,
+                status: 'planning',
+                added_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            }
+            await useLibraryStore.getState().addItem(newItem)
+            setCurrentUserWatchlistIds(prev => new Set(prev).add(tmdbId))
+        }
+    }
+
+    const watchingTVShows = useMemo(() => watchlistItems.filter(item =>
         (item.media_type === 'tv' || item.media_type === 'anime') && item.status === 'watching'
     ), [watchlistItems])
 
-    const moviesToWatch = useMemo(() => watchlistItems.filter(item => 
+    const moviesToWatch = useMemo(() => watchlistItems.filter(item =>
         item.media_type === 'movie' && item.status === 'planning'
     ), [watchlistItems])
 
-    const finishedItems = useMemo(() => watchlistItems.filter(item => 
+    const finishedItems = useMemo(() => watchlistItems.filter(item =>
         item.status === 'completed' || item.status === 'caught_up'
     ), [watchlistItems])
-
-    const formatDate = (dateString: string): string => {
-        const date = new Date(dateString)
-        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-    }
 
     if (loading) {
         return (
@@ -271,6 +316,7 @@ const ProfilePage: React.FC = () => {
                                     src={profile.avatar_url}
                                     alt={profile.display_name || 'User'}
                                     className="profile-hero__avatar"
+                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                                 />
                             ) : (
                                 <div className="profile-hero__avatar profile-hero__avatar--placeholder">
@@ -280,114 +326,85 @@ const ProfilePage: React.FC = () => {
                         </div>
 
                         <div className="profile-hero__info">
-                            <div className="profile-hero__header">
-                                <div>
-                                    <h1 className="profile-hero__name">
-                                        {profile.display_name || 'Anonymous'}
-                                    </h1>
-                                    <p className="profile-hero__username">
-                                        @{(profile.display_name || 'user').toLowerCase().replace(/\s+/g, '_')}
-                                    </p>
-                                </div>
+                            <div className="profile-hero__identity">
+                                <h1 className="profile-hero__name">
+                                    {profile.display_name || 'Anonymous'}
+                                </h1>
+                                <p className="profile-hero__username">
+                                    @{(profile.display_name || 'user').toLowerCase().replace(/\s+/g, '_')}
+                                </p>
+                            </div>
 
-                                <div className="profile-hero__actions">
-                                    {isOwnProfile ? (
-                                        <>
-                                            <Link to="/EditProfile" className="profile-btn profile-btn--primary">
-                                                <i className="fa-solid fa-pen"></i>
-                                                Edit Profile
-                                            </Link>
-                                            <Link to="/Settings" className="profile-btn profile-btn--secondary">
-                                                <i className="fa-solid fa-gear"></i>
-                                                Settings
-                                            </Link>
-                                        </>
-                                    ) : (
-                                        currentUser && (
-                                            <button
-                                                className={`profile-btn ${isFollowingUser ? 'profile-btn--following' : 'profile-btn--primary'}`}
-                                                onClick={handleFollow}
-                                                disabled={followLoading}
-                                            >
-                                                {followLoading ? (
-                                                    <><i className="fa-solid fa-spinner fa-spin"></i> Loading...</>
-                                                ) : isFollowingUser ? (
-                                                    <><i className="fa-solid fa-user-check"></i> Following</>
-                                                ) : (
-                                                    <><i className="fa-solid fa-user-plus"></i> Follow</>
-                                                )}
-                                            </button>
-                                        )
-                                    )}
-                                </div>
+                            <div className="profile-hero__stats">
+                                <Link to={`/Followers/${profile.display_name}`} className="profile-stat profile-stat--link">
+                                    <span className="profile-stat__value">{followersCount}</span>
+                                    <span className="profile-stat__label"> Followers</span>
+                                </Link>
+                                <Link to={`/Following/${profile.display_name}`} className="profile-stat profile-stat--link">
+                                    <span className="profile-stat__value">{followingCount}</span>
+                                    <span className="profile-stat__label"> Following</span>
+                                </Link>
+                            </div>
+
+                            <div className="profile-hero__actions">
+                                {!isOwnProfile && currentUser && (
+                                    <button
+                                        className={`profile-btn ${isFollowingUser ? 'profile-btn--following' : 'profile-btn--primary'}`}
+                                        onClick={handleFollow}
+                                        disabled={followLoading}
+                                    >
+                                        {followLoading ? (
+                                            <><i className="fa-solid fa-spinner fa-spin"></i> Loading...</>
+                                        ) : isFollowingUser ? (
+                                            <> Following</>
+                                        ) : (
+                                            <> Follow</>
+                                        )}
+                                    </button>
+                                )}
                             </div>
 
                             {profile.bio && (
                                 <p className="profile-hero__bio">{profile.bio}</p>
                             )}
-
-                            <div className="profile-hero__meta">
-                                <span className="profile-hero__meta-item">
-                                    Joined {formatDate(profile.created_at)}
-                                </span>
-                            </div>
-
-                            <div className="profile-hero__stats">
-                                <div className="profile-stat">
-                                    <span className="profile-stat__value">{watchlistItems.length}</span>
-                                    <span className="profile-stat__label">Watchlist</span>
-                                </div>
-                                <div className="profile-stat">
-                                    <span className="profile-stat__value">{followersCount}</span>
-                                    <span className="profile-stat__label">Followers</span>
-                                </div>
-                                <div className="profile-stat">
-                                    <span className="profile-stat__value">{followingCount}</span>
-                                    <span className="profile-stat__label">Following</span>
-                                </div>
-                                <div className="profile-stat">
-                                    <span className="profile-stat__value">{userLists.length}</span>
-                                    <span className="profile-stat__label">Lists</span>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Tabs */}
                 <div className="profile-tabs">
-                    <button
-                        className={`profile-tab ${activeTab === 'watching' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('watching')}
-                    >
-                        <i className="fa-solid fa-tv"></i>
-                        Watching
-                        <span className="profile-tab__count">{watchingTVShows.length}</span>
-                    </button>
-                    <button
-                        className={`profile-tab ${activeTab === 'movies' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('movies')}
-                    >
-                        <i className="fa-solid fa-film"></i>
-                        Movies
-                        <span className="profile-tab__count">{moviesToWatch.length}</span>
-                    </button>
-                    <button
-                        className={`profile-tab ${activeTab === 'finished' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('finished')}
-                    >
-                        <i className="fa-solid fa-check-circle"></i>
-                        Finished
-                        <span className="profile-tab__count">{finishedItems.length}</span>
-                    </button>
-                    <button
-                        className={`profile-tab ${activeTab === 'lists' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('lists')}
-                    >
-                        <i className="fa-solid fa-list"></i>
-                        Lists
-                        <span className="profile-tab__count">{userLists.length}</span>
-                    </button>
+                    {watchingTVShows.length > 0 && (
+                        <button
+                            className={`profile-tab ${activeTab === 'watching' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('watching')}
+                        >
+                            <span className="profile-tab__text">Watching</span>
+                        </button>
+                    )}
+                    {moviesToWatch.length > 0 && (
+                        <button
+                            className={`profile-tab ${activeTab === 'movies' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('movies')}
+                        >
+                            <span className="profile-tab__text">Movies</span>
+                        </button>
+                    )}
+                    {finishedItems.length > 0 && (
+                        <button
+                            className={`profile-tab ${activeTab === 'finished' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('finished')}
+                        >
+                            <span className="profile-tab__text">Finished</span>
+                        </button>
+                    )}
+                    {userLists.length > 0 && (
+                        <button
+                            className={`profile-tab ${activeTab === 'lists' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('lists')}
+                        >
+                            <span className="profile-tab__text">Lists</span>
+                        </button>
+                    )}
                 </div>
 
                 {/* Tab Content */}
@@ -399,14 +416,14 @@ const ProfilePage: React.FC = () => {
                                 <div className="profile-watchlist-category">
                                     <VirtuosoGrid
                                         increaseViewportBy={{
-                                            top: isMobile ? 600 : 1200,
-                                            bottom: isMobile ? 2000 : 3000,
+                                            top: isMobile ? 200 : 400,
+                                            bottom: isMobile ? 400 : 800,
                                         }}
                                         computeItemKey={(index) => watchingTVShows[index]?.id ?? index}
                                         style={{ height: '100%', width: '100%' }}
                                         useWindowScroll={true}
                                         data={watchingTVShows}
-                                        overscan={isMobile ? 800 : 1500}
+                                        overscan={isMobile ? 50 : 100}
                                         listClassName="discover-grid"
                                         itemContent={(index) => {
                                             const item = watchingTVShows[index]
@@ -419,7 +436,8 @@ const ProfilePage: React.FC = () => {
                                             return (
                                                 <MediaCard
                                                     item={tmdbItem}
-                                                    isInWatchlist={true}
+                                                    isInWatchlist={currentUserWatchlistIds.has(tmdbItem.id)}
+                                                    onAdd={handleAddToWatchlist}
                                                 />
                                             )
                                         }}
@@ -441,14 +459,14 @@ const ProfilePage: React.FC = () => {
                                 <div className="profile-watchlist-category">
                                     <VirtuosoGrid
                                         increaseViewportBy={{
-                                            top: isMobile ? 600 : 1200,
-                                            bottom: isMobile ? 2000 : 3000,
+                                            top: isMobile ? 200 : 400,
+                                            bottom: isMobile ? 400 : 800,
                                         }}
                                         computeItemKey={(index) => moviesToWatch[index]?.id ?? index}
                                         style={{ height: '100%', width: '100%' }}
                                         useWindowScroll={true}
                                         data={moviesToWatch}
-                                        overscan={isMobile ? 800 : 1500}
+                                        overscan={isMobile ? 50 : 100}
                                         listClassName="discover-grid"
                                         itemContent={(index) => {
                                             const item = moviesToWatch[index]
@@ -461,7 +479,8 @@ const ProfilePage: React.FC = () => {
                                             return (
                                                 <MediaCard
                                                     item={tmdbItem}
-                                                    isInWatchlist={true}
+                                                    isInWatchlist={currentUserWatchlistIds.has(tmdbItem.id)}
+                                                    onAdd={handleAddToWatchlist}
                                                 />
                                             )
                                         }}
@@ -483,14 +502,14 @@ const ProfilePage: React.FC = () => {
                                 <div className="profile-watchlist-category">
                                     <VirtuosoGrid
                                         increaseViewportBy={{
-                                            top: isMobile ? 600 : 1200,
-                                            bottom: isMobile ? 2000 : 3000,
+                                            top: isMobile ? 200 : 400,
+                                            bottom: isMobile ? 400 : 800,
                                         }}
                                         computeItemKey={(index) => finishedItems[index]?.id ?? index}
                                         style={{ height: '100%', width: '100%' }}
                                         useWindowScroll={true}
                                         data={finishedItems}
-                                        overscan={isMobile ? 800 : 1500}
+                                        overscan={isMobile ? 50 : 100}
                                         listClassName="discover-grid"
                                         itemContent={(index) => {
                                             const item = finishedItems[index]
@@ -503,7 +522,8 @@ const ProfilePage: React.FC = () => {
                                             return (
                                                 <MediaCard
                                                     item={tmdbItem}
-                                                    isInWatchlist={true}
+                                                    isInWatchlist={currentUserWatchlistIds.has(tmdbItem.id)}
+                                                    onAdd={handleAddToWatchlist}
                                                 />
                                             )
                                         }}

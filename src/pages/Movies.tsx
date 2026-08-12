@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useLibraryStore } from '../stores/useLibraryStore'
+import { useSelectionStore } from '../stores/useSelectionStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { WatchlistItem, TMDBResult } from '../types'
@@ -11,6 +13,7 @@ import { useMobile } from '../contexts/useMobile'
 
 const Movies: React.FC = () => {
     usePageTitle('Trackist - Movies')
+    const navigate = useNavigate()
     const { committedQuery } = useSearch()
 
     const movies = useLibraryStore((state) => state.movies)
@@ -21,15 +24,27 @@ const Movies: React.FC = () => {
         item: TMDBResult
     } | null>(null)
 
-    const [selectionMode, setSelectionMode] = useState(false)
-    const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-    const [batchLoading, setBatchLoading] = useState(false)
+    const [actionLoading, setActionLoading] = useState(false)
+
+    const { 
+        moviesSelectionMode: selectionMode, 
+        moviesSelectedIds: selectedIds, 
+        toggleMovieSelection: toggleSelection 
+    } = useSelectionStore()
 
     const { isMobile } = useMobile()
+
+    const handleSwitchToMobile = () => {
+        navigate('/MobileMovies')
+    }
 
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
+
+    const scrollToTop = () => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
 
     const updateStatus = async (id: string, status: string) => {
         await useLibraryStore.getState().updateStatus(id, status as WatchlistItem['status'])
@@ -59,57 +74,20 @@ const Movies: React.FC = () => {
     }
 
     const handleConfirmAction = async () => {
-        if (!confirmModal) return
+        if (!confirmModal || actionLoading) return
         
-        if (confirmModal.action === 'watch') {
-            await markAsWatched(confirmModal.item)
-        } else {
-            await markAsUnwatched(confirmModal.item)
-        }
-        
-        setConfirmModal(null)
-    }
-
-    const toggleSelection = (id: string) => {
-        setSelectedIds(prev => {
-            const newSet = new Set(prev)
-            if (newSet.has(id)) {
-                newSet.delete(id)
-            } else {
-                newSet.add(id)
-            }
-            return newSet
-        })
-    }
-
-    const handleBatchMarkWatched = async () => {
-        if (selectedIds.size === 0) return
-
-        setBatchLoading(true)
+        setActionLoading(true)
         try {
-            const selectedItems = movies.filter(item => selectedIds.has(item.id))
-            
-            for (const item of selectedItems) {
-                if (isMovieReleased(item)) {
-                    await updateStatus(item.id, 'completed')
-                    if (item.status === 'planning') {
-                        launchCosmicConfetti()
-                    }
-                }
+            if (confirmModal.action === 'watch') {
+                await markAsWatched(confirmModal.item)
+            } else {
+                await markAsUnwatched(confirmModal.item)
             }
             
-            setSelectedIds(new Set())
-            setSelectionMode(false)
-        } catch (err) {
-            console.error('Failed to batch mark as watched:', err)
+            setConfirmModal(null)
         } finally {
-            setBatchLoading(false)
+            setActionLoading(false)
         }
-    }
-
-    const clearSelection = () => {
-        setSelectedIds(new Set())
-        setSelectionMode(false)
     }
 
     // Filter items based on global search (strict movie-type lock)
@@ -143,50 +121,19 @@ const Movies: React.FC = () => {
 
     return (
         <div className="discover-page">
+            {isMobile && (
+                <button
+                    className="mobile-view-toggle-fixed"
+                    onClick={handleSwitchToMobile}
+                    title="Switch to Mobile View"
+                >
+                    <i className="fa-solid fa-mobile-screen"></i>
+                </button>
+            )}
             <div className="discover-container" style={{ width: '85%' }}>
                 <div className="watchlist-section">
-                    <div className="watchlist-section__header" style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center',
-                        marginBottom: '1rem'
-                    }}>
+                    <div className="watchlist-section__header">
                         <h3 className="watchlist-section__title">To Watch</h3>
-                        
-                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                            {!selectionMode ? (
-                                <button
-                                    className="discover-filter-select discover-filter-select--btn"
-                                    onClick={() => setSelectionMode(true)}
-                                    disabled={watchlistItems.length === 0}
-                                >
-                                    Select
-                                </button>
-                            ) : (
-                                <>
-                                    <span style={{ 
-                                        color: 'rgba(255,255,255,0.6)', 
-                                        fontSize: '0.85rem',
-                                        marginRight: '0.5rem'
-                                    }}>
-                                        {selectedIds.size} selected
-                                    </span>
-                                    <button
-                                        className="discover-filter-select discover-filter-select--btn"
-                                        onClick={clearSelection}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        className="discover-filter-select discover-filter-select--btn"
-                                        onClick={handleBatchMarkWatched}
-                                        disabled={selectedIds.size === 0 || batchLoading}
-                                    >
-                                        {batchLoading ? '...' : 'Mark as Watched'}
-                                    </button>
-                                </>
-                            )}
-                        </div>
                     </div>
                     {watchlistItems.length > 0 ? (
                         <VirtuosoGrid
@@ -294,8 +241,13 @@ const Movies: React.FC = () => {
                     confirmText={confirmModal.action === 'watch' ? 'Mark as Watched' : 'Mark as Unwatched'}
                     cancelText="Cancel"
                     confirmColor={confirmModal.action === 'watch' ? 'success' : 'danger'}
+                    confirmLoading={actionLoading}
                 />
             )}
+
+            <button className="upcoming-new-scroll-top" onClick={scrollToTop} aria-label="Scroll to top" title="Back to top">
+                <i className="fas fa-arrow-up"></i>
+            </button>
         </div>
     )
 }

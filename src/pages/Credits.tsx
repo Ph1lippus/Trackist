@@ -64,6 +64,10 @@ const Credits: React.FC = () => {
                         </article>
                     ))}
                 </div>
+
+                <div className="tmdb-attribution">
+                    <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+                </div>
             </div>
         </section>
     )

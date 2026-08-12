@@ -17,19 +17,22 @@ export default defineConfig({
         display: 'standalone',
         orientation: 'portrait-primary',
         scope: '/',
-        start_url: '/Tvshows',
+        start_url: '/', 
         icons: [
           {
-            src: '/android-chrome-192x192.png',
-            sizes: '192x192',
-            type: 'image/png'
+            src: '/TRACK1ST-FULLNAMELGO.png?v=3',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any'
           },
           {
-            src: '/android-chrome-512x512.png',
+            src: '/TRACK1ST-FULLNAMELGO.png?v=3',
             sizes: '512x512',
-            type: 'image/png'
+            type: 'image/png',
+            purpose: 'maskable'
           }
         ]
+
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
@@ -44,27 +47,12 @@ export default defineConfig({
               cacheName: 'tmdb-api-cache',
               expiration: {
                 maxEntries: 200,
-                maxAgeSeconds: 60 * 60 * 24 // 24 hours
+                maxAgeSeconds: 60 * 60 * 24 
               },
               cacheableResponse: {
                 statuses: [0, 200]
               },
               networkTimeoutSeconds: 15
-            }
-          },
-          {
-            urlPattern: /^https:\/\/webservice\.fanart\.tv\/.*/i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'fanart-api-cache',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              },
-              networkTimeoutSeconds: 10
             }
           },
           {
@@ -74,7 +62,7 @@ export default defineConfig({
               cacheName: 'tmdb-image-cache',
               expiration: {
                 maxEntries: 200,
-                maxAgeSeconds: 60 * 60 * 24 * 30 // 30 days
+                maxAgeSeconds: 60 * 60 * 24 * 30 
               },
               cacheableResponse: {
                 statuses: [0, 200]
@@ -88,7 +76,7 @@ export default defineConfig({
               cacheName: 'supabase-api-cache',
               expiration: {
                 maxEntries: 100,
-                maxAgeSeconds: 60 * 5 // 5 minutes
+                maxAgeSeconds: 60 * 5 
               },
               cacheableResponse: {
                 statuses: [0, 200]

@@ -23,6 +23,9 @@ CREATE TABLE public.watchlist (
   updated_at timestamp with time zone DEFAULT now(),
   last_season_number integer DEFAULT 1,
   last_season_check timestamp with time zone,
+  watched_episodes_count integer DEFAULT 0,
+  next_season_number integer DEFAULT 1,
+  next_episode_number integer DEFAULT 1,
   CONSTRAINT watchlist_pkey PRIMARY KEY (id),
   CONSTRAINT watchlist_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
@@ -41,7 +44,8 @@ CREATE TABLE public.watchlist_episodes (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT watchlist_episodes_pkey PRIMARY KEY (id),
-  CONSTRAINT watchlist_episodes_watchlist_id_fkey FOREIGN KEY (watchlist_id) REFERENCES public.watchlist(id)
+  CONSTRAINT watchlist_episodes_watchlist_id_fkey FOREIGN KEY (watchlist_id) REFERENCES public.watchlist(id),
+  CONSTRAINT watchlist_episodes_watchlist_id_season_episode_key UNIQUE (watchlist_id, season_number, episode_number)
 );
 CREATE TABLE public.user_follows (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

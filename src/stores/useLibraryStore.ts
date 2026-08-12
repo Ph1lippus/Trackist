@@ -7,6 +7,9 @@ import type { WatchlistItem } from '../types'
 // Extend WatchlistItem to include calculated progress field
 interface TVShowWithProgress extends WatchlistItem {
     total_episodes_watched: number
+    watched_episodes_count?: number
+    next_season_number?: number
+    next_episode_number?: number
 }
 
 interface LibraryState {
@@ -69,15 +72,12 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         set({ isLoading: true, error: null })
 
         try {
-            console.log('Fetching library for user:', userId)
-            
             // Try to get from cache first
             const cachedData = await cacheService.get<WatchlistItem[]>('library', userId)
             
             let items: WatchlistItem[] = []
             
             if (cachedData) {
-                console.log('Using cached library data')
                 items = cachedData
                 // Revalidate in background with fresh data
                 ;(async () => {
@@ -95,7 +95,6 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                     }
                 })()
             } else {
-                console.log('Fetching fresh library data from database')
                 const { data, error } = await supabase
                     .from('watchlist')
                     .select(selectColumns)
@@ -119,16 +118,14 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 }
             }
 
-            console.log('Fetched items:', items.length)
-
             // Categorize items by status and media type
             const tvShows: TVShowWithProgress[] = []
             const movies: WatchlistItem[] = []
             const finished: WatchlistItem[] = []
 
             items.forEach(item => {
-                // Add to finished if status is completed or caught_up
-                if (item.status === 'completed' || item.status === 'caught_up') {
+                // Add to finished if status is completed, caught_up, or dropped
+                if (item.status === 'completed' || item.status === 'caught_up' || item.status === 'dropped') {
                     finished.push(item)
                 }
                 
@@ -136,7 +133,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 if (item.media_type === 'tv' || item.media_type === 'anime') {
                     tvShows.push({
                         ...item,
-                        total_episodes_watched: 0 // Will be calculated on demand
+                        total_episodes_watched: item.watched_episodes_count ?? 0
                     } as TVShowWithProgress)
                 } else if (item.media_type === 'movie') {
                     movies.push(item)
@@ -200,14 +197,19 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
         // Optimistic update - update all arrays immediately
         const updateInArray = (items: WatchlistItem[] | TVShowWithProgress[]) =>
-            items.map(item => item.id === id ? { ...item, status: nextStatus, updated_at: new Date().toISOString() } : item)
+            items.map(item => item.id === id ? {
+                ...item,
+                status: nextStatus,
+                updated_at: new Date().toISOString(),
+                ...(nextStatus === 'completed' ? { completed_at: new Date().toISOString() } : {})
+            } : item)
 
         const newAllItems = updateInArray(state.allItems) as WatchlistItem[]
         const newTvShows = updateInArray(state.tvShows) as TVShowWithProgress[]
         const newMovies = updateInArray(state.movies) as WatchlistItem[]
         
         // Handle finished array - move item in/out based on status
-        const isFinishedStatus = nextStatus === 'completed' || nextStatus === 'caught_up'
+        const isFinishedStatus = nextStatus === 'completed' || nextStatus === 'caught_up' || nextStatus === 'dropped'
         let newFinished = state.finished
         if (isFinishedStatus) {
             // Add to finished if not already there - add to beginning for most recent first
@@ -216,7 +218,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 const completedItem = { 
                     ...item, 
                     status: nextStatus,
-                    completed_at: item.completed_at
+                    completed_at: nextStatus === 'completed' ? new Date().toISOString() : item.completed_at
                 }
                 newFinished = [completedItem, ...state.finished]
             } else if (item) {
@@ -224,12 +226,12 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 const completedItem = { 
                     ...item, 
                     status: nextStatus,
-                    completed_at: item.completed_at
+                    completed_at: nextStatus === 'completed' ? new Date().toISOString() : item.completed_at
                 }
                 newFinished = state.finished.map(f => f.id === id ? completedItem : f)
             }
         } else {
-            // Remove from finished if status changed away from completed/caught_up
+            // Remove from finished if status changed away from completed/caught_up/dropped
             newFinished = state.finished.filter(item => item.id !== id)
         }
 
@@ -280,10 +282,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 throw error
             }
 
-            // Invalidate cache when status changes to/from completed/caught_up to ensure Finished page shows updated data
+            // Invalidate cache when status changes to/from completed/caught_up/dropped to ensure Finished page shows updated data
             const previousItem = previousAllItems.find(i => i.id === id)
-            const wasFinished = previousItem?.status === 'completed' || previousItem?.status === 'caught_up'
-            const isFinished = nextStatus === 'completed' || nextStatus === 'caught_up'
+            const wasFinished = previousItem?.status === 'completed' || previousItem?.status === 'caught_up' || previousItem?.status === 'dropped'
+            const isFinished = nextStatus === 'completed' || nextStatus === 'caught_up' || nextStatus === 'dropped'
             if (wasFinished !== isFinished) {
                 await invalidateUserCache()
             }
@@ -550,6 +552,11 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             }
         }
 
+        // Set completed_at when adding with completed status
+        if (enhancedItem.status === 'completed' && !enhancedItem.completed_at) {
+            enhancedItem.completed_at = new Date().toISOString()
+        }
+
         // Store previous state for rollback
         const previousAllItems = [...state.allItems]
         const previousTvShows = [...state.tvShows]
@@ -564,7 +571,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         let newFinished = state.finished
 
         if (enhancedItem.media_type === 'tv' || enhancedItem.media_type === 'anime') {
-            newTvShows = [enhancedItem as TVShowWithProgress, ...state.tvShows]
+            newTvShows = [{
+                ...enhancedItem,
+                total_episodes_watched: enhancedItem.watched_episodes_count ?? 0
+            } as TVShowWithProgress, ...state.tvShows]
         } else if (enhancedItem.media_type === 'movie') {
             newMovies = [enhancedItem, ...state.movies]
         }
@@ -638,6 +648,9 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     // Refresh single item from database
     refreshItem: async (id: string) => {
         try {
+            // Invalidate cache first to ensure we get fresh data and don't serve stale cached data
+            await invalidateUserCache()
+
             const { data, error } = await supabase
                 .from('watchlist')
                 .select(selectColumns)
@@ -680,8 +693,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 if (updateError) {
                     console.error('Failed to update total episodes in database:', updateError)
                 } else {
-                    // Invalidate cache to ensure the updated data is reflected across the app
-                    const { invalidateUserCache } = await import('../services/cacheService')
+                    // Invalidate cache again to ensure the updated data is reflected across the app
                     await invalidateUserCache()
                 }
             }
@@ -691,7 +703,10 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             // Re-categorize based on new status
             const newAllItems = state.allItems.map(item => item.id === id ? enhancedData : item)
 
-            const newTvShows = newAllItems.filter(item => item.media_type === 'tv' || item.media_type === 'anime') as TVShowWithProgress[]
+            const newTvShows = newAllItems.filter(item => item.media_type === 'tv' || item.media_type === 'anime').map(item => ({
+                ...item,
+                total_episodes_watched: (item as TVShowWithProgress).watched_episodes_count ?? 0
+            })) as TVShowWithProgress[]
             const newMovies = newAllItems.filter(item => item.media_type === 'movie')
             const newFinished = newAllItems.filter(item => item.status === 'completed' || item.status === 'caught_up')
 

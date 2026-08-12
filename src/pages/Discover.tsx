@@ -240,25 +240,23 @@ const Discover: React.FC = () => {
                             <VirtuosoGrid
                                 key={`${filters.mediaType}-${filters.sortBy}-${filters.selectedGenre ?? 'all'}-${filters.selectedYear ?? 'all'}-${filters.query}`}
                                 increaseViewportBy={{
-                                        top: isMobile ? 600 : 1200,
-                                        bottom: isMobile ? 2000 : 3000,
+                                        top: isMobile ? 200 : 400,
+                                        bottom: isMobile ? 400 : 800,
                                     }}
                                 computeItemKey={(index) => visibleResults[index]?.id ?? index}
                                 style={{ height: '100%', width: '100%' }}
                                 useWindowScroll={true}
                                 data={visibleResults}
                                 rangeChanged={(range) => {
-                                    // Load more items when user scrolls near the end
-                                    // This fires continuously during scrolling (unlike endReached which only fires on mobile when finger lifts)
                                     const { endIndex } = range
                                     const totalItems = visibleResults.length
-                                    const threshold = isMobile ? 15 : 20 // Load more when within 15-20 items of the end
+                                    const threshold = isMobile ? 15 : 20
                                     
                                     if (endIndex >= totalItems - threshold && loading.hasMore && !loading.isLoadingMore) {
                                         actions.fetchData(store.page + 1)
                                     }
                                 }}
-                                overscan={isMobile ? 800 : 1500}
+                                overscan={isMobile ? 50 : 100}
                                 listClassName="discover-grid"
                                 itemContent={(index) => {
                                     const item = visibleResults[index];
@@ -290,6 +288,10 @@ const Discover: React.FC = () => {
                     confirmColor="danger"
                 />
             )}
+
+            <button className="upcoming-new-scroll-top" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} aria-label="Scroll to top" title="Back to top">
+                <i className="fas fa-arrow-up"></i>
+            </button>
         </div>
     )
 }

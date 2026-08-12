@@ -4,9 +4,13 @@ import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../services/supabaseClient';
 import { useSearch } from '../../hooks/useSearch';
 import SearchDropdown from '../search/SearchDropdown';
-import ProgressFixModal from '../modals/ProgressFixModal';
 import ConfirmModal from '../modals/ConfirmModal';
 import { clearAllCache } from '../../services/cacheService';
+import { useSelectionStore } from '../../stores/useSelectionStore';
+import { useLibraryStore } from '../../stores/useLibraryStore';
+import { launchCosmicConfetti } from '../../utils/cosmicConfetti';
+import { markShowAsFullyWatched, removeAllWatchedEpisodes } from '../../services/watchlistService';
+import type { WatchlistItem } from '../../types';
 
 interface NavbarProps {
     currentMonth?: Date;
@@ -21,7 +25,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const [user, setUser] = useState<User | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
     const [closing, setClosing] = useState(false);
-    const [showFixModal, setShowFixModal] = useState(false);
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
     const [showInstallButton, setShowInstallButton] = useState(false);
@@ -32,9 +35,30 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
             (window.navigator as Navigator & { standalone?: boolean }).standalone === true
     });
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [batchLoading, setBatchLoading] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
     const searchBoxRef = useRef<HTMLDivElement>(null);
+
+    // Selection state
+    const {
+        moviesSelectionMode,
+        moviesSelectedIds,
+        setMoviesSelectionMode,
+        clearMovieSelection,
+        tvShowsSelectionMode,
+        tvShowsSelectedIds,
+        setTVShowsSelectionMode,
+        clearTVShowSelection,
+        finishedSelectionMode,
+        finishedSelectedIds,
+        setFinishedSelectionMode,
+        clearFinishedSelection,
+    } = useSelectionStore();
+
+    const movies = useLibraryStore((state) => state.movies);
+    const tvShows = useLibraryStore((state) => state.tvShows);
+    const finished = useLibraryStore((state) => state.finished);
 
     // Unified search engine
     const {
@@ -60,7 +84,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const showBackButton = Boolean(isDetailPage || isListDetailPage || isListEditPage);
     
     const showSearchBar = !['/login', '/register'].includes(location.pathname) && 
-        (['/Discover', '/Movies', '/Tvshows', '/', '/Finished', '/Friends', '/Lists'].includes(location.pathname) || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/'));
+        (['/Discover', '/Movies', '/Tvshows', '/', '/Finished', '/Friends', '/Followers', '/Following', '/Lists', '/MobileTVShows', '/MobileMovies'].includes(location.pathname) || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname.startsWith('/Followers/') || location.pathname.startsWith('/Following/') || location.pathname === '/MobileTVShows' || location.pathname === '/MobileMovies');
     
     const showCalendarHeader = location.pathname === '/Upcoming' && currentMonth && navigateMonth && canGoBack;
     
@@ -70,32 +94,52 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     }) : '';
 
     useEffect(() => {
-        // Get initial session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            setUser(session?.user || null);
-            if (session?.user) {
-                supabase.from('profiles').select('role').eq('id', session.user.id).single().then(({ data, error }) => {
-                    console.log('[Navbar] profile role check:', { data, error, userId: session.user.id })
-                    setIsAdmin(data?.role === 'admin')
-                })
-            }
-        });
+        let lastCheck = 0
+        const CHECK_COOLDOWN = 30000
 
-        // Listen for auth changes
+        const checkAdmin = async () => {
+            try {
+                const now = Date.now()
+                if (now - lastCheck < CHECK_COOLDOWN) return
+                lastCheck = now
+
+                const { data: { session } } = await supabase.auth.getSession()
+                setUser(session?.user || null)
+
+                if (session?.access_token) {
+                    try {
+                        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin`, {
+                            headers: { 'Authorization': `Bearer ${session.access_token}` }
+                        })
+                        if (res.ok) {
+                            const data = await res.json()
+                            setIsAdmin(data.isAdmin === true)
+                        } else {
+                            setIsAdmin(false)
+                        }
+                    } catch (fetchError) {
+                        console.error('[Navbar] verify-admin fetch failed:', fetchError)
+                        setIsAdmin(false)
+                    }
+                }
+            } catch {
+                setIsAdmin(false)
+            }
+        }
+
+        checkAdmin()
+
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-            setUser(session?.user || null);
-            if (session?.user) {
-                supabase.from('profiles').select('role').eq('id', session.user.id).single().then(({ data, error }) => {
-                    console.log('[Navbar] profile role check (auth change):', { data, error, userId: session.user.id })
-                    setIsAdmin(data?.role === 'admin')
-                })
+            setUser(session?.user || null)
+            if (session?.access_token) {
+                checkAdmin()
             } else {
                 setIsAdmin(false)
             }
-        });
+        })
 
-        return () => subscription.unsubscribe();
-    }, []);
+        return () => subscription.unsubscribe()
+    }, [])
 
     // PWA install prompt handling
     useEffect(() => {
@@ -204,12 +248,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         }
     };
 
-    const nickname = user?.user_metadata?.username 
-        || user?.user_metadata?.nickname 
-        || user?.user_metadata?.full_name 
-        || user?.email?.split('@')[0] 
-        || 'Viewer';
-
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         // Commit the query for full-page results
@@ -219,6 +257,111 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const handleSearchClear = () => {
         clear();
     }
+
+    // Selection helpers
+    const isMoviesPage = location.pathname === '/Movies' || location.pathname === '/MobileMovies';
+    const isTVShowsPage = location.pathname === '/Tvshows' || location.pathname === '/MobileTVShows';
+    const isFinishedPage = location.pathname === '/Finished';
+    const isSelectionActive = isMoviesPage ? moviesSelectionMode : (isTVShowsPage ? tvShowsSelectionMode : (isFinishedPage ? finishedSelectionMode : false));
+    const selectedCount = isMoviesPage ? moviesSelectedIds.size : (isTVShowsPage ? tvShowsSelectedIds.size : (isFinishedPage ? finishedSelectedIds.size : 0));
+
+    const handleRandomPick = () => {
+        if (isMoviesPage && movies.length > 0) {
+            const randomIndex = Math.floor(Math.random() * movies.length)
+            const randomMovie = movies[randomIndex]
+            if (randomMovie.tmdb_id) {
+                navigate(`/movie/${randomMovie.tmdb_id}`)
+            }
+        } else if (isTVShowsPage) {
+            const notStarted = tvShows.filter(show => show.status === 'planning')
+            const pool = notStarted.length > 0 ? notStarted : tvShows
+            if (pool.length > 0) {
+                const randomIndex = Math.floor(Math.random() * pool.length)
+                const randomShow = pool[randomIndex]
+                if (randomShow.tmdb_id) {
+                    navigate(`/tv/${randomShow.tmdb_id}`)
+                }
+            }
+        }
+        closeMenu()
+    }
+
+    const showRandomPick = (isMoviesPage || isTVShowsPage) && !isSelectionActive
+
+    const handleToggleSelectionMode = () => {
+        if (isMoviesPage) {
+            setMoviesSelectionMode(!moviesSelectionMode);
+        } else if (isTVShowsPage) {
+            setTVShowsSelectionMode(!tvShowsSelectionMode);
+        } else if (isFinishedPage) {
+            setFinishedSelectionMode(!finishedSelectionMode);
+        }
+    };
+
+    const handleClearSelection = () => {
+        if (isMoviesPage) {
+            clearMovieSelection();
+        } else if (isTVShowsPage) {
+            clearTVShowSelection();
+        } else if (isFinishedPage) {
+            clearFinishedSelection();
+        }
+    };
+
+    const handleBatchMarkWatched = async () => {
+        if (selectedCount === 0) return;
+
+        setBatchLoading(true);
+        try {
+            if (isMoviesPage) {
+                const selectedItems = movies.filter(item => moviesSelectedIds.has(item.id));
+                
+                for (const item of selectedItems) {
+                    const isMovieReleased = (item: WatchlistItem): boolean => {
+                        if (!item.release_date) return true;
+                        const releaseDate = new Date(item.release_date);
+                        const today = new Date();
+                        return releaseDate <= today;
+                    };
+
+                    if (isMovieReleased(item)) {
+                        await useLibraryStore.getState().updateStatus(item.id, 'completed');
+                        if (item.status === 'planning') {
+                            launchCosmicConfetti();
+                        }
+                    }
+                }
+            } else if (isTVShowsPage) {
+                const selectedItems = tvShows.filter(item => tvShowsSelectedIds.has(item.id));
+                
+                for (const item of selectedItems) {
+                    if (item.tmdb_id) {
+                        await markShowAsFullyWatched(item.id, item.tmdb_id);
+                        await useLibraryStore.getState().refreshItem(item.id);
+                    }
+                }
+            } else if (isFinishedPage) {
+                const selectedTVShows = finished.filter(item => (item.media_type === 'tv' || item.media_type === 'anime') && finishedSelectedIds.has(item.id));
+                const selectedMovies = finished.filter(item => item.media_type === 'movie' && finishedSelectedIds.has(item.id));
+
+                for (const item of selectedTVShows) {
+                    await removeAllWatchedEpisodes(item.id);
+                    await useLibraryStore.getState().refreshItem(item.id);
+                }
+
+                for (const item of selectedMovies) {
+                    await useLibraryStore.getState().updateStatus(item.id, 'planning');
+                    await useLibraryStore.getState().refreshItem(item.id);
+                }
+            }
+            
+            handleClearSelection();
+        } catch (err) {
+            console.error('Failed to batch operation:', err);
+        } finally {
+            setBatchLoading(false);
+        }
+    };
 
     // Context-aware placeholder text
     const searchPlaceholder = (() => {
@@ -336,15 +479,16 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                 <div className="navbar-actions">
                     {user ? (
                         <>
-                            <div className="navbar-user-wrap">
-                                <NavLink 
-                                    className="navbar-user" 
-                                    to="/Profile"
-                                    title={nickname}
+                            {isPWA && (
+                                <button
+                                    className="navbar-menu-btn"
+                                    onClick={handleFullscreenToggle}
+                                    aria-label={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+                                    title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
                                 >
-                                    {nickname}
-                                </NavLink>
-                            </div>
+                                    <i className={isFullscreen ? "fa-solid fa-compress" : "fa-solid fa-expand"}></i>
+                                </button>
+                            )}
                             <div className="t-dropdown-wrap">
                                 <button
                                     ref={buttonRef}
@@ -359,17 +503,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                         <span className="hamburger-line"></span>
                                     </div>
                                 </button>
-                                {isPWA && (
-                                <button
-                                    className="navbar-menu-btn"
-                                    onClick={handleFullscreenToggle}
-                                    aria-label={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-                                    title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-                                    style={{ marginLeft: '0.5rem' }}
-                                >
-                                    <i className={isFullscreen ? "fa-solid fa-compress" : "fa-solid fa-expand"}></i>
-                                </button>
-                                )}
                                 <div
                                     ref={menuRef}
                                     className={`t-dropdown ${menuOpen ? (closing ? 'is-closing' : 'is-open') : ''}`}
@@ -384,19 +517,27 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                         Admin Center
                                     </button>
                                 )}
+                                {showRandomPick && (
+                                    <button className="t-dropdown-item" onClick={handleRandomPick}>
+                                        <i className="fa-solid fa-shuffle"></i>
+                                        {isMoviesPage ? 'Random Movie' : 'Random TV Show'}
+                                    </button>
+                                )}
+                                {(isMoviesPage || isTVShowsPage || isFinishedPage) && !isSelectionActive && (
+                                    <button className="t-dropdown-item" onClick={() => {
+                                        closeMenu();
+                                        handleToggleSelectionMode();
+                                    }}>
+                                        <i className="fa-solid fa-check-square"></i>
+                                        Selection
+                                    </button>
+                                )}
                                 {showInstallButton && (
                                         <button className="t-dropdown-item" onClick={handleInstallClick}>
                                             <i className="fa-solid fa-download"></i>
                                             Install App
                                         </button>
                                     )}
-                                    <button className="t-dropdown-item" onClick={() => {
-                                        closeMenu();
-                                        setShowFixModal(true);
-                                    }}>
-                                        <i className="fa-solid fa-wrench"></i>
-                                        Fix Progress
-                                    </button>
                                     <button className="t-dropdown-item" onClick={handleClearCache}>
                                         <i className="fa-solid fa-trash"></i>
                                         Clear Cache
@@ -407,6 +548,13 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                     }}>
                                         <i className="fa-solid fa-gear"></i>
                                         Settings
+                                    </button>
+                                    <button className="t-dropdown-item" onClick={() => {
+                                        closeMenu();
+                                        navigate('/Credits');
+                                    }}>
+                                        <i className="fa-solid fa-trophy"></i>
+                                        Credits
                                     </button>
                                     <button className="t-dropdown-item" onClick={handleLogout}>
                                         <i className="fa-solid fa-right-from-bracket"></i>
@@ -437,13 +585,36 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                     )}
                 </div>
             </div>
-            <ProgressFixModal
-                isOpen={showFixModal}
-                onClose={() => setShowFixModal(false)}
-                onComplete={() => {
-                    window.dispatchEvent(new CustomEvent('watchlist-refresh'))
-                }}
-            />
+            
+            {/* Selection Mode Action Bar */}
+            {isSelectionActive && (
+                <div className="selection-action-bar">
+                    <span className="selection-count">{selectedCount} selected</span>
+                    <div className="selection-actions">
+                        <button
+                            className="selection-action-btn selection-action-btn--cancel"
+                            onClick={handleClearSelection}
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            className="selection-action-btn selection-action-btn--confirm"
+                            onClick={handleBatchMarkWatched}
+                            disabled={selectedCount === 0 || batchLoading}
+                        >
+                            {batchLoading ? (
+                                <i className="fa-solid fa-spinner fa-spin"></i>
+                            ) : (
+                                <>
+                                    <i className="fa-solid fa-rotate-left"></i>
+                                    {isFinishedPage ? 'Mark as Unwatched' : 'Mark as Watched'}
+                                </>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            )}
+            
             <ConfirmModal
                 isOpen={showLogoutModal}
                 title="Logout"
