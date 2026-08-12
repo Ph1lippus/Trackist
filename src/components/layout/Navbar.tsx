@@ -532,6 +532,13 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                         Selection
                                     </button>
                                 )}
+                                <button className="t-dropdown-item" onClick={() => {
+                                    closeMenu();
+                                    navigate('/Profile');
+                                }}>
+                                    <i className="fa-solid fa-user"></i>
+                                    Profile
+                                </button>
                                 {showInstallButton && (
                                         <button className="t-dropdown-item" onClick={handleInstallClick}>
                                             <i className="fa-solid fa-download"></i>

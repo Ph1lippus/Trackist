@@ -67,17 +67,31 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
 
     useEffect(() => {
         const measure = () => {
-            const dayEl = calendarGridRef.current?.querySelector('.calendar-day')
+            const grid = calendarGridRef.current
+            if (!grid) return
+            const gridRect = grid.getBoundingClientRect()
+            const gridWidth = gridRect.width
+            const style = getComputedStyle(grid)
+            const columnGap = parseFloat(style.columnGap || style.gap || '9.6')
+            const totalGaps = 6 * columnGap
+            const availableWidth = gridWidth - totalGaps
+            const cellWidth = availableWidth / 7
+            const dayEl = grid.querySelector('.calendar-day') as HTMLElement | null
             if (dayEl) {
-                const style = window.getComputedStyle(dayEl)
-                const paddingX = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight)
-                setDayCellInnerWidth(dayEl.clientWidth - paddingX)
+                const dayStyle = getComputedStyle(dayEl)
+                const paddingX = parseFloat(dayStyle.paddingLeft) + parseFloat(dayStyle.paddingRight)
+                setDayCellInnerWidth(Math.max(0, cellWidth - paddingX))
+            } else {
+                setDayCellInnerWidth(Math.max(0, cellWidth))
             }
         }
-        measure()
+        const raf = requestAnimationFrame(() => measure())
         const observer = new ResizeObserver(measure)
         if (calendarGridRef.current) observer.observe(calendarGridRef.current)
-        return () => observer.disconnect()
+        return () => {
+            cancelAnimationFrame(raf)
+            observer.disconnect()
+        }
     }, [])
 
     useEffect(() => {
