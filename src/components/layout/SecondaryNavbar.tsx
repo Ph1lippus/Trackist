@@ -18,6 +18,7 @@ const SecondaryNavbar: React.FC = () => {
         { to: '/Lists', label: 'Lists' },
         { to: '/Friends', label: 'Friends' },
         { to: '/Statistics', label: 'Statistics' },
+        { to: '/Profile', label: 'Profile' },
     ];
 
     // Map pathname to nav item - handle root route redirecting to tvshows

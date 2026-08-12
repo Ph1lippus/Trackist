@@ -248,12 +248,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         }
     };
 
-    const nickname = user?.user_metadata?.username 
-        || user?.user_metadata?.nickname 
-        || user?.user_metadata?.full_name 
-        || user?.email?.split('@')[0] 
-        || 'Viewer';
-
     const handleSearchSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         // Commit the query for full-page results
@@ -485,23 +479,14 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                 <div className="navbar-actions">
                     {user ? (
                         <>
-                            <div className="navbar-user-wrap">
-                                <NavLink 
-                                    className="navbar-user" 
-                                    to="/Profile"
-                                    title={nickname}
-                                >
-                                    {nickname}
-                                </NavLink>
-                            </div>
-                            {showRandomPick && (
+                            {isPWA && (
                                 <button
-                                    className="navbar-random-pick-btn"
-                                    onClick={handleRandomPick}
-                                    title={isMoviesPage ? 'Pick random movie' : 'Pick random TV show'}
-                                    aria-label={isMoviesPage ? 'Pick random movie' : 'Pick random TV show'}
+                                    className="navbar-menu-btn"
+                                    onClick={handleFullscreenToggle}
+                                    aria-label={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+                                    title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
                                 >
-                                    <i className="fa-solid fa-shuffle"></i>
+                                    <i className={isFullscreen ? "fa-solid fa-compress" : "fa-solid fa-expand"}></i>
                                 </button>
                             )}
                             <div className="t-dropdown-wrap">
@@ -518,17 +503,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                         <span className="hamburger-line"></span>
                                     </div>
                                 </button>
-                                {isPWA && (
-                                <button
-                                    className="navbar-menu-btn"
-                                    onClick={handleFullscreenToggle}
-                                    aria-label={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-                                    title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-                                    style={{ marginLeft: '0.5rem' }}
-                                >
-                                    <i className={isFullscreen ? "fa-solid fa-compress" : "fa-solid fa-expand"}></i>
-                                </button>
-                                )}
                                 <div
                                     ref={menuRef}
                                     className={`t-dropdown ${menuOpen ? (closing ? 'is-closing' : 'is-open') : ''}`}
@@ -541,6 +515,12 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                     }}>
                                         <i className="fa-solid fa-user-shield"></i>
                                         Admin Center
+                                    </button>
+                                )}
+                                {showRandomPick && (
+                                    <button className="t-dropdown-item" onClick={handleRandomPick}>
+                                        <i className="fa-solid fa-shuffle"></i>
+                                        {isMoviesPage ? 'Random Movie' : 'Random TV Show'}
                                     </button>
                                 )}
                                 {(isMoviesPage || isTVShowsPage || isFinishedPage) && !isSelectionActive && (
