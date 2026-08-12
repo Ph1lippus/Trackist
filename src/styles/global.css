@@ -18,6 +18,9 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .detail-page{
+        padding:0.5rem;
+    }
     .lists-page__overview-header {
         margin-left: 2.5%;
     }
@@ -1078,7 +1081,7 @@ body::after {
 /* Smaller cards on phones */
 @media (max-width: 480px) {
     .discover-grid {
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
         gap: 0.6rem;
         padding: 0.5rem 0;
     }

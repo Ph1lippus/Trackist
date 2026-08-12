@@ -200,7 +200,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                             const isTodayDate = isToday(dateKey)
 
                             // Show max 2 episodes, rest go into "+" button
-                            const maxVisible = 3
+                            const maxVisible = 2
                             const visibleItems = dayItems.slice(0, maxVisible)
                             const hasMore = dayItems.length > maxVisible
 
