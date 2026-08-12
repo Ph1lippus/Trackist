@@ -380,9 +380,6 @@ const MobileTVShows: React.FC = () => {
 <div className="dashboard-shell mobile-tvshows-shell">
                 {watching.length === 0 && toWatch.length === 0 && paused.length === 0 ? (
                     <div className="mobile-tvshows-empty">
-                        <i className="fa-solid fa-tv"></i>
-                        <h3>No TV shows yet</h3>
-                        <p>Add shows to your watchlist to see them here</p>
                     </div>
                 ) : (
                     <div className="mobile-tvshows-list">
