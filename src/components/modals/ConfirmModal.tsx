@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React from 'react'
 import type { ReactNode } from 'react'
 
 interface ConfirmModalProps {
@@ -28,23 +28,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
     confirmLoading = false,
     customContent
 }) => {
-    const [isAnimatingOut, setIsAnimatingOut] = useState(false)
-    const [shouldRender, setShouldRender] = useState(false)
-
-    useEffect(() => {
-        if (isOpen) {
-            setShouldRender(true)
-            setIsAnimatingOut(false)
-        } else {
-            setIsAnimatingOut(true)
-            const timer = setTimeout(() => {
-                setShouldRender(false)
-            }, 150) // Match animation duration
-            return () => clearTimeout(timer)
-        }
-    }, [isOpen])
-
-    if (!shouldRender) return null
+    if (!isOpen) return null
 
     const isDisabled = disabled || confirmLoading
 
@@ -79,19 +63,14 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 
     const colorStyle = getConfirmColorStyle()
 
-    const overlayAnimation = isAnimatingOut ? 'confirmOverlayOut 0.15s ease-in forwards' : 'confirmOverlayIn 0.15s ease-out'
-    const modalAnimation = isAnimatingOut ? 'confirmModalOut 0.15s ease-in forwards' : 'confirmModalIn 0.15s ease-out'
-
     return (
         <div 
             className="confirm-modal-overlay" 
             onClick={confirmLoading ? undefined : onCancel}
-            style={{ animation: overlayAnimation }}
         >
             <div 
                 className="confirm-modal-content" 
                 onClick={(e) => e.stopPropagation()}
-                style={{ animation: modalAnimation }}
             >
                 <h3 className="confirm-modal-title">{title}</h3>
                 <p className="confirm-modal-message">{message}</p>

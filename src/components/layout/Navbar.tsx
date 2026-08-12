@@ -5,7 +5,6 @@ import { supabase } from '../../services/supabaseClient';
 import { useSearch } from '../../hooks/useSearch';
 import SearchDropdown from '../search/SearchDropdown';
 import ConfirmModal from '../modals/ConfirmModal';
-import { clearAllCache } from '../../services/cacheService';
 import { useSelectionStore } from '../../stores/useSelectionStore';
 import { useLibraryStore } from '../../stores/useLibraryStore';
 import { launchCosmicConfetti } from '../../utils/cosmicConfetti';
@@ -25,9 +24,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const [user, setUser] = useState<User | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
     const [closing, setClosing] = useState(false);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-    const [showInstallButton, setShowInstallButton] = useState(false);
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
     const [isPWA] = useState<boolean>(() => {
@@ -141,21 +137,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         return () => subscription.unsubscribe()
     }, [])
 
-    // PWA install prompt handling
-    useEffect(() => {
-        const handleBeforeInstallPrompt = (e: Event) => {
-            e.preventDefault();
-            setDeferredPrompt(e);
-            setShowInstallButton(true);
-        };
-
-        window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-        return () => {
-            window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-        };
-    }, []);
-
     // Check fullscreen state
     useEffect(() => {
         const handleFullscreenChange = () => {
@@ -210,30 +191,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         setShowLogoutModal(false);
         await supabase.auth.signOut();
         navigate('/login');
-    };
-
-    const handleClearCache = async () => {
-        closeMenu();
-        // Ask for confirmation before clearing cache
-        if (window.confirm('Are you sure you want to clear all cache? This will remove all cached data and may slow down the app temporarily.')) {
-            await clearAllCache();
-            // Reload the page to refresh all data
-            window.location.reload();
-        }
-    };
-
-    const handleInstallClick = async () => {
-        if (!deferredPrompt) return;
-
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-
-        if (outcome === 'accepted') {
-            setShowInstallButton(false);
-        }
-
-        setDeferredPrompt(null);
-        closeMenu();
     };
 
     const handleFullscreenToggle = () => {
@@ -508,66 +465,49 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                     className={`t-dropdown ${menuOpen ? (closing ? 'is-closing' : 'is-open') : ''}`}
                                     data-origin="top-right"
                                 >
-                                {isAdmin && (
-                                    <button className="t-dropdown-item" onClick={() => {
-                                        closeMenu();
-                                        navigate('/Admin');
-                                    }}>
-                                        <i className="fa-solid fa-user-shield"></i>
-                                        Admin Center
-                                    </button>
-                                )}
-                                {showRandomPick && (
-                                    <button className="t-dropdown-item" onClick={handleRandomPick}>
-                                        <i className="fa-solid fa-shuffle"></i>
-                                        {isMoviesPage ? 'Random Movie' : 'Random TV Show'}
-                                    </button>
-                                )}
-                                {(isMoviesPage || isTVShowsPage || isFinishedPage) && !isSelectionActive && (
-                                    <button className="t-dropdown-item" onClick={() => {
-                                        closeMenu();
-                                        handleToggleSelectionMode();
-                                    }}>
-                                        <i className="fa-solid fa-check-square"></i>
-                                        Selection
-                                    </button>
-                                )}
-                                <button className="t-dropdown-item" onClick={() => {
-                                    closeMenu();
-                                    navigate('/Profile');
-                                }}>
-                                    <i className="fa-solid fa-user"></i>
-                                    Profile
-                                </button>
-                                {showInstallButton && (
-                                        <button className="t-dropdown-item" onClick={handleInstallClick}>
-                                            <i className="fa-solid fa-download"></i>
-                                            Install App
-                                        </button>
-                                    )}
-                                    <button className="t-dropdown-item" onClick={handleClearCache}>
-                                        <i className="fa-solid fa-trash"></i>
-                                        Clear Cache
-                                    </button>
-                                    <button className="t-dropdown-item" onClick={() => {
-                                        closeMenu();
-                                        navigate('/Settings');
-                                    }}>
-                                        <i className="fa-solid fa-gear"></i>
-                                        Settings
-                                    </button>
-                                    <button className="t-dropdown-item" onClick={() => {
-                                        closeMenu();
-                                        navigate('/Credits');
-                                    }}>
-                                        <i className="fa-solid fa-trophy"></i>
-                                        Credits
-                                    </button>
-                                    <button className="t-dropdown-item" onClick={handleLogout}>
-                                        <i className="fa-solid fa-right-from-bracket"></i>
-                                        Logout
-                                    </button>
-                                </div>
+                                 {isAdmin && (
+                                     <button className="t-dropdown-item" onClick={() => {
+                                         closeMenu();
+                                         navigate('/Admin');
+                                     }}>
+                                         Admin Center
+                                     </button>
+                                 )}
+                                 <button className="t-dropdown-item" onClick={() => {
+                                     closeMenu();
+                                     navigate('/Profile');
+                                 }}>
+                                     Profile
+                                 </button>
+                                 {showRandomPick && (
+                                     <button className="t-dropdown-item" onClick={handleRandomPick}>
+                                         {isMoviesPage ? 'Random Movie' : 'Random TV Show'}
+                                     </button>
+                                 )}
+                                 {(isMoviesPage || isTVShowsPage || isFinishedPage) && !isSelectionActive && (
+                                     <button className="t-dropdown-item" onClick={() => {
+                                         closeMenu();
+                                         handleToggleSelectionMode();
+                                     }}>
+                                         Selection
+                                     </button>
+                                 )}
+                                 <button className="t-dropdown-item" onClick={() => {
+                                     closeMenu();
+                                     navigate('/Settings');
+                                 }}>
+                                     Settings
+                                 </button>
+                                 <button className="t-dropdown-item" onClick={() => {
+                                     closeMenu();
+                                     navigate('/Credits');
+                                 }}>
+                                     Credits
+                                 </button>
+                                 <button className="t-dropdown-item" onClick={handleLogout}>
+                                     Logout
+                                 </button>
+                                 </div>
                             </div>
                         </>
                     ) : (

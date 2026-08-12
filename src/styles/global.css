@@ -18,6 +18,19 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    body {
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
+    }
+    input, textarea, select {
+        -webkit-user-select: text;
+        -moz-user-select: text;
+        -ms-user-select: text;
+        user-select: text;
+    }
+
     .dashboard-shell.mobile-tvshows-shell{
         padding: 0rem!important;
     }
@@ -631,44 +644,33 @@ body::after {
     top: 100%;
     right: 0;
     margin-top: 0.5rem;
-    min-width: 160px;
+    min-width: 190px;
     background: rgba(15, 15, 20, 0.98);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
+    border: none;
+    border-radius: 25px;
     padding: 0.5rem;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(8px);
     opacity: 0;
     visibility: hidden;
-    transform: translateY(-8px) scale(0.96);
-    transition: opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-        transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
-        visibility 0.3s cubic-bezier(0.22, 1, 0.36, 1);
     z-index: 100;
-    will-change: transform, opacity;
 }
 .t-dropdown.is-open {
     opacity: 1;
     visibility: visible;
     transform: translateY(0) scale(1);
 }
-.t-dropdown.is-closing {
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-8px) scale(0.96);
-}
+
 .t-dropdown-item {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     width: 100%;
-    padding: 0.6rem 0.75rem;
+    padding: 0.6rem 1rem;
     border: none;
     background: transparent;
     color: var(--color-platinum);
     font-size: 0.9rem;
     font-weight: 500;
-    border-radius: 8px;
+    border-radius: 20px;
     cursor: pointer;
     transition: all 0.2s ease;
     text-align: left;
@@ -676,11 +678,6 @@ body::after {
 .t-dropdown-item:hover {
     background: rgba(133, 138, 227, 0.15);
     color: var(--color-primary);
-}
-.t-dropdown-item i {
-    font-size: 0.85rem;
-    width: 16px;
-    text-align: center;
 }
 
 .navbar {
@@ -3701,6 +3698,7 @@ body::after {
 }
 
 .credits-page {
+    height: 100vh;
     width: 100%;
     max-width: 980px;
     margin: 0 auto;
@@ -3716,15 +3714,15 @@ body::after {
 
 .credit-card {
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 20px;
-    padding: 1.1rem;
+    border: none;
+    border-radius: 25px;
+    padding: 1.5rem;
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
     gap: 0.8rem;
-    min-height: 220px;
+    min-height: 280px;
 }
 
 .credit-card__logo {
@@ -4892,24 +4890,21 @@ i.fa-solid.fa-trash:hover {
     position: fixed;
     inset: 0;
     z-index: 4000;
-    background: rgba(0, 0, 0, 0.85);
-    backdrop-filter: blur(4px);
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    animation: confirmOverlayIn 0.15s ease-out;
 }
 
 .confirm-modal-content {
-    background: rgba(20, 20, 25, 0.98);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: transparent;
+    backdrop-filter: blur(50px);
+    border: none;
     border-radius: 25px;
     padding: 1.5rem;
     max-width: 360px;
     width: 100%;
     text-align: center;
-    animation: confirmModalIn 0.15s ease-out;
 }
 
 .confirm-modal-title {
@@ -4934,14 +4929,13 @@ i.fa-solid.fa-trash:hover {
 .confirm-modal-btn {
     flex: 1;
     padding: 0.65rem 0.5rem;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    border: none;
     background: rgba(255, 255, 255, 0.05);
     color: var(--color-platinum);
     font-size: 0.85rem;
     font-weight: 600;
-    border-radius: 8px;
+    border-radius: 20px;
     cursor: pointer;
-    transition: all 0.2s ease;
 }
 
 .confirm-modal-btn--cancel:hover {
@@ -4950,21 +4944,19 @@ i.fa-solid.fa-trash:hover {
 }
 
 .confirm-modal-btn--confirm {
-    border-color: rgba(133, 138, 227, 0.3);
     color: var(--color-primary);
 }
 
 .confirm-modal-btn--confirm:hover {
     background: var(--color-primary);
     color: var(--color-black);
-    border-color: var(--color-primary);
 }
 
 .modal-btn-spinner {
     display: inline-block;
     width: 16px;
     height: 16px;
-    border: 2px solid rgba(255, 255, 255, 0.2);
+    border: none;
     border-top-color: inherit;
     border-radius: 50%;
     animation: modal-spin 0.8s linear infinite;

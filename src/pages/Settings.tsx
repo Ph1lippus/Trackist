@@ -4,6 +4,7 @@ import { supabase } from '../services/supabaseClient'
 import type { User } from '@supabase/supabase-js'
 import { requestPasswordReset, updateUserEmail, getProfile, updateProfile } from '../services/profileService'
 import { useCache } from '../hooks/useCache'
+import { usePWAInstall } from '../hooks/usePWAInstall'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { validateDisplayName, validateEmail } from '../utils/validation'
 import { getUTCTodayString } from '../utils/dateUtils'
@@ -39,6 +40,7 @@ const Settings: React.FC = () => {
 
     // Data states
     const { stats: cacheStats, clearCache, isClearing } = useCache()
+    const { canInstall, isPWA, install } = usePWAInstall()
     const [exportLoading, setExportLoading] = useState(false)
     const [dataMessage, setDataMessage] = useState('')
 
@@ -568,14 +570,32 @@ const Settings: React.FC = () => {
                                             {cacheStats.memoryEntries} in memory · {cacheStats.dbEntries} in database
                                         </span>
                                     </div>
-                                    <button
-                                        className="settings-btn settings-btn--secondary"
-                                        onClick={clearCache}
-                                        disabled={isClearing || (cacheStats.memoryEntries === 0 && cacheStats.dbEntries === 0)}
-                                    >
-                                        {isClearing ? <><i className="fa-solid fa-spinner fa-spin"></i> Clearing...</> : <><i className="fa-solid fa-trash"></i> Clear Cache</>}
-                                    </button>
-                                </div>
+                                 <button
+                                     className="settings-btn settings-btn--secondary"
+                                     onClick={clearCache}
+                                     disabled={isClearing || (cacheStats.memoryEntries === 0 && cacheStats.dbEntries === 0)}
+                                 >
+                                     {isClearing ? <><i className="fa-solid fa-spinner fa-spin"></i> Clearing...</> : <><i className="fa-solid fa-trash"></i> Clear Cache</>}
+                                 </button>
+                                 </div>
+
+                                 <div className="settings-divider"></div>
+
+                                 {!isPWA && canInstall && (
+                                 <div className="settings-data-card">
+                                     <div className="settings-data-card__info">
+                                         <span className="settings-data-card__label">Install App</span>
+                                         <span className="settings-data-card__value">Install Trackist on your device</span>
+                                         <span className="settings-data-card__sub">Add to your home screen for a native app experience</span>
+                                     </div>
+                                     <button
+                                         className="settings-btn settings-btn--secondary"
+                                         onClick={install}
+                                     >
+                                         <i className="fa-solid fa-download"></i> Install App
+                                     </button>
+                                 </div>
+                                 )}
 
                                 <div className="settings-divider"></div>
 
