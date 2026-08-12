@@ -54,7 +54,7 @@ const ProfilePage: React.FC = () => {
     const [loading, setLoading] = useState(true)
     const [watchlistItems, setWatchlistItems] = useState<WatchlistItem[]>([])
     const [userLists, setUserLists] = useState<UserList[]>([])
-    const [activeTab, setActiveTab] = useState<TabType>('watching')
+    const [activeTab, setActiveTab] = useState<TabType | null>(null)
 
     useEffect(() => {
         const loadUser = async () => {
@@ -148,7 +148,7 @@ const ProfilePage: React.FC = () => {
 
                         const counts: Record<string, { item_count: number; watched_count: number }> = {}
                         if (listItems) {
-                            listItems.forEach(item => {
+                            listItems.forEach((item: { list_id: string; watched_at: string | null }) => {
                                 if (!counts[item.list_id]) {
                                     counts[item.list_id] = { item_count: 0, watched_count: 0 }
                                 }
@@ -215,10 +215,24 @@ const ProfilePage: React.FC = () => {
         item.status === 'completed' || item.status === 'caught_up'
     ), [watchlistItems])
 
-    const formatDate = (dateString: string): string => {
-        const date = new Date(dateString)
-        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
-    }
+    useEffect(() => {
+        const hasWatching = watchingTVShows.length > 0
+        const hasMovies = moviesToWatch.length > 0
+        const hasFinished = finishedItems.length > 0
+        const hasLists = userLists.length > 0
+
+        if (!hasWatching && !hasMovies && !hasFinished && !hasLists) {
+            setActiveTab(null)
+            return
+        }
+
+        if (activeTab === null || !((activeTab === 'watching' && hasWatching) || (activeTab === 'movies' && hasMovies) || (activeTab === 'finished' && hasFinished) || (activeTab === 'lists' && hasLists))) {
+            if (hasWatching) setActiveTab('watching')
+            else if (hasMovies) setActiveTab('movies')
+            else if (hasFinished) setActiveTab('finished')
+            else if (hasLists) setActiveTab('lists')
+        }
+    }, [watchingTVShows, moviesToWatch, finishedItems, userLists])
 
     if (loading) {
         return (
@@ -310,58 +324,55 @@ const ProfilePage: React.FC = () => {
                             {profile.bio && (
                                 <p className="profile-hero__bio">{profile.bio}</p>
                             )}
-
-                            <div className="profile-hero__meta">
-                                <span className="profile-hero__meta-item">
-                                    Joined {formatDate(profile.created_at)}
-                                </span>
-                            </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Tabs */}
-                <div className="profile-tabs">
-                    {watchingTVShows.length > 0 && (
-                        <button
-                            className={`profile-tab ${activeTab === 'watching' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('watching')}
-                        >
-                            <i className="fa-solid fa-tv"></i>
-                            <span className="profile-tab__text">Watching</span>
-                        </button>
-                    )}
-                    {moviesToWatch.length > 0 && (
-                        <button
-                            className={`profile-tab ${activeTab === 'movies' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('movies')}
-                        >
-                            <i className="fa-solid fa-film"></i>
-                            <span className="profile-tab__text">Movies</span>
-                        </button>
-                    )}
-                    {finishedItems.length > 0 && (
-                        <button
-                            className={`profile-tab ${activeTab === 'finished' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('finished')}
-                        >
-                            <i className="fa-solid fa-check-circle"></i>
-                            <span className="profile-tab__text">Finished</span>
-                        </button>
-                    )}
-                    {userLists.length > 0 && (
-                        <button
-                            className={`profile-tab ${activeTab === 'lists' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('lists')}
-                        >
-                            <i className="fa-solid fa-list"></i>
-                            <span className="profile-tab__text">Lists</span>
-                        </button>
-                    )}
-                </div>
+                {activeTab !== null && (
+                    <div className="profile-tabs">
+                        {watchingTVShows.length > 0 && (
+                            <button
+                                className={`profile-tab ${activeTab === 'watching' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('watching')}
+                            >
+                                <i className="fa-solid fa-tv"></i>
+                                <span className="profile-tab__text">Watching</span>
+                            </button>
+                        )}
+                        {moviesToWatch.length > 0 && (
+                            <button
+                                className={`profile-tab ${activeTab === 'movies' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('movies')}
+                            >
+                                <i className="fa-solid fa-film"></i>
+                                <span className="profile-tab__text">Movies</span>
+                            </button>
+                        )}
+                        {finishedItems.length > 0 && (
+                            <button
+                                className={`profile-tab ${activeTab === 'finished' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('finished')}
+                            >
+                                <i className="fa-solid fa-check-circle"></i>
+                                <span className="profile-tab__text">Finished</span>
+                            </button>
+                        )}
+                        {userLists.length > 0 && (
+                            <button
+                                className={`profile-tab ${activeTab === 'lists' ? 'active' : ''}`}
+                                onClick={() => setActiveTab('lists')}
+                            >
+                                <i className="fa-solid fa-list"></i>
+                                <span className="profile-tab__text">Lists</span>
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 {/* Tab Content */}
-                <div className="profile-tab-content">
+                {activeTab !== null && (
+                    <div className="profile-tab-content">
                     {/* Watching Tab */}
                     {activeTab === 'watching' && (
                         <div className="profile-watchlist-section">
@@ -534,6 +545,7 @@ const ProfilePage: React.FC = () => {
                         </div>
                     )}
                 </div>
+                )}
 
                 {/* Unfollow Confirmation Modal */}
                 {showUnfollowModal && (

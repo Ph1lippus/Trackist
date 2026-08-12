@@ -7111,10 +7111,7 @@ i.fa-solid.fa-trash:hover {
 }
 
 .profile-hero {
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 20px;
-    margin-bottom: 1.5rem;
+    
 }
 
 .profile-hero__banner {
@@ -7153,10 +7150,10 @@ i.fa-solid.fa-trash:hover {
 }
 
 .profile-hero__avatar {
-    width: 130px;
-    height: 130px;
+    width: 172px;
+    height: 172px;
     border-radius: 50%;
-    border: 4px solid var(--color-bg);
+    border: 2px solid var(--color-primary);
     object-fit: cover;
     background: var(--color-primary);
     display: flex;
