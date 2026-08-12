@@ -18,6 +18,9 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .profile-hero__avatar-wrap {
+        padding: 0rem 0rem 1rem 0rem;
+    }
     .dashboard-shell {
         max-width: 100% !important;
         width: 100% !important;
@@ -25,7 +28,6 @@
     }
     .profile-hero__content {
         gap: 0rem!important;
-        margin-top: 1rem;
     }
     .profile-tab i {
         display: block!important;
@@ -7354,7 +7356,7 @@ i.fa-solid.fa-trash:hover {
 /* Mobile: profile tabs text at 0.9rem */
 @media (max-width: 768px) {
     .profile-tabs {
-        justify-content: space-between;
+        justify-content: space-around;
     }
 
     .profile-tab {

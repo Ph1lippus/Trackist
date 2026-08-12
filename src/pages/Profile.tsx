@@ -55,6 +55,7 @@ const ProfilePage: React.FC = () => {
     const [watchlistItems, setWatchlistItems] = useState<WatchlistItem[]>([])
     const [userLists, setUserLists] = useState<UserList[]>([])
     const [activeTab, setActiveTab] = useState<TabType | null>(null)
+    const [currentUserWatchlistIds, setCurrentUserWatchlistIds] = useState<Set<number>>(new Set())
 
     useEffect(() => {
         const loadUser = async () => {
@@ -63,6 +64,29 @@ const ProfilePage: React.FC = () => {
         }
         void loadUser()
     }, [])
+
+    useEffect(() => {
+        const fetchCurrentUserWatchlist = async () => {
+            if (!currentUser) {
+                setCurrentUserWatchlistIds(new Set())
+                return
+            }
+
+            const { data } = await supabase
+                .from('watchlist')
+                .select('tmdb_id')
+                .eq('user_id', currentUser.id)
+
+            if (data) {
+                const ids = new Set(data.map(item => item.tmdb_id).filter((id): id is number => id != null))
+                setCurrentUserWatchlistIds(ids)
+            } else {
+                setCurrentUserWatchlistIds(new Set())
+            }
+        }
+
+        void fetchCurrentUserWatchlist()
+    }, [currentUser])
 
     useEffect(() => {
         if (!username && !currentUser) return
@@ -396,7 +420,7 @@ const ProfilePage: React.FC = () => {
                                             return (
                                                 <MediaCard
                                                     item={tmdbItem}
-                                                    isInWatchlist={true}
+                                                    isInWatchlist={currentUserWatchlistIds.has(tmdbItem.id)}
                                                 />
                                             )
                                         }}
@@ -438,7 +462,7 @@ const ProfilePage: React.FC = () => {
                                             return (
                                                 <MediaCard
                                                     item={tmdbItem}
-                                                    isInWatchlist={true}
+                                                    isInWatchlist={currentUserWatchlistIds.has(tmdbItem.id)}
                                                 />
                                             )
                                         }}
@@ -480,7 +504,7 @@ const ProfilePage: React.FC = () => {
                                             return (
                                                 <MediaCard
                                                     item={tmdbItem}
-                                                    isInWatchlist={true}
+                                                    isInWatchlist={currentUserWatchlistIds.has(tmdbItem.id)}
                                                 />
                                             )
                                         }}
