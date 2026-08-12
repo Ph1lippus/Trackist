@@ -573,6 +573,62 @@ body::after {
 .navbar-menu-btn:hover .navbar-hamburger span {
     background-color: var(--color-primary);
 }
+
+.navbar-random-pick-btn {
+    background: transparent;
+    border: none;
+    color: var(--color-light);
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    transition: color 0.3s ease, background 0.3s ease;
+    font-size: 1rem;
+}
+
+.navbar-random-pick-btn:hover {
+    color: var(--color-primary);
+    background: rgba(133, 138, 227, 0.1);
+}
+
+.navbar-random-pick-btn:active {
+    transform: scale(0.95);
+}
+
+.mobile-random-pick-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    min-width: 0;
+    padding: 0.8rem 1rem;
+    background: transparent;
+    border: none;
+    color: var(--color-platinum);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+}
+
+.mobile-random-pick-btn i {
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    line-height: 1;
+}
+
+.mobile-random-pick-btn:active {
+    color: var(--color-primary);
+    transform: scale(0.95);
+}
+
+.mobile-random-pick-btn:hover {
+    color: var(--color-primary);
+}
 .navbar-hamburger.is-active span:nth-child(1) {
     transform: translateY(5px) rotate(45deg);
     background-color: var(--color-primary);

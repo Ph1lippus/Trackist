@@ -271,6 +271,29 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const isSelectionActive = isMoviesPage ? moviesSelectionMode : (isTVShowsPage ? tvShowsSelectionMode : (isFinishedPage ? finishedSelectionMode : false));
     const selectedCount = isMoviesPage ? moviesSelectedIds.size : (isTVShowsPage ? tvShowsSelectedIds.size : (isFinishedPage ? finishedSelectedIds.size : 0));
 
+    const handleRandomPick = () => {
+        if (isMoviesPage && movies.length > 0) {
+            const randomIndex = Math.floor(Math.random() * movies.length)
+            const randomMovie = movies[randomIndex]
+            if (randomMovie.tmdb_id) {
+                navigate(`/movie/${randomMovie.tmdb_id}`)
+            }
+        } else if (isTVShowsPage) {
+            const notStarted = tvShows.filter(show => show.status === 'planning')
+            const pool = notStarted.length > 0 ? notStarted : tvShows
+            if (pool.length > 0) {
+                const randomIndex = Math.floor(Math.random() * pool.length)
+                const randomShow = pool[randomIndex]
+                if (randomShow.tmdb_id) {
+                    navigate(`/tv/${randomShow.tmdb_id}`)
+                }
+            }
+        }
+        closeMenu()
+    }
+
+    const showRandomPick = (isMoviesPage || isTVShowsPage) && !isSelectionActive
+
     const handleToggleSelectionMode = () => {
         if (isMoviesPage) {
             setMoviesSelectionMode(!moviesSelectionMode);
@@ -471,6 +494,16 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                     {nickname}
                                 </NavLink>
                             </div>
+                            {showRandomPick && (
+                                <button
+                                    className="navbar-random-pick-btn"
+                                    onClick={handleRandomPick}
+                                    title={isMoviesPage ? 'Pick random movie' : 'Pick random TV show'}
+                                    aria-label={isMoviesPage ? 'Pick random movie' : 'Pick random TV show'}
+                                >
+                                    <i className="fa-solid fa-shuffle"></i>
+                                </button>
+                            )}
                             <div className="t-dropdown-wrap">
                                 <button
                                     ref={buttonRef}
