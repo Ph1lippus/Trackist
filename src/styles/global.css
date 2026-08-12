@@ -174,7 +174,7 @@ body.no-scroll {
 }
 
 body {
-    background: #000000;
+    background: #050505;
     color: var(--color-platinum);
     font-family: system-ui, "-apple-system", "Segoe UI", Roboto, sans-serif;
     min-height: 100vh;
