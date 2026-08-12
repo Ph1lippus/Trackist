@@ -18,6 +18,13 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .profile-hero__content {
+        gap: 0rem!important;
+        margin-top: 1rem;
+    }
+    .profile-tab i {
+        display: block!important;
+    }
     .discover-page{
         padding: 0.5rem 1rem 7rem !important;
     }
@@ -5547,10 +5554,10 @@ i.fa-solid.fa-trash:hover {
     align-items: center;
     width: 50%;
     gap: 1rem;
-        align-self: center;
+    align-self: center;
     padding: 1rem;
     background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: none;
     border-radius: 50px;
     text-decoration: none;
     transition: all 0.2s ease;
@@ -5611,14 +5618,15 @@ i.fa-solid.fa-trash:hover {
 
 .friend-card__follow-btn {
     padding: 0.6rem 1rem;
-    border: 1px solid rgba(133, 138, 227, 0.3);
+    border: none;
     background: rgba(133, 138, 227, 0.1);
     color: var(--color-primary);
     border-radius: 25px;
-    font-size: 0.85rem;
+    font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
+    width: 130px;
 }
 
 .friend-card__follow-btn:hover {
@@ -5628,13 +5636,13 @@ i.fa-solid.fa-trash:hover {
 
 .friend-card__follow-btn--following {
     background: rgba(104, 255, 174, 0.1);
-    border-color: rgba(104, 255, 174, 0.3);
-    color: #68ffae;
+    border: none;
+    color: var(--color-mint);
 }
 
 .friend-card__follow-btn--following:hover {
     background: rgba(255, 50, 50, 0.1);
-    border-color: rgba(255, 50, 50, 0.3);
+    border: none;
     color: #ff6b6b;
 }
 
@@ -7134,7 +7142,6 @@ i.fa-solid.fa-trash:hover {
     display: flex;
     gap: 1.5rem;
     padding: 0 1.5rem 1.5rem;
-    margin-top: -40px;
     flex-wrap: wrap;
 }
 
@@ -7177,16 +7184,14 @@ i.fa-solid.fa-trash:hover {
 .profile-hero__info {
     flex: 1;
     min-width: 250px;
-    padding-top: 50px;
 }
 
-.profile-hero__header {
+.profile-hero__identity {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 1rem;
+    align-items: center;
+    gap: 0.75rem;
     flex-wrap: wrap;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
 }
 
 .profile-hero__name {
@@ -7200,7 +7205,7 @@ i.fa-solid.fa-trash:hover {
 .profile-hero__username {
     font-size: 0.9rem;
     color: rgba(255, 255, 255, 0.5);
-    margin: 0.25rem 0 0;
+    margin: 0;
 }
 
 .profile-hero__actions {
@@ -7213,49 +7218,38 @@ i.fa-solid.fa-trash:hover {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.6rem 1.2rem;
-    border-radius: 10px;
+    padding: 0.6rem 1rem;
+    border-radius: 25px;
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
-    border: 1px solid transparent;
     text-decoration: none;
 }
-
 .profile-btn--primary {
     background: var(--color-primary);
     color: var(--color-black);
-    border-color: var(--color-primary);
 }
-
 .profile-btn--primary:hover {
-    background: #a5a9f0;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(133, 138, 227, 0.3);
+    background: var(--color-primary-lighter);
 }
-
 .profile-btn--secondary {
     background: rgba(255, 255, 255, 0.05);
     color: var(--color-platinum);
-    border-color: rgba(255, 255, 255, 0.15);
 }
-
 .profile-btn--secondary:hover {
     background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(255, 255, 255, 0.25);
 }
 
 .profile-btn--following {
     background: rgba(104, 255, 174, 0.1);
     color: #68ffae;
-    border-color: rgba(104, 255, 174, 0.3);
+    border: none;
 }
 
 .profile-btn--following:hover {
     background: rgba(255, 50, 50, 0.1);
     color: #ff6b6b;
-    border-color: rgba(255, 50, 50, 0.3);
 }
 
 .profile-hero__bio {
@@ -7341,6 +7335,10 @@ i.fa-solid.fa-trash:hover {
     white-space: nowrap;
 }
 
+.profile-tab i {
+    display: none;
+}
+
 .profile-tab:hover {
     color: rgba(255, 255, 255, 0.8);
 }
@@ -7350,17 +7348,36 @@ i.fa-solid.fa-trash:hover {
     border-bottom-color: var(--color-primary);
 }
 
-.profile-tab__count {
-    background: rgba(255, 255, 255, 0.08);
-    padding: 0.1rem 0.5rem;
-    border-radius: 10px;
-    font-size: 0.75rem;
-    font-weight: 700;
+/* Profile Stats Link */
+.profile-stat--link {
+    text-decoration: none;
+    color: inherit;
+    transition: color 0.2s ease;
 }
 
-.profile-tab.active .profile-tab__count {
-    background: rgba(133, 138, 227, 0.15);
+.profile-stat--link:hover {
     color: var(--color-primary);
+}
+
+/* Mobile: profile tabs show icons only, space-between */
+@media (max-width: 768px) {
+    .profile-tabs {
+        justify-content: space-between;
+    }
+
+    .profile-tab {
+        padding: 0.75rem;
+        justify-content: center;
+    }
+
+    .profile-tab__text,
+    .profile-tab__count {
+        display: none;
+    }
+
+    .profile-tab i {
+        font-size: 1.2rem;
+    }
 }
 
 /* Profile Tab Content */
@@ -8210,7 +8227,7 @@ i.fa-solid.fa-trash:hover {
         text-align: center;
     }
 
-    .profile-hero__header {
+    .profile-hero__identity {
         flex-direction: column;
         align-items: center;
     }

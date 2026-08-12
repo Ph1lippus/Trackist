@@ -109,7 +109,6 @@ const ProfilePage: React.FC = () => {
                     
                     if (watchlistError) {
                         console.error('[Profile] Failed to load watchlist:', watchlistError)
-                    } else {
                     }
                     
                     const items = (watchlistData || []) as WatchlistItem[]
@@ -131,7 +130,6 @@ const ProfilePage: React.FC = () => {
                     
                     if (listsError) {
                         console.error('[Profile] Failed to load lists:', listsError)
-                    } else {
                     }
                     
                     const rawLists = (listsData || []) as UserList[]
@@ -146,7 +144,6 @@ const ProfilePage: React.FC = () => {
 
                         if (listItemsError) {
                             console.error('[Profile] Failed to load list_items:', listItemsError)
-                        } else {
                         }
 
                         const counts: Record<string, { item_count: number; watched_count: number }> = {}
@@ -206,15 +203,15 @@ const ProfilePage: React.FC = () => {
 
     const isOwnProfile = currentUser?.id === profile?.id
 
-    const watchingTVShows = useMemo(() => watchlistItems.filter(item => 
+    const watchingTVShows = useMemo(() => watchlistItems.filter(item =>
         (item.media_type === 'tv' || item.media_type === 'anime') && item.status === 'watching'
     ), [watchlistItems])
 
-    const moviesToWatch = useMemo(() => watchlistItems.filter(item => 
+    const moviesToWatch = useMemo(() => watchlistItems.filter(item =>
         item.media_type === 'movie' && item.status === 'planning'
     ), [watchlistItems])
 
-    const finishedItems = useMemo(() => watchlistItems.filter(item => 
+    const finishedItems = useMemo(() => watchlistItems.filter(item =>
         item.status === 'completed' || item.status === 'caught_up'
     ), [watchlistItems])
 
@@ -272,46 +269,42 @@ const ProfilePage: React.FC = () => {
                         </div>
 
                         <div className="profile-hero__info">
-                            <div className="profile-hero__header">
-                                <div>
-                                    <h1 className="profile-hero__name">
-                                        {profile.display_name || 'Anonymous'}
-                                    </h1>
-                                    <p className="profile-hero__username">
-                                        @{(profile.display_name || 'user').toLowerCase().replace(/\s+/g, '_')}
-                                    </p>
-                                </div>
+                            <div className="profile-hero__identity">
+                                <h1 className="profile-hero__name">
+                                    {profile.display_name || 'Anonymous'}
+                                </h1>
+                                <p className="profile-hero__username">
+                                    @{(profile.display_name || 'user').toLowerCase().replace(/\s+/g, '_')}
+                                </p>
+                            </div>
 
-                                <div className="profile-hero__actions">
-                                    {isOwnProfile ? (
-                                        <>
-                                            <Link to="/EditProfile" className="profile-btn profile-btn--primary">
-                                                <i className="fa-solid fa-pen"></i>
-                                                Edit Profile
-                                            </Link>
-                                            <Link to="/Settings" className="profile-btn profile-btn--secondary">
-                                                <i className="fa-solid fa-gear"></i>
-                                                Settings
-                                            </Link>
-                                        </>
-                                    ) : (
-                                        currentUser && (
-                                            <button
-                                                className={`profile-btn ${isFollowingUser ? 'profile-btn--following' : 'profile-btn--primary'}`}
-                                                onClick={handleFollow}
-                                                disabled={followLoading}
-                                            >
-                                                {followLoading ? (
-                                                    <><i className="fa-solid fa-spinner fa-spin"></i> Loading...</>
-                                                ) : isFollowingUser ? (
-                                                    <><i className="fa-solid fa-user-check"></i> Following</>
-                                                ) : (
-                                                    <><i className="fa-solid fa-user-plus"></i> Follow</>
-                                                )}
-                                            </button>
-                                        )
-                                    )}
-                                </div>
+                            <div className="profile-hero__stats">
+                                <Link to={`/Followers/${profile.display_name}`} className="profile-stat profile-stat--link">
+                                    <span className="profile-stat__value">{followersCount}</span>
+                                    <span className="profile-stat__label">Followers</span>
+                                </Link>
+                                <Link to={`/Following/${profile.display_name}`} className="profile-stat profile-stat--link">
+                                    <span className="profile-stat__value">{followingCount}</span>
+                                    <span className="profile-stat__label">Following</span>
+                                </Link>
+                            </div>
+
+                            <div className="profile-hero__actions">
+                                {!isOwnProfile && currentUser && (
+                                    <button
+                                        className={`profile-btn ${isFollowingUser ? 'profile-btn--following' : 'profile-btn--primary'}`}
+                                        onClick={handleFollow}
+                                        disabled={followLoading}
+                                    >
+                                        {followLoading ? (
+                                            <><i className="fa-solid fa-spinner fa-spin"></i> Loading...</>
+                                        ) : isFollowingUser ? (
+                                            <><i className="fa-solid fa-user-check"></i> Following</>
+                                        ) : (
+                                            <><i className="fa-solid fa-user-plus"></i> Follow</>
+                                        )}
+                                    </button>
+                                )}
                             </div>
 
                             {profile.bio && (
@@ -323,63 +316,48 @@ const ProfilePage: React.FC = () => {
                                     Joined {formatDate(profile.created_at)}
                                 </span>
                             </div>
-
-                            <div className="profile-hero__stats">
-                                <div className="profile-stat">
-                                    <span className="profile-stat__value">{watchlistItems.length}</span>
-                                    <span className="profile-stat__label">Watchlist</span>
-                                </div>
-                                <div className="profile-stat">
-                                    <span className="profile-stat__value">{followersCount}</span>
-                                    <span className="profile-stat__label">Followers</span>
-                                </div>
-                                <div className="profile-stat">
-                                    <span className="profile-stat__value">{followingCount}</span>
-                                    <span className="profile-stat__label">Following</span>
-                                </div>
-                                <div className="profile-stat">
-                                    <span className="profile-stat__value">{userLists.length}</span>
-                                    <span className="profile-stat__label">Lists</span>
-                                </div>
-                            </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Tabs */}
                 <div className="profile-tabs">
-                    <button
-                        className={`profile-tab ${activeTab === 'watching' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('watching')}
-                    >
-                        <i className="fa-solid fa-tv"></i>
-                        Watching
-                        <span className="profile-tab__count">{watchingTVShows.length}</span>
-                    </button>
-                    <button
-                        className={`profile-tab ${activeTab === 'movies' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('movies')}
-                    >
-                        <i className="fa-solid fa-film"></i>
-                        Movies
-                        <span className="profile-tab__count">{moviesToWatch.length}</span>
-                    </button>
-                    <button
-                        className={`profile-tab ${activeTab === 'finished' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('finished')}
-                    >
-                        <i className="fa-solid fa-check-circle"></i>
-                        Finished
-                        <span className="profile-tab__count">{finishedItems.length}</span>
-                    </button>
-                    <button
-                        className={`profile-tab ${activeTab === 'lists' ? 'active' : ''}`}
-                        onClick={() => setActiveTab('lists')}
-                    >
-                        <i className="fa-solid fa-list"></i>
-                        Lists
-                        <span className="profile-tab__count">{userLists.length}</span>
-                    </button>
+                    {watchingTVShows.length > 0 && (
+                        <button
+                            className={`profile-tab ${activeTab === 'watching' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('watching')}
+                        >
+                            <i className="fa-solid fa-tv"></i>
+                            <span className="profile-tab__text">Watching</span>
+                        </button>
+                    )}
+                    {moviesToWatch.length > 0 && (
+                        <button
+                            className={`profile-tab ${activeTab === 'movies' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('movies')}
+                        >
+                            <i className="fa-solid fa-film"></i>
+                            <span className="profile-tab__text">Movies</span>
+                        </button>
+                    )}
+                    {finishedItems.length > 0 && (
+                        <button
+                            className={`profile-tab ${activeTab === 'finished' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('finished')}
+                        >
+                            <i className="fa-solid fa-check-circle"></i>
+                            <span className="profile-tab__text">Finished</span>
+                        </button>
+                    )}
+                    {userLists.length > 0 && (
+                        <button
+                            className={`profile-tab ${activeTab === 'lists' ? 'active' : ''}`}
+                            onClick={() => setActiveTab('lists')}
+                        >
+                            <i className="fa-solid fa-list"></i>
+                            <span className="profile-tab__text">Lists</span>
+                        </button>
+                    )}
                 </div>
 
                 {/* Tab Content */}

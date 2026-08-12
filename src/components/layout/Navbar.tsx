@@ -84,7 +84,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const showBackButton = Boolean(isDetailPage || isListDetailPage || isListEditPage);
     
     const showSearchBar = !['/login', '/register'].includes(location.pathname) && 
-        (['/Discover', '/Movies', '/Tvshows', '/', '/Finished', '/Friends', '/Lists', '/MobileTVShows', '/MobileMovies'].includes(location.pathname) || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname === '/MobileTVShows' || location.pathname === '/MobileMovies');
+        (['/Discover', '/Movies', '/Tvshows', '/', '/Finished', '/Friends', '/Followers', '/Following', '/Lists', '/MobileTVShows', '/MobileMovies'].includes(location.pathname) || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname.startsWith('/Followers/') || location.pathname.startsWith('/Following/') || location.pathname === '/MobileTVShows' || location.pathname === '/MobileMovies');
     
     const showCalendarHeader = location.pathname === '/Upcoming' && currentMonth && navigateMonth && canGoBack;
     
@@ -94,19 +94,31 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     }) : '';
 
     useEffect(() => {
+        let lastCheck = 0
+        const CHECK_COOLDOWN = 30000
+
         const checkAdmin = async () => {
             try {
+                const now = Date.now()
+                if (now - lastCheck < CHECK_COOLDOWN) return
+                lastCheck = now
+
                 const { data: { session } } = await supabase.auth.getSession()
                 setUser(session?.user || null)
 
                 if (session?.access_token) {
-                    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin`, {
-                        headers: { 'Authorization': `Bearer ${session.access_token}` }
-                    })
-                    if (res.ok) {
-                        const data = await res.json()
-                        setIsAdmin(data.isAdmin === true)
-                    } else {
+                    try {
+                        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin`, {
+                            headers: { 'Authorization': `Bearer ${session.access_token}` }
+                        })
+                        if (res.ok) {
+                            const data = await res.json()
+                            setIsAdmin(data.isAdmin === true)
+                        } else {
+                            setIsAdmin(false)
+                        }
+                    } catch (fetchError) {
+                        console.error('[Navbar] verify-admin fetch failed:', fetchError)
                         setIsAdmin(false)
                     }
                 }
@@ -120,24 +132,14 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user || null)
             if (session?.access_token) {
-                fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin`, {
-                    headers: { 'Authorization': `Bearer ${session.access_token}` }
-                })
-                .then(res => {
-                    if (res.ok) {
-                        return res.json()
-                    }
-                    throw new Error('Not admin')
-                })
-                .then(data => setIsAdmin(data.isAdmin === true))
-                .catch(() => setIsAdmin(false))
+                checkAdmin()
             } else {
                 setIsAdmin(false)
             }
         })
 
-        return () => subscription.unsubscribe();
-    }, []);
+        return () => subscription.unsubscribe()
+    }, [])
 
     // PWA install prompt handling
     useEffect(() => {

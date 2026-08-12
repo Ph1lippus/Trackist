@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { getProfile, updateProfile, uploadAvatar } from '../services/profileService'
+import { getProfile, updateProfile, uploadAvatar, checkDisplayNameExists } from '../services/profileService'
 import { validateDisplayName } from '../utils/validation'
 import type { User } from '@supabase/supabase-js'
 import { useAuthStore } from '../stores/useAuthStore'
@@ -109,6 +109,16 @@ const EditProfile: React.FC = () => {
         }
 
         setLoading(true)
+
+        const trimmedUsername = username.trim()
+        if (trimmedUsername !== (currentUser.user_metadata?.username || currentUser.user_metadata?.display_name || '')) {
+            const exists = await checkDisplayNameExists(trimmedUsername)
+            if (exists) {
+                setError('Username already taken')
+                setLoading(false)
+                return
+            }
+        }
 
         const { error: updateError } = await updateProfile(currentUser.id, {
             display_name: username || undefined,

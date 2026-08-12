@@ -25,6 +25,8 @@ import Credits from './pages/Credits'
 import ForgotPassword from './pages/ForgotPassword'
 import Profile from './pages/Profile'
 import Friends from './pages/Friends'
+import Followers from './pages/Followers'
+import Following from './pages/Following'
 import Statistics from './pages/Statistics'
 import EditProfile from './pages/EditProfile'
 import Admin from './pages/Admin'
@@ -143,8 +145,8 @@ const AppContent: React.FC = () => {
         )
     }
 
-    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Friends', '/Statistics', '/Finished', '/Lists', '/Profile', '/Admin', '/MobileTVShows', '/MobileMovies']
-    const hideFooter = Boolean(user) && (mediaPages.includes(location.pathname) || location.pathname === '/Settings' || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname.startsWith('/Lists/') || location.pathname.startsWith('/Profile/') || location.pathname.startsWith('/Movies/'))
+    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Friends', '/Statistics', '/Finished', '/Lists', '/Profile', '/Admin', '/MobileTVShows', '/MobileMovies', '/Followers', '/Following']
+    const hideFooter = Boolean(user) && (mediaPages.includes(location.pathname) || location.pathname === '/Settings' || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname.startsWith('/Lists/') || location.pathname.startsWith('/Profile/') || location.pathname.startsWith('/Movies/') || location.pathname.startsWith('/Followers') || location.pathname.startsWith('/Following'))
     
     const navigateMonth = (direction: number) => {
         setCurrentMonth(prev => {
@@ -188,6 +190,10 @@ const AppContent: React.FC = () => {
                     <Route path="/Tvshows" element={user ? <TVShows /> : <Navigate to="/login" replace />} />
                     <Route path="/MobileTVShows" element={user ? <MobileTVShows /> : <Navigate to="/login" replace />} />
                     <Route path="/Friends" element={user ? <Friends /> : <Navigate to="/login" replace />} />
+                    <Route path="/Followers" element={user ? <Followers /> : <Navigate to="/login" replace />} />
+                    <Route path="/Following" element={user ? <Following /> : <Navigate to="/login" replace />} />
+                    <Route path="/Followers/:username" element={user ? <Followers /> : <Navigate to="/login" replace />} />
+                    <Route path="/Following/:username" element={user ? <Following /> : <Navigate to="/login" replace />} />
                     <Route path="/Statistics" element={user ? <Statistics /> : <Navigate to="/login" replace />} />
                     <Route path="/Settings" element={user ? <Settings /> : <Navigate to="/login" replace />} />
                     <Route path="/Admin" element={<Admin />} />

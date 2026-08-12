@@ -171,6 +171,27 @@ export const isFollowing = async (followerId: string, followedId: string) => {
     return !!data
 }
 
+export const getFollowersList = async (followedId: string) => {
+    const { data: follows, error } = await supabase
+        .from('user_follows')
+        .select('follower_id')
+        .eq('followed_id', followedId)
+
+    if (error || !follows) return { data: null, error }
+
+    const followerIds = follows.map(f => f.follower_id)
+    if (followerIds.length === 0) return { data: [], error: null }
+
+    const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('id, display_name, avatar_url')
+        .in('id', followerIds)
+
+    if (profilesError) return { data: null, error: profilesError }
+
+    return { data: profiles || [], error: null }
+}
+
 export const getFollowingList = async (followerId: string) => {
     // Step 1: Fetch the followed user IDs
     const { data: follows, error } = await supabase
