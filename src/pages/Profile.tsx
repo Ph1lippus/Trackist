@@ -295,11 +295,11 @@ const ProfilePage: React.FC = () => {
                             <div className="profile-hero__stats">
                                 <Link to={`/Followers/${profile.display_name}`} className="profile-stat profile-stat--link">
                                     <span className="profile-stat__value">{followersCount}</span>
-                                    <span className="profile-stat__label">Followers</span>
+                                    <span className="profile-stat__label"> Followers</span>
                                 </Link>
                                 <Link to={`/Following/${profile.display_name}`} className="profile-stat profile-stat--link">
                                     <span className="profile-stat__value">{followingCount}</span>
-                                    <span className="profile-stat__label">Following</span>
+                                    <span className="profile-stat__label"> Following</span>
                                 </Link>
                             </div>
 
@@ -313,9 +313,9 @@ const ProfilePage: React.FC = () => {
                                         {followLoading ? (
                                             <><i className="fa-solid fa-spinner fa-spin"></i> Loading...</>
                                         ) : isFollowingUser ? (
-                                            <><i className="fa-solid fa-user-check"></i> Following</>
+                                            <> Following</>
                                         ) : (
-                                            <><i className="fa-solid fa-user-plus"></i> Follow</>
+                                            <> Follow</>
                                         )}
                                     </button>
                                 )}
@@ -336,7 +336,6 @@ const ProfilePage: React.FC = () => {
                                 className={`profile-tab ${activeTab === 'watching' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('watching')}
                             >
-                                <i className="fa-solid fa-tv"></i>
                                 <span className="profile-tab__text">Watching</span>
                             </button>
                         )}
@@ -345,7 +344,6 @@ const ProfilePage: React.FC = () => {
                                 className={`profile-tab ${activeTab === 'movies' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('movies')}
                             >
-                                <i className="fa-solid fa-film"></i>
                                 <span className="profile-tab__text">Movies</span>
                             </button>
                         )}
@@ -354,7 +352,6 @@ const ProfilePage: React.FC = () => {
                                 className={`profile-tab ${activeTab === 'finished' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('finished')}
                             >
-                                <i className="fa-solid fa-check-circle"></i>
                                 <span className="profile-tab__text">Finished</span>
                             </button>
                         )}
@@ -363,7 +360,6 @@ const ProfilePage: React.FC = () => {
                                 className={`profile-tab ${activeTab === 'lists' ? 'active' : ''}`}
                                 onClick={() => setActiveTab('lists')}
                             >
-                                <i className="fa-solid fa-list"></i>
                                 <span className="profile-tab__text">Lists</span>
                             </button>
                         )}

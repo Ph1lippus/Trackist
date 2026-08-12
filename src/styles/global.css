@@ -18,6 +18,11 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .dashboard-shell {
+        max-width: 100% !important;
+        width: 100% !important;
+        padding: 0.5rem 0.5rem 7rem !important;
+    }
     .profile-hero__content {
         gap: 0rem!important;
         margin-top: 1rem;
@@ -26,7 +31,7 @@
         display: block!important;
     }
     .discover-page{
-        padding: 0.5rem 1rem 7rem !important;
+        padding: 0.5rem 0.5rem 7rem !important;
     }
     .watchlist-section__title{
         font-size: 0.9rem!important;
@@ -763,7 +768,7 @@ body::after {
     min-height: 100%;
 }
 .dashboard-shell {
-    max-width: 90%;
+    max-width: 85%;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
@@ -7138,7 +7143,7 @@ i.fa-solid.fa-trash:hover {
 .profile-hero__content {
     display: flex;
     gap: 1.5rem;
-    padding: 0 1.5rem 1.5rem;
+    padding: 0 1.5rem;
     flex-wrap: wrap;
 }
 
@@ -7178,11 +7183,6 @@ i.fa-solid.fa-trash:hover {
     color: var(--color-black);
 }
 
-.profile-hero__info {
-    flex: 1;
-    min-width: 250px;
-}
-
 .profile-hero__identity {
     display: flex;
     align-items: center;
@@ -7209,6 +7209,7 @@ i.fa-solid.fa-trash:hover {
     display: flex;
     gap: 0.75rem;
     flex-wrap: wrap;
+    margin: 0.75rem 0;
 }
 
 .profile-btn {
@@ -7222,6 +7223,8 @@ i.fa-solid.fa-trash:hover {
     cursor: pointer;
     transition: all 0.2s ease;
     text-decoration: none;
+    width: 130px;
+    justify-content: center;
 }
 .profile-btn--primary {
     background: var(--color-primary);
@@ -7283,13 +7286,11 @@ i.fa-solid.fa-trash:hover {
 }
 
 .profile-stat {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
+    
 }
 
 .profile-stat__value {
-    font-size: 1.5rem;
+    font-size: 0.9rem;
     font-weight: 700;
     color: #fff;
     line-height: 1.2;
@@ -7306,8 +7307,6 @@ i.fa-solid.fa-trash:hover {
 .profile-tabs {
     display: flex;
     gap: 0.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    margin-bottom: 1.5rem;
     overflow-x: auto;
     scrollbar-width: none;
 }
@@ -7332,10 +7331,6 @@ i.fa-solid.fa-trash:hover {
     white-space: nowrap;
 }
 
-.profile-tab i {
-    display: none;
-}
-
 .profile-tab:hover {
     color: rgba(255, 255, 255, 0.8);
 }
@@ -7356,7 +7351,7 @@ i.fa-solid.fa-trash:hover {
     color: var(--color-primary);
 }
 
-/* Mobile: profile tabs show icons only, space-between */
+/* Mobile: profile tabs text at 0.9rem */
 @media (max-width: 768px) {
     .profile-tabs {
         justify-content: space-between;
@@ -7364,16 +7359,7 @@ i.fa-solid.fa-trash:hover {
 
     .profile-tab {
         padding: 0.75rem;
-        justify-content: center;
-    }
-
-    .profile-tab__text,
-    .profile-tab__count {
-        display: none;
-    }
-
-    .profile-tab i {
-        font-size: 1.2rem;
+        font-size: 0.9rem;
     }
 }
 
