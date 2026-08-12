@@ -145,7 +145,7 @@ const FriendsPage = () => {
                                         className="friend-card__avatar"
                                     >
                                         {user.avatar_url ? (
-                                            <img src={user.avatar_url} alt={user.display_name || 'User'} />
+                                            <img src={user.avatar_url} alt={user.display_name || 'User'} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                                         ) : (
                                             <div className="friend-card__avatar-placeholder">
                                                 {(user.display_name || 'U')[0].toUpperCase()}
@@ -185,7 +185,7 @@ const FriendsPage = () => {
                                         className="friend-card__avatar"
                                     >
                                         {user.avatar_url ? (
-                                            <img src={user.avatar_url} alt={user.display_name || 'User'} />
+                                            <img src={user.avatar_url} alt={user.display_name || 'User'} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                                         ) : (
                                             <div className="friend-card__avatar-placeholder">
                                                 {(user.display_name || 'U')[0].toUpperCase()}

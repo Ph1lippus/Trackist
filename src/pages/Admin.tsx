@@ -632,7 +632,7 @@ const Admin: React.FC = () => {
                                                         title="Click to change avatar"
                                                     >
                                                         {profile.avatar_url ? (
-                                                            <img src={profile.avatar_url} alt={profile.display_name || 'User'} />
+                                                            <img src={profile.avatar_url} alt={profile.display_name || 'User'} onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                                                         ) : (
                                                             <span>{(profile.display_name || '?')[0].toUpperCase()}</span>
                                                         )}
