@@ -18,6 +18,9 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .dashboard-shell.mobile-tvshows-shell {
+    padding: 0 !important;
+}
     .profile-hero__avatar-wrap {
         padding: 0rem 0rem 1rem 0rem;
     }
