@@ -447,11 +447,26 @@ const Admin: React.FC = () => {
         setAvatarMessage(null)
 
         try {
-            const { url, error } = await uploadAvatar(file, pendingAvatarUserId)
+            const { url, error: uploadError } = await uploadAvatar(file)
 
-            if (error) {
-                setAvatarMessage({ userId: pendingAvatarUserId, text: error, type: 'error' })
-            } else if (url) {
+            if (uploadError) {
+                setAvatarMessage({ userId: pendingAvatarUserId, text: uploadError, type: 'error' })
+                return
+            }
+
+            if (!url) {
+                setAvatarMessage({ userId: pendingAvatarUserId, text: 'Failed to get upload URL', type: 'error' })
+                return
+            }
+
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ avatar_url: url })
+                .eq('id', pendingAvatarUserId)
+
+            if (updateError) {
+                setAvatarMessage({ userId: pendingAvatarUserId, text: updateError.message, type: 'error' })
+            } else {
                 setProfiles(prev => prev.map(p => p.id === pendingAvatarUserId ? { ...p, avatar_url: url } : p))
                 setAvatarMessage({ userId: pendingAvatarUserId, text: 'Avatar updated successfully', type: 'success' })
             }
