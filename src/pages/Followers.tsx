@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { useAuthStore } from '../stores/useAuthStore'
-import { getProfileByUsername, getFollowersList, followUser, unfollowUser } from '../services/profileService'
+import { getProfileByUsername, getProfile, getFollowersList, followUser, unfollowUser } from '../services/profileService'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
 

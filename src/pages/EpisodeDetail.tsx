@@ -12,11 +12,11 @@ interface EpisodeData {
     id: number
     episode_number: number
     name: string
-    overview: string
-    still_path: string | null
-    vote_average: number
-    air_date: string
-    runtime: number
+    overview?: string
+    still_path?: string | null
+    vote_average?: number
+    air_date?: string
+    runtime?: number
 }
 
 const EpisodeDetail: React.FC = () => {
@@ -45,7 +45,7 @@ const EpisodeDetail: React.FC = () => {
                 ])
                 setTvDetails(tvData)
 
-                const ep = seasonData.episodes?.find((e: EpisodeData) => e.episode_number === Number(episode))
+                const ep = seasonData.episodes?.find((e) => e.episode_number === Number(episode)) ?? null
                 setEpisodeData(ep)
 
                 // Check if in watchlist using global store

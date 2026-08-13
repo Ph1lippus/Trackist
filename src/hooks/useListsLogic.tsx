@@ -299,7 +299,7 @@ export const useListsLogic = (): UseListsLogicResult => {
                     getGenres('movie'),
                     getGenres('tv')
                 ])
-                const allGenres = [...movieGenres, ...tvGenres]
+                const allGenres = [...movieGenres.genres, ...tvGenres.genres]
                 const filteredGenres = allGenres.filter(g => g.id !== 10769)
                 const uniqueGenres = Array.from(
                     new Map(filteredGenres.map(g => [g.id, g])).values()

@@ -50,7 +50,7 @@ const AddModal: React.FC<AddModalProps> = ({ item, onClose, onAdd, onAddWatchlis
                             season_number: season,
                             episode_number: ep.episode_number,
                             name: ep.name,
-                            still_path: ep.still_path,
+                            still_path: ep.still_path ?? undefined,
                             air_date: ep.air_date,
                             runtime: ep.runtime
                         })

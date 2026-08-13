@@ -725,7 +725,7 @@ export const backfillTmdbEpisodeIds = async (tmdbId: number, watchlistId: string
             const sData = await getTVSeasonDetails(tmdbId, season)
             const sEpisodes = sData.episodes || []
             for (const ep of sEpisodes) {
-                episodeIdMap.set(`${ep.season_number}-${ep.episode_number}`, ep.id)
+                episodeIdMap.set(`${season}-${ep.episode_number}`, ep.id)
             }
         }
 
