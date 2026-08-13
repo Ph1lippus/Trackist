@@ -3,11 +3,15 @@ import type { TMDBResult } from '../types'
 
 const IMAGE_BASE_ORIGINAL = 'https://image.tmdb.org/t/p/original'
 
-const ALLOWED_TMDB_PATHS = ['/search/multi', '/search/person', '/person/', '/movie/', '/tv/', '/trending', '/discover/movie', '/discover/tv', '/genre/movie/list', '/genre/tv/list'] as const
+const ALLOWED_TMDB_PATHS = ['/search/', '/person/', '/movie/', '/tv/', '/trending/', '/discover/', '/genre/'] as const
 
 function isAllowedPath(path: string): boolean {
     const basePath = path.split('?')[0]
-    return ALLOWED_TMDB_PATHS.some(prefix => basePath === prefix || basePath.startsWith(`${prefix}/`))
+    const allowed = ALLOWED_TMDB_PATHS.some(prefix => basePath.startsWith(prefix))
+    if (!allowed) {
+        console.warn('[tmdbProxy] Blocked path:', path, 'basePath:', basePath, 'allowedPrefixes:', ALLOWED_TMDB_PATHS)
+    }
+    return allowed
 }
 
 async function tmdbProxy(path: string): Promise<Response> {
