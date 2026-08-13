@@ -361,7 +361,7 @@ const MobileTVShows: React.FC = () => {
                         disabled={isAdding}
                         title="Add one episode"
                     >
-                        <i className={`fa-solid ${isAdding ? 'fa-spinner fa-spin' : 'fa-check'}`}></i>
+                        <i className={`fa-solid fa-check`}></i>
                     </button>
                 )}
             </div>

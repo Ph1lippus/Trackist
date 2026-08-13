@@ -4928,10 +4928,9 @@ i.fa-solid.fa-trash:hover {
 
 .modal-btn-spinner {
     display: inline-block;
-    color: var(--color-light);
     width: 16px;
     height: 16px;
-    border: none;
+    border: 2px solid rgba(255, 255, 255, 0.2);
     border-top-color: inherit;
     border-radius: 50%;
     animation: modal-spin 0.8s linear infinite;
@@ -9494,6 +9493,16 @@ i.fa-solid.fa-trash:hover {
     align-items: center;
     justify-content: center;
     transition: all 0.25s ease;
+}
+
+.mobile-tvshow-card-add-btn:active:not(:disabled) {
+    transform: scale(0.85);
+    background: rgba(104, 255, 174, 0.25);
+}
+
+.mobile-tvshow-card-add-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 

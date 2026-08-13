@@ -282,7 +282,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             getGenres('movie'),
             getGenres('tv'),
         ])
-        const allGenres = [...movieGenres, ...tvGenres]
+        const allGenres = [...movieGenres.genres, ...tvGenres.genres]
         const filteredGenres = allGenres.filter(g => g.id !== 10763 && g.id !== 10767)
         const uniqueGenres = Array.from(
             new Map(filteredGenres.map(g => [g.id, g])).values()

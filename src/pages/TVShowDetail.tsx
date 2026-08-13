@@ -223,7 +223,7 @@ const TVShowDetail: React.FC = () => {
                             episode_number: ep.episode_number,
                             tmdb_episode_id: ep.id,
                             title: ep.name,
-                            still_path: ep.still_path,
+                            still_path: ep.still_path ?? undefined,
                             overview: ep.overview,
                             vote_average: ep.vote_average,
                             air_date: ep.air_date,
@@ -439,7 +439,7 @@ const TVShowDetail: React.FC = () => {
                     markEpisodeWatched(watchlistId, ep.season_number, ep.episode_number, {
                         tmdb_episode_id: ep.tmdb_episode_id,
                         title: ep.title,
-                        still_path: ep.still_path,
+                        still_path: ep.still_path ?? undefined,
                         overview: ep.overview,
                         vote_average: ep.vote_average,
                         air_date: ep.air_date,
@@ -1130,7 +1130,7 @@ const TVShowDetail: React.FC = () => {
                                     return markEpisodeWatched(watchlistId, ep.season_number, ep.episode_number, {
                                         tmdb_episode_id: ep.tmdb_episode_id,
                                         title: ep.title,
-                                        still_path: ep.still_path,
+                                        still_path: ep.still_path ?? undefined,
                                         overview: ep.overview,
                                         vote_average: ep.vote_average,
                                         air_date: ep.air_date,

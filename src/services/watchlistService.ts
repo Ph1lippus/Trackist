@@ -116,8 +116,8 @@ export const getNextEpisodeToWatch = async (watchlistId: string, skipCache: bool
         // If we have a cached next episode and we're not skipping cache, use it as the starting point
         // This avoids iterating through all seasons from the beginning
         // But skip cache when recalculating after episode removal to avoid returning the removed episode
-        let cachedNextSeason = watchlistItem.next_season_number
-        let cachedNextEpisode = watchlistItem.next_episode_number
+        const cachedNextSeason = watchlistItem.next_season_number
+        const cachedNextEpisode = watchlistItem.next_episode_number
         if (!skipCache && cachedNextSeason && cachedNextEpisode && cachedNextSeason >= seasonToCheck) {
             // Start from the cached next episode, but verify it's still valid
             const seasonData = await getTVSeasonDetails(watchlistItem.tmdb_id, cachedNextSeason)
@@ -137,7 +137,7 @@ export const getNextEpisodeToWatch = async (watchlistId: string, skipCache: bool
                     season_number: cachedNextSeason,
                     episode_number: ep.episode_number,
                     title: ep.name,
-                    still_path: ep.still_path,
+                    still_path: ep.still_path ?? undefined,
                     overview: ep.overview,
                     air_date: ep.air_date,
                     runtime: ep.runtime,
@@ -169,7 +169,7 @@ export const getNextEpisodeToWatch = async (watchlistId: string, skipCache: bool
                     season_number: seasonNum,
                     episode_number: ep.episode_number,
                     title: ep.name,
-                    still_path: ep.still_path,
+                    still_path: ep.still_path ?? undefined,
                     overview: ep.overview,
                     air_date: ep.air_date,
                     runtime: ep.runtime,
@@ -200,13 +200,13 @@ export const saveAllEpisodesForShow = async (tmdbId: number, watchlistId: string
         for (const season of seasonNumbers) {
             const seasonData = await getTVSeasonDetails(tmdbId, season)
             const episodes = seasonData.episodes || []
-            const episodeInserts = episodes.map((ep: { episode_number: number; id?: number; name?: string; still_path?: string; overview?: string; air_date?: string; runtime?: number }) => ({
+            const episodeInserts = episodes.map((ep: { episode_number: number; id?: number; name?: string; still_path?: string | null; overview?: string; air_date?: string; runtime?: number }) => ({
                 watchlist_id: watchlistId,
                 season_number: season,
                 episode_number: ep.episode_number,
                 tmdb_episode_id: ep.id,
                 title: ep.name,
-                still_path: ep.still_path,
+                still_path: ep.still_path ?? undefined,
                 overview: ep.overview,
                 air_date: ep.air_date,
                 runtime: ep.runtime

@@ -5,7 +5,7 @@ const IMAGE_BASE_ORIGINAL = 'https://image.tmdb.org/t/p/original'
 
 const ALLOWED_TMDB_PATHS = ['/search/multi', '/search/person', '/person/', '/movie/', '/tv/', '/trending', '/discover/movie', '/discover/tv'] as const
 
-async function isAllowedPath(path: string): boolean {
+function isAllowedPath(path: string): boolean {
     const basePath = path.split('?')[0]
     return ALLOWED_TMDB_PATHS.some(prefix => basePath === prefix || basePath.startsWith(`${prefix}/`))
 }
@@ -304,28 +304,31 @@ export const getPopularPeople = async (page: number = 1): Promise<{ results: TMD
 
 
 
-export const discoverMovies = async (page: number = 1, sortBy: string = 'popularity.desc', genres?: number[], year?: number): Promise<{ results: TMDBResult[] }> => {
-    const params = new URLSearchParams({ page: String(page), sort_by: sortBy })
-    if (genres && genres.length > 0) params.set('with_genres', genres.join(','))
-    if (year) params.set('primary_release_year', String(year))
+export const discoverMovies = async (options: { page?: number; sort_by?: string; with_genres?: string; primary_release_year?: number; vote_count_gte?: number } = {}): Promise<{ results: TMDBResult[] }> => {
+    const params = new URLSearchParams()
+    if (options.page) params.set('page', String(options.page))
+    if (options.sort_by) params.set('sort_by', options.sort_by)
+    if (options.with_genres) params.set('with_genres', options.with_genres)
+    if (options.primary_release_year) params.set('primary_release_year', String(options.primary_release_year))
+    if (options.vote_count_gte) params.set('vote_count.gte', String(options.vote_count_gte))
     const res = await tmdbProxy(`/discover/movie?${params.toString()}`)
     return res.json()
 }
 
-
-export const discoverTV = async (page: number = 1, sortBy: string = 'popularity.desc', genres?: number[], year?: number): Promise<{ results: TMDBResult[] }> => {
-    const params = new URLSearchParams({ page: String(page), sort_by: sortBy })
-    if (genres && genres.length > 0) params.set('with_genres', genres.join(','))
-    if (year) params.set('first_air_date_year', String(year))
+export const discoverTV = async (options: { page?: number; sort_by?: string; with_genres?: string; first_air_date_year?: number; vote_count_gte?: number } = {}): Promise<{ results: TMDBResult[] }> => {
+    const params = new URLSearchParams()
+    if (options.page) params.set('page', String(options.page))
+    if (options.sort_by) params.set('sort_by', options.sort_by)
+    if (options.with_genres) params.set('with_genres', options.with_genres)
+    if (options.first_air_date_year) params.set('first_air_date_year', String(options.first_air_date_year))
+    if (options.vote_count_gte) params.set('vote_count.gte', String(options.vote_count_gte))
     const res = await tmdbProxy(`/discover/tv?${params.toString()}`)
     return res.json()
 }
 
-
-export const getGenres = async (): Promise<{ genres: { id: number; name: string }[] }> => {
-    const res = await tmdbProxy(`/genre/movie/list`)
+export const getGenres = async (type: 'movie' | 'tv'): Promise<{ genres: { id: number; name: string }[] }> => {
+    const path = type === 'movie' ? '/genre/movie/list' : '/genre/tv/list'
+    const res = await tmdbProxy(path)
     const data = await res.json()
     return data
 }
-
-
