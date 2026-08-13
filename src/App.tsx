@@ -66,9 +66,11 @@ const AppContent: React.FC = () => {
         document.referrer.includes('android-app://')
 
     // Default route based on app context:
-    // - PWA: open Mobile TV Shows by default
+    // - PWA on mobile: open Mobile TV Shows by default
+    // - PWA on desktop: open normal TV Shows page
     // - Website: open Discover page by default
-    const defaultRoute = isPWA ? '/MobileTVShows' : '/Discover'
+    const isMobile = window.innerWidth < 768
+    const defaultRoute = isPWA ? (isMobile ? '/MobileTVShows' : '/Tvshows') : '/Discover'
 
     const isDetailPage = location.pathname.match(/^\/(movie|tv|person)\/\d+$/) || location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/)
 
