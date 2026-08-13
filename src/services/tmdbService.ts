@@ -115,6 +115,7 @@ export const getMovieDetails = async (id: number): Promise<{
     status?: string
     tagline?: string
     production_companies?: { id: number; name: string; logo_path?: string | null; origin_country?: string }[]
+    images?: { logos?: { file_path: string; language?: string }[]; backdrops?: any[] }
     videos?: {
         results: {
             id: string
@@ -126,7 +127,7 @@ export const getMovieDetails = async (id: number): Promise<{
         }[]
     }
 }> => {
-    const res = await tmdbProxy(`/movie/${id}`)
+    const res = await tmdbProxy(`/movie/${id}?append_to_response=images`)
     return res.json()
 }
 export const getTVShowDetails = async (id: number): Promise<{
@@ -155,7 +156,7 @@ export const getTVShowDetails = async (id: number): Promise<{
         }[]
     }
 }> => {
-    const res = await tmdbProxy(`/tv/${id}`)
+    const res = await tmdbProxy(`/tv/${id}?append_to_response=images`)
     return res.json()
 }
 export const getTVSeasonDetails = async (tvId: number, seasonNumber: number): Promise<{
