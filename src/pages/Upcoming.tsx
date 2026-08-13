@@ -139,7 +139,9 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                             try {
                                 const json = JSON.parse(text)
                                 errorMessage = json.error || text
-                            } catch {}
+                            } catch {
+                                // ignore JSON parse error, fallback to raw text
+                            }
                             console.error(`Season check failed (${res.status}):`, errorMessage)
                         }
                     }
@@ -233,19 +235,42 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                             const isTodayDate = isToday(dateKey)
 
                             const cardWidth = 72
-                            const overlap = 20
-                            const effectiveSlot = cardWidth - overlap
+                            const minOverlap = 8
                             const maxCards = dayCellInnerWidth > 0
-                                ? Math.max(1, Math.floor((dayCellInnerWidth - overlap) / effectiveSlot))
+                                ? Math.max(1, Math.floor((dayCellInnerWidth - minOverlap) / (cardWidth - minOverlap)))
                                 : 2
 
                             const hasMore = dayItems.length > maxCards
-                            const showMoreButton = hasMore && maxCards > 1
-                            const visibleCount = hasMore
-                                ? Math.max(1, maxCards - 1)
-                                : Math.min(dayItems.length, maxCards)
 
-                            const visibleItems = dayItems.slice(0, visibleCount)
+                            const groups = new Map<string, UpcomingItem[]>()
+                            for (const item of dayItems) {
+                                const key = String(item.item.tmdb_id)
+                                if (!groups.has(key)) groups.set(key, [])
+                                groups.get(key)!.push(item)
+                            }
+                            const sortedGroups = Array.from(groups.values()).sort((a, b) => a.length - b.length)
+
+                            const visibleItems: UpcomingItem[] = []
+                            const pointers = sortedGroups.map(() => 0)
+                            while (visibleItems.length < maxCards && visibleItems.length < dayItems.length) {
+                                let madeProgress = false
+                                for (let i = 0; i < sortedGroups.length && visibleItems.length < maxCards; i++) {
+                                    const group = sortedGroups[i]
+                                    const ptr = pointers[i]
+                                    if (ptr < group.length) {
+                                        visibleItems.push(group[ptr])
+                                        pointers[i] = ptr + 1
+                                        madeProgress = true
+                                    }
+                                }
+                                if (!madeProgress) break
+                            }
+
+                            let dynamicOverlap = 0
+                            if (visibleItems.length > 1 && dayCellInnerWidth > 0) {
+                                const idealStep = (dayCellInnerWidth - cardWidth) / (visibleItems.length - 1)
+                                dynamicOverlap = Math.max(minOverlap, cardWidth - idealStep)
+                            }
 
                             return (
                                 <div 
@@ -253,8 +278,8 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                     className={`calendar-day ${isTodayDate ? 'calendar-day--today' : ''} ${dayItems.length > 0 ? 'calendar-day--has-episodes' : ''}`}
                                     style={{ position: 'relative' }}
                                 >
-                                    <span className="calendar-day-number" style={{ position: 'absolute', top: '0.2rem', left: '0.2rem' }}>{day.getUTCDate()}</span>
-                                    <div style={{ display: 'flex', flexDirection: 'row', gap: '0', paddingTop: '1.2rem', position: 'relative', flexWrap: 'nowrap' }}>
+                                    <span className="calendar-day-number" style={{ position: 'absolute', top: '0.4rem', left: '0.4rem' }}>{day.getUTCDate()}</span>
+                                    <div className="calendar-episodes" style={{ display: 'flex', flexDirection: 'row', gap: '0', paddingTop: '1.2rem', position: 'relative', flexWrap: 'nowrap', overflow: 'hidden' }}>
                                         {visibleItems.map((item, idx) => (
                                             <div 
                                                 key={item.id}
@@ -266,11 +291,11 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                                         navigate(`/tv/${item.item.tmdb_id}`)
                                                     }
                                                 }}
-                                                style={{ 
-                                                    marginLeft: idx > 0 ? '-20px' : '0',
-                                                    position: 'relative',
-                                                    zIndex: idx
-                                                }}
+                                                 style={{ 
+                                                     marginLeft: idx > 0 ? `-${dynamicOverlap}px` : '0',
+                                                     position: 'relative',
+                                                     zIndex: idx
+                                                 }}
                                             >
                                                 <div className="calendar-episode-poster">
                                                     {item.item.poster_path ? (
@@ -286,23 +311,19 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                                 </div>
                                             </div>
                                         ))}
-                                        {showMoreButton && (
-                                            <div 
-                                                className="calendar-episode-more"
-                                                onClick={(e) => {
-                                                    e.stopPropagation()
-                                                    setSelectedDate({ dateKey, items: dayItems })
-                                                }}
-                                                style={{ 
-                                                    marginLeft: '-20px',
-                                                    position: 'relative',
-                                                    zIndex: 0
-                                                }}
-                                            >
-                                                +{dayItems.length - visibleCount}
-                                            </div>
-                                        )}
                                     </div>
+                                    {hasMore && (
+                                        <button 
+                                            className="calendar-day-more-btn"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setSelectedDate({ dateKey, items: dayItems })
+                                            }}
+                                            aria-label={`${dayItems.length - visibleItems.length} more`}
+                                        >
+                                            <i className="fa-solid fa-plus"></i>
+                                        </button>
+                                    )}
                                 </div>
                             )
                         })}

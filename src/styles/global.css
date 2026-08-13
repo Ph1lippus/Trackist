@@ -18,6 +18,12 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .media-card__episodes-left {
+        display: none!important;
+    }
+    .dashboard-shell.upcoming-new-shell {
+        padding: 0rem !important;
+    }
     body {
         -webkit-user-select: none;
         -moz-user-select: none;
@@ -3375,24 +3381,19 @@ body::after {
 }
 
 .calendar-day {
-        padding: 0.3rem;
-    background: rgba(255, 255, 255, 0.02);
+    padding: 0.6rem;
+    background: rgb(255 255 255 / 0%);
     border: 1px solid rgba(255, 255, 255, 0.06);
-    border-radius: 10px;
+    border-radius: 12px;
     transition: all 0.2s ease;
-    overflow: visible;
+    overflow: hidden;
     position: relative;
+    min-width: 0;
 }
 
 .calendar-day--empty {
     background: transparent;
     border: none;
-}
-
-.calendar-day--today {
-    border-color: var(--color-mint);
-    background: rgba(104, 255, 174, 0.08);
-    box-shadow: 0 0 12px rgba(104, 255, 174, 0.15);
 }
 
 .calendar-day--has-episodes {
@@ -3410,14 +3411,13 @@ body::after {
 }
 
 .calendar-day--today .calendar-day-number {
-    color: var(--color-primary);
+    color: var(--color-mint);
     font-weight: 800;
     opacity: 1;
 }
 
-.calendar-day, 
-.calendar-day div {
-    overflow: visible !important;
+.calendar-episodes {
+    overflow: hidden;
 }
 
 .calendar-episode {
@@ -3430,14 +3430,13 @@ body::after {
     flex-shrink: 0;
     border-radius: 12px !important;
     overflow: hidden !important; 
-    opacity: 0.8;
-    /* Smooth, uniform transition for focus interactions */
     transition: background 0.2s ease, filter 0.2s ease, border-color 0.2s ease;
 }
 
 .calendar-episode:hover {
     opacity: 1;
-    filter: brightness(1.1); }
+    filter: brightness(1.15);
+}
 
 /* Keep internal image compliance tight */
 .calendar-episode img {
@@ -3461,15 +3460,9 @@ body::after {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background: linear-gradient(
-        135deg,
-        rgba(133, 138, 227, 0.3),
-        rgba(255, 255, 255, 0.05)
-    );
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 4px;
 }
 
 .calendar-episode-poster img {
@@ -3547,6 +3540,30 @@ body::after {
     border-color: var(--color-primary);
 }
 
+.calendar-day-more-btn {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(133, 138, 227, 0.2);
+    color: var(--color-primary);
+    font-size: 0.65rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    z-index: 2;
+}
+
+.calendar-day-more-btn:hover {
+    background: rgba(133, 138, 227, 0.4);
+    transform: scale(1.1);
+}
+
 .upcoming-sidebar-item {
     display: flex;
     flex-direction: column;
@@ -3605,43 +3622,6 @@ body::after {
     border-color: var(--color-primary);
     color: var(--color-black);
 }
-
-/* ===== ANIME EPISODE TRACKING ===== */
-.anime-episode-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.4rem 0.6rem;
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 6px;
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: background 0.2s;
-}
-
-.anime-episode-item:hover {
-    background: rgba(255, 255, 255, 0.05);
-}
-
-.anime-episode-item.watched {
-    opacity: 0.6;
-}
-
-.anime-episode-checkbox {
-    width: 18px;
-    height: 18px;
-    border-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.anime-episode-checkbox.watched {
-    background: rgba(104, 255, 174, 0.2);
-    border-color: #68ffae;
-}
-
 .page-loader--initial {
     animation: loaderFadeIn 0.25s ease-out forwards;
 }
@@ -4954,6 +4934,7 @@ i.fa-solid.fa-trash:hover {
 
 .modal-btn-spinner {
     display: inline-block;
+    color: var(--color-light);
     width: 16px;
     height: 16px;
     border: none;
@@ -8897,7 +8878,7 @@ i.fa-solid.fa-trash:hover {
 
 /* ===== UPCOMING NEW PAGE (CARD LIST VIEW) ===== */
 .upcoming-new-page {
-    padding: 1rem 1rem 2rem;
+    padding: 0rem 0.5rem 2rem;
     min-height: 100vh;
 }
 
@@ -9435,11 +9416,10 @@ i.fa-solid.fa-trash:hover {
     align-items: center;
     gap: 0.85rem;
     background: linear-gradient(135deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02));
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: none;
     cursor: pointer;
     transition: all 0.25s ease;
     position: relative;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .mobile-tvshow-card-poster {

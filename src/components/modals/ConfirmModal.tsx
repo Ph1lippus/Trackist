@@ -38,25 +38,19 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                 return {
                     borderColor: 'rgba(104,255,174,0.3)',
                     color: '#68ffae',
-                    hoverBg: 'rgba(104,255,174,0.15)',
-                    hoverBorder: '#68ffae',
-                    hoverShadow: 'rgba(104, 255, 174, 0.3)'
+                    hoverBg: 'rgba(104,255,174,0.15)'
                 }
             case 'danger':
                 return {
                     borderColor: 'rgba(255,107,107,0.3)',
                     color: '#ff6b6b',
-                    hoverBg: 'rgba(255,107,107,0.15)',
-                    hoverBorder: '#ff6b6b',
-                    hoverShadow: 'rgba(255, 107, 107, 0.3)'
+                    hoverBg: 'rgba(255,107,107,0.15)'
                 }
             default:
                 return {
                     borderColor: 'rgba(133,138,227,0.3)',
                     color: 'var(--color-primary)',
-                    hoverBg: 'rgba(133,138,227,0.15)',
-                    hoverBorder: 'var(--color-primary)',
-                    hoverShadow: 'rgba(133, 138, 227, 0.3)'
+                    hoverBg: 'rgba(133,138,227,0.15)'
                 }
         }
     }
@@ -102,8 +96,6 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                             onMouseEnter={(e) => {
                                 if (!isDisabled) {
                                     e.currentTarget.style.background = colorStyle.hoverBg
-                                    e.currentTarget.style.borderColor = colorStyle.hoverBorder
-                                    e.currentTarget.style.boxShadow = `0 0 8px ${colorStyle.hoverShadow}`
                                 }
                             }}
                             onMouseLeave={(e) => {
