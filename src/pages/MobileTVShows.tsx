@@ -196,7 +196,7 @@ const MobileTVShows: React.FC = () => {
                         episode_number: show.next_episode_number,
                         tmdb_episode_id: ep.id,
                         title: ep.name,
-                        still_path: ep.still_path,
+                        still_path: ep.still_path ?? undefined,
                         overview: ep.overview,
                         air_date: ep.air_date,
                         runtime: ep.runtime
@@ -269,7 +269,7 @@ const MobileTVShows: React.FC = () => {
                         episode_number: show.next_episode_number,
                         tmdb_episode_id: ep.id,
                         title: ep.name,
-                        still_path: ep.still_path,
+                        still_path: ep.still_path ?? undefined,
                         overview: ep.overview,
                         air_date: ep.air_date,
                         runtime: ep.runtime

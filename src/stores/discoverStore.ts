@@ -477,7 +477,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                             sort_by: sortBy,
                             primary_release_year: selectedYear ?? undefined,
                             with_genres: selectedGenre ? String(selectedGenre) : undefined,
-                            'vote_count.gte': 100,
+                            vote_count_gte: 100,
                         }),
                         { ttl: 6 * 60 * 60 * 1000, staleWhileRevalidate: true }
                     ),
@@ -489,7 +489,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                             sort_by: mapSortParamForTV(sortBy),
                             first_air_date_year: selectedYear ?? undefined,
                             with_genres: selectedGenre ? String(selectedGenre) : undefined,
-                            'vote_count.gte': 200,
+                            vote_count_gte: 200,
                         }),
                         { ttl: 6 * 60 * 60 * 1000, staleWhileRevalidate: true }
                     ),
@@ -531,7 +531,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                         sort_by: sortBy,
                         primary_release_year: selectedYear ?? undefined,
                         with_genres: selectedGenre ? String(selectedGenre) : undefined,
-                        'vote_count.gte': 100,
+                        vote_count_gte: 100,
                     }),
                     { ttl: 6 * 60 * 60 * 1000, staleWhileRevalidate: true }
                 )
@@ -562,7 +562,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                         sort_by: mapSortParamForTV(sortBy),
                         first_air_date_year: selectedYear ?? undefined,
                         with_genres: selectedGenre ? String(selectedGenre) : undefined,
-                        'vote_count.gte': 200,
+                        vote_count_gte: 200,
                     }),
                     { ttl: 6 * 60 * 60 * 1000, staleWhileRevalidate: true }
                 )

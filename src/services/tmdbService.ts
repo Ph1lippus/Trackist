@@ -95,11 +95,20 @@ export const getMovieDetails = async (id: number): Promise<{
     status?: string
     tagline?: string
     production_companies?: { id: number; name: string; logo_path?: string | null; origin_country?: string }[]
+    videos?: {
+        results: {
+            id: string
+            key: string
+            name: string
+            site: string
+            type: string
+            official: boolean
+        }[]
+    }
 }> => {
     const res = await tmdbProxy(`/movie/${id}`)
     return res.json()
 }
-
 export const getTVShowDetails = async (id: number): Promise<{
     id: number
     name: string
@@ -115,11 +124,20 @@ export const getTVShowDetails = async (id: number): Promise<{
     status?: string
     episode_run_time?: number[]
     production_companies?: { id: number; name: string; logo_path?: string | null; origin_country?: string }[]
+    videos?: {
+        results: {
+            id: string
+            key: string
+            name: string
+            site: string
+            type: string
+            official: boolean
+        }[]
+    }
 }> => {
     const res = await tmdbProxy(`/tv/${id}`)
     return res.json()
 }
-
 export const getTVSeasonDetails = async (tvId: number, seasonNumber: number): Promise<{
     id: number
     season_number: number
@@ -332,3 +350,7 @@ export const getGenres = async (type: 'movie' | 'tv'): Promise<{ genres: { id: n
     const data = await res.json()
     return data
 }
+
+
+
+
