@@ -310,6 +310,8 @@ export const getTVDetails = async (id: number): Promise<{
 
 export const getBestBackdropPath = (backdrops: any[] | undefined | null): string | null => {
     if (!backdrops || backdrops.length === 0) return null
+    const noLanguage = backdrops.find(b => b.iso_639_1 == null || b.iso_639_1 === '')
+    if (noLanguage?.file_path) return noLanguage.file_path
     const english = backdrops.find(b => b.iso_639_1 === 'en')
     return english?.file_path ?? backdrops[0]?.file_path ?? null
 }
