@@ -185,11 +185,11 @@ const MobileTVShows: React.FC = () => {
     const handleAddEpisodeInternal = async (show: WatchlistItem) => {
         try {
             // Use the cached next episode from store if available, otherwise fetch from TMDB
-            let nextEp: { season_number: number; episode_number: number; tmdb_episode_id?: number; title?: string; still_path?: string; overview?: string; air_date?: string; runtime?: number } | null = null
+            let nextEp: { season_number: number; episode_number: number; tmdb_episode_id?: number; title?: string; still_path?: string | null; overview?: string; air_date?: string; runtime?: number } | null = null
             if (show.next_season_number && show.next_episode_number && show.tmdb_id) {
                 const { getTVSeasonDetails } = await import('../services/tmdbService')
                 const seasonData = await getTVSeasonDetails(show.tmdb_id, show.next_season_number)
-                const ep = seasonData.episodes?.find((e: { episode_number: number; id?: number; name?: string; still_path?: string; overview?: string; air_date?: string; runtime?: number }) => e.episode_number === show.next_episode_number)
+                const ep = seasonData.episodes?.find((e: { episode_number: number; id?: number; name?: string; still_path?: string | null; overview?: string; air_date?: string; runtime?: number }) => e.episode_number === show.next_episode_number)
                 if (ep) {
                     nextEp = {
                         season_number: show.next_season_number,
@@ -258,11 +258,11 @@ const MobileTVShows: React.FC = () => {
 
             // Then proceed with episode addition logic (reuse the same logic)
             const show = confirmModal.item
-            let nextEp: { season_number: number; episode_number: number; tmdb_episode_id?: number; title?: string; still_path?: string; overview?: string; air_date?: string; runtime?: number } | null = null
+            let nextEp: { season_number: number; episode_number: number; tmdb_episode_id?: number; title?: string; still_path?: string | null; overview?: string; air_date?: string; runtime?: number } | null = null
             if (show.next_season_number && show.next_episode_number && show.tmdb_id) {
                 const { getTVSeasonDetails } = await import('../services/tmdbService')
                 const seasonData = await getTVSeasonDetails(show.tmdb_id, show.next_season_number)
-                const ep = seasonData.episodes?.find((e: { episode_number: number; id?: number; name?: string; still_path?: string; overview?: string; air_date?: string; runtime?: number }) => e.episode_number === show.next_episode_number)
+                const ep = seasonData.episodes?.find((e: { episode_number: number; id?: number; name?: string; still_path?: string | null; overview?: string; air_date?: string; runtime?: number }) => e.episode_number === show.next_episode_number)
                 if (ep) {
                     nextEp = {
                         season_number: show.next_season_number,

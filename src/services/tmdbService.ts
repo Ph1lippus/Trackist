@@ -280,15 +280,24 @@ export const getTVDetails = async (id: number): Promise<{
     episode_run_time?: number[]
     seasons?: { season_number: number; episode_count: number; air_date?: string }[]
     images?: { logos?: { file_path: string; language?: string }[]; backdrops?: any[] }
+    videos?: {
+        results: {
+            id: string
+            key: string
+            name: string
+            site: string
+            type: string
+            official: boolean
+        }[]
+    }
 }> => {
     const res = await tmdbProxy(`/tv/${id}`)
     return res.json()
 }
-
-
 export const imageUrlOriginal = (path: string | null | undefined): string | null => {
     if (!path) return null
-    return `${IMAGE_BASE_ORIGINAL}/original` }
+    return `${IMAGE_BASE_ORIGINAL}/original`
+}
 
 
 export const getBestBackdropPath = (backdrops: any[] | undefined | null): string | null => {
@@ -350,6 +359,8 @@ export const getGenres = async (type: 'movie' | 'tv'): Promise<{ genres: { id: n
     const data = await res.json()
     return data
 }
+
+
 
 
 
