@@ -3,7 +3,7 @@ import type { TMDBResult } from '../types'
 
 const IMAGE_BASE_ORIGINAL = 'https://image.tmdb.org/t/p/original'
 
-const ALLOWED_TMDB_PATHS = ['/search/multi', '/search/person', '/person/', '/movie/', '/tv/', '/trending', '/discover/movie', '/discover/tv'] as const
+const ALLOWED_TMDB_PATHS = ['/search/multi', '/search/person', '/person/', '/movie/', '/tv/', '/trending', '/discover/movie', '/discover/tv', '/genre/movie/list', '/genre/tv/list'] as const
 
 function isAllowedPath(path: string): boolean {
     const basePath = path.split('?')[0]
