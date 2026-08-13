@@ -223,18 +223,21 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const selectedCount = isMoviesPage ? moviesSelectedIds.size : (isTVShowsPage ? tvShowsSelectedIds.size : (isFinishedPage ? finishedSelectedIds.size : 0));
 
     const handleRandomPick = () => {
-        if (isMoviesPage && movies.length > 0) {
-            const randomIndex = Math.floor(Math.random() * movies.length)
-            const randomMovie = movies[randomIndex]
-            if (randomMovie.tmdb_id) {
-                navigate(`/movie/${randomMovie.tmdb_id}`)
-            }
-        } else if (isTVShowsPage) {
-            const notStarted = tvShows.filter(show => show.status === 'planning')
-            const pool = notStarted.length > 0 ? notStarted : tvShows
+        if (isMoviesPage) {
+            const planning = movies.filter(m => m.status === 'planning')
+            const pool = planning.length > 0 ? planning : []
             if (pool.length > 0) {
                 const randomIndex = Math.floor(Math.random() * pool.length)
-                const randomShow = pool[randomIndex]
+                const randomMovie = pool[randomIndex]
+                if (randomMovie.tmdb_id) {
+                    navigate(`/movie/${randomMovie.tmdb_id}`)
+                }
+            }
+        } else if (isTVShowsPage) {
+            const planning = tvShows.filter(show => show.status === 'planning')
+            if (planning.length > 0) {
+                const randomIndex = Math.floor(Math.random() * planning.length)
+                const randomShow = planning[randomIndex]
                 if (randomShow.tmdb_id) {
                     navigate(`/tv/${randomShow.tmdb_id}`)
                 }
@@ -436,16 +439,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                 <div className="navbar-actions">
                     {user ? (
                         <>
-                            {isPWA && (
-                                <button
-                                    className="navbar-menu-btn"
-                                    onClick={handleFullscreenToggle}
-                                    aria-label={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-                                    title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-                                >
-                                    <i className={isFullscreen ? "fa-solid fa-compress" : "fa-solid fa-expand"}></i>
-                                </button>
-                            )}
                             <div className="t-dropdown-wrap">
                                 <button
                                     ref={buttonRef}
@@ -498,15 +491,21 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                  }}>
                                      Settings
                                  </button>
-                                 <button className="t-dropdown-item" onClick={() => {
-                                     closeMenu();
-                                     navigate('/Credits');
-                                 }}>
-                                     Credits
-                                 </button>
-                                 <button className="t-dropdown-item" onClick={handleLogout}>
-                                     Logout
-                                 </button>
+                                  <button className="t-dropdown-item" onClick={() => {
+                                      closeMenu();
+                                      navigate('/Credits');
+                                  }}>
+                                      Credits
+                                  </button>
+                                  {isPWA && (
+                                      <button className="t-dropdown-item" onClick={handleFullscreenToggle}>
+                                          <i className={isFullscreen ? "fa-solid fa-compress" : "fa-solid fa-expand"}></i>
+                                          {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
+                                      </button>
+                                  )}
+                                  <button className="t-dropdown-item" onClick={handleLogout}>
+                                      Logout
+                                  </button>
                                  </div>
                             </div>
                         </>
