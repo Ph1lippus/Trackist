@@ -79,7 +79,9 @@ const Admin: React.FC = () => {
     const [pendingAvatarUserId, setPendingAvatarUserId] = useState<string | null>(null)
     const avatarInputRef = useRef<HTMLInputElement>(null)
 
-    const isAdmin = profile?.role === 'admin'
+    if (profile && profile.role !== "admin") return <Navigate to="/" replace />
+
+    const isAdmin = profile?.role === "admin"
 
     const fetchAll = async <T,>(query: any): Promise<T[]> => {
         const allData: T[] = []
@@ -136,7 +138,7 @@ const Admin: React.FC = () => {
     }, [])
 
     useEffect(() => {
-        if (!isAdmin || !user) return
+        if (!user) return
 
         const fetchData = async () => {
             try {
@@ -890,3 +892,8 @@ const Admin: React.FC = () => {
 }
 
 export default Admin
+
+
+
+
+

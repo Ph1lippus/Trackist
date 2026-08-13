@@ -3432,7 +3432,6 @@ body::after {
     overflow: hidden !important; 
     transition: background 0.2s ease, filter 0.2s ease, border-color 0.2s ease;
 }
-
 .calendar-episode:hover {
     opacity: 1;
     filter: brightness(1.15);
@@ -3443,11 +3442,6 @@ body::after {
     border-radius: inherit !important;
     transition: filter 0.2s ease;
 }
-
-
-
-
-
 .calendar-episodes {
     display: flex;
     flex-direction: row;

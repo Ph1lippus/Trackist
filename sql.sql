@@ -15,7 +15,7 @@ CREATE TABLE public.watchlist (
   total_episodes integer DEFAULT 0,
   current_season integer DEFAULT 1,
   current_episode integer DEFAULT 0,
-  status text DEFAULT 'planning'::text CHECK (status = ANY (ARRAY['planning'::text, 'watching'::text, 'completed'::text, 'dropped'::text, 'caught_up'::text])),
+  status text DEFAULT 'planning'::text CHECK (status = ANY (ARRAY['planning'::text, 'watching'::text, 'paused'::text, 'completed'::text, 'dropped'::text, 'caught_up'::text])),
   started_watching_at timestamp with time zone,
   completed_at timestamp with time zone,
   last_watched_at timestamp with time zone,
@@ -44,8 +44,7 @@ CREATE TABLE public.watchlist_episodes (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT watchlist_episodes_pkey PRIMARY KEY (id),
-  CONSTRAINT watchlist_episodes_watchlist_id_fkey FOREIGN KEY (watchlist_id) REFERENCES public.watchlist(id),
-  CONSTRAINT watchlist_episodes_watchlist_id_season_episode_key UNIQUE (watchlist_id, season_number, episode_number)
+  CONSTRAINT watchlist_episodes_watchlist_id_fkey FOREIGN KEY (watchlist_id) REFERENCES public.watchlist(id)
 );
 CREATE TABLE public.user_follows (
   id uuid NOT NULL DEFAULT gen_random_uuid(),

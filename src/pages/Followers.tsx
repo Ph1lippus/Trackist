@@ -107,13 +107,13 @@ const FollowersPage = () => {
         if (isCurrentlyFollowing) {
             await unfollowUser(currentUser.id, userId)
             setFollowers(prev => prev.filter(f => f.id !== userId))
-            followingSet.delete(userId)
+            
         } else {
             await followUser(currentUser.id, userId)
-            const { data } = await getProfileByUsername(userId)
+            const { data } = await getProfile(userId)
             if (data) {
                 setFollowers(prev => [...prev, data])
-                followingSet.add(userId)
+                
             }
         }
 
@@ -243,3 +243,4 @@ const FollowersPage = () => {
 }
 
 export default FollowersPage
+

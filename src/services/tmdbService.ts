@@ -1,9 +1,22 @@
 import type { TMDBResult } from '../types'
-import { getCachedOrFetch } from './cacheService'
+
 
 const IMAGE_BASE_ORIGINAL = 'https://image.tmdb.org/t/p/original'
 
+const ALLOWED_TMDB_PATHS = ['/search/multi', '/search/person', '/person/', '/movie/', '/tv/', '/trending', '/discover/movie', '/discover/tv'] as const
+
+async function isAllowedPath(path: string): boolean {
+    const basePath = path.split('?')[0]
+    return ALLOWED_TMDB_PATHS.some(prefix => basePath === prefix || basePath.startsWith(`${prefix}/`))
+}
+
 async function tmdbProxy(path: string): Promise<Response> {
+    if (!path.startsWith('/')) {
+        throw new Error(`Invalid TMDB path: ${path}`)
+    }
+    if (!isAllowedPath(path)) {
+        throw new Error(`TMDB path not allowed: ${path}`)
+    }
     const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/tmdb-proxy?path=${encodeURIComponent(path)}&_t=${Date.now()}`
     return fetch(url)
 }
@@ -38,14 +51,23 @@ export const getPersonDetails = async (id: number): Promise<{
 }
 
 export const getPopularMovies = async (page: number = 1, vote_count_gte?: number): Promise<{ results: TMDBResult[] }> => {
-    let path = `/movie/popular?page=${page}`
-    if (vote_count_gte) path += `&vote_count.gte=${vote_count_gte}`
+    const path = vote_count_gte
+        ? `/movie/popular?page=${page}&vote_count.gte=${vote_count_gte}`
+        : `/movie/popular?page=${page}`
     const res = await tmdbProxy(path)
     return res.json()
 }
 
-export const getTrendingMovies = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
-    const res = await tmdbProxy(`/trending/movie/week?page=${page}`)
+export const getPopularTVShows = async (page: number = 1, vote_count_gte?: number): Promise<{ results: TMDBResult[] }> => {
+    const path = vote_count_gte
+        ? `/tv/popular?page=${page}&vote_count.gte=${vote_count_gte}`
+        : `/tv/popular?page=${page}`
+    const res = await tmdbProxy(path)
+    return res.json()
+}
+
+export const getTrending = async (timeWindow: 'day' | 'week' = 'day'): Promise<{ results: TMDBResult[] }> => {
+    const res = await tmdbProxy(`/trending/all/${timeWindow}`)
     return res.json()
 }
 
@@ -54,194 +76,256 @@ export const getTopRatedMovies = async (page: number = 1): Promise<{ results: TM
     return res.json()
 }
 
-export const getPopularTV = async (page: number = 1, vote_count_gte?: number): Promise<{ results: TMDBResult[] }> => {
-    let path = `/tv/popular?page=${page}`
-    if (vote_count_gte) path += `&vote_count.gte=${vote_count_gte}`
-    const res = await tmdbProxy(path)
-    return res.json()
-}
-
-export const getTrendingTV = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
-    const res = await tmdbProxy(`/trending/tv/week?page=${page}`)
-    return res.json()
-}
-
-export const getTopRatedTV = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
+export const getTopRatedTVShows = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
     const res = await tmdbProxy(`/tv/top_rated?page=${page}`)
     return res.json()
 }
 
-export const getMovieDetails = async (id: number) => {
-    const path = `/movie/${id}?append_to_response=external_ids,credits,videos,images,release_dates,watch/providers&include_image_language=en,null`
-    const res = await tmdbProxy(path)
-    if (!res.ok) {
-        throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
-    }
+export const getMovieDetails = async (id: number): Promise<{
+    id: number
+    title: string
+    overview?: string
+    poster_path?: string | null
+    backdrop_path?: string | null
+    release_date?: string
+    vote_average?: number
+    vote_count?: number
+    genres?: { id: number; name: string }[]
+    runtime?: number
+    status?: string
+    tagline?: string
+    production_companies?: { id: number; name: string; logo_path?: string | null; origin_country?: string }[]
+}> => {
+    const res = await tmdbProxy(`/movie/${id}`)
     return res.json()
 }
 
-export const getTVDetails = async (id: number) => {
-    return getCachedOrFetch(
-        'tv-details',
-        id,
-        async () => {
-            const path = `/tv/${id}?append_to_response=external_ids,credits,videos,aggregate_credits,images,watch/providers,content_ratings&include_image_language=en,null`
-            const res = await tmdbProxy(path)
-            return res.json()
-        },
-        { ttl: 6 * 60 * 60 * 1000 }
-    )
+export const getTVShowDetails = async (id: number): Promise<{
+    id: number
+    name: string
+    overview?: string
+    poster_path?: string | null
+    backdrop_path?: string | null
+    first_air_date?: string
+    vote_average?: number
+    vote_count?: number
+    genres?: { id: number; name: string }[]
+    number_of_seasons?: number
+    number_of_episodes?: number
+    status?: string
+    episode_run_time?: number[]
+    production_companies?: { id: number; name: string; logo_path?: string | null; origin_country?: string }[]
+}> => {
+    const res = await tmdbProxy(`/tv/${id}`)
+    return res.json()
 }
 
-export const getBestBackdropPath = (
-    backdrops: Array<{
-        file_path: string
-        width: number
-        height: number
-        iso_639_1?: string | null
+export const getTVSeasonDetails = async (tvId: number, seasonNumber: number): Promise<{
+    id: number
+    season_number: number
+    episodes: {
+        id: number
+        episode_number: number
+        name: string
+        overview?: string
+        still_path?: string | null
+        air_date?: string
         vote_average?: number
-        vote_count?: number
-    }> = []
-): string | null => {
-    if (!backdrops.length) return null
-
-    const candidates = backdrops.filter(
-        b => b.iso_639_1 === null
-    )
-
-    const list = candidates.length ? candidates : backdrops
-
-    const best = [...list].sort((a, b) => {
-        const areaA = a.width * a.height
-        const areaB = b.width * b.height
-        if (areaA !== areaB) return areaB - areaA
-
-        if ((a.vote_average ?? 0) !== (b.vote_average ?? 0)) {
-            return (b.vote_average ?? 0) - (a.vote_average ?? 0)
-        }
-
-        return (b.vote_count ?? 0) - (a.vote_count ?? 0)
-    })[0]
-
-    return best?.file_path ?? null
-}
-
-export const getTVSeasonDetails = async (tvId: number, seasonNumber: number) => {
-    return getCachedOrFetch(
-        'tv-season',
-        `${tvId}-${seasonNumber}`,
-        async () => {
-            const res = await tmdbProxy(`/tv/${tvId}/season/${seasonNumber}`)
-            return res.json()
-        },
-        { ttl: 6 * 60 * 60 * 1000 }
-    )
-}
-
-export const getTVSeasons = async (id: number, seasonNumber: number) => {
-    const res = await tmdbProxy(`/tv/${id}/season/${seasonNumber}`)
+        runtime?: number
+    }[]
+}> => {
+    const res = await tmdbProxy(`/tv/${tvId}/season/${seasonNumber}`)
     return res.json()
 }
 
-export const imageUrl = (path: string | null, size: string = 'w500') => {
-    if (!path) return null
-    return `https://image.tmdb.org/t/p/${size}${path}`
+export const getTVEpisodeDetails = async (tvId: number, seasonNumber: number, episodeNumber: number): Promise<{
+    id: number
+    episode_number: number
+    name: string
+    overview?: string
+    still_path?: string | null
+    air_date?: string
+    vote_average?: number
+    runtime?: number
+}> => {
+    const res = await tmdbProxy(`/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}`)
+    return res.json()
 }
 
-export const imageUrlOriginal = (path: string | null) => {
-    if (!path) return null
-    return `${IMAGE_BASE_ORIGINAL}${path}`
+export const getSimilarMovies = async (id: number, page: number = 1): Promise<{ results: TMDBResult[] }> => {
+    const res = await tmdbProxy(`/movie/${id}/similar?page=${page}`)
+    return res.json()
 }
+
+export const getSimilarTVShows = async (id: number, page: number = 1): Promise<{ results: TMDBResult[] }> => {
+    const res = await tmdbProxy(`/tv/${id}/similar?page=${page}`)
+    return res.json()
+}
+
+export const getMovieCredits = async (id: number): Promise<{
+    cast: {
+        id: number
+        name: string
+        character: string
+        profile_path?: string | null
+        order: number
+    }[]
+    crew: {
+        id: number
+        name: string
+        job: string
+        profile_path?: string | null
+        department: string
+    }[]
+}> => {
+    const res = await tmdbProxy(`/movie/${id}/credits`)
+    return res.json()
+}
+
+export const getTVShowCredits = async (id: number): Promise<{
+    cast: {
+        id: number
+        name: string
+        character: string
+        profile_path?: string | null
+        order: number
+    }[]
+    crew: {
+        id: number
+        name: string
+        job: string
+        profile_path?: string | null
+        department: string
+    }[]
+}> => {
+    const res = await tmdbProxy(`/tv/${id}/credits`)
+    return res.json()
+}
+
+export const getVideos = async (id: number, mediaType: 'movie' | 'tv'): Promise<{
+    results: {
+        id: string
+        key: string
+        name: string
+        site: string
+        type: string
+        official: boolean
+    }[]
+}> => {
+    const res = await tmdbProxy(`/${mediaType}/${id}/videos`)
+    return res.json()
+}
+
+export const getWatchProviders = async (id: number, mediaType: 'movie' | 'tv'): Promise<{
+    results?: {
+        flatrate?: { provider_id: number; provider_name: string; logo_path?: string | null }[]
+    }[]
+}> => {
+    const res = await tmdbProxy(`/${mediaType}/${id}/watch/providers`)
+    return res.json()
+}
+
+export const getExternalIds = async (id: number, mediaType: 'movie' | 'tv'): Promise<{
+    imdb_id?: string
+    facebook_id?: string
+    instagram_id?: string
+    twitter_id?: string
+}> => {
+    const res = await tmdbProxy(`/${mediaType}/${id}/external_ids`)
+    return res.json()
+}
+
+export const imageUrl = (path: string | null | undefined, size: string = 'w500'): string | null => {
+    if (!path) return null
+    return `${IMAGE_BASE_ORIGINAL}/${size}${path}`
+}
+
+export const getBackdropUrl = (path: string | null | undefined, size: string = 'original'): string | null => {
+    if (!path) return null
+    return `${IMAGE_BASE_ORIGINAL}/${size}${path}`
+}
+
+
+export const getTVDetails = async (id: number): Promise<{
+    id: number
+    name: string
+    overview?: string
+    poster_path?: string | null
+    backdrop_path?: string | null
+    first_air_date?: string
+    vote_average?: number
+    vote_count?: number
+    genres?: { id: number; name: string }[]
+    number_of_seasons?: number
+    number_of_episodes?: number
+    status?: string
+    episode_run_time?: number[]
+    seasons?: { season_number: number; episode_count: number; air_date?: string }[]
+    images?: { logos?: { file_path: string; language?: string }[]; backdrops?: any[] }
+}> => {
+    const res = await tmdbProxy(`/tv/${id}`)
+    return res.json()
+}
+
+
+export const imageUrlOriginal = (path: string | null | undefined): string | null => {
+    if (!path) return null
+    return `${IMAGE_BASE_ORIGINAL}/original` }
+
+
+export const getBestBackdropPath = (backdrops: any[] | undefined | null): string | null => {
+    if (!backdrops || backdrops.length === 0) return null
+    const english = backdrops.find(b => b.iso_639_1 === 'en')
+    return english?.file_path ?? backdrops[0]?.file_path ?? null
+}
+
+
+
+
+
 
 export const getPersonMovies = async (id: number): Promise<{ results: TMDBResult[] }> => {
     const res = await tmdbProxy(`/person/${id}/movie_credits`)
     return res.json()
 }
 
+
 export const getPersonTV = async (id: number): Promise<{ results: TMDBResult[] }> => {
     const res = await tmdbProxy(`/person/${id}/tv_credits`)
     return res.json()
 }
+
 
 export const getPopularPeople = async (page: number = 1): Promise<{ results: TMDBResult[] }> => {
     const res = await tmdbProxy(`/person/popular?page=${page}`)
     return res.json()
 }
 
-export const discoverMovies = async (params: {
-    page?: number
-    sort_by?: string
-    primary_release_year?: number
-    with_genres?: string
-    'release_date.lte'?: string
-    'release_date.gte'?: string
-    'vote_count.gte'?: number
-}) => {
-    const query = new URLSearchParams()
-    query.append('language', 'en-US')
-    query.append('region', 'US')
-    if (params.page) query.append('page', String(params.page))
-    if (params.sort_by) query.append('sort_by', params.sort_by)
-    if (params.primary_release_year) query.append('primary_release_year', String(params.primary_release_year))
-    if (params.with_genres) query.append('with_genres', params.with_genres)
-    if (params['release_date.lte']) query.append('release_date.lte', params['release_date.lte'])
-    if (params['release_date.gte']) query.append('release_date.gte', params['release_date.gte'])
-    if (params['vote_count.gte']) query.append('vote_count.gte', String(params['vote_count.gte']))
-    
-    const res = await tmdbProxy(`/discover/movie?${query.toString()}`)
-    if (!res.ok) {
-        throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
-    }
+
+
+
+export const discoverMovies = async (page: number = 1, sortBy: string = 'popularity.desc', genres?: number[], year?: number): Promise<{ results: TMDBResult[] }> => {
+    const params = new URLSearchParams({ page: String(page), sort_by: sortBy })
+    if (genres && genres.length > 0) params.set('with_genres', genres.join(','))
+    if (year) params.set('primary_release_year', String(year))
+    const res = await tmdbProxy(`/discover/movie?${params.toString()}`)
+    return res.json()
+}
+
+
+export const discoverTV = async (page: number = 1, sortBy: string = 'popularity.desc', genres?: number[], year?: number): Promise<{ results: TMDBResult[] }> => {
+    const params = new URLSearchParams({ page: String(page), sort_by: sortBy })
+    if (genres && genres.length > 0) params.set('with_genres', genres.join(','))
+    if (year) params.set('first_air_date_year', String(year))
+    const res = await tmdbProxy(`/discover/tv?${params.toString()}`)
+    return res.json()
+}
+
+
+export const getGenres = async (): Promise<{ genres: { id: number; name: string }[] }> => {
+    const res = await tmdbProxy(`/genre/movie/list`)
     const data = await res.json()
-    if (data.status_code || data.status_message) {
-        throw new Error(`TMDB API error: ${data.status_message || 'Unknown error'}`)
-    }
     return data
 }
 
-export const discoverTV = async (params: {
-    page?: number
-    sort_by?: string
-    first_air_date_year?: number
-    with_genres?: string
-    'first_air_date.lte'?: string
-    'first_air_date.gte'?: string
-    'vote_count.gte'?: number
-}) => {
-    const query = new URLSearchParams()
-    query.append('language', 'en-US')
-    if (params.page) query.append('page', String(params.page))
-    if (params.sort_by) query.append('sort_by', params.sort_by)
-    if (params.first_air_date_year) query.append('first_air_date_year', String(params.first_air_date_year))
-    if (params.with_genres) query.append('with_genres', params.with_genres)
-    if (params['first_air_date.lte']) query.append('first_air_date.lte', params['first_air_date.lte'])
-    if (params['first_air_date.gte']) query.append('first_air_date.gte', params['first_air_date.gte'])
-    if (params['vote_count.gte']) query.append('vote_count.gte', String(params['vote_count.gte']))
-    
-    const res = await tmdbProxy(`/discover/tv?${query.toString()}`)
-    if (!res.ok) {
-        throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
-    }
-    const data = await res.json()
-    if (data.status_code || data.status_message) {
-        throw new Error(`TMDB API error: ${data.status_message || 'Unknown error'}`)
-    }
-    return data
-}
 
-export const getGenres = async (type: 'movie' | 'tv') => {
-    const cacheKey = `genres-${type}`
-    return getCachedOrFetch(
-        'genres',
-        cacheKey,
-        async () => {
-            const res = await tmdbProxy(`/genre/${type}/list`)
-            if (!res.ok) {
-                throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
-            }
-            const data = await res.json()
-            return data.genres || []
-        },
-        { ttl: 24 * 60 * 60 * 1000 }
-    )
-}
