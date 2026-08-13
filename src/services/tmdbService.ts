@@ -1,7 +1,23 @@
 import type { TMDBResult } from '../types'
 
 
-const IMAGE_BASE_ORIGINAL = 'https://image.tmdb.org/t/p/original'
+const IMAGE_BASE = 'https://image.tmdb.org/t/p'
+
+export const imageUrl = (path: string | null | undefined, size: string = 'w500'): string | null => {
+    if (!path) return null
+    return `${IMAGE_BASE}/${size}${path}`
+}
+
+export const getBackdropUrl = (path: string | null | undefined, size: string = 'original'): string | null => {
+    if (!path) return null
+    return `${IMAGE_BASE}/${size}${path}`
+}
+
+
+export const imageUrlOriginal = (path: string | null | undefined): string | null => {
+    if (!path) return null
+    return `${IMAGE_BASE}/original${path}`
+}
 
 const ALLOWED_TMDB_PATHS = ['/search/', '/person/', '/movie/', '/tv/', '/trending/', '/discover/', '/genre/'] as const
 
@@ -257,17 +273,6 @@ export const getExternalIds = async (id: number, mediaType: 'movie' | 'tv'): Pro
     return res.json()
 }
 
-export const imageUrl = (path: string | null | undefined, size: string = 'w500'): string | null => {
-    if (!path) return null
-    return `${IMAGE_BASE_ORIGINAL}/${size}${path}`
-}
-
-export const getBackdropUrl = (path: string | null | undefined, size: string = 'original'): string | null => {
-    if (!path) return null
-    return `${IMAGE_BASE_ORIGINAL}/${size}${path}`
-}
-
-
 export const getTVDetails = async (id: number): Promise<{
     id: number
     name: string
@@ -297,10 +302,6 @@ export const getTVDetails = async (id: number): Promise<{
 }> => {
     const res = await tmdbProxy(`/tv/${id}`)
     return res.json()
-}
-export const imageUrlOriginal = (path: string | null | undefined): string | null => {
-    if (!path) return null
-    return `${IMAGE_BASE_ORIGINAL}/original`
 }
 
 
