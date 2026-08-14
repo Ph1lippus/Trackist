@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+﻿import { useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import type { VirtuosoHandle } from 'react-virtuoso'
 
@@ -44,7 +44,7 @@ export function useScrollRestoration() {
         let timeout: ReturnType<typeof setTimeout>
         const throttledSave = () => {
             clearTimeout(timeout)
-            timeout = setTimeout(handleScroll, 100)
+            timeout = setTimeout(handleScroll, 200)
         }
 
         window.addEventListener('scroll', throttledSave, { passive: true })
