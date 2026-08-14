@@ -310,10 +310,22 @@ export const getTVDetails = async (id: number): Promise<{
 
 export const getBestBackdropPath = (backdrops: any[] | undefined | null): string | null => {
     if (!backdrops || backdrops.length === 0) return null
-    const noLanguage = backdrops.find(b => b.iso_639_1 == null || b.iso_639_1 === '')
-    if (noLanguage?.file_path) return noLanguage.file_path
-    const english = backdrops.find(b => b.iso_639_1 === 'en')
-    return english?.file_path ?? backdrops[0]?.file_path ?? null
+    
+    const candidates = backdrops
+        .filter(b => b.iso_639_1 == null || b.iso_639_1 === '')
+        .sort((a, b) => {
+            const aVote = a.vote_average ?? 0
+            const bVote = b.vote_average ?? 0
+            if (bVote !== aVote) return bVote - aVote
+            
+            const aCount = a.vote_count ?? 0
+            const bCount = b.vote_count ?? 0
+            if (bCount !== aCount) return bCount - aCount
+            
+            return (b.width ?? 0) - (a.width ?? 0)
+        })
+    
+    return candidates[0]?.file_path ?? null
 }
 
 
