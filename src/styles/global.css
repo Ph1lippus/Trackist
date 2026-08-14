@@ -1,4 +1,4 @@
-/* ============================
+﻿/* ============================
    Large tablets
    ============================ */
 @media (max-width: 1200px) {
@@ -162,9 +162,83 @@
     .friend-card{
         width: 100% !important;
     }
-}
+    /* Mobile: static aurora-like background instead of animated layers */
+    body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+        z-index: -2;
+        background-image:
+            radial-gradient(ellipse at 20% 25%, rgba(255,41,112,0.25) 0%, transparent 55%),
+            radial-gradient(ellipse at 80% 30%, rgba(114,46,240,0.22) 0%, transparent 60%),
+            radial-gradient(ellipse at 50% 80%, rgba(0,255,123,0.18) 0%, transparent 50%),
+            radial-gradient(ellipse at 25% 70%, rgba(0,191,255,0.18) 0%, transparent 55%),
+            radial-gradient(circle at 75% 75%, rgba(240,46,175,0.22) 0%, transparent 45%);
+        animation: none !important;
+        mix-blend-mode: normal !important;
+        opacity: 1 !important;
+    }
 
-@media (max-width: 480) {
+    body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        z-index: -1;
+        background-image:
+            radial-gradient(1px 1px at 15% 20%, rgba(255,255,255,0.6), transparent),
+            radial-gradient(1.5px 1.5px at 35% 45%, rgba(133,230,255,0.5), transparent),
+            radial-gradient(1px 1px at 55% 75%, rgba(255,255,255,0.4), transparent),
+            radial-gradient(1.5px 1.5px at 75% 35%, rgba(255,255,255,0.5), transparent),
+            radial-gradient(1px 1px at 90% 65%, rgba(255,255,255,0.4), transparent),
+            radial-gradient(2px 2px at 25% 60%, rgba(255,255,255,0.7), transparent),
+            radial-gradient(1.5px 1.5px at 65% 85%, rgba(200,100,255,0.6), transparent),
+            radial-gradient(1px 1px at 45% 40%, rgba(255,255,255,0.5), transparent);
+        background-size: 350px 350px;
+        background-repeat: repeat;
+        animation: none !important;
+        opacity: 0.35 !important;
+    }
+
+    /* Reduce backdrop-filter on mobile for GPU performance */
+    .navbar,
+    .detail-page__actions,
+    .detail-page__actions-mobile,
+    .detail-page__genre,
+    .detail-page__age-rating,
+    .discover-card__add-icon,
+    .discover-card__check-icon,
+    .calendar-day-more-btn,
+    .detail-page__episode-card,
+    .detail-page__cast-item,
+    .upcoming-side-panel,
+    .modal-overlay,
+    .detail-page__trailer-overlay,
+    .confirm-modal-overlay {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
+    /* Solid backgrounds instead of translucent overlays */
+    .detail-page__backdrop-overlay {
+        background: rgba(5, 5, 5, 0.88) !important;
+    }
+
+    .detail-page__actions {
+        background: rgba(5, 5, 5, 0.85) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .detail-page__actions-mobile {
+        background: rgba(5, 5, 5, 0.88) !important;
+    }
+
+    .upcoming-side-panel {
+        background: rgba(10, 10, 15, 0.95) !important;
+    }
     .detail-page__episode-details strong{
         font-size:  0.7rem;
     }

@@ -1,14 +1,14 @@
-import React, { useEffect, useState, useRef } from 'react'
+﻿import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
 import { loadCalendar, type CalendarItem } from '../services/calendarService'
 import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { 
-    getYearMonth, 
-    isToday, 
-    formatDateString 
+import {
+    getYearMonth,
+    isToday,
+    formatDateString
 } from '../utils/dateUtils'
 
 interface UpcomingItem {
@@ -65,36 +65,80 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
     const [dayCellInnerWidth, setDayCellInnerWidth] = useState(0)
     const calendarGridRef = useRef<HTMLDivElement>(null)
 
+    const monthKey = useMemo(() => {
+        const y = currentMonth.getFullYear()
+        const m = currentMonth.getMonth()
+        return `${y}-${m}`
+    }, [currentMonth])
+
+    const groupedItems = useMemo(() => {
+        return upcomingItems.reduce((groups, upcoming) => {
+            if (!upcoming.date) return groups
+            const dateKey = upcoming.date
+            const { year, month } = getYearMonth(dateKey)
+            const [viewYear, viewMonth] = monthKey.split('-').map(Number)
+            if (year === viewYear && month === viewMonth) {
+                if (!groups[dateKey]) groups[dateKey] = []
+                groups[dateKey].push(upcoming)
+            }
+            return groups
+        }, {} as Record<string, UpcomingItem[]>)
+    }, [upcomingItems, monthKey])
+
+    const calendarDays = useMemo(() => {
+        const year = currentMonth.getFullYear()
+        const month = currentMonth.getMonth()
+        const firstDay = new Date(Date.UTC(year, month, 1))
+        const lastDay = new Date(Date.UTC(year, month + 1, 0))
+        const daysInMonth = lastDay.getUTCDate()
+        let startDayOfWeek = firstDay.getUTCDay()
+        startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1
+
+        const days: (Date | null)[] = []
+        for (let i = 0; i < startDayOfWeek; i++) days.push(null)
+        for (let i = 1; i <= daysInMonth; i++) days.push(new Date(Date.UTC(year, month, i)))
+        return days
+    }, [currentMonth])
+
+    const measureDayCell = useCallback(() => {
+        const grid = calendarGridRef.current
+        if (!grid) return
+        const gridWidth = grid.getBoundingClientRect().width
+        const style = getComputedStyle(grid)
+        const columnGap = parseFloat(style.columnGap || style.gap || '9.6')
+        const totalGaps = 6 * columnGap
+        const availableWidth = gridWidth - totalGaps
+        const cellWidth = availableWidth / 7
+        const dayEl = grid.querySelector('.calendar-day') as HTMLElement | null
+        if (dayEl) {
+            const dayStyle = getComputedStyle(dayEl)
+            const paddingX = parseFloat(dayStyle.paddingLeft) + parseFloat(dayStyle.paddingRight)
+            setDayCellInnerWidth(Math.max(0, cellWidth - paddingX))
+        } else {
+            setDayCellInnerWidth(Math.max(0, cellWidth))
+        }
+    }, [])
+
     useEffect(() => {
         if (loading) return
         const grid = calendarGridRef.current
         if (!grid) return
 
-        const measure = () => {
-            const gridRect = grid.getBoundingClientRect()
-            const gridWidth = gridRect.width
-            const style = getComputedStyle(grid)
-            const columnGap = parseFloat(style.columnGap || style.gap || '9.6')
-            const totalGaps = 6 * columnGap
-            const availableWidth = gridWidth - totalGaps
-            const cellWidth = availableWidth / 7
-            const dayEl = grid.querySelector('.calendar-day') as HTMLElement | null
-            if (dayEl) {
-                const dayStyle = getComputedStyle(dayEl)
-                const paddingX = parseFloat(dayStyle.paddingLeft) + parseFloat(dayStyle.paddingRight)
-                setDayCellInnerWidth(Math.max(0, cellWidth - paddingX))
-            } else {
-                setDayCellInnerWidth(Math.max(0, cellWidth))
-            }
+        let timeout: ReturnType<typeof setTimeout>
+        const scheduleMeasure = () => {
+            clearTimeout(timeout)
+            timeout = setTimeout(() => measureDayCell(), 80)
         }
-        const raf = requestAnimationFrame(() => measure())
-        const observer = new ResizeObserver(measure)
+
+        const raf = requestAnimationFrame(() => scheduleMeasure())
+        const observer = new ResizeObserver(scheduleMeasure)
         observer.observe(grid)
         return () => {
             cancelAnimationFrame(raf)
+            clearTimeout(timeout)
             observer.disconnect()
         }
-    }, [loading])
+    }, [loading, measureDayCell])
 
     useEffect(() => {
         const fetchUpcoming = async () => {
@@ -104,57 +148,34 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                 return
             }
 
-            // Check if any shows need a season check (stale check > 6 hours ago)
             const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
             const { data: staleShows } = await supabase
                 .from('watchlist')
-                .select('id, tmdb_id, last_season_number, last_season_check')
+                .select('id')
                 .eq('user_id', user.id)
                 .eq('media_type', 'tv')
                 .not('last_season_number', 'is', null)
                 .or(`last_season_check.is.null,last_season_check.lt.${sixHoursAgo}`)
                 .limit(1)
 
-            // If there are stale shows, trigger the Edge Function to check for new seasons
             if (staleShows && staleShows.length > 0) {
-                let seasonCheckOk = false
-                try {
-                    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim()
-                    const { data: { session } } = await supabase.auth.getSession()
-
-                    if (session?.access_token) {
-                        const res = await fetch(`${supabaseUrl}/functions/v1/check-new-seasons`, {
+                const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim()
+                supabase.auth.getSession().then(({ data: { session } }) => {
+                    if (session?.access_token && supabaseUrl) {
+                        fetch(`${supabaseUrl}/functions/v1/check-new-seasons`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
                                 'Authorization': `Bearer ${session.access_token}`
                             },
                             body: JSON.stringify({ userId: user.id })
+                        }).catch(err => {
+                            console.error('Background season check failed:', err)
                         })
-                        if (res.ok) {
-                            seasonCheckOk = true
-                        } else {
-                            const text = await res.text()
-                            let errorMessage = text
-                            try {
-                                const json = JSON.parse(text)
-                                errorMessage = json.error || text
-                            } catch {
-                                // ignore JSON parse error, fallback to raw text
-                            }
-                            console.error(`Season check failed (${res.status}):`, errorMessage)
-                        }
                     }
-                } catch (err) {
-                    console.error('Failed to trigger season check:', err)
-                }
-
-                if (!seasonCheckOk) {
-                    await new Promise(resolve => setTimeout(resolve, 1500))
-                }
+                }).catch(() => {})
             }
 
-            // Stale-while-revalidate calendar loading
             loadCalendar(user.id, (freshItems) => {
                 setUpcomingItems(freshItems.map(mapCalendarItem))
             }).then((items) => {
@@ -162,49 +183,11 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                 setLoading(false)
             })
             return
-
         }
         fetchUpcoming()
     }, [])
 
-    const groupedItems = upcomingItems.reduce((groups, upcoming) => {
-        if (!upcoming.date) return groups
-        const dateKey = upcoming.date // Already in YYYY-MM-DD format
-        const { year, month } = getYearMonth(dateKey)
-        const currentYear = currentMonth.getFullYear()
-        const currentMonthIndex = currentMonth.getMonth()
-        
-        // Only include items in the current month being viewed
-        if (year === currentYear && month === currentMonthIndex) {
-            if (!groups[dateKey]) {
-                groups[dateKey] = []
-            }
-            groups[dateKey].push(upcoming)
-        }
-        return groups
-    }, {} as Record<string, UpcomingItem[]>)
-
-    const getDaysInMonth = (date: Date) => {
-        const year = date.getFullYear()
-        const month = date.getMonth()
-        const firstDay = new Date(Date.UTC(year, month, 1))
-        const lastDay = new Date(Date.UTC(year, month + 1, 0))
-        const daysInMonth = lastDay.getUTCDate()
-        // Adjust for Monday as first day (0 = Monday, 6 = Sunday)
-        let startDayOfWeek = firstDay.getUTCDay()
-        startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1
-        
-        const days = []
-        for (let i = 0; i < startDayOfWeek; i++) {
-            days.push(null)
-        }
-        for (let i = 1; i <= daysInMonth; i++) {
-            days.push(new Date(Date.UTC(year, month, i)))
-        }
-        return days
-    }
-
-    const calendarDays = getDaysInMonth(currentMonth)
+    const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
     if (loading) return (
         <section className="dashboard-page">
@@ -213,8 +196,6 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
             </div>
         </section>
     )
-
-    const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
     return (
         <section className="dashboard-page" style={{ height: '100vh', overflow: 'hidden' }}>
@@ -228,7 +209,6 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                         {calendarDays.map((day, index) => {
                             if (!day) return <div key={`empty-${index}`} className="calendar-day calendar-day--empty" />
 
-                            //  NEW WAY (100% Timezone Safe - Matches both computers perfectly)
                             const dateKey = `${day.getUTCFullYear()}-${String(day.getUTCMonth() + 1).padStart(2, '0')}-${String(day.getUTCDate()).padStart(2, '0')}`
 
                             const dayItems = groupedItems[dateKey] || []
@@ -273,15 +253,15 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                             }
 
                             return (
-                                <div 
-                                    key={dateKey} 
+                                <div
+                                    key={dateKey}
                                     className={`calendar-day ${isTodayDate ? 'calendar-day--today' : ''} ${dayItems.length > 0 ? 'calendar-day--has-episodes' : ''}`}
                                     style={{ position: 'relative' }}
                                 >
                                     <span className="calendar-day-number" style={{ position: 'absolute', top: '0.4rem', left: '0.4rem' }}>{day.getUTCDate()}</span>
                                     <div className="calendar-episodes" style={{ display: 'flex', flexDirection: 'row', gap: '0', paddingTop: '1.2rem', position: 'relative', flexWrap: 'nowrap', overflow: 'hidden' }}>
                                         {visibleItems.map((item, idx) => (
-                                            <div 
+                                            <div
                                                 key={item.id}
                                                 className="calendar-episode"
                                                 onClick={() => {
@@ -291,7 +271,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                                         navigate(`/tv/${item.item.tmdb_id}`)
                                                     }
                                                 }}
-                                                 style={{ 
+                                                 style={{
                                                      marginLeft: idx > 0 ? `-${dynamicOverlap}px` : '0',
                                                      position: 'relative',
                                                      zIndex: idx
@@ -299,9 +279,9 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                             >
                                                 <div className="calendar-episode-poster">
                                                     {item.item.poster_path ? (
-                                                            <img 
-                                                                src={(imageUrl as (path: string) => string)(item.item.poster_path)} 
-                                                                alt={item.item.title} 
+                                                            <img
+                                                                src={imageUrl(item.item.poster_path, 'w185')}
+                                                                alt={item.item.title}
                                                             />
                                                     ) : (
                                                         <div className="calendar-episode-no-poster">
@@ -313,7 +293,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                         ))}
                                     </div>
                                     {hasMore && (
-                                        <button 
+                                        <button
                                             className="calendar-day-more-btn"
                                             onClick={(e) => {
                                                 e.stopPropagation()
@@ -336,12 +316,12 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                         <div className="upcoming-side-panel-header">
                             <h3 className="upcoming-side-panel-title">
                                 {formatDateString(selectedDate.dateKey, {
-                                    month: 'long', 
+                                    month: 'long',
                                     day: 'numeric',
                                     year: 'numeric'
                                 })}
                             </h3>
-                            <button 
+                            <button
                                 className="upcoming-side-panel-close"
                                 onClick={() => setSelectedDate(null)}
                             >
@@ -363,8 +343,8 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                 >
                                     <div className="upcoming-episode-card-poster">
                                         {item.item.poster_path ? (
-                                            <img 
-                                                src={(imageUrl as (path: string) => string)(item.item.poster_path)} 
+                                            <img
+                                                src={imageUrl(item.item.poster_path, 'w185')}
                                                 alt={item.item.title}
                                             />
                                         ) : (

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+﻿import React, { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
@@ -66,55 +66,34 @@ const UpcomingNew: React.FC = () => {
                 return
             }
 
-            // Check if any shows need a season check (stale check > 6 hours ago)
             const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
             const { data: staleShows } = await supabase
                 .from('watchlist')
-                .select('id, tmdb_id, last_season_number, last_season_check')
+                .select('id')
                 .eq('user_id', user.id)
                 .eq('media_type', 'tv')
                 .not('last_season_number', 'is', null)
                 .or(`last_season_check.is.null,last_season_check.lt.${sixHoursAgo}`)
                 .limit(1)
 
-            // If there are stale shows, trigger the Edge Function to check for new seasons
             if (staleShows && staleShows.length > 0) {
-                let seasonCheckOk = false
-                try {
-                    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim()
-                    const { data: { session } } = await supabase.auth.getSession()
-
-                    if (session?.access_token) {
-                        const res = await fetch(`${supabaseUrl}/functions/v1/check-new-seasons`, {
+                const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim()
+                supabase.auth.getSession().then(({ data: { session } }) => {
+                    if (session?.access_token && supabaseUrl) {
+                        fetch(`${supabaseUrl}/functions/v1/check-new-seasons`, {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/json',
                                 'Authorization': `Bearer ${session.access_token}`
                             },
                             body: JSON.stringify({ userId: user.id })
+                        }).catch(err => {
+                            console.error('Background season check failed:', err)
                         })
-                        if (res.ok) {
-                            seasonCheckOk = true
-                        } else {
-                            const text = await res.text()
-                            let errorMessage = text
-                            try {
-                                const json = JSON.parse(text)
-                                errorMessage = json.error || text
-                            } catch {}
-                            console.error(`Season check failed (${res.status}):`, errorMessage)
-                        }
                     }
-                } catch (err) {
-                    console.error('Failed to trigger season check:', err)
-                }
-
-                if (!seasonCheckOk) {
-                    await new Promise(resolve => setTimeout(resolve, 1500))
-                }
+                }).catch(() => {})
             }
 
-            // Stale-while-revalidate calendar loading
             loadCalendar(user.id, (freshItems) => {
                 setUpcomingItems(freshItems.map(mapCalendarItem))
             }).then((items) => {
@@ -125,27 +104,26 @@ const UpcomingNew: React.FC = () => {
         fetchUpcoming()
     }, [])
 
-    // Group items by date and filter out past dates
-    const groupedItems = upcomingItems.reduce((groups, upcoming) => {
-        if (!upcoming.date) return groups
-        if (!groups[upcoming.date]) {
-            groups[upcoming.date] = []
-        }
-        groups[upcoming.date].push(upcoming)
-        return groups
-    }, {} as Record<string, UpcomingItem[]>)
+    const groupedItems = useMemo(() => {
+        return upcomingItems.reduce((groups, upcoming) => {
+            if (!upcoming.date) return groups
+            if (!groups[upcoming.date]) {
+                groups[upcoming.date] = []
+            }
+            groups[upcoming.date].push(upcoming)
+            return groups
+        }, {} as Record<string, UpcomingItem[]>)
+    }, [upcomingItems])
 
-    // Sort dates chronologically
-    const sortedDates = Object.keys(groupedItems).sort()
-
-    // Sort items within each date (episodes before movies, then by title)
-    const sortedGroupedItems = sortedDates.map(date => {
-        const items = [...groupedItems[date]].sort((a, b) => {
-            if (a.type !== b.type) return a.type === 'episode' ? -1 : 1
-            return a.title.localeCompare(b.title)
+    const sortedGroupedItems = useMemo(() => {
+        return Object.keys(groupedItems).sort().map(date => {
+            const items = [...groupedItems[date]].sort((a, b) => {
+                if (a.type !== b.type) return a.type === 'episode' ? -1 : 1
+                return a.title.localeCompare(b.title)
+            })
+            return { date, items }
         })
-        return { date, items }
-    })
+    }, [groupedItems])
 
     if (loading) return (
         <section className="dashboard-page">
@@ -194,7 +172,7 @@ const UpcomingNew: React.FC = () => {
                                             <div className="upcoming-new-card-poster">
                                                 {item.item.poster_path ? (
                                                         <img
-                                                            src={(imageUrl as (path: string) => string)(item.item.poster_path)}
+                                                            src={imageUrl(item.item.poster_path, 'w185')}
                                                             alt={item.item.title}
                                                             loading="lazy"
                                                         />
@@ -221,7 +199,7 @@ const UpcomingNew: React.FC = () => {
 
                                                 {item.episode?.title && (
                                                     <p className="upcoming-new-card-episode-title">
-                                                        "{item.episode.title}"
+                                                        &quot;{item.episode.title}&quot;
                                                     </p>
                                                 )}
 
@@ -233,7 +211,7 @@ const UpcomingNew: React.FC = () => {
                                             </div>
 
                                             <div className="upcoming-new-card-arrow">
-                                                ›
+                                                &rsaquo;
                                             </div>
                                         </div>
                                     ))}
