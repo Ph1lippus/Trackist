@@ -16,7 +16,7 @@ const EpisodeWatchModal: React.FC<EpisodeWatchModalProps> = ({ episode, onClose,
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="add-modal" style={{ maxWidth: '400px' }} onClick={e => e.stopPropagation()}>
-                <button className="modal-close" onClick={onClose}>âœ•</button>
+                <button className="modal-close" onClick={onClose}>✖</button>
                 
                 {stillUrl && (
                     <img src={stillUrl} alt="Episode still" style={{ 

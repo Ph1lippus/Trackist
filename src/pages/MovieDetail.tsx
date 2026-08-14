@@ -257,7 +257,7 @@ const MovieDetail: React.FC = () => {
                             {runtime && <span className="detail-page__runtime">{runtime}</span>}
                             {rating !== undefined && rating !== null && (
                                 <span className="detail-page__rating" aria-label={`Rating: ${rating} out of 10`}>
-                                    <span aria-hidden="true">â˜…</span> {rating}
+                                    <span aria-hidden="true">★</span> {rating}
                                 </span>
                             )}
 

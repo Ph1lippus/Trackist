@@ -169,7 +169,7 @@ const AddModal: React.FC<AddModalProps> = ({ item, onClose, onAdd, onAddWatchlis
         return (
             <div className="modal-overlay" onClick={onClose}>
                 <div className="media-detail-view" onClick={e => e.stopPropagation()}>
-                    <button className="modal-close" onClick={onClose}>âœ•</button>
+                    <button className="modal-close" onClick={onClose}>✖</button>
 
                     <div className="media-detail-layout">
                         <div className="media-detail-info">
@@ -186,9 +186,9 @@ const AddModal: React.FC<AddModalProps> = ({ item, onClose, onAdd, onAddWatchlis
                             )}
 
                             <div className="media-detail-meta">
-                                {item.vote_average && <span>â­ {item.vote_average.toFixed(1)}</span>}
-                                {episodes.length > 0 && <span>ðŸ“º {episodes.length} episodes</span>}
-                                {seasons.length > 0 && <span>ðŸ“¦ {seasons.length} seasons</span>}
+                                {item.vote_average && <span>★ {item.vote_average.toFixed(1)}</span>}
+                                {episodes.length > 0 && <span>📺 {episodes.length} episodes</span>}
+                                {seasons.length > 0 && <span>📦 {seasons.length} seasons</span>}
                             </div>
 
                             {seasons.length > 1 && (
@@ -247,13 +247,13 @@ const AddModal: React.FC<AddModalProps> = ({ item, onClose, onAdd, onAddWatchlis
                                                 <div className="media-detail-episode-info">
                                                     <div className="media-detail-episode-number">
                                                         <div className={`media-detail-episode-check ${selected ? 'checked' : ''}`}>
-                                                            {selected && <span>âœ“</span>}
+                                                            {selected && <span>✓</span>}
                                                         </div>
                                                         <span>Episode {ep.episode_number}</span>
                                                     </div>
                                                     <div className="media-detail-episode-details">
                                                         <strong>{ep.name || `Episode ${ep.episode_number}`}</strong>
-                                                        {ep.air_date && <span> Â· {ep.air_date}</span>}
+                                                        {ep.air_date && <span> · {ep.air_date}</span>}
                                                     </div>
                                                 </div>
                                             </div>
@@ -272,7 +272,7 @@ const AddModal: React.FC<AddModalProps> = ({ item, onClose, onAdd, onAddWatchlis
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="add-modal" onClick={e => e.stopPropagation()}>
-                <button className="modal-close" onClick={onClose}>âœ•</button>
+                <button className="modal-close" onClick={onClose}>✖</button>
                 <div className="add-modal__preview">
                     {posterUrl ? (
                         <img src={posterUrl} alt={title} />

@@ -226,12 +226,6 @@
         filter: none !important;
     }
 
-    /* Use content-visibility to skip rendering off-screen episode cards */
-    .detail-page__episode-card {
-        content-visibility: auto;
-        contain-intrinsic-size: 0 80px;
-    }
-
     /* Reduce motion on mobile for slower devices */
     @media (prefers-reduced-motion: reduce) {
         .mobile-tvshow-card-sweep {
@@ -244,21 +238,53 @@
 
     /* Solid backgrounds instead of translucent overlays */
     .detail-page__backdrop-overlay {
-        background: rgba(5, 5, 5, 0.88) !important;
+        background: rgba(18, 18, 28, 0.78) !important;
     }
 
     .detail-page__actions {
-        background: rgba(5, 5, 5, 0.85) !important;
+        background: rgba(18, 18, 28, 0.75) !important;
         border: 1px solid rgba(255, 255, 255, 0.1) !important;
     }
 
     .detail-page__actions-mobile {
-        background: rgba(5, 5, 5, 0.88) !important;
+        background: rgba(18, 18, 28, 0.78) !important;
     }
 
     .upcoming-side-panel {
-        background: rgba(10, 10, 15, 0.95) !important;
+        background: rgba(18, 18, 28, 0.82) !important;
     }
+    /* Remove remaining backdrop-filter on mobile elements */
+    .mobile-bottom-navbar,
+    .upcoming-new-scroll-top,
+    .mobile-view-toggle-fixed,
+    .mobile-view-toggle-btn,
+    .selection-action-bar,
+    .selection-action-btn,
+    .confirm-modal-content,
+    .detail-page__season-select,
+    .search-dropdown,
+    .media-card__add-icon,
+    .media-card__check-icon,
+    .media-card__icon-btn,
+    .media-card__unwatch-icon,
+    .media-card__confirm-overlay,
+    .discover-card__rating,
+    .person-card__rating,
+    .avatar-hover-overlay,
+    .lists-page__form-section,
+    .lists-page__form input,
+    .lists-page__action-btn,
+    .lists-page__reorder-btn,
+    .calendar-episode-badge,
+    .upcoming-side-panel-header,
+    .upcoming-episode-card,
+    .navbar-brand-row::after,
+    .secondary-navbar-inner,
+    .media-card__no-poster {
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+    }
+
     .detail-page__episode-details strong{
         font-size:  0.7rem;
     }

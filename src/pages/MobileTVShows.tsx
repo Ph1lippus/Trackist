@@ -239,7 +239,7 @@ const MobileTVShows: React.FC = () => {
                     }
                     await useLibraryStore.getState().refreshItem(show.id)
 
-                    // Clear sweep â€” all data is now correct
+                    // Clear sweep — all data is now correct
                     setSweepId(null)
                 }, 500)
             }

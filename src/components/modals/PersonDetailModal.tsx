@@ -100,7 +100,7 @@ const PersonDetailModal: React.FC<PersonDetailModalProps> = ({ item, onClose, on
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-content" onClick={e => e.stopPropagation()}>
-                <button className="modal-close" onClick={onClose}>âœ•</button>
+                <button className="modal-close" onClick={onClose}>✖</button>
 
                 {loading ? (
                     <div className="discover-loading"><div className="discover-spinner" /><p>Loading details...</p></div>

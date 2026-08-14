@@ -673,7 +673,7 @@ const TVShowDetail: React.FC = () => {
                             {displaySeasonCount > 0 && <span className="detail-page__seasons">{displaySeasonCount} Seasons</span>}
                             {rating !== undefined && rating !== null && (
                                 <span className="detail-page__rating" aria-label={`Rating: ${rating} out of 10`}>
-                                    <span aria-hidden="true">â˜…</span> {rating}
+                                    <span aria-hidden="true">★</span> {rating}
                                 </span>
                             )}
 
@@ -935,7 +935,7 @@ const TVShowDetail: React.FC = () => {
                                                     <div className="detail-page__episode-meta">
                                                         {ep.air_date && <span>{ep.air_date}</span>}
                                                         {ep.runtime && <span>{ep.runtime} min</span>}
-                                                        {!isMobile && isEpisodeReleased(ep) && ep.vote_average && ep.vote_average > 0 && <span>â˜… {ep.vote_average.toFixed(1)}</span>}
+                                                        {!isMobile && isEpisodeReleased(ep) && ep.vote_average && ep.vote_average > 0 && <span>★ {ep.vote_average.toFixed(1)}</span>}
                                                     </div>
                                             </div>
                                         </div>
