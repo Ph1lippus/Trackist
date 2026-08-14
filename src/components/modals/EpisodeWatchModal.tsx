@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import type { WatchlistEpisode } from '../../types'
 import { imageUrl } from '../../services/tmdbService'
 
@@ -11,12 +11,12 @@ interface EpisodeWatchModalProps {
 }
 
 const EpisodeWatchModal: React.FC<EpisodeWatchModalProps> = ({ episode, onClose, onMarkSingle, onMarkAll, onMarkAllWatched }) => {
-    const stillUrl = episode.still_path ? imageUrl(episode.still_path) : null
+    const stillUrl = episode.still_path ? imageUrl(episode.still_path, 'w300') : null
 
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="add-modal" style={{ maxWidth: '400px' }} onClick={e => e.stopPropagation()}>
-                <button className="modal-close" onClick={onClose}>✕</button>
+                <button className="modal-close" onClick={onClose}>âœ•</button>
                 
                 {stillUrl && (
                     <img src={stillUrl} alt="Episode still" style={{ 

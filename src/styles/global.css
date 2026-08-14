@@ -221,6 +221,26 @@
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
     }
+    /* Remove expensive image blur on unwatched episode cards for mobile performance */
+    .detail-page__episode-still img {
+        filter: none !important;
+    }
+
+    /* Use content-visibility to skip rendering off-screen episode cards */
+    .detail-page__episode-card {
+        content-visibility: auto;
+        contain-intrinsic-size: 0 80px;
+    }
+
+    /* Reduce motion on mobile for slower devices */
+    @media (prefers-reduced-motion: reduce) {
+        .mobile-tvshow-card-sweep {
+            animation-duration: 0.01ms !important;
+        }
+        .detail-page__episode-card {
+            transition-duration: 0.01ms !important;
+        }
+    }
 
     /* Solid backgrounds instead of translucent overlays */
     .detail-page__backdrop-overlay {
@@ -1163,6 +1183,7 @@ body::after {
 /* Card grid - responsive grid of media cards */
 .discover-grid {
     display: grid;
+    content-visibility: auto;
     gap: 1rem;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     width: 100%;
@@ -1794,6 +1815,7 @@ body::after {
 }
 .watchlist-card {
     background: rgba(255, 255, 255, 0.03);
+    content-visibility: auto;
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 12px;
     overflow: hidden;
@@ -4533,6 +4555,7 @@ button:focus-visible {
 /* ===== Media Card (unified replacement for discover-card) ===== */
 .media-card {
     overflow: hidden;
+    content-visibility: auto;
     transition: transform 0.2s ease, border-color 0.2s ease,
         box-shadow 0.2s ease;
     cursor: pointer;
@@ -9067,6 +9090,7 @@ i.fa-solid.fa-trash:hover {
 
 .upcoming-new-card {
     display: flex;
+    content-visibility: auto;
     align-items: center;
     gap: 1rem;
     padding: 0.5rem;
@@ -9479,6 +9503,7 @@ i.fa-solid.fa-trash:hover {
 
 .mobile-tvshow-card {
     padding: 0.6rem 1.1rem 0.6rem 0rem;
+    content-visibility: auto;
     display: flex;
     align-items: center;
     gap: 0.85rem;

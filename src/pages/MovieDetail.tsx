@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+﻿import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getMovieDetails, imageUrl, imageUrlOriginal, getBestBackdropPath } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
@@ -257,7 +257,7 @@ const MovieDetail: React.FC = () => {
                             {runtime && <span className="detail-page__runtime">{runtime}</span>}
                             {rating !== undefined && rating !== null && (
                                 <span className="detail-page__rating" aria-label={`Rating: ${rating} out of 10`}>
-                                    <span aria-hidden="true">★</span> {rating}
+                                    <span aria-hidden="true">â˜…</span> {rating}
                                 </span>
                             )}
 
@@ -554,7 +554,7 @@ const MovieDetail: React.FC = () => {
                                         {c.profile_path && (
                                             <img 
                                                 className="detail-page__cast-photo" 
-                                                src={imageUrl(c.profile_path) ?? ''} 
+                                                src={imageUrl(c.profile_path, 'w185') ?? ''} 
                                                 alt={c.name ?? ''} 
                                                 loading="lazy"
                                             />

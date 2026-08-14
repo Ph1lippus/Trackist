@@ -172,7 +172,7 @@ const UpcomingNew: React.FC = () => {
                                             <div className="upcoming-new-card-poster">
                                                 {item.item.poster_path ? (
                                                         <img
-                                                            src={imageUrl(item.item.poster_path, 'w185')}
+                                                            src={imageUrl(item.item.poster_path, 'w185') || ''}
                                                             alt={item.item.title}
                                                             loading="lazy"
                                                         />
@@ -229,3 +229,4 @@ const UpcomingNew: React.FC = () => {
 }
 
 export default UpcomingNew
+

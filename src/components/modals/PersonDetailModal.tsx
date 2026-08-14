@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+﻿import React, { useEffect, useState } from 'react'
 import { getPersonDetails, getPersonMovies, getPersonTV, imageUrl } from '../../services/tmdbService'
 import type { TMDBResult } from '../../types'
 
@@ -100,7 +100,7 @@ const PersonDetailModal: React.FC<PersonDetailModalProps> = ({ item, onClose, on
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-content" onClick={e => e.stopPropagation()}>
-                <button className="modal-close" onClick={onClose}>✕</button>
+                <button className="modal-close" onClick={onClose}>âœ•</button>
 
                 {loading ? (
                     <div className="discover-loading"><div className="discover-spinner" /><p>Loading details...</p></div>
@@ -119,12 +119,12 @@ const PersonDetailModal: React.FC<PersonDetailModalProps> = ({ item, onClose, on
                             <div className="modal-meta">
                                 {knownForDepartment && <span>{knownForDepartment}</span>}
                                 {getGender(details?.gender) && <span>{getGender(details?.gender)}</span>}
-                                {birthday && <span>🎂 {birthday}</span>}
+                                {birthday && <span>ðŸŽ‚ {birthday}</span>}
                             </div>
 
                             {placeOfBirth && (
                                 <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem', margin: '0.5rem 0' }}>
-                                    📍 {placeOfBirth}
+                                    ðŸ“ {placeOfBirth}
                                 </p>
                             )}
                         </div>
@@ -153,7 +153,7 @@ const PersonDetailModal: React.FC<PersonDetailModalProps> = ({ item, onClose, on
                                                 >
                                                     {movie.poster_path && (
                                                         <img
-                                                            src={imageUrl(movie.poster_path) || ''}
+                                                            src={imageUrl(movie.poster_path, 'w185') || ''}
                                                             alt={movie.title || movie.name || 'Movie'}
                                                         />
                                                     )}
@@ -185,7 +185,7 @@ const PersonDetailModal: React.FC<PersonDetailModalProps> = ({ item, onClose, on
                                                 >
                                                     {show.poster_path && (
                                                         <img
-                                                            src={imageUrl(show.poster_path) || ''}
+                                                            src={imageUrl(show.poster_path, 'w185') || ''}
                                                             alt={show.title || show.name || 'TV Show'}
                                                         />
                                                     )}

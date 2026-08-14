@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+﻿import React, { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { getPersonDetails, getPersonMovies, getPersonTV, imageUrl } from '../services/tmdbService'
 import type { TMDBResult } from '../types'
@@ -98,7 +98,7 @@ const PersonDetail: React.FC = () => {
         return <div className="detail-page-error">Person not found</div>
     }
 
-    const profileUrl = details.profile_path ? imageUrl(details.profile_path) : null
+    const profileUrl = details.profile_path ? imageUrl(details.profile_path, 'w185') : null
     const title = details.name || 'Unknown'
     const biography = details.biography || 'No biography available.'
     const birthday = details.birthday
@@ -129,8 +129,8 @@ const PersonDetail: React.FC = () => {
                             <h1 className="detail-page__person-name">{title}</h1>
                             <div className="detail-page__person-meta">
                                 {knownForDepartment && <span>{knownForDepartment}</span>}
-                                {getGender(details.gender) && <span>· {getGender(details.gender)}</span>}
-                                {birthday && <span>· Born {birthday}</span>}
+                                {getGender(details.gender) && <span>Â· {getGender(details.gender)}</span>}
+                                {birthday && <span>Â· Born {birthday}</span>}
                             </div>
                             {placeOfBirth && (
                                 <p className="detail-page__person-location">
@@ -185,3 +185,4 @@ const PersonDetail: React.FC = () => {
 }
 
 export default PersonDetail
+

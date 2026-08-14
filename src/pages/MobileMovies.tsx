@@ -1,14 +1,16 @@
-import React, { useEffect, useMemo, useState } from 'react'
+﻿import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { imageUrl } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useMobile } from '../contexts/useMobile'
 import { useSearch } from '../hooks/useSearch'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import ConfirmModal from '../components/modals/ConfirmModal'
 
 const MobileMovies: React.FC = () => {
+    const { isMobile } = useMobile()
     usePageTitle('Trackist - Movies')
     const navigate = useNavigate()
     const { committedQuery } = useSearch()
@@ -102,7 +104,7 @@ const MobileMovies: React.FC = () => {
             >
                 <div className="mobile-tvshow-card-poster">
                     {movie.poster_path ? (
-                        <img src={imageUrl(movie.poster_path) || ''} alt={movie.title} loading="lazy" />
+                        <img src={imageUrl(movie.poster_path, isMobile ? 'w185' : 'w342') || ''} alt={movie.title} loading="lazy" />
                     ) : (
                         <div className="mobile-tvshow-card-no-poster">
                             <span>{movie.title}</span>
@@ -188,3 +190,5 @@ const MobileMovies: React.FC = () => {
 }
 
 export default MobileMovies
+
+

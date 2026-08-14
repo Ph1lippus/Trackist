@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+﻿import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
 import { markShowAsFullyWatched } from '../services/watchlistService'
@@ -45,10 +45,7 @@ const TVShows: React.FC = () => {
         window.scrollTo(0, 0)
     }, [])
 
-    // Scroll to top when page loads
-    useEffect(() => {
-        window.scrollTo(0, 0)
-    }, [])
+
 
     // Use actual watched episode count instead of current_episode
     // current_episode is the episode number within the current season, not the total watched count

@@ -280,7 +280,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                                 <div className="calendar-episode-poster">
                                                     {item.item.poster_path ? (
                                                             <img
-                                                                src={imageUrl(item.item.poster_path, 'w185')}
+                                                                src={imageUrl(item.item.poster_path, 'w185') || ''}
                                                                 alt={item.item.title}
                                                             />
                                                     ) : (
@@ -344,7 +344,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                     <div className="upcoming-episode-card-poster">
                                         {item.item.poster_path ? (
                                             <img
-                                                src={imageUrl(item.item.poster_path, 'w185')}
+                                                src={imageUrl(item.item.poster_path, 'w185') || ''}
                                                 alt={item.item.title}
                                             />
                                         ) : (
@@ -375,3 +375,5 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
 }
 
 export default Upcoming
+
+

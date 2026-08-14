@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+﻿import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails, imageUrl } from '../services/tmdbService'
 import { markEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
@@ -6,11 +6,13 @@ import { markEpisodeWatched, checkAndUpdateCompleted } from '../services/watchli
 import { useLibraryStore } from '../stores/useLibraryStore'
 import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useMobile } from '../contexts/useMobile'
 import { useSearch } from '../hooks/useSearch'
 import { supabase } from '../services/supabaseClient'
 import ConfirmModal from '../components/modals/ConfirmModal'
 
 const MobileTVShows: React.FC = () => {
+    const { isMobile } = useMobile()
     usePageTitle('Trackist - TV Shows')
     const navigate = useNavigate()
     const { committedQuery } = useSearch()
@@ -237,9 +239,9 @@ const MobileTVShows: React.FC = () => {
                     }
                     await useLibraryStore.getState().refreshItem(show.id)
 
-                    // Clear sweep — all data is now correct
+                    // Clear sweep â€” all data is now correct
                     setSweepId(null)
-                }, 10)
+                }, 500)
             }
         } catch (err) {
             console.error('Failed to add episode:', err)
@@ -308,7 +310,7 @@ const MobileTVShows: React.FC = () => {
                     }
                     await useLibraryStore.getState().refreshItem(show.id)
                     setSweepId(null)
-                }, 10)
+                }, 500)
             }
         } catch (err) {
             console.error('Failed to resume show:', err)
@@ -335,7 +337,7 @@ const MobileTVShows: React.FC = () => {
                 {hasSweep && <div className="mobile-tvshow-card-sweep" />}
                 <div className="mobile-tvshow-card-poster">
                     {show.poster_path ? (
-                        <img src={imageUrl(show.poster_path) || ''} alt={show.title} loading="lazy" />
+                        <img src={imageUrl(show.poster_path, isMobile ? 'w185' : 'w342') || ''} alt={show.title} loading="lazy" />
                     ) : (
                         <div className="mobile-tvshow-card-no-poster">
                             <span>{show.title}</span>
@@ -431,3 +433,6 @@ const MobileTVShows: React.FC = () => {
 }
 
 export default MobileTVShows
+
+
+
