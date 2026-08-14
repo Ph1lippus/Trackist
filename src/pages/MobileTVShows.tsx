@@ -92,9 +92,8 @@ const MobileTVShows: React.FC = () => {
 
             if (completedShows.length === 0) return
 
-            for (const show of completedShows) {
-                if (!show.tmdb_id) continue
-
+            const checks = completedShows.map(async (show) => {
+                if (!show.tmdb_id) return
                 try {
                     const details = await getTVDetails(show.tmdb_id)
                     const currentTotalEpisodes = details.number_of_episodes || 0
@@ -112,15 +111,23 @@ const MobileTVShows: React.FC = () => {
 
                         if (hasReleasedEpisodes) {
                             await supabase
-                                .from('watchlist')
+                                .from("watchlist")
                                 .update({
-                                    status: 'watching',
+                                    status: "watching",
                                     total_episodes: currentTotalEpisodes,
                                     total_seasons: details.number_of_seasons || show.total_seasons
                                 })
-                                .eq('id', show.id)
+                                .eq("id", show.id)
 
                             await useLibraryStore.getState().refreshItem(show.id)
+                        }
+                    }
+                } catch (err) {
+                    console.error(`Failed to check for new episodes for ${show.title}:`, err)
+                }
+            })
+
+            await Promise.allSettled(checks)
                         }
                     }
                 } catch (err) {
@@ -131,13 +138,13 @@ const MobileTVShows: React.FC = () => {
 
         checkForNewEpisodes()
 
-        const interval = setInterval(() => {
-            checkForNewEpisodes()
-        }, 5 * 60 * 1000)
+        const interval = setInterval(() => { checkForNewEpisodes() }, 15 * 60 * 1000)
 
+        let visibilityTimeout: ReturnType<typeof setTimeout>
         const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                checkForNewEpisodes()
+            if (document.visibilityState === "visible") {
+                clearTimeout(visibilityTimeout)
+                visibilityTimeout = setTimeout(checkForNewEpisodes, 2000)
             }
         }
         document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -320,7 +327,7 @@ const MobileTVShows: React.FC = () => {
         }
     }
 
-    const renderShowCard = (show: WatchlistItem) => {
+    const renderShowCard = useCallback((show: WatchlistItem) => {
         const isAdding = addingEpisode === show.id
         const isCompleted = show.status === 'completed' || show.status === 'caught_up'
         const isDroppedOrPaused = show.status === 'dropped' || show.status === 'paused'
@@ -368,7 +375,7 @@ const MobileTVShows: React.FC = () => {
                 )}
             </div>
         )
-    }
+    }, [addingEpisode, sweepId, handleAddEpisode, getEpisodesLeft, getEpisodeInfo, isMobile, navigate])
 
     return (
         <section className="dashboard-page mobile-tvshows-page">
@@ -433,6 +440,10 @@ const MobileTVShows: React.FC = () => {
 }
 
 export default MobileTVShows
+
+
+
+
 
 
 

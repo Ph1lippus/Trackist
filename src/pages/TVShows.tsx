@@ -87,53 +87,42 @@ const TVShows: React.FC = () => {
 
             if (completedShows.length === 0) return
 
-            for (const show of completedShows) {
-                if (!show.tmdb_id) continue
-
+            const checks = completedShows.map(async (show) => {
+                if (!show.tmdb_id) return
                 try {
                     const details = await getTVDetails(show.tmdb_id)
                     const currentTotalEpisodes = details.number_of_episodes || 0
                     const storedTotalEpisodes = show.total_episodes || 0
 
                     if (currentTotalEpisodes > storedTotalEpisodes) {
-                        // Check if any new episodes have been released (air_date <= today)
                         const latestSeasonNumber = details.number_of_seasons || 1
                         const seasonData = await getTVSeasonDetails(show.tmdb_id, latestSeasonNumber)
                         const newEpisodes = seasonData.episodes?.filter((ep: { episode_number: number; air_date?: string }) => ep.episode_number > storedTotalEpisodes) || []
-                        
-                        // Only update if at least one new episode has been released
+
                         const hasReleasedEpisodes = newEpisodes.some((ep: { episode_number: number; air_date?: string }) => {
-                            if (!ep.air_date) return true // If no air date, assume released
+                            if (!ep.air_date) return true
                             return new Date(ep.air_date) <= new Date()
                         })
 
                         if (hasReleasedEpisodes) {
-                            // Update status and episode count WITHOUT updating updated_at
-                            // This prevents the show from jumping to the top of the list
-                            const { supabase } = await import('../services/supabaseClient')
                             await supabase
-                                .from('watchlist')
+                                .from("watchlist")
                                 .update({
-                                    status: 'watching' as const,
+                                    status: "watching",
                                     total_episodes: currentTotalEpisodes,
                                     total_seasons: details.number_of_seasons || show.total_seasons
                                 })
-                                .eq('id', show.id)
-                            
-                            // Direct state updates are problematic, use the store's built-in methods instead
-                            // For now, just fetch the data normally
-                            const { data } = await supabase
-                                .from('watchlist')
-                                .update({ 
-                                    status: 'watching',
-                                    total_episodes: currentTotalEpisodes,
-                                    total_seasons: details.number_of_seasons || show.total_seasons
-                                })
-                                .eq('id', show.id)
-                                .select()
-                            
-                            if (data && data.length > 0) {
-                                await useLibraryStore.getState().refreshItem(show.id)
+                                .eq("id", show.id)
+
+                            await useLibraryStore.getState().refreshItem(show.id)
+                        }
+                    }
+                } catch (err) {
+                    console.error(`Failed to check for new episodes for ${show.title}:`, err)
+                }
+            })
+
+            await Promise.allSettled(checks)
                             }
                         }
                     }
@@ -145,13 +134,13 @@ const TVShows: React.FC = () => {
 
         checkForNewEpisodes()
 
-        const interval = setInterval(() => {
-            checkForNewEpisodes()
-        }, 5 * 60 * 1000)
+        const interval = setInterval(() => { checkForNewEpisodes() }, 15 * 60 * 1000)
 
+        let visibilityTimeout: ReturnType<typeof setTimeout>
         const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                checkForNewEpisodes()
+            if (document.visibilityState === "visible") {
+                clearTimeout(visibilityTimeout)
+                visibilityTimeout = setTimeout(checkForNewEpisodes, 2000)
             }
         }
         document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -404,3 +393,4 @@ const TVShows: React.FC = () => {
 }
 
 export default TVShows
+

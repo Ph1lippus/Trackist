@@ -359,7 +359,7 @@ body::before {
 
     mix-blend-mode: screen;
     transform-origin: center center;
-    will-change: transform;
+    /* will-change removed for mobile performance */
     animation: auroraFlow 50s linear infinite;
 }
 
@@ -391,7 +391,7 @@ body::after {
     background-size: 450px 450px;
     background-repeat: repeat;
 
-    will-change: transform;
+    /* will-change removed for mobile performance */
     animation: 
         starDrift 50s linear infinite,
         twinkleGlow 6s ease-in-out infinite alternate;
@@ -1841,6 +1841,7 @@ body::after {
 }
 .watchlist-card {
     background: rgba(255, 255, 255, 0.03);
+    contain: layout style paint;
     content-visibility: auto;
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 12px;
@@ -1935,7 +1936,7 @@ body::after {
     width: 100%;
     height: 100%;
     z-index: 0;
-    will-change: transform; 
+    /* will-change removed for mobile performance */ 
     pointer-events: none; 
 }
 .detail-page__backdrop img {
@@ -4546,7 +4547,7 @@ button:focus-visible {
     transform: translateX(0);
     transition: transform var(--tabs-dur) var(--tabs-ease),
         width var(--tabs-dur) var(--tabs-ease);
-    will-change: transform, width;
+    /* will-change removed for mobile performance */
     z-index: 0;
     pointer-events: none;
 }
@@ -9116,6 +9117,7 @@ i.fa-solid.fa-trash:hover {
 
 .upcoming-new-card {
     display: flex;
+    contain: layout style paint;
     content-visibility: auto;
     align-items: center;
     gap: 1rem;
@@ -9529,6 +9531,7 @@ i.fa-solid.fa-trash:hover {
 
 .mobile-tvshow-card {
     padding: 0.6rem 1.1rem 0.6rem 0rem;
+    contain: layout style paint;
     content-visibility: auto;
     display: flex;
     align-items: center;
@@ -9837,3 +9840,4 @@ i.fa-solid.fa-trash:hover {
         display: flex !important;
     }
 }
+

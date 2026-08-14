@@ -1,4 +1,4 @@
-import confetti from 'canvas-confetti'
+﻿import confetti from 'canvas-confetti'
 
 /**
  * Cosmic Confetti
@@ -19,10 +19,14 @@ const COSMIC_PALETTE = [
 let isAnimating = false
 
 export const launchCosmicConfetti = (opts?: { duration?: number }) => {
+  const isMobile = window.innerWidth < 768
+  if (isMobile) {
+    opts = { ...opts, duration: Math.min(opts?.duration ?? 2800, 800) }
+  }
   if (isAnimating) return
   isAnimating = true
 
-  const duration = opts?.duration ?? 2800
+  const duration = opts?.duration ?? (isMobile ? 800 : 2800)
   const animationEnd = Date.now() + duration
 
   const random = (min: number, max: number) =>
@@ -99,3 +103,4 @@ export const launchCosmicConfetti = (opts?: { duration?: number }) => {
     })
   }, 90)
 }
+

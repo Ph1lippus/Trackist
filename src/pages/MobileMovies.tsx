@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react'
+﻿import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { imageUrl } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
@@ -92,7 +92,7 @@ const MobileMovies: React.FC = () => {
         })
     }, [movies, committedQuery])
 
-    const renderMovieCard = (movie: WatchlistItem) => {
+    const renderMovieCard = useCallback((movie: WatchlistItem) => {
         const isUpdating = updatingId === movie.id
         const isCompleted = movie.status === 'completed' || movie.status === 'caught_up'
 
@@ -131,7 +131,7 @@ const MobileMovies: React.FC = () => {
                 </button>
             </div>
         )
-    }
+    }, [updatingId, confirmModal, handleToggleWatched, handleConfirmAction, isMobile, navigate])
 
     return (
         <section className="dashboard-page mobile-tvshows-page">
@@ -190,5 +190,6 @@ const MobileMovies: React.FC = () => {
 }
 
 export default MobileMovies
+
 
 

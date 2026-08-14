@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react';
+﻿import React, { useEffect, useRef, useCallback } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -131,3 +131,5 @@ const SecondaryNavbar: React.FC = () => {
 };
 
 export default SecondaryNavbar;
+
+
