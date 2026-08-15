@@ -123,14 +123,7 @@ const TVShows: React.FC = () => {
             })
 
             await Promise.allSettled(checks)
-                            }
-                        }
-                    }
-                } catch (err) {
-                    console.error(`Failed to check for new episodes for ${show.title}:`, err)
-                }
             }
-        }
 
         checkForNewEpisodes()
 

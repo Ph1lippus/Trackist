@@ -128,13 +128,7 @@ const MobileTVShows: React.FC = () => {
             })
 
             await Promise.allSettled(checks)
-                        }
-                    }
-                } catch (err) {
-                    console.error(`Failed to check for new episodes for ${show.title}:`, err)
-                }
             }
-        }
 
         checkForNewEpisodes()
 
@@ -187,74 +181,78 @@ const MobileTVShows: React.FC = () => {
             return
         }
 
+        // Start sweep immediately for responsive feel
+        setSweepId(show.id)
+
         setAddingEpisode(show.id)
-        await handleAddEpisodeInternal(show)
-    }
-
-    const handleAddEpisodeInternal = async (show: WatchlistItem) => {
         try {
-            // Use the cached next episode from store if available, otherwise fetch from TMDB
-            let nextEp: { season_number: number; episode_number: number; tmdb_episode_id?: number; title?: string; still_path?: string | null; overview?: string; air_date?: string; runtime?: number } | null = null
-            if (show.next_season_number && show.next_episode_number && show.tmdb_id) {
-                const { getTVSeasonDetails } = await import('../services/tmdbService')
-                const seasonData = await getTVSeasonDetails(show.tmdb_id, show.next_season_number)
-                const ep = seasonData.episodes?.find((e: { episode_number: number; id?: number; name?: string; still_path?: string | null; overview?: string; air_date?: string; runtime?: number }) => e.episode_number === show.next_episode_number)
-                if (ep) {
-                    nextEp = {
-                        season_number: show.next_season_number,
-                        episode_number: show.next_episode_number,
-                        tmdb_episode_id: ep.id,
-                        title: ep.name,
-                        still_path: ep.still_path ?? undefined,
-                        overview: ep.overview,
-                        air_date: ep.air_date,
-                        runtime: ep.runtime
-                    }
-                }
-            }
-            if (!nextEp) {
-                const { getNextEpisodeToWatch } = await import('../services/watchlistService')
-                nextEp = await getNextEpisodeToWatch(show.id)
-            }
-
-            if (!nextEp) {
-                setAddingEpisode(null)
-                return
-            }
-
-            const success = await markEpisodeWatched(
-                show.id,
-                nextEp.season_number,
-                nextEp.episode_number,
-                {
-                    tmdb_episode_id: nextEp.tmdb_episode_id,
-                    title: nextEp.title,
-                    still_path: nextEp.still_path ?? undefined,
-                    overview: nextEp.overview,
-                    air_date: nextEp.air_date,
-                    runtime: nextEp.runtime
-                }
-            )
-
-            if (success) {
-                // Start sweep immediately to cover all data transitions
-                setSweepId(show.id)
-                setTimeout(async () => {
-                    // Update data behind the sweep
-                    if (show.tmdb_id) {
-                        await checkAndUpdateCompleted(show.id, show.tmdb_id)
-                    }
-                    await useLibraryStore.getState().refreshItem(show.id)
-
-                    // Clear sweep — all data is now correct
-                    setSweepId(null)
-                }, 500)
-            }
+            await handleAddEpisodeInternal(show)
         } catch (err) {
+            // Clear sweep on error
+            setSweepId(null)
             console.error('Failed to add episode:', err)
         } finally {
             setAddingEpisode(null)
         }
+    }
+
+    const handleAddEpisodeInternal = async (show: WatchlistItem) => {
+        // Use the cached next episode from store if available, otherwise fetch from TMDB
+        let nextEp: { season_number: number; episode_number: number; tmdb_episode_id?: number; title?: string; still_path?: string | null; overview?: string; air_date?: string; runtime?: number } | null = null
+        if (show.next_season_number && show.next_episode_number && show.tmdb_id) {
+            const { getTVSeasonDetails } = await import('../services/tmdbService')
+            const seasonData = await getTVSeasonDetails(show.tmdb_id, show.next_season_number)
+            const ep = seasonData.episodes?.find((e: { episode_number: number; id?: number; name?: string; still_path?: string | null; overview?: string; air_date?: string; runtime?: number }) => e.episode_number === show.next_episode_number)
+            if (ep) {
+                nextEp = {
+                    season_number: show.next_season_number,
+                    episode_number: show.next_episode_number,
+                    tmdb_episode_id: ep.id,
+                    title: ep.name,
+                    still_path: ep.still_path ?? undefined,
+                    overview: ep.overview,
+                    air_date: ep.air_date,
+                    runtime: ep.runtime
+                }
+            }
+        }
+        if (!nextEp) {
+            const { getNextEpisodeToWatch } = await import('../services/watchlistService')
+            nextEp = await getNextEpisodeToWatch(show.id)
+        }
+
+        if (!nextEp) {
+            return
+        }
+
+        const success = await markEpisodeWatched(
+            show.id,
+            nextEp.season_number,
+            nextEp.episode_number,
+            {
+                tmdb_episode_id: nextEp.tmdb_episode_id,
+                title: nextEp.title,
+                still_path: nextEp.still_path ?? undefined,
+                overview: nextEp.overview,
+                air_date: nextEp.air_date,
+                runtime: nextEp.runtime
+            }
+        )
+
+        if (!success) {
+            return
+        }
+
+        setTimeout(async () => {
+            // Update data behind the sweep
+            if (show.tmdb_id) {
+                await checkAndUpdateCompleted(show.id, show.tmdb_id)
+            }
+            await useLibraryStore.getState().refreshItem(show.id)
+
+            // Clear sweep — all data is now correct
+            setSweepId(null)
+        }, 500)
     }
 
     const handleConfirmResume = async () => {

@@ -128,7 +128,7 @@ export const getMovieDetails = async (id: number): Promise<{
         }[]
     }
 }> => {
-    const res = await tmdbProxy(`/movie/${id}?append_to_response=images,external_ids`)
+    const res = await tmdbProxy(`/movie/${id}?append_to_response=images,external_ids,credits,videos`)
     return res.json()
 }
 export const getTVShowDetails = async (id: number): Promise<{
@@ -146,6 +146,8 @@ export const getTVShowDetails = async (id: number): Promise<{
     status?: string
     episode_run_time?: number[]
     production_companies?: { id: number; name: string; logo_path?: string | null; origin_country?: string }[]
+    images?: { logos?: { file_path: string; language?: string }[]; backdrops?: any[] }
+    external_ids?: { imdb_id?: string }
     videos?: {
         results: {
             id: string
@@ -156,8 +158,17 @@ export const getTVShowDetails = async (id: number): Promise<{
             official: boolean
         }[]
     }
+    credits?: {
+        cast: {
+            id: number
+            name: string
+            character: string
+            profile_path?: string | null
+            order: number
+        }[]
+    }
 }> => {
-    const res = await tmdbProxy(`/tv/${id}?append_to_response=images`)
+    const res = await tmdbProxy(`/tv/${id}?append_to_response=images,external_ids,credits,videos`)
     return res.json()
 }
 export const getTVSeasonDetails = async (tvId: number, seasonNumber: number): Promise<{
@@ -302,8 +313,17 @@ export const getTVDetails = async (id: number): Promise<{
             official: boolean
         }[]
     }
+    credits?: {
+        cast: {
+            id: number
+            name: string
+            character: string
+            profile_path?: string | null
+            order: number
+        }[]
+    }
 }> => {
-    const res = await tmdbProxy(`/tv/${id}?append_to_response=images,external_ids`)
+    const res = await tmdbProxy(`/tv/${id}?append_to_response=images,external_ids,credits,videos`)
     return res.json()
 }
 

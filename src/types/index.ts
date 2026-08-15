@@ -14,7 +14,7 @@ export interface TMDBResult {
     vote_count?: number
     genres?: Array<{ id: number; name: string }>
     credits?: {
-        cast?: Array<{ id: number; name: string; profile_path?: string; character?: string }>
+        cast?: Array<{ id: number; name: string; profile_path?: string | null; character: string; order: number }>
     }
     aggregate_credits?: {
         cast?: Array<{ id: number; name: string; profile_path?: string }>

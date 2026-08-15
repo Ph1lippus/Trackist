@@ -836,7 +836,7 @@ const TVShowDetail: React.FC = () => {
                             <div className="detail-page__cast-section">
                                 {showCast && (
                                     <div className="detail-page__cast-list">
-                                        {cast.map((c: { id: number; name: string; profile_path?: string; character?: string }) => (
+                                        {cast.map((c: { id: number; name: string; profile_path?: string | null; character: string; order: number }) => (
                                             <div 
                                                 key={c.id} 
                                                 className="detail-page__cast-item"
