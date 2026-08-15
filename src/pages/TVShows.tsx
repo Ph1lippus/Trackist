@@ -12,6 +12,7 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { VirtuosoGrid } from 'react-virtuoso'
 import { useMobile } from '../contexts/useMobile'
+import { supabase } from '../services/supabaseClient'
 
 const TVShows: React.FC = () => {
     usePageTitle('Trackist - TV Shows')

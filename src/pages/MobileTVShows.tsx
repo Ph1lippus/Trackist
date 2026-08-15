@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react'
+﻿import React, { useEffect, useMemo, useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails, imageUrl } from '../services/tmdbService'
 import { markEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
