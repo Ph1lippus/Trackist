@@ -142,8 +142,7 @@ const Movies: React.FC = () => {
                                 bottom: isMobile ? 2000 : 3000,
                             }}
                             computeItemKey={(index) => watchlistItems[index]?.id ?? index}
-                            style={{ height: '100%', width: '100%' }}
-                            useWindowScroll={true}
+                            style={{ height: isMobile ? '50vh' : '65vh', width: '100%' }}
                             data={watchlistItems}
                             overscan={isMobile ? 800 : 1500}
                             listClassName="discover-grid"
@@ -197,8 +196,7 @@ const Movies: React.FC = () => {
                                 bottom: isMobile ? 2000 : 3000,
                             }}
                             computeItemKey={(index) => notReleasedItems[index]?.id ?? index}
-                            style={{ height: '100%', width: '100%' }}
-                            useWindowScroll={true}
+                            style={{ height: isMobile ? '50vh' : '65vh', width: '100%' }}
                             data={notReleasedItems}
                             overscan={isMobile ? 800 : 1500}
                             listClassName="discover-grid"

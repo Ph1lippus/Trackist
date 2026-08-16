@@ -225,7 +225,10 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const handleRandomPick = () => {
         if (isMoviesPage) {
             const planning = movies.filter(m => m.status === 'planning')
-            const pool = planning.length > 0 ? planning : []
+            const pool = planning.filter(m => {
+                if (!m.release_date) return true
+                return new Date(m.release_date) <= new Date()
+            })
             if (pool.length > 0) {
                 const randomIndex = Math.floor(Math.random() * pool.length)
                 const randomMovie = pool[randomIndex]
@@ -235,9 +238,13 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
             }
         } else if (isTVShowsPage) {
             const planning = tvShows.filter(show => show.status === 'planning')
-            if (planning.length > 0) {
-                const randomIndex = Math.floor(Math.random() * planning.length)
-                const randomShow = planning[randomIndex]
+            const pool = planning.filter(show => {
+                if (!show.release_date) return true
+                return new Date(show.release_date) <= new Date()
+            })
+            if (pool.length > 0) {
+                const randomIndex = Math.floor(Math.random() * pool.length)
+                const randomShow = pool[randomIndex]
                 if (randomShow.tmdb_id) {
                     navigate(`/tv/${randomShow.tmdb_id}`)
                 }
