@@ -1,5 +1,4 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react'
-import { VirtuosoGrid } from 'react-virtuoso'
 import { useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
 import { markShowAsFullyWatched } from '../services/watchlistService'
@@ -354,4 +353,5 @@ const TVShows: React.FC = () => {
 }
 
 export default TVShows
+
 

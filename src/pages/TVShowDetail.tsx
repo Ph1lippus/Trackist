@@ -194,14 +194,6 @@ const TVShowDetail: React.FC = () => {
         return episodes.filter(ep => ep.watched)
     }, [episodes])
 
-    const unwatchedEpisodesBefore = useMemo(() => {
-        if (!selectedSeason || episodes.length === 0) return 0
-        return episodes.filter(ep => 
-            ep.season_number === selectedSeason && 
-            !ep.watched && 
-            ep.episode_number < (watchedEpisodesInSeason.find((w: LocalEpisode) => w.season_number === selectedSeason)?.episode_number ?? Infinity)
-        ).length
-    }, [episodes, selectedSeason, watchedEpisodesInSeason])
 
     const loadSeason = async (seasonNumber: number) => {
         if (!id || !details) return

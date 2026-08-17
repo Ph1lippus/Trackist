@@ -1,5 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { VirtuosoGrid } from 'react-virtuoso'
+﻿import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { useSelectionStore } from '../stores/useSelectionStore'
@@ -233,3 +232,4 @@ const Movies: React.FC = () => {
 }
 
 export default Movies
+
