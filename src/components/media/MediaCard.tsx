@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react'
+﻿import React, { useMemo, useCallback } from 'react'
 import { imageUrl } from '../../services/tmdbService'
 import type { TMDBResult } from '../../types'
 import { Link } from "react-router-dom"
@@ -52,7 +52,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
     
     const imgUrl = useMemo(
         () => {
-            const imageSize = isMobile ? 'w232' : 'w342'
+            const imageSize = isMobile ? 'w185' : 'w342'
             return isPerson ? imageUrl(item.profile_path ?? null, imageSize) : imageUrl(item.poster_path ?? null, imageSize)
         },
         [isPerson, item.profile_path, item.poster_path, isMobile],
