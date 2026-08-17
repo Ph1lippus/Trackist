@@ -258,48 +258,37 @@ const TVShowDetail: React.FC = () => {
                 setSelectedSeason(initialSeason)
                 await loadSeason(initialSeason)
 
-                // Find last watched episode and set season/scroll if user hasn't manually selected
-                if (!hasUserSelectedSeason.current && !hasAutoPositioned.current && watchedKeysCache.current.size > 0) {
-                    hasAutoPositioned.current = true
-                    // Find the last watched episode by looking at the highest season+episode
-                    const allCached = Array.from(seasonCache.current.values()).flat()
-                    const watchedEps = allCached.filter(ep => ep.watched)
-                    if (watchedEps.length > 0) {
-                        const lastWatched = watchedEps.reduce((max, ep) => {
-                            if (ep.season_number > max.season_number) return ep
-                            if (ep.season_number === max.season_number && ep.episode_number > max.episode_number) return ep
-                            return max
-                        }, watchedEps[0])
-                        
-                        if (lastWatched) {
-                            // Check if all episodes in the last watched season are fully watched
-                            const seasonEps = seasonCache.current.get(lastWatched.season_number) || []
-                            const allReleasedInSeasonWatched = seasonEps.filter(ep => isEpisodeReleased(ep)).every(ep => ep.watched)
-                            
-                            let targetSeason = lastWatched.season_number
-                            let targetEpisode = lastWatched.episode_number
-                            
-                            // If all released episodes in the season are watched, go to next season
-                            if (allReleasedInSeasonWatched) {
-                                const nextSeasonIndex = seasonList.indexOf(lastWatched.season_number) + 1
-                                if (nextSeasonIndex < seasonList.length) {
-                                    targetSeason = seasonList[nextSeasonIndex]
-                                    const firstEpisodeOfNextSeason = seasonCache.current.get(targetSeason)?.[0]
-                                    if (firstEpisodeOfNextSeason) {
-                                        targetEpisode = firstEpisodeOfNextSeason.episode_number
-                                    }
-                                }
-                            }
-                            
-                            if (targetSeason !== initialSeason) {
-                                setSelectedSeason(targetSeason)
-                                await loadSeason(targetSeason)
-                                episodeToScrollRef.current = `${id}-${targetSeason}-${targetEpisode}`
-                            } else {
-                                episodeToScrollRef.current = `${id}-${targetSeason}-${targetEpisode}`
-                            }
+                // Find last watched episode directly from watchedKeysCache
+                let lastWatched: { season_number: number; episode_number: number } | null = null
+                for (const key of watchedKeysCache.current) {
+                    const parts = key.split('-')
+                    const s = Number(parts[0])
+                    const e = Number(parts[1])
+                    if (lastWatched === null || s > lastWatched.season_number || (s === lastWatched.season_number && e > lastWatched.episode_number)) {
+                        lastWatched = { season_number: s, episode_number: e }
+                    }
+                }
+
+                if (lastWatched) {
+                    let targetSeason = lastWatched.season_number
+                    let targetEpisode = lastWatched.episode_number
+
+                    // Load the last watched season to check if all released episodes are watched
+                    await loadSeason(targetSeason)
+                    const seasonEps = seasonCache.current.get(targetSeason) || []
+                    const allReleasedInSeasonWatched = seasonEps.filter(ep => isEpisodeReleased(ep)).every(ep => ep.watched)
+
+                    // If all released episodes in the season are watched, go to next season
+                    if (allReleasedInSeasonWatched) {
+                        const nextSeasonIndex = seasonList.indexOf(targetSeason) + 1
+                        if (nextSeasonIndex < seasonList.length) {
+                            targetSeason = seasonList[nextSeasonIndex]
+                            await loadSeason(targetSeason)
                         }
                     }
+
+                    setSelectedSeason(targetSeason)
+                    episodeToScrollRef.current = `${id}-${targetSeason}-${targetEpisode}`
                 }
             } catch (err) {
                 console.error('Failed to load episodes:', err)
