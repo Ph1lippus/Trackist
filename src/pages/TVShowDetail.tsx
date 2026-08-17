@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useRef } from 'react'
+﻿import React, { useEffect, useState, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getBestBackdropPath } from '../services/tmdbService'
 import { markEpisodeWatched, unmarkEpisodeWatched, getWatchedEpisodes, checkAndUpdateCompleted, markShowAsFullyWatched } from '../services/watchlistService'
@@ -199,7 +199,7 @@ const TVShowDetail: React.FC = () => {
         return episodes.filter(ep => 
             ep.season_number === selectedSeason && 
             !ep.watched && 
-            ep.episode_number < (watchedEpisodesInSeason.find(w => w.season_number === selectedSeason)?.episode_number ?? Infinity)
+            ep.episode_number < (watchedEpisodesInSeason.find((w: LocalEpisode) => w.season_number === selectedSeason)?.episode_number ?? Infinity)
         ).length
     }, [episodes, selectedSeason, watchedEpisodesInSeason])
 
@@ -1255,4 +1255,5 @@ const TVShowDetail: React.FC = () => {
 }
 
 export default TVShowDetail
+
 
