@@ -10,7 +10,6 @@ import type { WatchlistItem, TMDBResult } from '../types'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
-import { VirtuosoGrid } from 'react-virtuoso'
 import { useMobile } from '../contexts/useMobile'
 import { supabase } from '../services/supabaseClient'
 
@@ -239,26 +238,15 @@ const TVShows: React.FC = () => {
                         <div className="watchlist-section__header">
                             <h3 className="watchlist-section__title">Currently Watching</h3>
                         </div>
-                        <VirtuosoGrid
-                            increaseViewportBy={{
-                                top: isMobile ? 600 : 1200,
-                                bottom: isMobile ? 2000 : 3000,
-                            }}
-                            computeItemKey={(index) => currentlyWatching[index]?.id ?? index}
-                            style={{ height: '100%', width: '100%' }}
-                            useWindowScroll={true}
-                            data={currentlyWatching}
-                            overscan={isMobile ? 800 : 1500}
-                            listClassName="discover-grid"
-                            itemContent={(index) => {
-                                const item = currentlyWatching[index]
+                        <div className="discover-grid">
+                            {currentlyWatching.map((item) => {
                                 const episodesLeft = item.total_episodes !== undefined
                                     ? Math.max(0, item.total_episodes - item.total_episodes_watched)
                                     : undefined
                                 const isSelected = selectedIds.has(item.id)
                                 
                                 return (
-                                    <div style={{ position: 'relative' }}>
+                                    <div key={item.id} style={{ position: 'relative' }}>
                                         <MediaCard
                                             item={buildTmdbItem(item)}
                                             selected={selectionMode && isSelected}
@@ -271,8 +259,8 @@ const TVShows: React.FC = () => {
                                         />
                                     </div>
                                 )
-                            }}
-                        />
+                            })}
+                        </div>
                     </div>
                 )}
 
@@ -282,23 +270,12 @@ const TVShows: React.FC = () => {
                         <div className="watchlist-section__header">
                             <h3 className="watchlist-section__title">Paused</h3>
                         </div>
-                        <VirtuosoGrid
-                            increaseViewportBy={{
-                                top: isMobile ? 600 : 1200,
-                                bottom: isMobile ? 2000 : 3000,
-                            }}
-                            computeItemKey={(index) => paused[index]?.id ?? index}
-                            style={{ height: '100%', width: '100%' }}
-                            useWindowScroll={true}
-                            data={paused}
-                            overscan={isMobile ? 800 : 1500}
-                            listClassName="discover-grid"
-                            itemContent={(index) => {
-                                const item = paused[index]
+                        <div className="discover-grid">
+                            {paused.map((item) => {
                                 const isSelected = selectedIds.has(item.id)
                                 
                                 return (
-                                    <div style={{ position: 'relative' }}>
+                                    <div key={item.id} style={{ position: 'relative' }}>
                                         <MediaCard
                                             item={buildTmdbItem(item)}
                                             selected={selectionMode && isSelected}
@@ -310,8 +287,8 @@ const TVShows: React.FC = () => {
                                         />
                                     </div>
                                 )
-                            }}
-                        />
+                            })}
+                        </div>
                     </div>
                 )}
 
@@ -321,23 +298,12 @@ const TVShows: React.FC = () => {
                         <div className="watchlist-section__header">
                             <h3 className="watchlist-section__title">Watchlist (Not Started)</h3>
                         </div>
-                        <VirtuosoGrid
-                            increaseViewportBy={{
-                                top: isMobile ? 600 : 1200,
-                                bottom: isMobile ? 2000 : 3000,
-                            }}
-                            computeItemKey={(index) => notStarted[index]?.id ?? index}
-                            style={{ height: '100%', width: '100%' }}
-                            useWindowScroll={true}
-                            data={notStarted}
-                            overscan={isMobile ? 800 : 1500}
-                            listClassName="discover-grid"
-                            itemContent={(index) => {
-                                const item = notStarted[index]
+                        <div className="discover-grid">
+                            {notStarted.map((item) => {
                                 const isSelected = selectedIds.has(item.id)
                                 
                                 return (
-                                    <div style={{ position: 'relative' }}>
+                                    <div key={item.id} style={{ position: 'relative' }}>
                                         <MediaCard
                                             item={buildTmdbItem(item)}
                                             selected={selectionMode && isSelected}
@@ -349,8 +315,8 @@ const TVShows: React.FC = () => {
                                         />
                                     </div>
                                 )
-                            }}
-                        />
+                            })}
+                        </div>
                     </div>
                 )}
 

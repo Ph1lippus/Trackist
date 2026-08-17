@@ -8,7 +8,6 @@ import type { WatchlistItem, TMDBResult } from '../types'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
-import { VirtuosoGrid } from 'react-virtuoso'
 import { useMobile } from '../contexts/useMobile'
 
 const Movies: React.FC = () => {
@@ -136,18 +135,8 @@ const Movies: React.FC = () => {
                         <h3 className="watchlist-section__title">To Watch</h3>
                     </div>
                     {watchlistItems.length > 0 ? (
-                        <VirtuosoGrid
-                            increaseViewportBy={{
-                                top: isMobile ? 600 : 1200,
-                                bottom: isMobile ? 2000 : 3000,
-                            }}
-                            computeItemKey={(index) => watchlistItems[index]?.id ?? index}
-                            style={{ height: isMobile ? '50vh' : '65vh', width: '100%' }}
-                            data={watchlistItems}
-                            overscan={isMobile ? 800 : 1500}
-                            listClassName="discover-grid"
-                            itemContent={(index) => {
-                                const item = watchlistItems[index]
+                        <div className="discover-grid">
+                            {watchlistItems.map((item) => {
                                 const tmdbItem: TMDBResult = {
                                     id: item.tmdb_id as number,
                                     title: item.title,
@@ -157,7 +146,7 @@ const Movies: React.FC = () => {
                                 const isSelected = selectedIds.has(item.id)
                                 
                                 return (
-                                    <div style={{ position: 'relative' }}>
+                                    <div key={item.id} style={{ position: 'relative' }}>
                                         <MediaCard
                                             item={tmdbItem}
                                             selected={selectionMode && isSelected}
@@ -175,8 +164,8 @@ const Movies: React.FC = () => {
                                         />
                                     </div>
                                 )
-                            }}
-                        />
+                            })}
+                        </div>
                     ) : (
                         <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
                             No movies to watch. Add some!
@@ -190,18 +179,8 @@ const Movies: React.FC = () => {
                         <h3 className="watchlist-section__title">Not Released</h3>
                     </div>
                     {notReleasedItems.length > 0 ? (
-                        <VirtuosoGrid
-                            increaseViewportBy={{
-                                top: isMobile ? 600 : 1200,
-                                bottom: isMobile ? 2000 : 3000,
-                            }}
-                            computeItemKey={(index) => notReleasedItems[index]?.id ?? index}
-                            style={{ height: isMobile ? '50vh' : '65vh', width: '100%' }}
-                            data={notReleasedItems}
-                            overscan={isMobile ? 800 : 1500}
-                            listClassName="discover-grid"
-                            itemContent={(index) => {
-                                const item = notReleasedItems[index]
+                        <div className="discover-grid">
+                            {notReleasedItems.map((item) => {
                                 const tmdbItem: TMDBResult = {
                                     id: item.tmdb_id as number,
                                     title: item.title,
@@ -209,14 +188,16 @@ const Movies: React.FC = () => {
                                     media_type: 'movie'
                                 }
                                 return (
-                                    <MediaCard
-                                        item={tmdbItem}
-                                        isInWatchlist={true}
-                                        onAdd={() => {}}
-                                    />
+                                    <div key={item.id} style={{ position: 'relative' }}>
+                                        <MediaCard
+                                            item={tmdbItem}
+                                            isInWatchlist={true}
+                                            onAdd={() => {}}
+                                        />
+                                    </div>
                                 )
-                            }}
-                        />
+                            })}
+                        </div>
                     ) : (
                         <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
                             No upcoming movies
