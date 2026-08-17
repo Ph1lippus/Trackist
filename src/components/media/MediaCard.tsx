@@ -52,7 +52,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
     
     const imgUrl = useMemo(
         () => {
-            const imageSize = isMobile ? 'w185' : 'w342'
+            const imageSize = isMobile ? 'w342' : 'w342'
             return isPerson ? imageUrl(item.profile_path ?? null, imageSize) : imageUrl(item.poster_path ?? null, imageSize)
         },
         [isPerson, item.profile_path, item.poster_path, isMobile],
@@ -279,3 +279,4 @@ export default React.memo(MediaCard, (prev, next) => {
         prev.onSelect === next.onSelect
     )
 })
+

@@ -342,7 +342,7 @@ const MobileTVShows: React.FC = () => {
                 {hasSweep && <div className="mobile-tvshow-card-sweep" />}
                 <div className="mobile-tvshow-card-poster">
                     {show.poster_path ? (
-                        <img src={imageUrl(show.poster_path, isMobile ? 'w185' : 'w342') || ''} alt={show.title} loading="lazy" />
+                        <img src={imageUrl(show.poster_path, isMobile ? 'w342' : 'w342') || ''} alt={show.title} loading="lazy" />
                     ) : (
                         <div className="mobile-tvshow-card-no-poster">
                             <span>{show.title}</span>
@@ -438,6 +438,7 @@ const MobileTVShows: React.FC = () => {
 }
 
 export default MobileTVShows
+
 
 
 

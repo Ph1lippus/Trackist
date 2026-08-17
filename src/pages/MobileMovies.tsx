@@ -104,7 +104,7 @@ const MobileMovies: React.FC = () => {
             >
                 <div className="mobile-tvshow-card-poster">
                     {movie.poster_path ? (
-                        <img src={imageUrl(movie.poster_path, isMobile ? 'w185' : 'w342') || ''} alt={movie.title} loading="lazy" />
+                        <img src={imageUrl(movie.poster_path, isMobile ? 'w342' : 'w342') || ''} alt={movie.title} loading="lazy" />
                     ) : (
                         <div className="mobile-tvshow-card-no-poster">
                             <span>{movie.title}</span>
@@ -190,6 +190,7 @@ const MobileMovies: React.FC = () => {
 }
 
 export default MobileMovies
+
 
 
 
