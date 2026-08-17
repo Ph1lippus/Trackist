@@ -190,9 +190,6 @@ const TVShowDetail: React.FC = () => {
     const watchedKeysCache = useRef<Set<string>>(new Set())
 
     // Precompute watched info for current season
-    const watchedEpisodesInSeason = useMemo(() => {
-        return episodes.filter(ep => ep.watched)
-    }, [episodes])
 
 
     const loadSeason = async (seasonNumber: number) => {
