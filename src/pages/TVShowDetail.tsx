@@ -185,6 +185,62 @@ const TVShowDetail: React.FC = () => {
         fetchDetails()
     }, [id])
 
+    // Cache for season data: season_number -> episodes array
+    const seasonCache = useRef<Map<number, LocalEpisode[]>>(new Map())
+    const watchedKeysCache = useRef<Set<string>>(new Set())
+
+    // Precompute watched info for current season
+    const watchedEpisodesInSeason = useMemo(() => {
+        return episodes.filter(ep => ep.watched)
+    }, [episodes])
+
+    const unwatchedEpisodesBefore = useMemo(() => {
+        if (!selectedSeason || episodes.length === 0) return 0
+        return episodes.filter(ep => 
+            ep.season_number === selectedSeason && 
+            !ep.watched && 
+            ep.episode_number < (watchedEpisodesInSeason.find(w => w.season_number === selectedSeason)?.episode_number ?? Infinity)
+        ).length
+    }, [episodes, selectedSeason, watchedEpisodesInSeason])
+
+    const loadSeason = async (seasonNumber: number) => {
+        if (!id || !details) return
+        
+        // Return cached if available
+        if (seasonCache.current.has(seasonNumber)) {
+            setEpisodes(seasonCache.current.get(seasonNumber)!)
+            return
+        }
+
+        try {
+            const seasonData = await getTVSeasonDetails(Number(id), seasonNumber)
+            const sEpisodes = seasonData.episodes || []
+            const seasonEpisodes: LocalEpisode[] = []
+            
+            for (const ep of sEpisodes) {
+                const key = `${seasonNumber}-${ep.episode_number}`
+                seasonEpisodes.push({
+                    id: `${id}-${seasonNumber}-${ep.episode_number}`,
+                    season_number: seasonNumber,
+                    episode_number: ep.episode_number,
+                    tmdb_episode_id: ep.id,
+                    title: ep.name,
+                    still_path: ep.still_path ?? undefined,
+                    overview: ep.overview,
+                    vote_average: ep.vote_average,
+                    air_date: ep.air_date,
+                    runtime: ep.runtime,
+                    watched: watchedKeysCache.current.has(key)
+                })
+            }
+            
+            seasonCache.current.set(seasonNumber, seasonEpisodes)
+            setEpisodes(seasonEpisodes)
+        } catch (err) {
+            console.error('Failed to load season:', err)
+        }
+    }
+
     useEffect(() => {
         const loadEpisodes = async () => {
             if (!details || !id) return
@@ -199,46 +255,26 @@ const TVShowDetail: React.FC = () => {
                 setSeasons(seasonList)
 
                 // Get watched episodes from DB (these are episodes in watchlist_episodes table)
-                let watchedEpisodeKeys = new Set<string>()
                 if (isInWatchlist && watchlistId) {
                     const watchedEps = await getWatchedEpisodes(watchlistId)
-                    watchedEpisodeKeys = new Set(
+                    watchedKeysCache.current = new Set(
                         watchedEps.map(ep => `${ep.season_number}-${ep.episode_number}`)
                     )
+                } else {
+                    watchedKeysCache.current = new Set()
                 }
 
-                // Fetch all seasons in parallel for better performance
-                const seasonPromises = seasonList.map(season => getTVSeasonDetails(Number(id), season))
-                const seasonDataArray = await Promise.all(seasonPromises)
-                
-                const allEpisodes: LocalEpisode[] = []
-                seasonDataArray.forEach((sData, index) => {
-                    const season = seasonList[index]
-                    const sEpisodes = sData.episodes || []
-                    for (const ep of sEpisodes) {
-                        const key = `${season}-${ep.episode_number}`
-                        allEpisodes.push({
-                            id: `${id}-${season}-${ep.episode_number}`,
-                            season_number: season,
-                            episode_number: ep.episode_number,
-                            tmdb_episode_id: ep.id,
-                            title: ep.name,
-                            still_path: ep.still_path ?? undefined,
-                            overview: ep.overview,
-                            vote_average: ep.vote_average,
-                            air_date: ep.air_date,
-                            runtime: ep.runtime,
-                            watched: watchedEpisodeKeys.has(key)
-                        })
-                    }
-                })
-                setEpisodes(allEpisodes)
+                // Load only the initially selected season
+                const initialSeason = selectedSeason || seasonList[0] || 1
+                setSelectedSeason(initialSeason)
+                await loadSeason(initialSeason)
 
                 // Find last watched episode and set season/scroll if user hasn't manually selected
-                if (!hasUserSelectedSeason.current && !hasAutoPositioned.current && watchedEpisodeKeys.size > 0) {
+                if (!hasUserSelectedSeason.current && !hasAutoPositioned.current && watchedKeysCache.current.size > 0) {
                     hasAutoPositioned.current = true
                     // Find the last watched episode by looking at the highest season+episode
-                    const watchedEps = allEpisodes.filter(ep => ep.watched)
+                    const allCached = Array.from(seasonCache.current.values()).flat()
+                    const watchedEps = allCached.filter(ep => ep.watched)
                     if (watchedEps.length > 0) {
                         const lastWatched = watchedEps.reduce((max, ep) => {
                             if (ep.season_number > max.season_number) return ep
@@ -248,8 +284,8 @@ const TVShowDetail: React.FC = () => {
                         
                         if (lastWatched) {
                             // Check if all episodes in the last watched season are fully watched
-                            const episodesInSeason = allEpisodes.filter(ep => ep.season_number === lastWatched.season_number)
-                            const allReleasedInSeasonWatched = episodesInSeason.filter(ep => isEpisodeReleased(ep)).every(ep => ep.watched)
+                            const seasonEps = seasonCache.current.get(lastWatched.season_number) || []
+                            const allReleasedInSeasonWatched = seasonEps.filter(ep => isEpisodeReleased(ep)).every(ep => ep.watched)
                             
                             let targetSeason = lastWatched.season_number
                             let targetEpisode = lastWatched.episode_number
@@ -259,15 +295,20 @@ const TVShowDetail: React.FC = () => {
                                 const nextSeasonIndex = seasonList.indexOf(lastWatched.season_number) + 1
                                 if (nextSeasonIndex < seasonList.length) {
                                     targetSeason = seasonList[nextSeasonIndex]
-                                    const firstEpisodeOfNextSeason = allEpisodes.find(ep => ep.season_number === targetSeason)
+                                    const firstEpisodeOfNextSeason = seasonCache.current.get(targetSeason)?.[0]
                                     if (firstEpisodeOfNextSeason) {
                                         targetEpisode = firstEpisodeOfNextSeason.episode_number
                                     }
                                 }
                             }
                             
-                            setSelectedSeason(targetSeason)
-                            episodeToScrollRef.current = `${id}-${targetSeason}-${targetEpisode}`
+                            if (targetSeason !== initialSeason) {
+                                setSelectedSeason(targetSeason)
+                                await loadSeason(targetSeason)
+                                episodeToScrollRef.current = `${id}-${targetSeason}-${targetEpisode}`
+                            } else {
+                                episodeToScrollRef.current = `${id}-${targetSeason}-${targetEpisode}`
+                            }
                         }
                     }
                 }
@@ -344,18 +385,31 @@ const TVShowDetail: React.FC = () => {
             setModalLoading(false)
         }
     }
-    const handleSeasonChange = (season: number) => {
+    const handleSeasonChange = async (season: number) => {
         hasUserSelectedSeason.current = true
         setSelectedSeason(season)
+        await loadSeason(season)
     }
 
     const hasUnwatchedEpisodesBefore = (episode: LocalEpisode): boolean => {
-        const episodesBefore = episodes.filter(ep => {
-            if (ep.season_number < episode.season_number) return true
-            if (ep.season_number === episode.season_number && ep.episode_number < episode.episode_number) return true
-            return false
-        })
-        return episodesBefore.some(ep => !ep.watched)
+        // For current season only (lazy-loaded)
+        if (episode.season_number === selectedSeason) {
+            return episodes.some(ep => 
+                ep.season_number === selectedSeason && 
+                ep.episode_number < episode.episode_number && 
+                !ep.watched
+            )
+        }
+        // For other seasons, check if any earlier season has unwatched episodes
+        const seasonIndex = seasons.indexOf(episode.season_number)
+        if (seasonIndex > 0) {
+            const earlierSeasons = seasons.slice(0, seasonIndex)
+            return earlierSeasons.some(s => {
+                const cached = seasonCache.current.get(s)
+                return cached ? cached.some(ep => !ep.watched) : true // Assume unwatched if not cached
+            })
+        }
+        return false
     }
 
     const getLogoUrl = (): string | null => {
@@ -621,7 +675,7 @@ const TVShowDetail: React.FC = () => {
         return <div className="detail-page-error">TV Show not found</div>
     }
 
-    const backdropUrl = imageUrlOriginal(getBestBackdropPath(details.images?.backdrops) ?? details.backdrop_path ?? null)
+    const backdropUrl = isMobile ? imageUrl(getBestBackdropPath(details.images?.backdrops) ?? details.backdrop_path ?? null, "w780") : imageUrlOriginal(getBestBackdropPath(details.images?.backdrops) ?? details.backdrop_path ?? null)
     const logoUrl = getLogoUrl()
     const title = details.name || 'Untitled'
     const firstYear = details.first_air_date?.slice(0, 4) || ''
