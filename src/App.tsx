@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
 import { updateLastActive } from './services/profileService'
 import { initializeAuth, useAuthStore } from './stores/useAuthStore'
@@ -60,19 +60,19 @@ const AppContent: React.FC = () => {
     const [updateSW, setUpdateSW] = useState<((reloadPage?: boolean) => Promise<void>) | null>(null)
 
     // Determine if running as a PWA (standalone mode)
-    const isPWA = useMemo(() => window.matchMedia('(display-mode: standalone)').matches ||
+    const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
         // @ts-expect-error - iOS Safari specific property
         (window.navigator.standalone === true) ||
-        document.referrer.includes('android-app://'), [])
+        document.referrer.includes('android-app://')
 
     // Default route based on app context:
     // - PWA on mobile: open Mobile TV Shows by default
     // - PWA on desktop: open normal TV Shows page
     // - Website: open Discover page by default
-    const isMobile = useMemo(() => window.innerWidth < 768, [])
-    const defaultRoute = useMemo(() => isPWA ? (isMobile ? '/MobileTVShows' : '/Tvshows') : '/Discover', [isPWA, isMobile])
+    const isMobile = window.innerWidth < 768
+    const defaultRoute = isPWA ? (isMobile ? '/MobileTVShows' : '/Tvshows') : '/Discover'
 
-    const isDetailPage = useMemo(() => location.pathname.match(/^\/(movie|tv|person)\/\d+$/) || location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/), [location.pathname])
+    const isDetailPage = location.pathname.match(/^\/(movie|tv|person)\/\d+$/) || location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/)
 
     useEffect(() => {
         void initializeAuth()
@@ -147,10 +147,10 @@ const AppContent: React.FC = () => {
         )
     }
 
-    const mediaPages = useMemo(() => ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Friends', '/Statistics', '/Finished', '/Lists', '/Profile', '/Admin', '/MobileTVShows', '/MobileMovies', '/Followers', '/Following'], [])
+    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Friends', '/Statistics', '/Finished', '/Lists', '/Profile', '/Admin', '/MobileTVShows', '/MobileMovies', '/Followers', '/Following']
     const hideFooter = Boolean(user) && (mediaPages.includes(location.pathname) || location.pathname === '/Settings' || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname.startsWith('/Lists/') || location.pathname.startsWith('/Profile/') || location.pathname.startsWith('/Movies/') || location.pathname.startsWith('/Followers') || location.pathname.startsWith('/Following'))
     
-    const navigateMonth = useCallback((direction: number) => {
+    const navigateMonth = (direction: number) => {
         setCurrentMonth(prev => {
             const year = prev.getFullYear()
             const month = prev.getMonth()
@@ -163,17 +163,17 @@ const AppContent: React.FC = () => {
             }
             return newDate
         })
-    }, [])
+    }
 
-    const canGoBack = useCallback(() => {
+    const canGoBack = () => {
         const now = new Date()
         return currentMonth.getFullYear() > now.getFullYear() || 
                (currentMonth.getFullYear() === now.getFullYear() && currentMonth.getMonth() > now.getMonth())
-    }, [currentMonth])
+    }
 
-    const goToToday = useCallback(() => {
+    const goToToday = () => {
         setCurrentMonth(new Date())
-    }, [])
+    }
 
     return (
         <div className="d-flex flex-column min-vh-100">
