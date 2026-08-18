@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Link } from 'react-router-dom';
 
 interface FooterProps {
@@ -47,13 +47,13 @@ const Footer: React.FC<FooterProps> = ({ loggedIn = false }) => {
                     <div className="footer__links-group">
                         <span className="footer__links-title">Connect</span>
                         <div className="footer__social">
-                            <a href="https://github.com/Ph1lippus" target="_blank" aria-label="GitHub">
+                            <a href="https://github.com/Ph1lippus" target="_blank" rel="noopener noreferrer" aria-label="GitHub">
                                 <i className="fab fa-github"></i>
                             </a>
-                            <a href="https://www.linkedin.com/in/filipe-santos-7b2b70355/" target="_blank" aria-label="LinkedIn">
+                            <a href="https://www.linkedin.com/in/filipe-santos-7b2b70355/" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn">
                                 <i className="fab fa-linkedin-in"></i>
                             </a>
-                            <a href="https://buymeacoffee.com/ph1lippus" target="_blank" aria-label="Buy Me a Coffee">
+                            <a href="https://buymeacoffee.com/ph1lippus" target="_blank" rel="noopener noreferrer" aria-label="Buy Me a Coffee">
                                 <i className="fas fa-mug-hot"></i>
                             </a>
                         </div>
@@ -63,7 +63,7 @@ const Footer: React.FC<FooterProps> = ({ loggedIn = false }) => {
                 <div className="footer__bottom">
                     <p className="footer__copyright">
                         &copy; 2026 <strong>Trackist</strong>. Open source. 
-                        Built with ❤️ by <a href="https://github.com/Ph1lippus" target="_blank">Ph1lippus</a>
+                        Built with â¤ï¸ by <a href="https://github.com/Ph1lippus" target="_blank" rel="noopener noreferrer">Ph1lippus</a>
                     </p>
                 </div>
             </div>

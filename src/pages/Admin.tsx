@@ -79,6 +79,7 @@ const Admin: React.FC = () => {
     const [pendingAvatarUserId, setPendingAvatarUserId] = useState<string | null>(null)
     const avatarInputRef = useRef<HTMLInputElement>(null)
 
+    if (loading) return <div className="discover-loading"><div className="discover-spinner" /><p>Loading...</p></div>
     if (profile && profile.role !== "admin") return <Navigate to="/" replace />
 
     const isAdmin = profile?.role === "admin"
