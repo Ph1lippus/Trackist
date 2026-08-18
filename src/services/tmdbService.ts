@@ -185,7 +185,6 @@ export const getMovieDetails = async (id: number): Promise<{
     }
     return res.json()
 }
-export const getTVDetails = getTVShowDetails
 
 export const getTVShowDetails = async (id: number): Promise<{
     id: number
@@ -199,6 +198,7 @@ export const getTVShowDetails = async (id: number): Promise<{
     genres?: { id: number; name: string }[]
     number_of_seasons?: number
     number_of_episodes?: number
+    seasons?: { season_number: number; episode_count: number; air_date?: string }[]
     status?: string
     episode_run_time?: number[]
     production_companies?: { id: number; name: string; logo_path?: string | null; origin_country?: string }[]
@@ -230,6 +230,8 @@ export const getTVShowDetails = async (id: number): Promise<{
     }
     return res.json()
 }
+
+export const getTVDetails = getTVShowDetails
 export const getTVSeasonDetails = async (tvId: number, seasonNumber: number): Promise<{
     id: number
     season_number: number
