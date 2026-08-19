@@ -734,7 +734,7 @@ const TVShowDetail: React.FC = () => {
                             {isInWatchlist && watchlistStatus && (
                                 <div className="detail-page__status">
                                     <span className="detail-page__status-label">Status:</span>
-                                    <span className="detail-page__status-value">{formatStatus(watchlistStatus || ).label}</span>
+                                    <span className="detail-page__status-value">{formatStatus(watchlistStatus || "").label}</span>
                                 </div>
                             )}
                             
