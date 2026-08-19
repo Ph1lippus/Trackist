@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getBestBackdropPath } from '../services/tmdbService'
+import { formatStatus } from '../utils/statusUtils'
 import { markEpisodeWatched, unmarkEpisodeWatched, getWatchedEpisodes, checkAndUpdateCompleted, markShowAsFullyWatched } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { invalidateUserCache } from '../services/cacheService'
@@ -733,7 +734,7 @@ const TVShowDetail: React.FC = () => {
                             {isInWatchlist && watchlistStatus && (
                                 <div className="detail-page__status">
                                     <span className="detail-page__status-label">Status:</span>
-                                    <span className="detail-page__status-value">{watchlistStatus}</span>
+                                    <span className="detail-page__status-value">{formatStatus(watchlistStatus || ).label}</span>
                                 </div>
                             )}
                             

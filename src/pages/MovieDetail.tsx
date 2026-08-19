@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getMovieDetails, imageUrl, imageUrlOriginal, getBestBackdropPath } from '../services/tmdbService'
+import { formatStatus } from '../utils/statusUtils'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { invalidateUserCache } from '../services/cacheService'
 import ConfirmModal from '../components/modals/ConfirmModal'
@@ -288,7 +289,7 @@ const MovieDetail: React.FC = () => {
                         {isInWatchlist && watchlistStatus && (
                             <div className="detail-page__status">
                                 <span className="detail-page__status-label">Status:</span>
-                                <span className="detail-page__status-value">{watchlistStatus}</span>
+                                <span className="detail-page__status-value">{formatStatus(watchlistStatus || ).label}</span>
                             </div>
                         )}
                         
