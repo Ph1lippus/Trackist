@@ -220,6 +220,39 @@ const TVShows: React.FC = () => {
         }
     }
 
+
+    const handleMarkUnwatched = async (item: WatchlistItem) => {
+        if (!item.id) return
+
+        try {
+            // Delete all watched episodes
+            await supabase
+                .from('watchlist_episodes')
+                .delete()
+                .eq('watchlist_id', item.id)
+
+            // Reset to watching status with fresh episode tracking
+            await supabase
+                .from('watchlist')
+                .update({
+                    status: 'watching',
+                    total_episodes: 0,
+                    total_episodes_watched: 0,
+                    total_seasons: 0,
+                    current_season: 1,
+                    current_episode: 0,
+                    completed_at: null,
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', item.id)
+
+            // Refresh the store
+            await useLibraryStore.getState().refreshItem(item.id)
+        } catch (err) {
+            console.error('Failed to mark as unwatched:', err)
+            alert('Failed to mark as unwatched. Please try again.')
+        }
+    }
     return (
         <div className="discover-page">
             {isMobile && (
