@@ -254,7 +254,8 @@ const TVShows: React.FC = () => {
                                             onSelect={() => toggleSelection(item.id)}
                                             isInWatchlist={true}
                                             onAdd={selectionMode ? undefined : () => {}}
-                                            onMarkWatched={selectionMode ? undefined : () => setMarkAllModal(item)}
+                                            onMarkWatched={selectionMode ? undefined : (item.status === 'completed' || item.status === 'caught_up') ? undefined : () => setMarkAllModal(item)}
+                                            onMarkUnwatched={selectionMode ? undefined : (item.status === 'completed' || item.status === 'caught_up') ? () => handleMarkUnwatched(item) : undefined}
                                             episodesLeft={episodesLeft}
                                         />
                                     </div>
@@ -283,7 +284,8 @@ const TVShows: React.FC = () => {
                                             onSelect={() => toggleSelection(item.id)}
                                             isInWatchlist={true}
                                             onAdd={selectionMode ? undefined : () => {}}
-                                            onMarkWatched={selectionMode ? undefined : () => setMarkAllModal(item)}
+                                            onMarkWatched={selectionMode ? undefined : (item.status === 'completed' || item.status === 'caught_up') ? undefined : () => setMarkAllModal(item)}
+                                            onMarkUnwatched={selectionMode ? undefined : (item.status === 'completed' || item.status === 'caught_up') ? () => handleMarkUnwatched(item) : undefined}
                                         />
                                     </div>
                                 )
@@ -311,7 +313,8 @@ const TVShows: React.FC = () => {
                                             onSelect={() => toggleSelection(item.id)}
                                             isInWatchlist={true}
                                             onAdd={selectionMode ? undefined : () => {}}
-                                            onMarkWatched={selectionMode ? undefined : () => setMarkAllModal(item)}
+                                            onMarkWatched={selectionMode ? undefined : (item.status === 'completed' || item.status === 'caught_up') ? undefined : () => setMarkAllModal(item)}
+                                            onMarkUnwatched={selectionMode ? undefined : (item.status === 'completed' || item.status === 'caught_up') ? () => handleMarkUnwatched(item) : undefined}
                                         />
                                     </div>
                                 )
