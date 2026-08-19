@@ -789,13 +789,13 @@ const TVShowDetail: React.FC = () => {
                                             className="detail-page__icon-btn"
                                             onClick={() => {
                                                 if (!watchlistId) return
-                                                const markAsWatched = watchlistStatus !== 'completed'
+                                                const markAsWatched = watchlistStatus !== 'completed' && watchlistStatus !== 'caught_up'
                                                 setMarkWatchedModal({ isOpen: true, markAsWatched })
                                             }}
                                             disabled={isUpdatingStatus || modalLoading}
-                                            title={watchlistStatus === 'completed' ? 'Mark as Unwatched' : 'Mark as Watched'}
+                                            title={(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? 'Mark as Unwatched' : 'Mark as Watched'}
                                         >
-                                            <i className={watchlistStatus === 'completed' ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
+                                            <i className={(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
                                         </button>
                                         <button 
                                             className="detail-page__icon-btn"
