@@ -1,4 +1,4 @@
-import { create } from 'zustand'
+﻿import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 import { supabase } from '../services/supabaseClient'
 import type { TMDBResult, WatchlistItem } from '../types'
@@ -48,7 +48,6 @@ interface DiscoverState {
     
     // Computed
     visibleResults: TMDBResult[]
-    visibleCount: number
 
     // Actions
     setQuery: (query: string) => void
@@ -95,7 +94,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     showAdded: true,
     sessionAddedIds: new Set<number>(),
     visibleResults: [],
-    visibleCount: 0,
 
     // Actions
     setQuery: (query) => set({ query, sessionAddedIds: new Set() }),
@@ -108,7 +106,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             mediaType,
             sessionAddedIds: new Set(), // Clear session overrides on tab switch
             visibleResults,
-            visibleCount: visibleResults.length
         }
     }),
 
@@ -206,7 +203,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         showAdded: true,
         sessionAddedIds: new Set<number>(),
         visibleResults: [],
-        visibleCount: 0,
     }),
 
     reset: () => set({
@@ -589,7 +585,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     ? updatedResults 
                     : updatedResults.filter(item => !watchlistIds.has(item.id) || currentSessionIds.has(item.id))
 
-                const visibleCount = visibleResults.length
                 const hasMoreContent = pageNum < totalPages
 
                 return {
