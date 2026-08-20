@@ -46,7 +46,7 @@ const Discover: React.FC = () => {
     // Compute visible results locally to ensure it is always in sync with results and filters
     const visibleResults = React.useMemo(() => {
         if (showAdded || filters.mediaType === 'person') {
-            return results
+            return [...results]
         }
         return results.filter(item => !watchlistIds.has(item.id))
     }, [results, watchlistIds, showAdded, filters.mediaType])
