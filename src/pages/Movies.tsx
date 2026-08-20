@@ -103,7 +103,7 @@ const Movies: React.FC = () => {
     }
 
     const watchlistItems = useMemo(() => filteredItems.filter(item => 
-        item.status === 'planning' && isMovieReleased(item)
+        (item.status === 'planning' || item.status === 'watching') && isMovieReleased(item)
     ).sort((a, b) => {
         const dateA = new Date(a.added_at || 0)
         const dateB = new Date(b.added_at || 0)
@@ -111,7 +111,7 @@ const Movies: React.FC = () => {
     }), [filteredItems])
 
     const notReleasedItems = useMemo(() => filteredItems.filter(item => 
-        item.status === 'planning' && !isMovieReleased(item)
+        (item.status === 'planning' || item.status === 'watching') && !isMovieReleased(item)
     ).sort((a, b) => {
         const dateA = new Date(a.release_date || '9999-12-31')
         const dateB = new Date(b.release_date || '9999-12-31')
@@ -232,4 +232,6 @@ const Movies: React.FC = () => {
 }
 
 export default Movies
+
+
 
