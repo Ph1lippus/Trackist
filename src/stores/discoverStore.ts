@@ -289,9 +289,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             sortBy,
             query,
             selectedGenre,
-            selectedYear,
-            showAdded,
-            watchlistIds,
+            selectedYear
         } = get()
 
         // Stale request from a previous tab/filter - abandon it.
@@ -579,11 +577,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     updatedResults = [...state.results, ...newUniqueItems]
                 }
 
-                const currentSessionIds = pageNum === 1 ? new Set<number>() : state.sessionAddedIds;
-
-                const visibleResults = showAdded || mediaType === 'person'
-                    ? updatedResults 
-                    : updatedResults.filter(item => !watchlistIds.has(item.id) || currentSessionIds.has(item.id))
 
                 const hasMoreContent = pageNum < totalPages
 
