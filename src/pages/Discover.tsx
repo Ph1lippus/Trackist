@@ -7,7 +7,7 @@ import React, {
 import { useLocation } from 'react-router-dom'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
-import useDiscoverStore, { useDiscoverVisibleResults, useDiscoverFilters, useDiscoverLoading, useDiscoverActions, useDiscoverWatchlistIds, useDiscoverShowAdded } from '../stores/discoverStore'
+import useDiscoverStore, { useDiscoverFilters, useDiscoverLoading, useDiscoverActions, useDiscoverWatchlistIds, useDiscoverShowAdded, useDiscoverResults } from '../stores/discoverStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
@@ -35,13 +35,21 @@ const Discover: React.FC = () => {
     const isVisible = location.pathname === '/' || location.pathname === '/Discover'
 
     // Store selectors
-    const visibleResults = useDiscoverVisibleResults()
+    const results = useDiscoverResults()
     const filters = useDiscoverFilters()
     const loading = useDiscoverLoading()
     const actions = useDiscoverActions()
     const watchlistIds = useDiscoverWatchlistIds()
     const showAdded = useDiscoverShowAdded()
     const store = useDiscoverStore()
+
+    // Compute visible results locally to ensure it is always in sync with results and filters
+    const visibleResults = React.useMemo(() => {
+        if (showAdded || filters.mediaType === 'person') {
+            return results
+        }
+        return results.filter(item => !watchlistIds.has(item.id))
+    }, [results, watchlistIds, showAdded, filters.mediaType])
     const { committedQuery } = useSearch()
     const { isMobile } = useMobile()
 

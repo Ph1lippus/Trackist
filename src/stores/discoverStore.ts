@@ -118,38 +118,11 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
 
     setSelectedYear: (selectedYear) => set({ selectedYear, sessionAddedIds: new Set() }),
 
-    setWatchlistIds: (watchlistIds) => set((state) => {
-        const visibleResults = state.showAdded || state.mediaType === 'person'
-            ? state.results 
-            : state.results.filter(item => !watchlistIds.has(item.id) || state.sessionAddedIds.has(item.id))
-        return { 
-            watchlistIds, 
-            visibleResults,
-            visibleCount: visibleResults.length
-        }
-    }),
+    setWatchlistIds: (watchlistIds) => set({ watchlistIds }),
 
-    setShowAdded: (showAdded) => set((state) => {
-        const visibleResults = showAdded || state.mediaType === 'person'
-            ? state.results 
-            : state.results.filter(item => !state.watchlistIds.has(item.id) || state.sessionAddedIds.has(item.id))
-        return { 
-            showAdded, 
-            visibleResults,
-            visibleCount: visibleResults.length
-        }
-    }),
+    setShowAdded: (showAdded) => set({ showAdded }),
 
-    setSessionAddedIds: (sessionAddedIds: Set<number>) => set((state) => {
-        const visibleResults = state.showAdded || state.mediaType === 'person'
-            ? state.results 
-            : state.results.filter(item => !state.watchlistIds.has(item.id) || sessionAddedIds.has(item.id))
-        return { 
-            sessionAddedIds, 
-            visibleResults,
-            visibleCount: visibleResults.length
-        }
-    }),
+    setSessionAddedIds: (sessionAddedIds: Set<number>) => set({ sessionAddedIds }),
 
     addToWatchlist: async (id, item?) => {
         const { data: { user } } = await supabase.auth.getUser()
@@ -252,8 +225,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         isLoadingMore: false,
         isDataLoaded: false,
         showAdded: true,
-        visibleResults: [],
-        visibleCount: 0,
     }),
 
     setIsVisible: (visible) => {
@@ -628,8 +599,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     isLoading: false,
                     isLoadingMore: false,
                     isDataLoaded: true,
-                    visibleResults,
-                    visibleCount,
                 }
             })
         } catch (err) {
@@ -651,21 +620,11 @@ useLibraryStore.subscribe((state) => {
                 .map((item) => item.tmdb_id)
                 .filter((id): id is number => id != null)
         )
-        const discoverState = useDiscoverStore.getState()
-        discoverState.setWatchlistIds(ids)
-        
-        const visibleResults = discoverState.showAdded || discoverState.mediaType === 'person'
-            ? discoverState.results 
-            : discoverState.results.filter(item => !ids.has(item.id) || discoverState.sessionAddedIds.has(item.id))
-        useDiscoverStore.setState({
-            visibleResults,
-            visibleCount: visibleResults.length
-        })
+        useDiscoverStore.getState().setWatchlistIds(ids)
     }
 })
 
 export const useDiscoverResults = () => useDiscoverStore((state) => state.results)
-export const useDiscoverVisibleResults = () => useDiscoverStore((state) => state.visibleResults)
 export const useDiscoverWatchlistIds = () => useDiscoverStore((state) => state.watchlistIds)
 export const useDiscoverShowAdded = () => useDiscoverStore((state) => state.showAdded)
 export const useDiscoverSessionAddedIds = () => useDiscoverStore((state) => state.sessionAddedIds)
