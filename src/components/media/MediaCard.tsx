@@ -115,8 +115,9 @@ const MediaCard: React.FC<MediaCardProps> = ({
         },
         [onDelete, item],
     )
-    const showAddButton = !compact && onAdd && !(isInWatchlist && (onMarkWatched || onMarkUnwatched)) && !listMode
+    const showAddButton = !compact && onAdd && !isInWatchlist && !listMode
     const showAddToListButton = !compact && onAddToList && !isPerson && !listMode
+    const showInWatchlistCheck = !compact && !isPerson && isInWatchlist && !onMarkWatched && !onMarkUnwatched && !listMode && !selectable
     const showMarkWatched = !compact && !isPerson && onMarkWatched && !onMarkUnwatched
     const showMarkUnwatched = !compact && !isPerson && onMarkUnwatched && !onMarkWatched
     const showDeleteButton = !compact && onDelete && !isPerson && listMode
@@ -170,6 +171,14 @@ const MediaCard: React.FC<MediaCardProps> = ({
                             <i className="fa-regular fa-bookmark"></i>
                         )}
                     </button>
+                )}
+                {showInWatchlistCheck && (
+                    <div
+                        className="media-card__check-icon"
+                        title="In watchlist"
+                    >
+                        <i className="fa-solid fa-check"></i>
+                    </div>
                 )}
                 {showAddToListButton && (
                     <button
@@ -279,6 +288,8 @@ export default React.memo(MediaCard, (prev, next) => {
         prev.onSelect === next.onSelect
     )
 })
+
+
 
 
 
