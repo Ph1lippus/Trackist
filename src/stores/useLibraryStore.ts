@@ -58,7 +58,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     isInitialized: false,
     error: null,
 
-    // Fetch entire library once at boot
+    // Fetch entire library once at boot (with pagination to support >1000 items)
     fetchInitialLibrary: async (userId: string) => {
         if (!userId) {
             console.error('No userId provided to fetchInitialLibrary')
@@ -79,43 +79,86 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             
             if (cachedData) {
                 items = cachedData
-                // Revalidate in background with fresh data
+                // Revalidate in background with fresh data (paginated)
                 ;(async () => {
                     try {
-                        const { data, error } = await supabase
-                            .from('watchlist')
-                            .select(selectColumns)
-                            .eq('user_id', userId)
-                            .order('updated_at', { ascending: false })
-                        if (!error && data) {
-                            await cacheService.set('library', userId, data, 5 * 60 * 1000)
+                        const freshItems: WatchlistItem[] = []
+                        let hasMore = true
+                        let page = 0
+                        const pageSize = 1000
+                        while (hasMore) {
+                            const { data, error } = await supabase
+                                .from('watchlist')
+                                .select(selectColumns)
+                                .eq('user_id', userId)
+                                .order('updated_at', { ascending: false })
+                                .range(page * pageSize, (page + 1) * pageSize - 1)
+                            if (error || !data || data.length < pageSize) {
+                                hasMore = false
+                            }
+                            if (data) {
+                                freshItems.push(...data)
+                            }
+                            page++
+                        }
+                        if (freshItems.length > 0) {
+                            await cacheService.set('library', userId, freshItems, 5 * 60 * 1000)
+                            // Update store with fresh data if it differs from cached
+                            const currentIds = new Set(get().allItems.map(i => i.id))
+                            const newIds = new Set(freshItems.map(i => i.id))
+                            if (currentIds.size !== newIds.size || !Array.from(currentIds).every(id => newIds.has(id))) {
+                                set({
+                                    allItems: freshItems,
+                                    tvShows: freshItems.filter(i => i.media_type === 'tv' || i.media_type === 'anime').map(i => ({ ...i, total_episodes_watched: i.watched_episodes_count ?? 0 } as TVShowWithProgress)),
+                                    movies: freshItems.filter(i => i.media_type === 'movie'),
+                                    finished: freshItems.filter(i => i.status === 'completed' || i.status === 'caught_up' || i.status === 'dropped'),
+                                    watchlistIds: computeWatchlistIds(freshItems),
+                                })
+                            }
                         }
                     } catch (err) {
                         console.error('Background revalidation failed:', err)
                     }
                 })()
             } else {
-                const { data, error } = await supabase
-                    .from('watchlist')
-                    .select(selectColumns)
-                    .eq('user_id', userId)
-                    .order('updated_at', { ascending: false })
+                // Paginated fetch to support libraries larger than 1000 items
+                const allItems: WatchlistItem[] = []
+                let hasMore = true
+                let page = 0
+                const pageSize = 1000
+                while (hasMore) {
+                    const { data, error } = await supabase
+                        .from('watchlist')
+                        .select(selectColumns)
+                        .eq('user_id', userId)
+                        .order('updated_at', { ascending: false })
+                        .range(page * pageSize, (page + 1) * pageSize - 1)
 
-                if (error) {
-                    console.error('Supabase error details:', {
-                        message: error.message,
-                        details: error.details,
-                        hint: error.hint,
-                        code: error.code,
-                        fullError: error
-                    })
-                    // Don't throw, just log and continue with empty array
-                    // This prevents the 400 error from breaking the app
-                } else {
-                    items = data || []
-                    // Cache the fresh data with short TTL (5 minutes) since users expect fresh data
-                    await cacheService.set('library', userId, items, 5 * 60 * 1000)
+                    if (error) {
+                        console.error('Supabase error details:', {
+                            message: error.message,
+                            details: error.details,
+                            hint: error.hint,
+                            code: error.code,
+                            fullError: error
+                        })
+                        // Don't throw, just log and continue with what we have
+                    }
+
+                    if (data && data.length > 0) {
+                        allItems.push(...data)
+                        if (data.length < pageSize) {
+                            hasMore = false
+                        }
+                    } else {
+                        hasMore = false
+                    }
+                    page++
                 }
+
+                items = allItems
+                // Cache the fresh data with short TTL (5 minutes) since users expect fresh data
+                await cacheService.set('library', userId, items, 5 * 60 * 1000)
             }
 
             // Categorize items by status and media type

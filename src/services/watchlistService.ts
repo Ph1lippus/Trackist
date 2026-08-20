@@ -918,17 +918,35 @@ export const checkForNewSeasons = async (userId: string): Promise<{ updated: num
     let errors = 0
 
     try {
-        const { data: shows, error: fetchError } = await supabase
-            .from('watchlist')
-            .select('*')
-            .eq('user_id', userId)
-            .eq('media_type', 'tv')
+        // Paginated fetch to support libraries larger than 1000 items
+        const shows: any[] = []
+        let hasMore = true
+        let page = 0
+        const pageSize = 1000
+        while (hasMore) {
+            const { data, error: fetchError } = await supabase
+                .from('watchlist')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('media_type', 'tv')
+                .range(page * pageSize, (page + 1) * pageSize - 1)
 
-        if (fetchError) {
-            throw new Error(`Failed to fetch watchlist: ${fetchError.message}`)
+            if (fetchError) {
+                throw new Error(`Failed to fetch watchlist: ${fetchError.message}`)
+            }
+
+            if (data && data.length > 0) {
+                shows.push(...data)
+                if (data.length < pageSize) {
+                    hasMore = false
+                }
+            } else {
+                hasMore = false
+            }
+            page++
         }
 
-        if (!shows || shows.length === 0) {
+        if (shows.length === 0) {
             return { updated: 0, errors: 0 }
         }
 
@@ -991,17 +1009,35 @@ export const updateLastSeasonNumbers = async (
     let errors = 0
 
     try {
-        const { data: shows, error: fetchError } = await supabase
-            .from('watchlist')
-            .select('*')
-            .eq('user_id', userId)
-            .eq('media_type', 'tv')
+        // Paginated fetch to support libraries larger than 1000 items
+        const shows: any[] = []
+        let hasMore = true
+        let page = 0
+        const pageSize = 1000
+        while (hasMore) {
+            const { data, error: fetchError } = await supabase
+                .from('watchlist')
+                .select('*')
+                .eq('user_id', userId)
+                .eq('media_type', 'tv')
+                .range(page * pageSize, (page + 1) * pageSize - 1)
 
-        if (fetchError) {
-            throw new Error(`Failed to fetch watchlist: ${fetchError.message}`)
+            if (fetchError) {
+                throw new Error(`Failed to fetch watchlist: ${fetchError.message}`)
+            }
+
+            if (data && data.length > 0) {
+                shows.push(...data)
+                if (data.length < pageSize) {
+                    hasMore = false
+                }
+            } else {
+                hasMore = false
+            }
+            page++
         }
 
-        if (!shows || shows.length === 0) {
+        if (shows.length === 0) {
             return { updated: 0, errors: 0 }
         }
 
@@ -1072,18 +1108,35 @@ export const fixAllProgress = async (
     }
 
     try {
-        // Fetch all TV shows and movies for the user
-        const { data: allItems, error: fetchError } = await supabase
-            .from('watchlist')
-            .select('*')
-            .eq('user_id', userId)
-            .in('media_type', ['tv', 'movie'])
+        // Paginated fetch to support libraries larger than 1000 items
+        const allItems: any[] = []
+        let hasMore = true
+        let page = 0
+        const pageSize = 1000
+        while (hasMore) {
+            const { data, error: fetchError } = await supabase
+                .from('watchlist')
+                .select('*')
+                .eq('user_id', userId)
+                .in('media_type', ['tv', 'movie'])
+                .range(page * pageSize, (page + 1) * pageSize - 1)
 
-        if (fetchError) {
-            throw new Error(`Failed to fetch watchlist: ${fetchError.message}`)
+            if (fetchError) {
+                throw new Error(`Failed to fetch watchlist: ${fetchError.message}`)
+            }
+
+            if (data && data.length > 0) {
+                allItems.push(...data)
+                if (data.length < pageSize) {
+                    hasMore = false
+                }
+            } else {
+                hasMore = false
+            }
+            page++
         }
 
-        if (!allItems || allItems.length === 0) {
+        if (allItems.length === 0) {
             onProgress?.({
                 ...progress,
                 total: 0,

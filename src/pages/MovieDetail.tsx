@@ -49,6 +49,38 @@ const MovieDetail: React.FC = () => {
         window.scrollTo(0, 0)
     }, [id])
 
+    // Re-check watchlist status when library store finishes initializing
+    useEffect(() => {
+        if (!id) return
+        
+        const checkWatchlistStatus = () => {
+            const watchlistItem = useLibraryStore.getState().allItems.find(item => item.tmdb_id === Number(id))
+            if (watchlistItem) {
+                setIsInWatchlist(true)
+                setWatchlistId(watchlistItem.id)
+                setWatchlistStatus(watchlistItem.status)
+            } else {
+                setIsInWatchlist(false)
+                setWatchlistId(null)
+                setWatchlistStatus(null)
+            }
+        }
+        
+        // Check immediately if already initialized
+        if (useLibraryStore.getState().isInitialized) {
+            checkWatchlistStatus()
+        }
+        
+        // Subscribe to library store changes
+        const unsubscribe = useLibraryStore.subscribe((state) => {
+            if (state.isInitialized) {
+                checkWatchlistStatus()
+            }
+        })
+        
+        return unsubscribe
+    }, [id])
+
     useEffect(() => {
         const fetchDetails = async () => {
             if (!id) return
