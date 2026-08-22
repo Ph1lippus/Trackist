@@ -115,7 +115,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
         },
         [onDelete, item],
     )
-    const showAddButton = !compact && onAdd && !isInWatchlist && !listMode
+    const showAddButton = !compact && onAdd && !listMode
     const showAddToListButton = !compact && onAddToList && !isPerson && !listMode
     const showMarkWatched = !compact && !isPerson && onMarkWatched && !onMarkUnwatched
     const showMarkUnwatched = !compact && !isPerson && onMarkUnwatched && !onMarkWatched
