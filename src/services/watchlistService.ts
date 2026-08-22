@@ -191,13 +191,13 @@ export const getNextEpisodeToWatch = async (watchlistId: string, skipCache: bool
  * all episodes so users can mark individual episodes as watched.
  */
 export const saveAllEpisodesForShow = async (tmdbId: number, watchlistId: string): Promise<void> => {
-    try {
-        const details = await getTVDetails(tmdbId)
-        const seasonNumbers = (details.seasons || [])
-            .filter((s: { season_number: number }) => s.season_number > 0)
-            .map((s: { season_number: number }) => s.season_number)
+    const details = await getTVDetails(tmdbId)
+    const seasonNumbers = (details.seasons || [])
+        .filter((s: { season_number: number }) => s.season_number > 0)
+        .map((s: { season_number: number }) => s.season_number)
 
-        for (const season of seasonNumbers) {
+    for (const season of seasonNumbers) {
+        try {
             const seasonData = await getTVSeasonDetails(tmdbId, season)
             const episodes = seasonData.episodes || []
             const episodeInserts = episodes.map((ep: { episode_number: number; id?: number; name?: string; still_path?: string | null; overview?: string; air_date?: string; runtime?: number }) => ({
@@ -212,7 +212,6 @@ export const saveAllEpisodesForShow = async (tmdbId: number, watchlistId: string
                 runtime: ep.runtime
             }))
 
-            // Insert in batches to avoid hitting limits
             const batchSize = 100
             for (let i = 0; i < episodeInserts.length; i += batchSize) {
                 const batch = episodeInserts.slice(i, i + batchSize)
@@ -220,9 +219,9 @@ export const saveAllEpisodesForShow = async (tmdbId: number, watchlistId: string
                     onConflict: 'watchlist_id,season_number,episode_number'
                 })
             }
+        } catch (err) {
+            console.error(`Failed to save episodes for season ${season} of show ${tmdbId}:`, err)
         }
-    } catch (err) {
-        console.error(`Failed to save all episodes for show ${tmdbId}:`, err)
     }
 }
 
@@ -496,12 +495,10 @@ export const markShowAsFullyWatched = async (watchlistId: string, tmdbId: number
         // Invalidate cache so Finished page shows updated data immediately
         await invalidateUserCache()
 
-        // 2. Save all episodes in the background (fire and forget)
+        // 2. Save all episodes - await to ensure completion and propagate errors
         // This ensures individual episode tracking still works
         // Note: watchlist_episodes only stores watched episodes, so all inserted rows are watched by default
-        saveAllEpisodesForShow(tmdbId, watchlistId).catch(err => {
-            console.error('Failed to save episodes in background:', err)
-        })
+        await saveAllEpisodesForShow(tmdbId, watchlistId)
 
         return newStatus
     } catch (err) {
