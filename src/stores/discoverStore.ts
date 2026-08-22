@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand'
+import { create } from 'zustand'
 import { useShallow } from 'zustand/react/shallow'
 import { supabase } from '../services/supabaseClient'
 import type { TMDBResult, WatchlistItem } from '../types'
@@ -234,6 +234,20 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     fetchWatchlistIds: async () => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
+
+        // First check if library store already has data loaded - use it as source of truth
+        const libraryState = useLibraryStore.getState()
+        if (libraryState.allItems.length > 0) {
+            const ids = new Set(
+                libraryState.allItems
+                    .map(item => item.tmdb_id)
+                    .filter((id): id is number => id != null)
+            )
+            set({ watchlistIds: ids })
+            return
+        }
+
+        // Fall back to database query if library store has not loaded yet
         const { data } = await supabase
             .from('watchlist')
             .select('tmdb_id')
