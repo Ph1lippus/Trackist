@@ -264,7 +264,6 @@
     .detail-page__season-select,
     .search-dropdown,
     .media-card__add-icon,
-    .media-card__check-icon,
     .media-card__icon-btn,
     .media-card__unwatch-icon,
     .media-card__confirm-overlay,
@@ -1238,7 +1237,6 @@ body::after {
         padding: 0.15rem 0.35rem;
     }
     .media-card__add-icon,
-    .media-card__check-icon,
     .media-card__unwatch-icon {
         width: 22px;
         height: 22px;
@@ -4683,24 +4681,6 @@ button:focus-visible {
 }
 
 .media-card__add-icon,
-.media-card__check-icon {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    background: rgba(0, 0, 0, 0.6);
-    border: none;
-    color: #fff;
-    width: 28px;
-    height: 28px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    backdrop-filter: blur(4px);
-    transition: background-color 0.2s ease, transform 0.15s ease;
-}
-
 .media-card__add-icon:hover {
     background: var(--color-primary);
     transform: scale(1.1);
@@ -4772,19 +4752,6 @@ i.fa-solid.fa-trash {
 i.fa-solid.fa-trash:hover {
     transition: color 0.2s ease, transform 0.15s ease;
     color: var(--color-primary) !important;
-}
-
-.media-card__check-icon {
-    background: rgba(104, 255, 174, 0.15);
-    border: 1px solid rgba(104, 255, 174, 0.3);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.media-card__check-icon:hover {
-    background: rgba(104, 255, 174, 0.3);
-    transform: scale(1.1);
-    box-shadow: 0 0 12px rgba(104, 255, 174, 0.4);
 }
 
 .media-card__body h3 {
