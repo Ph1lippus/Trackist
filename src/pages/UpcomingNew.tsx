@@ -147,13 +147,13 @@ const UpcomingNew: React.FC = () => {
                             <div key={date} className="upcoming-new-date-group">
                                 <div className={`upcoming-new-date-label ${isToday(date) ? 'today' : ''}`}>
                                     <span className="upcoming-new-date-main">
-                                        {formatDateString(date, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                                        {formatDateString(date, {
+                                            weekday: 'short',
+                                            month: 'short',
+                                            day: 'numeric',
+                                            ...(date.split('-')[0] !== String(new Date().getUTCFullYear()) ? { year: 'numeric' } : {})
+                                        })}
                                     </span>
-                                    {isToday(date) && (
-                                        <span className="upcoming-new-today-badge">
-                                            Today
-                                        </span>
-                                    )}
                                 </div>
 
                                 <div className="upcoming-new-cards">
