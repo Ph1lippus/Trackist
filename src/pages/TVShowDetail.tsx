@@ -683,7 +683,7 @@ const TVShowDetail: React.FC = () => {
         return <div className="detail-page-error">TV Show not found</div>
     }
 
-    const backdropUrl = isMobile ? imageUrl(getBestBackdropPath(details.images?.backdrops) ?? details.backdrop_path ?? null, "w780") : imageUrlOriginal(getBestBackdropPath(details.images?.backdrops) ?? details.backdrop_path ?? null)
+    const backdropUrl = isMobile ? imageUrl(getBestBackdropPath(details.images?.backdrops) ?? details.backdrop_path ?? null, "w1280") : imageUrlOriginal(getBestBackdropPath(details.images?.backdrops) ?? details.backdrop_path ?? null)
     const logoUrl = getLogoUrl()
     const title = details.name || 'Untitled'
     const firstYear = details.first_air_date?.slice(0, 4) || ''
