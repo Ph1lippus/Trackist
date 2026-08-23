@@ -1,7 +1,6 @@
 ﻿import React, { useState, useEffect } from 'react'
 import { supabase } from '../../services/supabaseClient'
 import { getTVDetails, getTVSeasonDetails, imageUrl } from '../../services/tmdbService'
-import { saveAllEpisodesForShow } from '../../services/watchlistService'
 import type { TMDBResult, WatchlistItem } from '../../types'
 
 interface AddModalProps {

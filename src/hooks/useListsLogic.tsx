@@ -507,7 +507,7 @@ export const useListsLogic = (): UseListsLogicResult => {
                 if (pendingWatchItem.media_type === 'tv' || pendingWatchItem.media_type === 'anime') {
                     const { data: watchlistItem } = await supabase
                         .from('watchlist')
-                        .select('id')
+                        .select('id, tmdb_id')
                         .eq('user_id', user.id)
                         .eq('tmdb_id', pendingWatchItem.id)
                         .single()
