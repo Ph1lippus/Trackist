@@ -7447,6 +7447,10 @@ i.fa-solid.fa-trash:hover {
     
 }
 
+.upcoming-new-date-main {
+    margin-left: 10px;
+}
+
 .profile-stat__value {
     font-size: 0.9rem;
     font-weight: 700;
