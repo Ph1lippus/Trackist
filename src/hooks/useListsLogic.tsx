@@ -4,6 +4,7 @@ import { supabase } from '../services/supabaseClient'
 import type { UserList, ListItem, TMDBResult } from '../types'
 import { discoverMovies, discoverTV, getGenres, searchMulti, getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
 import { addToList, updateList, createList, removeFromList, swapListItems } from '../services/profileService'
+import { saveAllEpisodesForShow } from '../services/watchlistService'
 import { useSearch } from '../hooks/useSearch'
 import { cacheService } from '../services/cacheService'
 import { useLibraryStore } from '../stores/useLibraryStore'
@@ -512,11 +513,10 @@ export const useListsLogic = (): UseListsLogicResult => {
                         .single()
 
                     if (watchlistItem) {
-                        // Mark all episodes as watched
-                        await supabase
-                            .from('watchlist_episodes')
-                            .update({ watched: true, watched_at: new Date().toISOString() })
-                            .eq('watchlist_id', watchlistItem.id)
+                        // Mark all episodes as watched by ensuring episode rows exist
+                        if (watchlistItem.tmdb_id) {
+                            await saveAllEpisodesForShow(watchlistItem.tmdb_id, watchlistItem.id)
+                        }
 
                         // Update current season/episode to total
                         await supabase
@@ -584,9 +584,7 @@ export const useListsLogic = (): UseListsLogicResult => {
                                                 overview: episode.overview,
                                                 vote_average: episode.vote_average,
                                                 air_date: episode.air_date,
-                                                runtime: episode.runtime,
-                                                watched: true,
-                                                watched_at: new Date().toISOString()
+                                                runtime: episode.runtime
                                             })
                                         }
                                     }
@@ -648,7 +646,7 @@ export const useListsLogic = (): UseListsLogicResult => {
                 if (watchlistItem) {
                     await supabase
                         .from('watchlist_episodes')
-                        .update({ watched: false, watched_at: null })
+                        .delete()
                         .eq('watchlist_id', watchlistItem.id)
 
                     // Reset progress

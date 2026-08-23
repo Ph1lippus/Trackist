@@ -126,9 +126,6 @@ const AddModal: React.FC<AddModalProps> = ({ item, onClose, onAdd, onAddWatchlis
         if (error) {
             alert('Error: ' + error.message)
         } else if (data) {
-            // Save all episodes to watchlist_episodes table
-            await saveAllEpisodesForShow(item.id, data.id)
-            
             // Add selected episodes as watched
             const watchlistId = data.id
             const episodeInserts = Array.from(selectedEpisodes).map(key => {
@@ -141,9 +138,7 @@ const AddModal: React.FC<AddModalProps> = ({ item, onClose, onAdd, onAddWatchlis
                     title: ep?.name,
                     still_path: ep?.still_path,
                     air_date: ep?.air_date,
-                    runtime: ep?.runtime,
-                    watched: true,
-                    watched_at: new Date().toISOString()
+                    runtime: ep?.runtime
                 }, {
                     onConflict: 'watchlist_id,season_number,episode_number'
                 })
