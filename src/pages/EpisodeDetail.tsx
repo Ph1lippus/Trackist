@@ -62,6 +62,7 @@ const EpisodeDetail: React.FC = () => {
                         .eq('watchlist_id', watchlistItem.id)
                         .eq('season_number', Number(season))
                         .eq('episode_number', Number(episode))
+                        .eq('watched', true)
                         .maybeSingle()
                     if (episodeWatchData) {
                         setWatched(true)

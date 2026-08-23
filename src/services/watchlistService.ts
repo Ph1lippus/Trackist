@@ -52,6 +52,7 @@ export const getWatchedEpisodeCountFiltered = async (watchlistId: string): Promi
         .from('watchlist_episodes')
         .select('*', { count: 'exact', head: true })
         .eq('watchlist_id', watchlistId)
+        .eq('watched', true)
             if (error) {
         console.error('Failed to count watched episodes (filtered):', error)
         return 0
@@ -90,6 +91,7 @@ export const getNextEpisodeToWatch = async (watchlistId: string, skipCache: bool
             .from('watchlist_episodes')
             .select('season_number, episode_number')
             .eq('watchlist_id', watchlistId)
+            .eq('watched', true)
         const watchedSet = new Set<string>()
         for (const ep of watchlistEps || []) {
             watchedSet.add(`${ep.season_number}-${ep.episode_number}`)
@@ -379,6 +381,7 @@ export const getWatchedEpisodes = async (watchlistId: string) => {
         .from('watchlist_episodes')
         .select('*')
         .eq('watchlist_id', watchlistId)
+        .eq('watched', true)
 
     if (error) {
         console.error('Failed to fetch watched episodes:', error)
@@ -429,6 +432,7 @@ export const getWatchedEpisodeCount = async (watchlistId: string): Promise<numbe
         .from('watchlist_episodes')
         .select('season_number, episode_number')
         .eq('watchlist_id', watchlistId)
+        .eq('watched', true)
 
     if (error) {
         console.error('Failed to count watched episodes:', error)
@@ -535,6 +539,7 @@ export const checkAndUpdateCaughtUp = async (watchlistId: string, tmdbId: number
             .select('*', { count: 'exact', head: true })
             .eq('watchlist_id', watchlistId)
             .eq('season_number', latestSeasonNumber)
+            .eq('watched', true)
 
         if (error) return
 
