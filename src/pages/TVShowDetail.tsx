@@ -178,20 +178,17 @@ const TVShowDetail: React.FC = () => {
             if (!id) return
             setLoading(true)
             try {
+                // Refresh watchlist item first if it exists, to ensure fresh progress data
+                const existingItem = useLibraryStore.getState().allItems.find(item => item.tmdb_id === Number(id))
+                let watchlistItem = existingItem
+                if (watchlistItem) {
+                    await useLibraryStore.getState().refreshItem(watchlistItem.id)
+                    watchlistItem = useLibraryStore.getState().allItems.find(item => item.tmdb_id === Number(id))
+                }
+
                 const data = await getTVDetails(Number(id))
                 setDetails(data)
                 
-                if (data.seasons?.[0]) {
-                    // Find the first valid season (not season 0, has episodes)
-                    const firstValidSeason = data.seasons.find(
-                        (s: { season_number: number; episode_count?: number }) => 
-                            s.season_number > 0 && (s.episode_count === undefined || s.episode_count > 0)
-                    )
-                    if (firstValidSeason) {
-                        setSelectedSeason(firstValidSeason.season_number)
-                    }
-                }
-
                 // Find trailer from videos
                 if (data.videos?.results) {
                     const trailer = data.videos.results.find(
@@ -200,8 +197,7 @@ const TVShowDetail: React.FC = () => {
                     if (trailer) setTrailerKey(trailer.key)
                 }
 
-                // Check if in watchlist using global store
-                const watchlistItem = useLibraryStore.getState().allItems.find(item => item.tmdb_id === Number(id))
+                // Check if in watchlist using global store (may have been refreshed above)
                 setIsInWatchlist(!!watchlistItem)
                 if (watchlistItem) {
                     setWatchlistId(watchlistItem.id)
@@ -286,11 +282,6 @@ const TVShowDetail: React.FC = () => {
                     watchedKeysCache.current = new Set()
                 }
 
-                // Load only the initially selected season
-                const initialSeason = selectedSeason || seasonList[0] || 1
-                setSelectedSeason(initialSeason)
-                await loadSeason(initialSeason)
-
                 // Find last watched episode directly from watchedKeysCache
                 let lastWatched: { season_number: number; episode_number: number } | null = null
                 for (const key of watchedKeysCache.current) {
@@ -302,9 +293,12 @@ const TVShowDetail: React.FC = () => {
                     }
                 }
 
+                let targetSeason = seasonList[0] || 1
+                let targetEpisode = 1
+
                 if (lastWatched) {
-                    let targetSeason = lastWatched.season_number
-                    let targetEpisode = lastWatched.episode_number
+                    targetSeason = lastWatched.season_number
+                    targetEpisode = lastWatched.episode_number
 
                     // Load the last watched season to check if all released episodes are watched
                     await loadSeason(targetSeason)
@@ -319,10 +313,13 @@ const TVShowDetail: React.FC = () => {
                             await loadSeason(targetSeason)
                         }
                     }
-
-                    setSelectedSeason(targetSeason)
-                    episodeToScrollRef.current = `${id}-${targetSeason}-${targetEpisode}`
+                } else {
+                    // No watched episodes, load first valid season
+                    await loadSeason(targetSeason)
                 }
+
+                setSelectedSeason(targetSeason)
+                episodeToScrollRef.current = lastWatched ? `${id}-${targetSeason}-${targetEpisode}` : null
             } catch (err) {
                 console.error('Failed to load episodes:', err)
             }

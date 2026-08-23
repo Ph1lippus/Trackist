@@ -156,7 +156,7 @@ const MobileTVShows: React.FC = () => {
     }
 
     const getEpisodeInfo = (show: WatchlistItem): string | null => {
-        if (show.status === 'planning' || show.status === 'paused') {
+        if (show.status === 'planning') {
             return 'S1 E1'
         }
         if (show.next_season_number && show.next_episode_number) {
