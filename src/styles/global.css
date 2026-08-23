@@ -32,7 +32,7 @@
         margin: 0!important;
         width: fit-content;
         padding: 0.6rem 1rem;
-        border: 1px solid rgba(255, 255, 255, 0.06);
+        border: none;
         border-radius: 0px 25px 25px 0px;
         background: rgba(255, 255, 255, 0.02);
     }
@@ -9404,7 +9404,7 @@ i.fa-solid.fa-trash:hover {
     margin: 0;
     width: fit-content;
     padding: 0.6rem 1rem;
-    border: 1px solid rgba(255, 255, 255, 0.06);
+    border: none;
     border-radius: 0px 25px 25px 0px;
     background: rgba(255, 255, 255, 0.02);
 }
