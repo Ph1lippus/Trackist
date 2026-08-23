@@ -11,6 +11,7 @@ import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { createMovieDeepLink, openInStremio } from '../utils/stremioUtils'
 import { useShowStremioButton } from '../hooks/useShowStremioButton'
 import { useShowLetterboxButton } from '../hooks/useShowLetterboxButton'
+import { useMobile } from '../contexts/useMobile'
 import { useAuthStore } from '../stores/useAuthStore'
 import stremioIcon from '../assets/stremio-logo-icon-only-fullcolor.svg'
 import letterboxdIcon from '../assets/letterboxd-decal-dots-pos-rgb-500px.png'
@@ -21,6 +22,7 @@ const MovieDetail: React.FC = () => {
     const navigate = useNavigate()
     const { showStremioButton, loading: stremioLoading } = useShowStremioButton()
     const { showLetterboxButton, loading: letterboxLoading } = useShowLetterboxButton()
+    const { isMobile } = useMobile()
     const [details, setDetails] = useState<TMDBResult | null>(null)
     const [isInWatchlist, setIsInWatchlist] = useState(false)
     const [watchlistId, setWatchlistId] = useState<string | null>(null)
@@ -388,8 +390,14 @@ const MovieDetail: React.FC = () => {
                             {trailerKey && (
                                 <button 
                                     className="detail-page__icon-btn"
-                                    onClick={() => setShowTrailer(!showTrailer)}
-                                    title={showTrailer ? 'Close Trailer' : 'Watch Trailer'}
+                                    onClick={() => {
+                                        if (isMobile) {
+                                            window.open(`https://www.youtube.com/watch?v=${trailerKey}`, '_blank')
+                                        } else {
+                                            setShowTrailer(!showTrailer)
+                                        }
+                                    }}
+                                    title={showTrailer && !isMobile ? 'Close Trailer' : 'Watch Trailer'}
                                 >
                                     <i className="fa-solid fa-clapperboard"></i>
                                 </button>
@@ -502,8 +510,14 @@ const MovieDetail: React.FC = () => {
                             {trailerKey && (
                                 <button 
                                     className="detail-page__icon-btn"
-                                    onClick={() => setShowTrailer(!showTrailer)}
-                                    title={showTrailer ? 'Close Trailer' : 'Watch Trailer'}
+                                    onClick={() => {
+                                        if (isMobile) {
+                                            window.open(`https://www.youtube.com/watch?v=${trailerKey}`, '_blank')
+                                        } else {
+                                            setShowTrailer(!showTrailer)
+                                        }
+                                    }}
+                                    title={showTrailer && !isMobile ? 'Close Trailer' : 'Watch Trailer'}
                                 >
                                     <i className="fa-solid fa-clapperboard"></i>
                                 </button>
@@ -552,7 +566,7 @@ const MovieDetail: React.FC = () => {
                             )}
                         </div>
 
-                        {showTrailer && trailerKey && (
+                        {!isMobile && showTrailer && trailerKey && (
                             <div className="detail-page__trailer-overlay" onClick={() => setShowTrailer(false)}>
                                 <div className="detail-page__trailer-modal" onClick={(e) => e.stopPropagation()}>
                                     <button 

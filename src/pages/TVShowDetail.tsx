@@ -842,8 +842,14 @@ const TVShowDetail: React.FC = () => {
                                 {trailerKey && (
                                     <button 
                                         className="detail-page__icon-btn"
-                                        onClick={() => setShowTrailer(!showTrailer)}
-                                        title={showTrailer ? 'Close Trailer' : 'Watch Trailer'}
+                                        onClick={() => {
+                                            if (isMobile) {
+                                                window.open(`https://www.youtube.com/watch?v=${trailerKey}`, '_blank')
+                                            } else {
+                                                setShowTrailer(!showTrailer)
+                                            }
+                                        }}
+                                        title={showTrailer && !isMobile ? 'Close Trailer' : 'Watch Trailer'}
                                     >
                                         <i className="fa-solid fa-clapperboard"></i>
                                     </button>
@@ -875,7 +881,7 @@ const TVShowDetail: React.FC = () => {
                             </div>
 
                             {/* Action buttons (desktop inline / mobile fixed sidebar) */}
-                            {showTrailer && trailerKey && (
+                            {!isMobile && showTrailer && trailerKey && (
                                 <div className="detail-page__trailer-overlay" onClick={() => setShowTrailer(false)}>
                                     <div className="detail-page__trailer-modal" onClick={(e) => e.stopPropagation()}>
                                         <button 

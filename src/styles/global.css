@@ -20,7 +20,7 @@
 @media (max-width: 768px) {
     .detail-page__episode-card{
         backdrop-filter: blur(0px)!important;
-        background: rgba(18, 18, 28, 1)!important;
+        background: transparent;
     }
     .watchlist-section__title {
         font-size: 0.9rem!important;
@@ -4999,8 +4999,7 @@ i.fa-solid.fa-trash:hover {
 }
 
 .confirm-modal-content {
-    background: transparent;
-    backdrop-filter: blur(50px);
+    background: rgba(18, 18, 28, 1);
     border: none;
     border-radius: 25px;
     padding: 1.5rem;
