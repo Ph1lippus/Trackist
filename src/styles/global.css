@@ -18,6 +18,10 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .detail-page__episode-card{
+        backdrop-filter: blur(0px);
+        background: rgba(18, 18, 28, 1);
+    }
     .watchlist-section__title {
         font-size: 0.9rem!important;
         font-weight: 400!important;
