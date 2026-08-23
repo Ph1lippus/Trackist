@@ -148,7 +148,7 @@ const Finished: React.FC = () => {
                     data={flatItems}
                     computeItemKey={(index) => flatItems[index]?.key ?? index}
                     overscan={isMobile ? 20 : 40}
-                    itemContent={(index, item) => {
+                    itemContent={(_index, item) => {
                         if (item.type === 'header') {
                             return (
                                 <div className="watchlist-section__header">
