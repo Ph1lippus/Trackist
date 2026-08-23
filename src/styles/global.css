@@ -18,6 +18,9 @@
    Small tablets / large phones
    ============================ */
 @media (max-width: 768px) {
+    .detail-page__episode-meta {
+        font-size: 0.7rem!important;
+    }
     .detail-page__episode-card{
         backdrop-filter: blur(0px)!important;
         background: transparent;
@@ -322,7 +325,7 @@
     }
 
     .detail-page__episode-details strong{
-        font-size:  0.7rem;
+        font-size:  0.85rem !important;
     }
 }
 :root {
@@ -9837,6 +9840,13 @@ i.fa-solid.fa-trash:hover {
     }
     .secondary-navbar {
         display: flex !important;
+    }
+}
+
+@media (max-width: 768px) {
+    *, *::before, *::after {
+        box-shadow: none !important;
+        text-shadow: none !important;
     }
 }
 
