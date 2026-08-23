@@ -7,7 +7,6 @@ import type { WatchlistItem, TMDBResult } from '../types'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { removeAllWatchedEpisodes } from '../services/watchlistService'
-import { useMobile } from '../contexts/useMobile'
 
 const Finished: React.FC = () => {
     usePageTitle('Trackist - Finished')
@@ -28,7 +27,6 @@ const Finished: React.FC = () => {
         toggleFinishedSelection: toggleSelection 
     } = useSelectionStore()
 
-    const { isMobile } = useMobile()
 
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' })
