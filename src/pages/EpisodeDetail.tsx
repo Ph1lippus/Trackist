@@ -232,7 +232,7 @@ const EpisodeDetail: React.FC = () => {
                                         onClick={handleToggleWatched}
                                         title={watched ? 'Mark as Unwatched' : 'Mark as Watched'}
                                     >
-                                        <i className={watched ? 'fa-solid fa-eye' : 'fa-solid fa-eye-slash'}></i>
+                                        <i className={watched ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'}></i>
                                     </button>
                                 )}
                             </div>
