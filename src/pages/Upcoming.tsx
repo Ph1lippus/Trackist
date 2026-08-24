@@ -27,6 +27,34 @@ interface UpcomingItem {
     }
 }
 
+const orderItemsLikeMiniCards = (items: UpcomingItem[]): UpcomingItem[] => {
+    const groups = new Map<string, UpcomingItem[]>()
+    for (const item of items) {
+        const key = String(item.item.tmdb_id)
+        if (!groups.has(key)) groups.set(key, [])
+        groups.get(key)!.push(item)
+    }
+    const sortedGroups = Array.from(groups.values()).sort((a, b) => a.length - b.length)
+
+    const result: UpcomingItem[] = []
+    const pointers = sortedGroups.map(() => 0)
+    let madeProgress: boolean
+    do {
+        madeProgress = false
+        for (let i = 0; i < sortedGroups.length; i++) {
+            const group = sortedGroups[i]
+            const ptr = pointers[i]
+            if (ptr < group.length) {
+                result.push(group[ptr])
+                pointers[i] = ptr + 1
+                madeProgress = true
+            }
+        }
+    } while (madeProgress)
+
+    return result
+}
+
 const mapCalendarItem = (item: CalendarItem): UpcomingItem => ({
     id: item.id,
     title: item.title,
@@ -329,7 +357,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                             </button>
                         </div>
                         <div className="upcoming-side-panel-content">
-                            {selectedDate.items.map((item) => (
+                            {orderItemsLikeMiniCards(selectedDate.items).map((item) => (
                                 <div
                                     key={item.id}
                                     className="upcoming-episode-card"
