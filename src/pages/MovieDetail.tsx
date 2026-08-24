@@ -88,14 +88,6 @@ const MovieDetail: React.FC = () => {
             if (!id) return
             setLoading(true)
             try {
-                // Refresh watchlist item first if it exists, to ensure fresh progress data
-                const existingItem = useLibraryStore.getState().allItems.find(item => item.tmdb_id === Number(id))
-                let watchlistItem = existingItem
-                if (watchlistItem) {
-                    await useLibraryStore.getState().refreshItem(watchlistItem.id)
-                    watchlistItem = useLibraryStore.getState().allItems.find(item => item.tmdb_id === Number(id))
-                }
-
                 const data = await getMovieDetails(Number(id))
                 setDetails(data)
                 
@@ -107,7 +99,8 @@ const MovieDetail: React.FC = () => {
                     if (trailer) setTrailerKey(trailer.key)
                 }
 
-                // Check if in watchlist using global store (may have been refreshed above)
+                // Check if in watchlist using global store
+                const watchlistItem = useLibraryStore.getState().allItems.find(item => item.tmdb_id === Number(id))
                 setIsInWatchlist(!!watchlistItem)
                 if (watchlistItem) {
                     setWatchlistId(watchlistItem.id)

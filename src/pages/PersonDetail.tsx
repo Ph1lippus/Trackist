@@ -55,6 +55,9 @@ const PersonDetail: React.FC = () => {
                 const sortedMovies = ((moviesData as { cast?: TMDBResult[] }).cast || [])
                     .map((m: TMDBResult) => ({ ...m, media_type: 'movie' as const }))
                     .sort((a, b) => {
+                        const hasPosterA = !!a.poster_path ? 1 : 0
+                        const hasPosterB = !!b.poster_path ? 1 : 0
+                        if (hasPosterA !== hasPosterB) return hasPosterB - hasPosterA
                         const dateA = (a as FilmographyItem).release_date || ''
                         const dateB = (b as FilmographyItem).release_date || ''
                         return dateB.localeCompare(dateA)
@@ -62,6 +65,9 @@ const PersonDetail: React.FC = () => {
                 const sortedTV = ((tvData as { cast?: TMDBResult[] }).cast || [])
                     .map((t: TMDBResult) => ({ ...t, media_type: 'tv' as const }))
                     .sort((a, b) => {
+                        const hasPosterA = !!a.poster_path ? 1 : 0
+                        const hasPosterB = !!b.poster_path ? 1 : 0
+                        if (hasPosterA !== hasPosterB) return hasPosterB - hasPosterA
                         const dateA = (a as FilmographyItem).first_air_date || ''
                         const dateB = (b as FilmographyItem).first_air_date || ''
                         return dateB.localeCompare(dateA)
@@ -112,8 +118,8 @@ const PersonDetail: React.FC = () => {
     }
 
     return (
-        <div className="detail-page">
-            <div className="detail-page__content" style={{ width: '85%', maxWidth: '1400px', margin: '0 auto' }}>
+        <div className="detail-page___person">
+            <div className="detail-page__content">
                 <div className="detail-page__main">
                     <div className="detail-page__person-header">
                         <div className="detail-page__person-photo">
@@ -148,7 +154,7 @@ const PersonDetail: React.FC = () => {
             </div>
 
             {(movies.length > 0 || tvShows.length > 0) && (
-                <div className="detail-page__content" style={{ width: '85%', maxWidth: '1400px', margin: '0 auto' }}>
+                <div className="detail-page__content">
                     <div className="detail-page__main">
                         {movies.length > 0 && (
                             <div className="detail-page__filmography-section">
