@@ -7,6 +7,7 @@ import React, {
 import { useLocation } from 'react-router-dom'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
 import useDiscoverStore, { useDiscoverFilters, useDiscoverLoading, useDiscoverActions, useDiscoverWatchlistIds, useDiscoverShowAdded, useDiscoverResults } from '../stores/discoverStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
@@ -15,16 +16,18 @@ import { VirtuosoGrid } from 'react-virtuoso'
 import { useMobile } from '../contexts/useMobile'
 
 // Memoized item renderer to prevent re-mounts during scroll
-const DiscoverCard = memo(({ item, onAdd, isInWatchlist }: { 
+const DiscoverCard = memo(({ item, onAdd, isInWatchlist, showIcons }: { 
     item: TMDBResult
     onAdd: (item: TMDBResult) => void
     isInWatchlist: boolean
+    showIcons: boolean
 }) => (
     <MediaCard
         item={item}
         compact={item.media_type === "person"}
         onAdd={onAdd}
         isInWatchlist={isInWatchlist}
+        showIcons={showIcons}
     />
 ))
 
@@ -52,6 +55,7 @@ const Discover: React.FC = () => {
     }, [results, watchlistIds, showAdded, filters.mediaType])
     const { committedQuery } = useSearch()
     const { isMobile } = useMobile()
+    const { showIcons } = useMediaCardIcons()
 
     // State for confirmation modal when removing from watchlist
     const [removeConfirmItem, setRemoveConfirmItem] = useState<TMDBResult | null>(null)
@@ -275,6 +279,7 @@ const Discover: React.FC = () => {
                                             item={item}
                                             onAdd={handleAddToWatchlist}
                                             isInWatchlist={watchlistIds.has(item.id)}
+                                            showIcons={showIcons}
                                         />
                                     );
                                 }}

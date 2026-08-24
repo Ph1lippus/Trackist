@@ -22,6 +22,7 @@ export interface MediaCardProps {
     selectable?: boolean
     onSelect?: (item: ResultItem) => void
     hideAddButton?: boolean
+    showIcons?: boolean
 }
 /**
  * Stable, memoized media card.
@@ -48,6 +49,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
     selectable = false,
     onSelect,
     hideAddButton = false,
+    showIcons = true,
 }) => {
     const { isMobile } = useMobile()
     const isPerson = item.media_type === 'person'
@@ -117,13 +119,13 @@ const MediaCard: React.FC<MediaCardProps> = ({
         },
         [onDelete, item],
     )
-    const showAddButton = !compact && onAdd && !listMode && !hideAddButton
-    const showAddToListButton = !compact && onAddToList && !isPerson && !listMode
-    const showMarkWatched = !compact && !isPerson && onMarkWatched && !onMarkUnwatched
-    const showMarkUnwatched = !compact && !isPerson && onMarkUnwatched && !onMarkWatched
-    const showDeleteButton = !compact && onDelete && !isPerson && listMode
+    const showAddButton = !compact && onAdd && !listMode && !hideAddButton && showIcons
+    const showAddToListButton = !compact && onAddToList && !isPerson && !listMode && showIcons
+    const showMarkWatched = !compact && !isPerson && onMarkWatched && !onMarkUnwatched && showIcons
+    const showMarkUnwatched = !compact && !isPerson && onMarkUnwatched && !onMarkWatched && showIcons
+    const showDeleteButton = !compact && onDelete && !isPerson && listMode && showIcons
     const showInWatchlistIndicator =
-        !compact && !isPerson && !onMarkWatched && !onMarkUnwatched && !onAdd && !onDelete && !listMode && !onAddToList && !selectable && !hideAddButton
+        !compact && !isPerson && !onMarkWatched && !onMarkUnwatched && !onAdd && !onDelete && !listMode && !onAddToList && !selectable && !hideAddButton && showIcons
 
     return (
         <article 
@@ -279,7 +281,8 @@ export default React.memo(MediaCard, (prev, next) => {
         prev.selected === next.selected &&
         prev.selectable === next.selectable &&
         prev.onSelect === next.onSelect &&
-        prev.hideAddButton === next.hideAddButton
+        prev.hideAddButton === next.hideAddButton &&
+        prev.showIcons === next.showIcons
     )
 })
 

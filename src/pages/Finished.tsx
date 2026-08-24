@@ -7,10 +7,12 @@ import type { WatchlistItem, TMDBResult } from '../types'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { removeAllWatchedEpisodes } from '../services/watchlistService'
+import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
 
 const Finished: React.FC = () => {
     usePageTitle('Trackist - Finished')
     const { committedQuery } = useSearch()
+    const { showIcons } = useMediaCardIcons()
 
     const finished = useLibraryStore((state) => state.finished)
 
@@ -111,15 +113,16 @@ const Finished: React.FC = () => {
                                 
                                 return (
                                     <div key={item.id} style={{ position: 'relative' }}>
-                                        <MediaCard
-                                            item={buildTmdbItem(item)}
-                                            selected={selectionMode && isSelected}
-                                            selectable={selectionMode}
-                                            onSelect={() => toggleSelection(item.id)}
-                                            isInWatchlist={true}
-                                            onAdd={selectionMode ? undefined : () => {}}
-                                            onMarkUnwatched={selectionMode ? undefined : () => setUnwatchModal({ isOpen: true, item, isTV: true })}
-                                        />
+                                    <MediaCard
+                                        item={buildTmdbItem(item)}
+                                        selected={selectionMode && isSelected}
+                                        selectable={selectionMode}
+                                        onSelect={() => toggleSelection(item.id)}
+                                        isInWatchlist={true}
+                                        onAdd={selectionMode ? undefined : () => {}}
+                                        onMarkUnwatched={selectionMode ? undefined : () => setUnwatchModal({ isOpen: true, item, isTV: true })}
+                                        showIcons={showIcons}
+                                    />
                                     </div>
                                 )
                             })}
@@ -147,6 +150,7 @@ const Finished: React.FC = () => {
                                             isInWatchlist={true}
                                             onAdd={selectionMode ? undefined : () => {}}
                                             onMarkUnwatched={selectionMode ? undefined : () => setUnwatchModal({ isOpen: true, item, isTV: false })}
+                                            showIcons={showIcons}
                                         />
                                     </div>
                                 )
@@ -175,6 +179,7 @@ const Finished: React.FC = () => {
                                             isInWatchlist={true}
                                             onAdd={selectionMode ? undefined : () => {}}
                                             onMarkUnwatched={selectionMode ? undefined : () => setUnwatchModal({ isOpen: true, item, isTV: item.media_type === 'tv' || item.media_type === 'anime' })}
+                                            showIcons={showIcons}
                                         />
                                     </div>
                                 )
@@ -203,6 +208,7 @@ const Finished: React.FC = () => {
                                             isInWatchlist={true}
                                             onAdd={selectionMode ? undefined : () => {}}
                                             onMarkUnwatched={selectionMode ? undefined : () => setUnwatchModal({ isOpen: true, item, isTV: item.media_type === 'tv' || item.media_type === 'anime' })}
+                                            showIcons={showIcons}
                                         />
                                     </div>
                                 )

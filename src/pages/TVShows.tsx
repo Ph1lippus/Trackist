@@ -12,11 +12,13 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { useMobile } from '../contexts/useMobile'
 import { supabase } from '../services/supabaseClient'
+import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
 
 const TVShows: React.FC = () => {
     usePageTitle('Trackist - TV Shows')
     const navigate = useNavigate()
     const { committedQuery } = useSearch()
+    const { showIcons } = useMediaCardIcons()
 
     // Use global store with proper selectors
     const tvShows = useLibraryStore((state) => state.tvShows)
@@ -290,6 +292,7 @@ const TVShows: React.FC = () => {
                                             onMarkWatched={selectionMode ? undefined : (item.status === 'completed' || item.status === 'caught_up') ? undefined : () => setMarkAllModal(item)}
                                             onMarkUnwatched={selectionMode ? undefined : (item.status === 'completed' || item.status === 'caught_up') ? () => handleMarkUnwatched(item) : undefined}
                                             episodesLeft={episodesLeft}
+                                            showIcons={showIcons}
                                         />
                                     </div>
                                 )
@@ -319,6 +322,7 @@ const TVShows: React.FC = () => {
                                             onAdd={selectionMode ? undefined : () => {}}
                                             onMarkWatched={selectionMode ? undefined : (item.status === 'completed' || item.status === 'caught_up') ? undefined : () => setMarkAllModal(item)}
                                             onMarkUnwatched={selectionMode ? undefined : (item.status === 'completed' || item.status === 'caught_up') ? () => handleMarkUnwatched(item) : undefined}
+                                            showIcons={showIcons}
                                         />
                                     </div>
                                 )
@@ -348,6 +352,7 @@ const TVShows: React.FC = () => {
                                             onAdd={selectionMode ? undefined : () => {}}
                                             onMarkWatched={selectionMode ? undefined : (item.status === 'completed' || item.status === 'caught_up') ? undefined : () => setMarkAllModal(item)}
                                             onMarkUnwatched={selectionMode ? undefined : (item.status === 'completed' || item.status === 'caught_up') ? () => handleMarkUnwatched(item) : undefined}
+                                            showIcons={showIcons}
                                         />
                                     </div>
                                 )

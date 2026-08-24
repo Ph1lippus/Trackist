@@ -252,7 +252,7 @@ const MobileTVShows: React.FC = () => {
 
             // Clear sweep — all data is now correct
             setSweepId(null)
-        }, 300)
+        }, 200)
     }
 
     const handleConfirmResume = async () => {
@@ -315,7 +315,7 @@ const MobileTVShows: React.FC = () => {
                     }
                     await useLibraryStore.getState().refreshItem(show.id)
                     setSweepId(null)
-                }, 300)
+                }, 200)
             }
         } catch (err) {
             console.error('Failed to resume show:', err)

@@ -10,6 +10,7 @@ import { useLibraryStore } from '../../stores/useLibraryStore';
 import { launchCosmicConfetti } from '../../utils/cosmicConfetti';
 import { markShowAsFullyWatched, removeAllWatchedEpisodes } from '../../services/watchlistService';
 import type { WatchlistItem } from '../../types';
+import { useMediaCardIcons } from '../../hooks/useMediaCardIcons';
 
 interface NavbarProps {
     currentMonth?: Date;
@@ -28,10 +29,11 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const [isAdmin, setIsAdmin] = useState(false);
     const [isPWA] = useState<boolean>(() => {
         return window.matchMedia('(display-mode: standalone)').matches ||
-            (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+            (navigator as Navigator & { standalone?: boolean }).standalone === true
     });
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [batchLoading, setBatchLoading] = useState(false);
+    const { showIcons, toggle: toggleMediaCardIcons } = useMediaCardIcons();
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
     const searchBoxRef = useRef<HTMLDivElement>(null);
@@ -498,12 +500,19 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                  }}>
                                      Settings
                                  </button>
-                                  <button className="t-dropdown-item" onClick={() => {
-                                      closeMenu();
-                                      navigate('/Credits');
-                                  }}>
-                                      Credits
-                                  </button>
+                                 <button className="t-dropdown-item" onClick={() => {
+                                     closeMenu();
+                                     toggleMediaCardIcons();
+                                 }}>
+                                     <i className={showIcons ? 'fa-solid fa-toggle-on' : 'fa-solid fa-toggle-off'} style={{ color: showIcons ? '#68ffae' : 'rgba(255,255,255,0.3)', marginRight: '8px' }}></i>
+                                     {showIcons ? 'Hide' : 'Show'} Media Icons
+                                 </button>
+                                 <button className="t-dropdown-item" onClick={() => {
+                                     closeMenu();
+                                     navigate('/Credits');
+                                 }}>
+                                     Credits
+                                 </button>
                                   {isPWA && (
                                       <button className="t-dropdown-item" onClick={handleFullscreenToggle}>
                                           <i className={isFullscreen ? "fa-solid fa-compress" : "fa-solid fa-expand"}></i>

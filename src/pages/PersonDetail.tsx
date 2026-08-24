@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { getPersonDetails, getPersonMovies, getPersonTV, imageUrl } from '../services/tmdbService'
 import type { TMDBResult, WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
 import MediaCard from '../components/media/MediaCard'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { useAuthStore } from '../stores/useAuthStore'
@@ -34,6 +35,7 @@ const PersonDetail: React.FC = () => {
     const watchlistIds = useLibraryStore((state) => state.watchlistIds)
     const currentUser = useAuthStore((state) => state.user)
     const [removeConfirmItem, setRemoveConfirmItem] = useState<TMDBResult | null>(null)
+    const { showIcons } = useMediaCardIcons()
 
     const handleAddToWatchlist = useCallback(
         async (item: TMDBResult) => {
@@ -215,6 +217,7 @@ const PersonDetail: React.FC = () => {
                                             item={movie}
                                             isInWatchlist={watchlistIds.has(movie.id)}
                                             onAdd={handleAddToWatchlist}
+                                            showIcons={showIcons}
                                         />
                                     ))}
                                 </div>
@@ -231,6 +234,7 @@ const PersonDetail: React.FC = () => {
                                             item={show}
                                             isInWatchlist={watchlistIds.has(show.id)}
                                             onAdd={handleAddToWatchlist}
+                                            showIcons={showIcons}
                                         />
                                     ))}
                                 </div>

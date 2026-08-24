@@ -15,6 +15,7 @@ import { useAuthStore } from '../stores/useAuthStore'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import type { WatchlistItem, TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
 import { VirtuosoGrid } from 'react-virtuoso'
 import { useMobile } from '../contexts/useMobile'
 import MediaCard from '../components/media/MediaCard'
@@ -57,6 +58,7 @@ const ProfilePage: React.FC = () => {
     const [userLists, setUserLists] = useState<UserList[]>([])
     const [activeTab, setActiveTab] = useState<TabType>('watching')
     const [currentUserWatchlistIds, setCurrentUserWatchlistIds] = useState<Set<number>>(new Set())
+    const { showIcons } = useMediaCardIcons()
 
     useEffect(() => {
         const loadUser = async () => {
@@ -439,6 +441,7 @@ const ProfilePage: React.FC = () => {
                                                     isInWatchlist={currentUserWatchlistIds.has(tmdbItem.id)}
                                                     onAdd={handleAddToWatchlist}
                                                     hideAddButton={isOwnProfile}
+                                                    showIcons={showIcons}
                                                 />
                                             )
                                         }}
@@ -483,6 +486,7 @@ const ProfilePage: React.FC = () => {
                                                     isInWatchlist={currentUserWatchlistIds.has(tmdbItem.id)}
                                                     onAdd={handleAddToWatchlist}
                                                     hideAddButton={isOwnProfile}
+                                                    showIcons={showIcons}
                                                 />
                                             )
                                         }}
@@ -527,6 +531,7 @@ const ProfilePage: React.FC = () => {
                                                     isInWatchlist={currentUserWatchlistIds.has(tmdbItem.id)}
                                                     onAdd={handleAddToWatchlist}
                                                     hideAddButton={isOwnProfile}
+                                                    showIcons={showIcons}
                                                 />
                                             )
                                         }}

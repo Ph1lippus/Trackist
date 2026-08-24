@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
 import { useListsLogic } from '../hooks/useListsLogic'
 import MediaCard from '../components/media/MediaCard'
 import { VirtuosoGrid } from 'react-virtuoso'
@@ -10,6 +11,7 @@ import { useMobile } from '../contexts/useMobile'
 const ListsDetail: React.FC = () => {
     usePageTitle('Trackist - Lists')
     const { id } = useParams<{ id: string }>()
+    const { showIcons } = useMediaCardIcons()
 
     const { isMobile } = useMobile()
     const {
@@ -150,6 +152,7 @@ const ListsDetail: React.FC = () => {
                             listMode={true}
                             onMarkWatched={handleMarkWatched}
                             onMarkUnwatched={undefined}
+                            showIcons={showIcons}
                         />
                     )
                 }}
@@ -192,6 +195,7 @@ const ListsDetail: React.FC = () => {
                                 listMode={true}
                                 onMarkUnwatched={handleMarkWatched}
                                 onMarkWatched={undefined}
+                                showIcons={showIcons}
                             />
                         )
                     }}

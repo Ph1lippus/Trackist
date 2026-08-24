@@ -9,11 +9,13 @@ import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { useMobile } from '../contexts/useMobile'
+import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
 
 const Movies: React.FC = () => {
     usePageTitle('Trackist - Movies')
     const navigate = useNavigate()
     const { committedQuery } = useSearch()
+    const { showIcons } = useMediaCardIcons()
 
     const movies = useLibraryStore((state) => state.movies)
 
@@ -161,6 +163,7 @@ const Movies: React.FC = () => {
                                                 }
                                                 setConfirmModal({ isOpen: true, action: 'watch', item: tmdbItem })
                                             }}
+                                            showIcons={showIcons}
                                         />
                                     </div>
                                 )
@@ -193,6 +196,7 @@ const Movies: React.FC = () => {
                                             item={tmdbItem}
                                             isInWatchlist={true}
                                             onAdd={() => {}}
+                                            showIcons={showIcons}
                                         />
                                     </div>
                                 )

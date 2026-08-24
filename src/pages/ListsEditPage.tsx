@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, memo } from 'react'
 import { useParams } from 'react-router-dom'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
 import { useListsLogic } from '../hooks/useListsLogic'
 import MediaCard from '../components/media/MediaCard'
 import { VirtuosoGrid } from 'react-virtuoso'
@@ -10,20 +11,23 @@ import { useMobile } from '../contexts/useMobile'
 import type { TMDBResult } from '../types'
 
 // Memoized item renderer to prevent re-mounts during scroll
-const BrowseCard = memo(({ item, onAdd }: { 
+const BrowseCard = memo(({ item, onAdd, showIcons }: { 
     item: TMDBResult
     onAdd: (item: TMDBResult) => void
+    showIcons: boolean
 }) => (
     <MediaCard
         item={item}
         onAddToList={onAdd}
         isInWatchlist={false}
+        showIcons={showIcons}
     />
 ))
 
 const ListsEditPage: React.FC = () => {
     usePageTitle('Trackist - Lists')
     const { id } = useParams<{ id: string }>()
+    const { showIcons } = useMediaCardIcons()
     const hasInitializedRef = useRef(false)
 
     const { isMobile } = useMobile()
@@ -236,6 +240,7 @@ const ListsEditPage: React.FC = () => {
                                         isInWatchlist={watchlistIds.has(item.tmdb_id)}
                                         listMode={true}
                                         onDelete={() => handleDeleteItem(item)}
+                                        showIcons={showIcons}
                                     />
                                 </div>
                             ))}
@@ -310,6 +315,7 @@ const ListsEditPage: React.FC = () => {
                                     <BrowseCard
                                         item={item}
                                         onAdd={handleAddToList}
+                                        showIcons={showIcons}
                                     />
                                 )
                             }}
