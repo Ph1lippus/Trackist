@@ -24,9 +24,6 @@ const MovieDetail: React.FC = () => {
     const { showLetterboxButton, loading: letterboxLoading } = useShowLetterboxButton()
     const { isMobile } = useMobile()
     const [details, setDetails] = useState<TMDBResult | null>(null)
-    const [isInWatchlist, setIsInWatchlist] = useState(false)
-    const [watchlistId, setWatchlistId] = useState<string | null>(null)
-    const [watchlistStatus, setWatchlistStatus] = useState<string | null>(null)
     const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
@@ -36,6 +33,11 @@ const MovieDetail: React.FC = () => {
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean } | null>(null)
     const [markWatchedModal, setMarkWatchedModal] = useState<{ isOpen: boolean; markAsWatched: boolean } | null>(null)
     const [modalLoading, setModalLoading] = useState(false)
+
+    const watchlistItem = useLibraryStore((state) => state.allItems.find((item) => item.tmdb_id === Number(id)))
+    const isInWatchlist = !!watchlistItem
+    const watchlistId = watchlistItem?.id ?? null
+    const watchlistStatus = watchlistItem?.status ?? null
 
     const openExternal = (url: string) => {
         const a = document.createElement('a')
@@ -49,38 +51,6 @@ const MovieDetail: React.FC = () => {
 
     useEffect(() => {
         window.scrollTo(0, 0)
-    }, [id])
-
-    // Re-check watchlist status when library store finishes initializing
-    useEffect(() => {
-        if (!id) return
-        
-        const checkWatchlistStatus = () => {
-            const watchlistItem = useLibraryStore.getState().allItems.find(item => item.tmdb_id === Number(id))
-            if (watchlistItem) {
-                setIsInWatchlist(true)
-                setWatchlistId(watchlistItem.id)
-                setWatchlistStatus(watchlistItem.status)
-            } else {
-                setIsInWatchlist(false)
-                setWatchlistId(null)
-                setWatchlistStatus(null)
-            }
-        }
-        
-        // Check immediately if already initialized
-        if (useLibraryStore.getState().isInitialized) {
-            checkWatchlistStatus()
-        }
-        
-        // Subscribe to library store changes
-        const unsubscribe = useLibraryStore.subscribe((state) => {
-            if (state.isInitialized) {
-                checkWatchlistStatus()
-            }
-        })
-        
-        return unsubscribe
     }, [id])
 
     useEffect(() => {
@@ -97,17 +67,6 @@ const MovieDetail: React.FC = () => {
                         (v: { type: string; site: string; key: string }) => v.type === 'Trailer' && v.site === 'YouTube'
                     )
                     if (trailer) setTrailerKey(trailer.key)
-                }
-
-                // Check if in watchlist using global store
-                const watchlistItem = useLibraryStore.getState().allItems.find(item => item.tmdb_id === Number(id))
-                setIsInWatchlist(!!watchlistItem)
-                if (watchlistItem) {
-                    setWatchlistId(watchlistItem.id)
-                    setWatchlistStatus(watchlistItem.status)
-                } else {
-                    setWatchlistId(null)
-                    setWatchlistStatus(null)
                 }
             } catch (err) {
                 console.error('Failed to load movie details:', err)
@@ -205,9 +164,6 @@ const MovieDetail: React.FC = () => {
         // Optimistic update via store
         await useLibraryStore.getState().addItem(newItem)
         
-        setIsInWatchlist(true)
-        setWatchlistId(newItem.id)
-        setWatchlistStatus('planning')
         setAdding(false)
         return newItem.id
     }
@@ -223,9 +179,6 @@ const MovieDetail: React.FC = () => {
             // Invalidate cache to ensure Finished page shows updated data immediately
             await invalidateUserCache()
             
-            setIsInWatchlist(false)
-            setWatchlistId(null)
-            setWatchlistStatus(null)
             setConfirmModal(null)
         } finally {
             setModalLoading(false)
