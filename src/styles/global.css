@@ -4662,8 +4662,7 @@ button:focus-visible {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: transparent;
-    backdrop-filter: blur(12px);
+    background: rgb(18, 18, 28);
     font-size: 0.9rem;
     text-align: center;
     padding: 1rem;
@@ -6055,7 +6054,11 @@ i.fa-solid.fa-trash:hover {
     border-radius: 3px;
     background: linear-gradient(90deg, var(--color-mint), #8bffc4);
     transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
-    box-shadow: 0 0 10px rgba(104, 255, 174, 0.3);
+}
+
+.detail-page___person{
+    max-width: 85%;
+    margin: 0 auto;
 }
 
 /* ===== STATISTICS PAGE (REDESIGNED) ===== */
