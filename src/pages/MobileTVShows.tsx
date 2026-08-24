@@ -20,7 +20,7 @@ const MobileTVShows: React.FC = () => {
     const isInitialized = useLibraryStore((state) => state.isInitialized)
     const [addingEpisode, setAddingEpisode] = useState<string | null>(null)
     const [sweepId, setSweepId] = useState<string | null>(null)
-    const [sweepContentKey, setSweepContentKey] = useState(0)
+    const [sweepPhase, setSweepPhase] = useState<Record<string, 'idle' | 'loading' | 'loaded'>>({})
     const [confirmModal, setConfirmModal] = useState<{
         isOpen: boolean
         action: 'resume' | null
@@ -184,7 +184,7 @@ const MobileTVShows: React.FC = () => {
 
         // Start sweep immediately for responsive feel
         setSweepId(show.id)
-        setSweepContentKey(k => k + 1)
+        setSweepPhase(prev => ({ ...prev, [show.id]: 'loading' }))
 
         setAddingEpisode(show.id)
         try {
@@ -252,8 +252,14 @@ const MobileTVShows: React.FC = () => {
             }
             await useLibraryStore.getState().refreshItem(show.id)
 
-            // Clear sweep — all data is now correct
-            setSweepId(null)
+            // Mark content as loaded for fade-in
+            setSweepPhase(prev => ({ ...prev, [show.id]: 'loaded' }))
+
+            // Clear sweep after content fades in
+            setTimeout(() => {
+                setSweepId(null)
+                setSweepPhase(prev => ({ ...prev, [show.id]: 'idle' }))
+            }, 350)
         }, 500)
     }
 
@@ -311,13 +317,17 @@ const MobileTVShows: React.FC = () => {
 
             if (success) {
                 setSweepId(show.id)
-                setSweepContentKey(k => k + 1)
+                setSweepPhase(prev => ({ ...prev, [show.id]: 'loading' }))
                 setTimeout(async () => {
                     if (show.tmdb_id) {
                         await checkAndUpdateCompleted(show.id, show.tmdb_id)
                     }
                     await useLibraryStore.getState().refreshItem(show.id)
-                    setSweepId(null)
+                    setSweepPhase(prev => ({ ...prev, [show.id]: 'loaded' }))
+                    setTimeout(() => {
+                        setSweepId(null)
+                        setSweepPhase(prev => ({ ...prev, [show.id]: 'idle' }))
+                    }, 350)
                 }, 500)
             }
         } catch (err) {
@@ -333,6 +343,7 @@ const MobileTVShows: React.FC = () => {
         const isCompleted = show.status === 'completed' || show.status === 'caught_up'
         const isDroppedOrPaused = show.status === 'dropped' || show.status === 'paused'
         const hasSweep = sweepId === show.id
+        const phase = sweepPhase[show.id] || 'idle'
         const episodesLeft = getEpisodesLeft(show)
         const episodeInfo = getEpisodeInfo(show)
 
@@ -342,7 +353,7 @@ const MobileTVShows: React.FC = () => {
                 className="mobile-tvshow-card"
                 onClick={() => { if (show.tmdb_id) navigate(`/tv/${show.tmdb_id}`) }}
             >
-                {hasSweep && <div className="mobile-tvshow-card-sweep" />}
+                {hasSweep && <div className={`mobile-tvshow-card-sweep ${phase === 'loading' ? 'is-active' : ''}`} />}
                 <div className="mobile-tvshow-card-poster">
                     {show.poster_path ? (
                         <img src={imageUrl(show.poster_path, isMobile ? 'w342' : 'w342') || ''} alt={show.title} loading="lazy" />
@@ -352,7 +363,7 @@ const MobileTVShows: React.FC = () => {
                         </div>
                     )}
                 </div>
-                <div className="mobile-tvshow-card-body" key={hasSweep ? sweepContentKey : show.id}>
+                <div className={`mobile-tvshow-card-body ${phase === 'loading' ? 'is-loading' : ''}`}>
                     <h3 className="mobile-tvshow-card-title">{show.title}</h3>
                     {episodesLeft !== undefined && episodesLeft > 0 && (
                         <span className="mobile-tvshow-card-episode">+{episodesLeft}</span>
@@ -376,7 +387,7 @@ const MobileTVShows: React.FC = () => {
                 )}
             </div>
         )
-    }, [addingEpisode, sweepId, sweepContentKey, handleAddEpisode, getEpisodesLeft, getEpisodeInfo, isMobile, navigate])
+    }, [addingEpisode, sweepId, sweepPhase, handleAddEpisode, getEpisodesLeft, getEpisodeInfo, isMobile, navigate])
 
     return (
         <section className="dashboard-page mobile-tvshows-page">

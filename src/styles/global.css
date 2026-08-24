@@ -9681,55 +9681,39 @@ i.fa-solid.fa-trash:hover {
 
 
 
-@keyframes sweep {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(0); }
-}
-
 @keyframes checkPop {
     0% { transform: scale(1); }
     40% { transform: scale(0.85); }
     100% { transform: scale(1); }
 }
 
-@keyframes fadeSlideIn {
-    0% { opacity: 0; transform: translateY(10px); }
-    100% { opacity: 1; transform: translateY(0); }
-}
-
 .mobile-tvshow-card-sweep {
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, rgba(104, 255, 174, 0) 0%, rgba(104, 255, 174, 0.35) 60%, rgba(104, 255, 174, 0.75) 100%);
+    background: linear-gradient(90deg, transparent 0%, rgba(104, 255, 174, 0.35) 20%, rgba(104, 255, 174, 0.75) 100%);
     transform: translateX(-100%);
-    animation: sweep 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    transition: transform 400ms cubic-bezier(0.25, 1, 0.5, 1);
     pointer-events: none;
     z-index: 3;
     will-change: transform;
+}
+
+.mobile-tvshow-card-sweep.is-active {
+    transform: translateX(100%);
 }
 
 .mobile-tvshow-card-add-btn--done {
     animation: checkPop 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
-.mobile-tvshow-card-add-btn--done {
-    background: rgba(104, 255, 174, 0.2);
+.mobile-tvshow-card-body {
+    transition: opacity 300ms ease, transform 300ms ease;
 }
 
-.mobile-tvshow-card-sweep ~ .mobile-tvshow-card-body .mobile-tvshow-card-title,
-.mobile-tvshow-card-sweep ~ .mobile-tvshow-card-body .mobile-tvshow-card-episode,
-.mobile-tvshow-card-sweep ~ .mobile-tvshow-card-body .mobile-tvshow-card-episode-info {
-    animation: fadeSlideIn 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-    animation-delay: 0.08s;
+.mobile-tvshow-card-body.is-loading {
     opacity: 0;
-}
-
-.mobile-tvshow-card-sweep ~ .mobile-tvshow-card-body .mobile-tvshow-card-episode {
-    animation-delay: 0.12s;
-}
-
-.mobile-tvshow-card-sweep ~ .mobile-tvshow-card-body .mobile-tvshow-card-episode-info {
-    animation-delay: 0.16s;
+    transform: translateY(8px);
+    transition-delay: 150ms;
 }
 
 /* ===== MOBILE MOVIES PAGE ===== */
