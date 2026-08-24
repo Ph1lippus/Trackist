@@ -210,9 +210,9 @@ const AppContent: React.FC = () => {
                         <Route path="/movie/:id" element={<MovieDetail />} />
                         <Route path="/tv/:id" element={<TVShowDetail />} />
                         <Route path="/tv/:id/season/:season/episode/:episode" element={<EpisodeDetail />} />
+                        <Route path="/Upcoming" element={user ? <Upcoming currentMonth={currentMonth} /> : <Navigate to="/login" replace />} />
+                        <Route path="/UpcomingNew" element={user ? <UpcomingNew /> : <Navigate to="/login" replace />} />
                     </Route>
-                    <Route path="/Upcoming" element={user ? <Upcoming currentMonth={currentMonth} /> : <Navigate to="/login" replace />} />
-                    <Route path="/UpcomingNew" element={user ? <UpcomingNew /> : <Navigate to="/login" replace />} />
                     <Route path="/person/:id" element={<PersonDetail />} />
                     <Route path="/Lists" element={user ? <Lists /> : <Navigate to="/login" replace />} />
                     <Route path="/ListsDetail/:id" element={user ? <ListsDetail /> : <Navigate to="/login" replace />} />

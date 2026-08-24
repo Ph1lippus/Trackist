@@ -1997,10 +1997,10 @@ body::after {
     inset: 0;
     background: linear-gradient(
         to bottom,
-        rgba(5, 5, 5, 0.4) 0%, 
-        rgba(5, 5, 5, 0.6) 30%,
-        rgba(5, 5, 5, 0.7) 60%,
-        rgba(5, 5, 5, 0.85) 100%
+        rgba(5, 5, 5, 0.05) 0%, 
+        rgba(5, 5, 5, 0.3) 30%,
+        rgba(5, 5, 5, 0.4) 60%,
+        rgba(5, 5, 5, 1) 100%
     )
 }
 .detail-page__content {
@@ -4561,8 +4561,7 @@ button:focus-visible {
     gap: 3px;
     padding: 3px;
     border-radius: 48px;
-    background: transparent;
-    backdrop-filter: blur(12px);
+    background: rgb(18, 18, 28);
     position: relative;
 }
 
@@ -8423,17 +8422,19 @@ i.fa-solid.fa-trash:hover {
 }
 
 .upcoming-side-panel {
+    background: rgb(18, 18, 28);
     position: fixed;
     right: 0;
     top: var(--navbar-height);
     bottom: 0;
     width: 400px;
     max-width: 90vw;
+    height: 90vh;
     z-index: 50;
     display: flex;
     flex-direction: column;
     animation: slideInRight 0.3s ease-out;
-    border-radius: 25px 0px 0px 0px ;
+    border-radius: 25px 0px 0px 25px ;
 }
 
 @keyframes slideInRight {
@@ -8452,9 +8453,6 @@ i.fa-solid.fa-trash:hover {
     justify-content: space-between;
     align-items: center;
     padding: 1.25rem 1.5rem;
-    background: transparent;
-    border-radius: 25px 0px 0px 25px;
-    backdrop-filter: blur(5px);
 }
 
 .upcoming-side-panel-title {
@@ -8494,11 +8492,9 @@ i.fa-solid.fa-trash:hover {
 
 .upcoming-episode-card {
     display: flex;
+    border-radius: 20px;
     gap: 1rem;
     padding: 0.75rem;
-    background-color: transparent;
-    backdrop-filter: blur(12px);
-    border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -8510,10 +8506,10 @@ i.fa-solid.fa-trash:hover {
 }
 
 .upcoming-episode-card-poster {
-    width: 60px;
-    height: 90px;
+
+    height: 150px;
     flex-shrink: 0;
-    border-radius: 6px;
+    border-radius: 12px;
     overflow: hidden;
     background: linear-gradient(135deg, rgba(133, 138, 227, 0.3), rgba(255, 255, 255, 0.05));
 }
@@ -9024,7 +9020,8 @@ i.fa-solid.fa-trash:hover {
 /* ===== UPCOMING NEW PAGE (CARD LIST VIEW) ===== */
 .upcoming-new-page {
     padding: 0rem 0rem 2rem;
-    min-height: 100vh;
+    height: 100vh;
+    overflow: hidden;
 }
 
 .upcoming-new-shell {
@@ -9032,6 +9029,8 @@ i.fa-solid.fa-trash:hover {
     margin: 0 auto;
     display: flex;
     flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
 }
 
 .upcoming-new-header {

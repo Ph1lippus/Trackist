@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useMemo } from 'react'
+﻿import React, { useEffect, useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
@@ -53,9 +53,10 @@ const UpcomingNew: React.FC = () => {
     usePageTitle('Trackist - Upcoming')
     const [upcomingItems, setUpcomingItems] = useState<UpcomingItem[]>([])
     const [loading, setLoading] = useState(true)
+    const shellRef = useRef<HTMLDivElement>(null)
 
     const scrollToTop = () => {
-        window.scrollTo({ top: 0, behavior: 'smooth' })
+        shellRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
     useEffect(() => {
@@ -135,7 +136,7 @@ const UpcomingNew: React.FC = () => {
 
     return (
         <section className="dashboard-page upcoming-new-page">
-            <div className="dashboard-shell upcoming-new-shell">
+            <div className="dashboard-shell upcoming-new-shell" ref={shellRef}>
                 {sortedGroupedItems.length === 0 ? (
                     <div className="upcoming-new-empty">
                         <h3>Nothing upcoming</h3>
