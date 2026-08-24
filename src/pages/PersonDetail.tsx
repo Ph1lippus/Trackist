@@ -1,9 +1,12 @@
-﻿import React, { useEffect, useState } from 'react'
+﻿import React, { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { getPersonDetails, getPersonMovies, getPersonTV, imageUrl } from '../services/tmdbService'
-import type { TMDBResult } from '../types'
+import type { TMDBResult, WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import MediaCard from '../components/media/MediaCard'
+import { useLibraryStore } from '../stores/useLibraryStore'
+import { useAuthStore } from '../stores/useAuthStore'
+import ConfirmModal from '../components/modals/ConfirmModal'
 
 interface PersonDetails {
     id: number
@@ -28,6 +31,48 @@ const PersonDetail: React.FC = () => {
     const [loading, setLoading] = useState(true)
     const [movies, setMovies] = useState<FilmographyItem[]>([])
     const [tvShows, setTVShows] = useState<FilmographyItem[]>([])
+    const watchlistIds = useLibraryStore((state) => state.watchlistIds)
+    const currentUser = useAuthStore((state) => state.user)
+    const [removeConfirmItem, setRemoveConfirmItem] = useState<TMDBResult | null>(null)
+
+    const handleAddToWatchlist = useCallback(
+        async (item: TMDBResult) => {
+            if (!currentUser) return
+
+            if (watchlistIds.has(item.id)) {
+                setRemoveConfirmItem(item)
+                return
+            }
+
+            const newItem: WatchlistItem = {
+                id: crypto.randomUUID(),
+                user_id: currentUser.id,
+                media_type: item.media_type === 'person' ? 'movie' : (item.media_type as 'movie' | 'tv' | 'anime'),
+                tmdb_id: item.id,
+                title: item.title || item.name || '',
+                poster_path: item.poster_path || undefined,
+                overview: item.overview || undefined,
+                release_date: item.release_date || item.first_air_date || undefined,
+                vote_average: item.vote_average || undefined,
+                status: 'planning',
+                added_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            }
+
+            await useLibraryStore.getState().addItem(newItem)
+        },
+        [currentUser, watchlistIds]
+    )
+
+    const handleConfirmRemove = useCallback(async () => {
+        if (!removeConfirmItem) return
+
+        const libraryItem = useLibraryStore.getState().allItems.find(i => i.tmdb_id === removeConfirmItem.id)
+        if (libraryItem) {
+            await useLibraryStore.getState().removeItem(libraryItem.id)
+        }
+        setRemoveConfirmItem(null)
+    }, [removeConfirmItem])
 
     useEffect(() => {
         const fetchDetails = async () => {
@@ -164,6 +209,8 @@ const PersonDetail: React.FC = () => {
                                         <MediaCard
                                             key={movie.id}
                                             item={movie}
+                                            isInWatchlist={watchlistIds.has(movie.id)}
+                                            onAdd={handleAddToWatchlist}
                                         />
                                     ))}
                                 </div>
@@ -178,6 +225,8 @@ const PersonDetail: React.FC = () => {
                                         <MediaCard
                                             key={show.id}
                                             item={show}
+                                            isInWatchlist={watchlistIds.has(show.id)}
+                                            onAdd={handleAddToWatchlist}
                                         />
                                     ))}
                                 </div>
@@ -185,6 +234,18 @@ const PersonDetail: React.FC = () => {
                         )}
                     </div>
                 </div>
+            )}
+            {removeConfirmItem && (
+                <ConfirmModal
+                    isOpen={true}
+                    title="Remove from Watchlist"
+                    message={`Are you sure you want to remove "${removeConfirmItem.title || removeConfirmItem.name}" from your watchlist?`}
+                    onConfirm={handleConfirmRemove}
+                    onCancel={() => setRemoveConfirmItem(null)}
+                    confirmText="Remove"
+                    cancelText="Cancel"
+                    confirmColor="danger"
+                />
             )}
         </div>
     )
