@@ -4594,7 +4594,7 @@ button:focus-visible {
     left: 0;
     height: 30px;
     width: 0;
-    background: var(--color-primary);
+    background: #4a4d5a;
     border-radius: 48px;
     transform: translateX(0);
     transition: transform var(--tabs-dur) var(--tabs-ease),
@@ -8494,7 +8494,7 @@ i.fa-solid.fa-trash:hover {
     display: flex;
     border-radius: 20px;
     gap: 1rem;
-    padding: 0.75rem;
+    padding: 0.5rem;
     cursor: pointer;
     transition: all 0.2s ease;
 }
