@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient'
-import { shouldRevalidateByDate } from '../utils/dateUtils'
+import { shouldRevalidateByDate, getUTCTodayString } from '../utils/dateUtils'
 
 // Invalidate calendar cache on auth state change
 let currentUserId: string | null = null
@@ -94,13 +94,19 @@ const writeCache = (userId: string, upcoming: CalendarItem[]): void => {
 const isCacheStale = (cache: CalendarCache | null): boolean => {
     if (!cache || !cache.last_fetched_timestamp) return true
     
-    // Check if cache is older than TTL
     const isOlderThanTTL = Date.now() - cache.last_fetched_timestamp > CACHE_TTL_MS
     
-    // Check if cache was created on a different calendar day (UTC)
     const isDifferentDay = shouldRevalidateByDate(cache.last_fetched_timestamp)
     
     return isOlderThanTTL || isDifferentDay
+}
+
+const filterPastItems = (items: CalendarItem[]): CalendarItem[] => {
+    const today = getUTCTodayString()
+    return items.filter(item => {
+        const date = item.media_type === 'tv' ? item.air_date : item.release_date
+        return date && date >= today
+    })
 }
 
 /**
@@ -120,19 +126,22 @@ export const loadCalendar = (
         const cached = readCache(userId)
 
         if (cached && !isCacheStale(cached)) {
-            resolve(cached.upcoming)
+            const filtered = filterPastItems(cached.upcoming)
+            resolve(filtered)
             return
         }
 
         if (cached) {
-            resolve(cached.upcoming)
+            const filtered = filterPastItems(cached.upcoming)
+            resolve(filtered)
         }
 
         fetchFromEdgeFunction(userId)
             .then((fresh) => {
-                writeCache(userId, fresh)
-                onFreshData(fresh)
-                if (!cached) resolve(fresh)
+                const filtered = filterPastItems(fresh)
+                writeCache(userId, filtered)
+                onFreshData(filtered)
+                if (!cached) resolve(filtered)
             })
             .catch((err) => {
                 console.error('Calendar background revalidation failed:', err)
