@@ -9686,7 +9686,7 @@ i.fa-solid.fa-trash:hover {
     inset: 0;
     background: var(--color-primary);
     transform: translateX(-100%);
-    animation: sweep 0.4s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    animation: sweep 0.3s cubic-bezier(0.25, 1, 0.5, 1) forwards;
     pointer-events: none;
     z-index: 3;
 }
