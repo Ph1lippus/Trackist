@@ -6,10 +6,10 @@ export function useMediaCardIcons() {
     const [showIcons, setShowIcons] = useState<boolean>(() => {
         try {
             const raw = localStorage.getItem(STORAGE_KEY)
-            if (raw === null) return true
+            if (raw === null) return false
             return raw === '1'
         } catch {
-            return true
+            return false
         }
     })
 

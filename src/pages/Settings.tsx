@@ -47,10 +47,13 @@ const Settings: React.FC = () => {
     // Additions states
     const [showStremioButton, setShowStremioButton] = useState(false)
     const [showLetterboxButton, setShowLetterboxButton] = useState(false)
+    const [showMediaCardIcons, setShowMediaCardIcons] = useState(false)
     const [additionsLoading, setAdditionsLoading] = useState(false)
     const [additionsMessage, setAdditionsMessage] = useState('')
     const [letterboxLoading, setLetterboxLoading] = useState(false)
     const [letterboxMessage, setLetterboxMessage] = useState('')
+    const [iconsLoading, setIconsLoading] = useState(false)
+    const [iconsMessage, setIconsMessage] = useState('')
 
     // Danger zone
     const [deleteConfirm, setDeleteConfirm] = useState('')
@@ -71,6 +74,7 @@ const Settings: React.FC = () => {
                     setBio(profileData.bio || '')
                     setShowStremioButton(profileData.show_stremio_button === true)
                     setShowLetterboxButton(profileData.show_letterbox_button === true)
+                    setShowMediaCardIcons(profileData.show_media_card_icons === true)
                 }
             }
 
@@ -307,6 +311,28 @@ const Settings: React.FC = () => {
 
         setShowLetterboxButton(prev => !prev)
         setLetterboxMessage('Preference updated successfully')
+    }
+
+    const handleMediaCardIconsUpdate = async () => {
+        if (!currentUser) return
+        setIconsLoading(true)
+        setIconsMessage('')
+
+        const newValue = !showMediaCardIcons
+        const { error } = await updateProfile(currentUser.id, {
+            show_media_card_icons: newValue
+        })
+
+        setIconsLoading(false)
+
+        if (error) {
+            setIconsMessage(error.message)
+            return
+        }
+
+        setShowMediaCardIcons(newValue)
+        localStorage.setItem('trackist-show-media-card-icons', newValue ? '1' : '0')
+        setIconsMessage('Preference updated successfully')
     }
 
     if (loading) {
@@ -662,6 +688,26 @@ const Settings: React.FC = () => {
                                 </div>
 
                                 {letterboxMessage && <div className="settings-alert settings-alert--success">{letterboxMessage}</div>}
+
+                                <div className="settings-divider"></div>
+
+                                <div className="settings-toggle-row">
+                                    <div className="settings-toggle-row__info">
+                                        <span className="settings-toggle-row__label">Media Card Icons</span>
+                                        <span className="settings-toggle-row__desc">Show action icons on media cards across the app</span>
+                                    </div>
+                                    <label className="settings-switch">
+                                        <input
+                                            type="checkbox"
+                                            checked={showMediaCardIcons}
+                                            onChange={handleMediaCardIconsUpdate}
+                                            disabled={iconsLoading}
+                                        />
+                                        <span className="settings-switch__slider"></span>
+                                    </label>
+                                </div>
+
+                                {iconsMessage && <div className="settings-alert settings-alert--success">{iconsMessage}</div>}
 
                                 <div className="settings-divider"></div>
 
