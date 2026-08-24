@@ -113,7 +113,7 @@ const PersonDetail: React.FC = () => {
 
     return (
         <div className="detail-page">
-            <div className="detail-page__content">
+            <div className="detail-page__content" style={{ width: '85%', maxWidth: '1400px', margin: '0 auto' }}>
                 <div className="detail-page__main">
                     <div className="detail-page__person-header">
                         <div className="detail-page__person-photo">
@@ -148,7 +148,7 @@ const PersonDetail: React.FC = () => {
             </div>
 
             {(movies.length > 0 || tvShows.length > 0) && (
-                <div className="detail-page__content">
+                <div className="detail-page__content" style={{ width: '85%', maxWidth: '1400px', margin: '0 auto' }}>
                     <div className="detail-page__main">
                         {movies.length > 0 && (
                             <div className="detail-page__filmography-section">

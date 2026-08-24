@@ -53,7 +53,7 @@ const MovieDetail: React.FC = () => {
 
     // Re-check watchlist status when library store finishes initializing
     useEffect(() => {
-        if (!id) return
+        if (!id || !details) return
         
         const checkWatchlistStatus = () => {
             const watchlistItem = useLibraryStore.getState().allItems.find(item => item.tmdb_id === Number(id))
@@ -81,16 +81,24 @@ const MovieDetail: React.FC = () => {
         })
         
         return unsubscribe
-    }, [id])
+    }, [id, details])
 
     useEffect(() => {
         const fetchDetails = async () => {
             if (!id) return
             setLoading(true)
             try {
+                // Refresh watchlist item first if it exists, to ensure fresh progress data
+                const existingItem = useLibraryStore.getState().allItems.find(item => item.tmdb_id === Number(id))
+                let watchlistItem = existingItem
+                if (watchlistItem) {
+                    await useLibraryStore.getState().refreshItem(watchlistItem.id)
+                    watchlistItem = useLibraryStore.getState().allItems.find(item => item.tmdb_id === Number(id))
+                }
+
                 const data = await getMovieDetails(Number(id))
                 setDetails(data)
-
+                
                 // Find trailer from videos
                 if (data.videos?.results) {
                     const trailer = data.videos.results.find(
@@ -99,8 +107,7 @@ const MovieDetail: React.FC = () => {
                     if (trailer) setTrailerKey(trailer.key)
                 }
 
-                // Check if in watchlist using global store
-                const watchlistItem = useLibraryStore.getState().allItems.find(item => item.tmdb_id === Number(id))
+                // Check if in watchlist using global store (may have been refreshed above)
                 setIsInWatchlist(!!watchlistItem)
                 if (watchlistItem) {
                     setWatchlistId(watchlistItem.id)
