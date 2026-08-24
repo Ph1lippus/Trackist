@@ -53,7 +53,7 @@ const MovieDetail: React.FC = () => {
 
     // Re-check watchlist status when library store finishes initializing
     useEffect(() => {
-        if (!id || !details) return
+        if (!id) return
         
         const checkWatchlistStatus = () => {
             const watchlistItem = useLibraryStore.getState().allItems.find(item => item.tmdb_id === Number(id))
@@ -81,7 +81,7 @@ const MovieDetail: React.FC = () => {
         })
         
         return unsubscribe
-    }, [id, details])
+    }, [id])
 
     useEffect(() => {
         const fetchDetails = async () => {
