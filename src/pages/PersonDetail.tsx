@@ -151,16 +151,26 @@ const PersonDetail: React.FC = () => {
 
     const profileUrl = details.profile_path ? imageUrl(details.profile_path, 'w185') : null
     const title = details.name || 'Unknown'
-    const biography = details.biography || 'No biography available.'
     const birthday = details.birthday
     const placeOfBirth = details.place_of_birth
-    const knownForDepartment = details.known_for_department
 
     const getGender = (gender?: number): string => {
         if (gender === 1) return 'Female'
         if (gender === 2) return 'Male'
         return ''
     }
+
+    const formatBirthday = (dateStr?: string): string => {
+        if (!dateStr) return ''
+        const date = new Date(dateStr + 'T00:00:00')
+        const months = ['January','February','March','April','May','June','July','August','September','October','November','December']
+        const day = date.getDate()
+        const month = months[date.getMonth()]
+        const year = date.getFullYear()
+        return `Born ${day} ${month} ${year}`
+    }
+
+    const formattedBirthday = formatBirthday(birthday)
 
     return (
         <div className="detail-page___person">
@@ -179,9 +189,8 @@ const PersonDetail: React.FC = () => {
                         <div className="detail-page__person-info">
                             <h1 className="detail-page__person-name">{title}</h1>
                             <div className="detail-page__person-meta">
-                                {knownForDepartment && <span>{knownForDepartment}</span>}
-                                {getGender(details.gender) && <span>Â· {getGender(details.gender)}</span>}
-                                {birthday && <span>Â· Born {birthday}</span>}
+                                {getGender(details.gender) && <span>{getGender(details.gender)}</span>}
+                                {formattedBirthday && <span>{formattedBirthday}</span>}
                             </div>
                             {placeOfBirth && (
                                 <p className="detail-page__person-location">
@@ -189,11 +198,6 @@ const PersonDetail: React.FC = () => {
                                 </p>
                             )}
                         </div>
-                    </div>
-
-                    <div className="detail-page__overview-section">
-                        <h2 className="detail-page__section-title">Biography</h2>
-                        <p className="detail-page__overview">{biography}</p>
                     </div>
                 </div>
             </div>
