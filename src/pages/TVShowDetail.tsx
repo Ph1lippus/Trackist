@@ -83,7 +83,7 @@ const TVShowDetail: React.FC = () => {
     }
 
     const getNextEpisodeToWatch = (): { season: number; episode: number } | null => {
-        if (!episodes.length || !details?.external_ids?.imdb_id) return null
+        if (!episodes.length) return null
 
         const watchedEps = episodes.filter(ep => ep.watched && isEpisodeReleased(ep))
         if (watchedEps.length === 0) return null
@@ -811,21 +811,54 @@ const TVShowDetail: React.FC = () => {
                                         <i className="fa-solid fa-users"></i>
                                     </button>
                                 )}
-                                {showStremioButton && !stremioLoading && (
-                                    <button
-                                        className="detail-page__icon-btn"
-                                        onClick={() => {
-                                            const nextEp = getNextEpisodeToWatch()
-                                            const sharingLink = nextEp
-                                                ? createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids?.imdb_id)
-                                                : createTVDeepLink(details.id, details.external_ids?.imdb_id)
-                                            openInStremio(sharingLink)
-                                        }}
-                                        title="Open in Stremio"
-                                    >
-                                        <img src={stremioIcon} alt="Stremio" className="detail-page__stremio-logo" />
-                                    </button>
-                                )}
+                                 {showStremioButton && !stremioLoading && (
+                                     <button
+                                         className="detail-page__icon-btn"
+                                         onClick={async () => {
+                                             let nextEp = getNextEpisodeToWatch()
+
+                                             if (!nextEp && details) {
+                                                 const watchedEps = episodes.filter(ep => ep.watched && isEpisodeReleased(ep))
+                                                 if (watchedEps.length > 0) {
+                                                     const lastWatched = watchedEps.reduce((max, ep) => {
+                                                         if (ep.season_number > max.season_number) return ep
+                                                         if (ep.season_number === max.season_number && ep.episode_number > max.episode_number) return ep
+                                                         return max
+                                                     }, watchedEps[0])
+
+                                                     const nextSeason = seasons.find(s => s > lastWatched.season_number)
+                                                     if (nextSeason) {
+                                                         await loadSeason(nextSeason)
+                                                         const nextSeasonEps = seasonCache.current.get(nextSeason) || []
+                                                         const firstReleased = nextSeasonEps.find(ep => isEpisodeReleased(ep))
+                                                         if (firstReleased) {
+                                                             nextEp = { season: nextSeason, episode: firstReleased.episode_number }
+                                                         }
+                                                     }
+                                                 } else if (seasons.length > 0) {
+                                                     const firstSeason = seasons[0]
+                                                     const firstSeasonEps = seasonCache.current.get(firstSeason) || []
+                                                     if (firstSeasonEps.length === 0) {
+                                                         await loadSeason(firstSeason)
+                                                     }
+                                                     const loadedEps = seasonCache.current.get(firstSeason) || []
+                                                     const firstReleased = loadedEps.find(ep => isEpisodeReleased(ep))
+                                                     if (firstReleased) {
+                                                         nextEp = { season: firstSeason, episode: firstReleased.episode_number }
+                                                     }
+                                                 }
+                                             }
+
+                                             const sharingLink = nextEp
+                                                 ? createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids?.imdb_id)
+                                                 : createTVDeepLink(details.id, details.external_ids?.imdb_id)
+                                             openInStremio(sharingLink)
+                                         }}
+                                         title="Open in Stremio"
+                                     >
+                                         <img src={stremioIcon} alt="Stremio" className="detail-page__stremio-logo" />
+                                     </button>
+                                 )}
                             </div>
 
                             {/* Action buttons (desktop inline / mobile fixed sidebar) */}

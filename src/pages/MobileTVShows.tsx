@@ -19,7 +19,6 @@ const MobileTVShows: React.FC = () => {
     const tvShows = useLibraryStore((state) => state.tvShows)
     const isInitialized = useLibraryStore((state) => state.isInitialized)
     const [addingEpisode, setAddingEpisode] = useState<string | null>(null)
-    const [sweepId, setSweepId] = useState<string | null>(null)
     const [confirmModal, setConfirmModal] = useState<{
         isOpen: boolean
         action: 'resume' | null
@@ -181,15 +180,10 @@ const MobileTVShows: React.FC = () => {
             return
         }
 
-        // Start sweep immediately for responsive feel
-        setSweepId(show.id)
-
         setAddingEpisode(show.id)
         try {
             await handleAddEpisodeInternal(show)
         } catch (err) {
-            // Clear sweep on error
-            setSweepId(null)
             console.error('Failed to add episode:', err)
         } finally {
             setAddingEpisode(null)
@@ -249,9 +243,6 @@ const MobileTVShows: React.FC = () => {
                 await checkAndUpdateCompleted(show.id, show.tmdb_id)
             }
             await useLibraryStore.getState().refreshItem(show.id)
-
-            // Clear sweep — all data is now correct
-            setSweepId(null)
         }, 200)
     }
 
@@ -308,13 +299,11 @@ const MobileTVShows: React.FC = () => {
             )
 
             if (success) {
-                setSweepId(show.id)
                 setTimeout(async () => {
                     if (show.tmdb_id) {
                         await checkAndUpdateCompleted(show.id, show.tmdb_id)
                     }
                     await useLibraryStore.getState().refreshItem(show.id)
-                    setSweepId(null)
                 }, 200)
             }
         } catch (err) {
@@ -329,7 +318,6 @@ const MobileTVShows: React.FC = () => {
         const isAdding = addingEpisode === show.id
         const isCompleted = show.status === 'completed' || show.status === 'caught_up'
         const isDroppedOrPaused = show.status === 'dropped' || show.status === 'paused'
-        const hasSweep = sweepId === show.id
         const episodesLeft = getEpisodesLeft(show)
         const episodeInfo = getEpisodeInfo(show)
 
@@ -339,7 +327,6 @@ const MobileTVShows: React.FC = () => {
                 className="mobile-tvshow-card"
                 onClick={() => { if (show.tmdb_id) navigate(`/tv/${show.tmdb_id}`) }}
             >
-                {hasSweep && <div className="mobile-tvshow-card-sweep" />}
                 <div className="mobile-tvshow-card-poster">
                     {show.poster_path ? (
                         <img src={imageUrl(show.poster_path, isMobile ? 'w342' : 'w342') || ''} alt={show.title} loading="lazy" />
@@ -368,12 +355,16 @@ const MobileTVShows: React.FC = () => {
                         disabled={isAdding}
                         title="Add one episode"
                     >
-                        <i className={`fa-solid fa-check`}></i>
+                        {isAdding ? (
+                            <div className="mobile-tvshow-card-spinner" />
+                        ) : (
+                            <i className={`fa-solid fa-check`}></i>
+                        )}
                     </button>
                 )}
             </div>
         )
-    }, [addingEpisode, sweepId, handleAddEpisode, getEpisodesLeft, getEpisodeInfo, isMobile, navigate])
+    }, [addingEpisode, handleAddEpisode, getEpisodesLeft, getEpisodeInfo, isMobile, navigate])
 
     return (
         <section className="dashboard-page mobile-tvshows-page">

@@ -9676,22 +9676,24 @@ i.fa-solid.fa-trash:hover {
 
 
 
-@keyframes sweep {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(0); }
+.mobile-tvshow-card-spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(104, 255, 174, 0.2);
+    border-top-color: #68ffae;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
 }
 
-.mobile-tvshow-card-sweep {
-    position: absolute;
-    inset: 0;
-    background: var(--color-primary);
-    transform: translateX(-100%);
-    animation: sweep 0.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-    pointer-events: none;
-    z-index: 3;
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
-/* ===== MOBILE MOVIES PAGE ===== */
+.mobile-tvshow-card-add-btn--done {
+    background: rgba(104, 255, 174, 0.2);
+}
+
+/* Hide auth links on mobile */
 .mobile-movies-page {
     padding: 1rem 1rem 7rem;
 }
