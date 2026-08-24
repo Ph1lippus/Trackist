@@ -1997,9 +1997,9 @@ body::after {
     inset: 0;
     background: linear-gradient(
         to bottom,
-        rgba(5, 5, 5, 0.05) 0%, 
-        rgba(5, 5, 5, 0.3) 30%,
-        rgba(5, 5, 5, 0.4) 60%,
+        rgba(5, 5, 5, 0.2) 0%, 
+        rgba(5, 5, 5, 0.5) 30%,
+        rgba(5, 5, 5, 0.7) 60%,
         rgba(5, 5, 5, 1) 100%
     )
 }
@@ -2294,6 +2294,10 @@ body::after {
     line-height: 1.7;
     margin: 0 0 1.5rem 0;
     padding: 0rem 1rem;
+}
+
+.detail-page__main--movie .detail-page__overview {
+    max-width: 50%;
 }
 .detail-page__status {
     display: flex;
