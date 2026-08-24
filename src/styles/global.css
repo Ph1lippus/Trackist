@@ -19,7 +19,7 @@
    ============================ */
 @media (max-width: 768px) {
     .detail-page__main--movie .detail-page__overview {
-        max-width: 100%;
+        max-width: 100% !important;
     }
     .detail-page__episode-meta {
         font-size: 0.7rem!important;
