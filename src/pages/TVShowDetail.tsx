@@ -129,7 +129,7 @@ const TVShowDetail: React.FC = () => {
     }, [id])
 
     useEffect(() => {
-        if (episodeToScrollRef.current && episodeRefs.current[episodeToScrollRef.current]) {
+        if (episodeToScrollRef.current && episodeRefs.current[episodeToScrollRef.current] && !isMobile) {
             const targetElement = episodeRefs.current[episodeToScrollRef.current]
             if (targetElement && episodeListRef.current) {
                 const container = episodeListRef.current
@@ -141,7 +141,7 @@ const TVShowDetail: React.FC = () => {
             }
             episodeToScrollRef.current = null
         }
-    }, [selectedSeason, episodes])
+    }, [selectedSeason, episodes, isMobile])
 
     useEffect(() => {
         const fetchDetails = async () => {
@@ -247,10 +247,12 @@ const TVShowDetail: React.FC = () => {
 
                 let targetSeason = seasonList[0] || 1
                 let targetEpisode = 1
+                let scrollTarget: string | null = null
 
                 if (lastWatched) {
                     targetSeason = lastWatched.season_number
                     targetEpisode = lastWatched.episode_number
+                    scrollTarget = `${id}-${targetSeason}-${targetEpisode}`
 
                     // Load the last watched season to check if all released episodes are watched
                     await loadSeason(targetSeason)
@@ -263,6 +265,14 @@ const TVShowDetail: React.FC = () => {
                         if (nextSeasonIndex < seasonList.length) {
                             targetSeason = seasonList[nextSeasonIndex]
                             await loadSeason(targetSeason)
+                            const nextSeasonEps = seasonCache.current.get(targetSeason) || []
+                            const firstReleasedEp = nextSeasonEps.find(ep => isEpisodeReleased(ep))
+                            if (firstReleasedEp) {
+                                targetEpisode = firstReleasedEp.episode_number
+                                scrollTarget = `${id}-${targetSeason}-${targetEpisode}`
+                            } else {
+                                scrollTarget = null
+                            }
                         }
                     }
                 } else {
@@ -271,7 +281,7 @@ const TVShowDetail: React.FC = () => {
                 }
 
                 setSelectedSeason(targetSeason)
-                episodeToScrollRef.current = lastWatched ? `${id}-${targetSeason}-${targetEpisode}` : null
+                episodeToScrollRef.current = scrollTarget
             } catch (err) {
                 console.error('Failed to load episodes:', err)
             }
