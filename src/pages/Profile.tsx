@@ -438,6 +438,7 @@ const ProfilePage: React.FC = () => {
                                                     item={tmdbItem}
                                                     isInWatchlist={currentUserWatchlistIds.has(tmdbItem.id)}
                                                     onAdd={handleAddToWatchlist}
+                                                    hideAddButton={isOwnProfile}
                                                 />
                                             )
                                         }}
@@ -481,6 +482,7 @@ const ProfilePage: React.FC = () => {
                                                     item={tmdbItem}
                                                     isInWatchlist={currentUserWatchlistIds.has(tmdbItem.id)}
                                                     onAdd={handleAddToWatchlist}
+                                                    hideAddButton={isOwnProfile}
                                                 />
                                             )
                                         }}
@@ -524,6 +526,7 @@ const ProfilePage: React.FC = () => {
                                                     item={tmdbItem}
                                                     isInWatchlist={currentUserWatchlistIds.has(tmdbItem.id)}
                                                     onAdd={handleAddToWatchlist}
+                                                    hideAddButton={isOwnProfile}
                                                 />
                                             )
                                         }}
