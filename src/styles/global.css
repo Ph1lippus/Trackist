@@ -271,6 +271,14 @@
         .mobile-tvshow-card-sweep {
             animation-duration: 0.01ms !important;
         }
+        .mobile-tvshow-card-add-btn--done {
+            animation-duration: 0.01ms !important;
+        }
+        .mobile-tvshow-card-sweep ~ .mobile-tvshow-card-body .mobile-tvshow-card-title,
+        .mobile-tvshow-card-sweep ~ .mobile-tvshow-card-body .mobile-tvshow-card-episode,
+        .mobile-tvshow-card-sweep ~ .mobile-tvshow-card-body .mobile-tvshow-card-episode-info {
+            animation-duration: 0.01ms !important;
+        }
         .detail-page__episode-card {
             transition-duration: 0.01ms !important;
         }
@@ -9678,14 +9686,50 @@ i.fa-solid.fa-trash:hover {
     100% { transform: translateX(0); }
 }
 
+@keyframes checkPop {
+    0% { transform: scale(1); }
+    40% { transform: scale(0.85); }
+    100% { transform: scale(1); }
+}
+
+@keyframes fadeSlideIn {
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
 .mobile-tvshow-card-sweep {
     position: absolute;
     inset: 0;
-    background: var(--color-primary);
+    background: linear-gradient(90deg, rgba(104, 255, 174, 0) 0%, rgba(104, 255, 174, 0.35) 60%, rgba(104, 255, 174, 0.75) 100%);
     transform: translateX(-100%);
-    animation: sweep 0.5s ease-out forwards;
+    animation: sweep 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
     pointer-events: none;
     z-index: 3;
+    will-change: transform;
+}
+
+.mobile-tvshow-card-add-btn--done {
+    animation: checkPop 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+.mobile-tvshow-card-add-btn--done {
+    background: rgba(104, 255, 174, 0.2);
+}
+
+.mobile-tvshow-card-sweep ~ .mobile-tvshow-card-body .mobile-tvshow-card-title,
+.mobile-tvshow-card-sweep ~ .mobile-tvshow-card-body .mobile-tvshow-card-episode,
+.mobile-tvshow-card-sweep ~ .mobile-tvshow-card-body .mobile-tvshow-card-episode-info {
+    animation: fadeSlideIn 0.35s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+    animation-delay: 0.08s;
+    opacity: 0;
+}
+
+.mobile-tvshow-card-sweep ~ .mobile-tvshow-card-body .mobile-tvshow-card-episode {
+    animation-delay: 0.12s;
+}
+
+.mobile-tvshow-card-sweep ~ .mobile-tvshow-card-body .mobile-tvshow-card-episode-info {
+    animation-delay: 0.16s;
 }
 
 /* ===== MOBILE MOVIES PAGE ===== */

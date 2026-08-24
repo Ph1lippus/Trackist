@@ -20,6 +20,7 @@ const MobileTVShows: React.FC = () => {
     const isInitialized = useLibraryStore((state) => state.isInitialized)
     const [addingEpisode, setAddingEpisode] = useState<string | null>(null)
     const [sweepId, setSweepId] = useState<string | null>(null)
+    const [sweepContentKey, setSweepContentKey] = useState(0)
     const [confirmModal, setConfirmModal] = useState<{
         isOpen: boolean
         action: 'resume' | null
@@ -183,6 +184,7 @@ const MobileTVShows: React.FC = () => {
 
         // Start sweep immediately for responsive feel
         setSweepId(show.id)
+        setSweepContentKey(k => k + 1)
 
         setAddingEpisode(show.id)
         try {
@@ -309,6 +311,7 @@ const MobileTVShows: React.FC = () => {
 
             if (success) {
                 setSweepId(show.id)
+                setSweepContentKey(k => k + 1)
                 setTimeout(async () => {
                     if (show.tmdb_id) {
                         await checkAndUpdateCompleted(show.id, show.tmdb_id)
@@ -349,7 +352,7 @@ const MobileTVShows: React.FC = () => {
                         </div>
                     )}
                 </div>
-                <div className="mobile-tvshow-card-body">
+                <div className="mobile-tvshow-card-body" key={hasSweep ? sweepContentKey : show.id}>
                     <h3 className="mobile-tvshow-card-title">{show.title}</h3>
                     {episodesLeft !== undefined && episodesLeft > 0 && (
                         <span className="mobile-tvshow-card-episode">+{episodesLeft}</span>
@@ -360,7 +363,7 @@ const MobileTVShows: React.FC = () => {
                 </div>
                 {(!isCompleted || isDroppedOrPaused) && (
                     <button
-                        className="mobile-tvshow-card-add-btn"
+                        className={`mobile-tvshow-card-add-btn ${hasSweep ? 'mobile-tvshow-card-add-btn--done' : ''}`}
                         onClick={(e) => {
                             e.stopPropagation()
                             handleAddEpisode(show)
@@ -373,7 +376,7 @@ const MobileTVShows: React.FC = () => {
                 )}
             </div>
         )
-    }, [addingEpisode, sweepId, handleAddEpisode, getEpisodesLeft, getEpisodeInfo, isMobile, navigate])
+    }, [addingEpisode, sweepId, sweepContentKey, handleAddEpisode, getEpisodesLeft, getEpisodeInfo, isMobile, navigate])
 
     return (
         <section className="dashboard-page mobile-tvshows-page">
