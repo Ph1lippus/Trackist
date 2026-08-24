@@ -6,6 +6,7 @@ import { requestPasswordReset, updateUserEmail, getProfile, updateProfile } from
 import { useCache } from '../hooks/useCache'
 import { usePWAInstall } from '../hooks/usePWAInstall'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
 import { validateDisplayName, validateEmail } from '../utils/validation'
 import { getUTCTodayString } from '../utils/dateUtils'
 import { useAuthStore } from '../stores/useAuthStore'
@@ -47,7 +48,7 @@ const Settings: React.FC = () => {
     // Additions states
     const [showStremioButton, setShowStremioButton] = useState(false)
     const [showLetterboxButton, setShowLetterboxButton] = useState(false)
-    const [showMediaCardIcons, setShowMediaCardIcons] = useState(false)
+    const { showIcons: showMediaCardIcons, setShowIcons: setShowMediaCardIcons } = useMediaCardIcons()
     const [additionsLoading, setAdditionsLoading] = useState(false)
     const [additionsMessage, setAdditionsMessage] = useState('')
     const [letterboxLoading, setLetterboxLoading] = useState(false)
@@ -319,6 +320,8 @@ const Settings: React.FC = () => {
         setIconsMessage('')
 
         const newValue = !showMediaCardIcons
+        setShowMediaCardIcons(newValue)
+
         const { error } = await updateProfile(currentUser.id, {
             show_media_card_icons: newValue
         })
@@ -326,12 +329,11 @@ const Settings: React.FC = () => {
         setIconsLoading(false)
 
         if (error) {
+            setShowMediaCardIcons(!newValue)
             setIconsMessage(error.message)
             return
         }
 
-        setShowMediaCardIcons(newValue)
-        localStorage.setItem('trackist-show-media-card-icons', newValue ? '1' : '0')
         setIconsMessage('Preference updated successfully')
     }
 

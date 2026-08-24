@@ -173,7 +173,7 @@ const ListsCreatePage: React.FC = () => {
                     <div style={{ flex: 1, minHeight: 0, width: '100%' }}>
                         <VirtuosoGrid
                             computeItemKey={(index) => filteredBrowseResults[index]?.id ?? index}
-                            style={{ height: '100%', width: '100%' }}
+                            style={{ width: '100%' }}
                             data={filteredBrowseResults}
                             rangeChanged={(range) => {
                                 // Load more items when user scrolls near the end
@@ -189,10 +189,10 @@ const ListsCreatePage: React.FC = () => {
                             components={{ Footer }}
                             useWindowScroll={true}
                             increaseViewportBy={{
-                                top: isMobile ? 600 : 1200,
-                                bottom: isMobile ? 2000 : 3000,
+                                top: isMobile ? 50 : 100,
+                                bottom: isMobile ? 100 : 200,
                             }}
-                            overscan={isMobile ? 800 : 1500}
+                            overscan={isMobile ? 20 : 40}
                             listClassName="discover-grid"
                             itemContent={(index) => {
                                 const item = filteredBrowseResults[index]

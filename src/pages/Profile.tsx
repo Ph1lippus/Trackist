@@ -422,7 +422,7 @@ const ProfilePage: React.FC = () => {
                                             bottom: isMobile ? 400 : 800,
                                         }}
                                         computeItemKey={(index) => watchingTVShows[index]?.id ?? index}
-                                        style={{ height: '100%', width: '100%' }}
+                                        style={{ width: '100%' }}
                                         useWindowScroll={true}
                                         data={watchingTVShows}
                                         overscan={isMobile ? 50 : 100}
@@ -467,7 +467,7 @@ const ProfilePage: React.FC = () => {
                                             bottom: isMobile ? 400 : 800,
                                         }}
                                         computeItemKey={(index) => moviesToWatch[index]?.id ?? index}
-                                        style={{ height: '100%', width: '100%' }}
+                                        style={{ width: '100%' }}
                                         useWindowScroll={true}
                                         data={moviesToWatch}
                                         overscan={isMobile ? 50 : 100}
@@ -512,7 +512,7 @@ const ProfilePage: React.FC = () => {
                                             bottom: isMobile ? 400 : 800,
                                         }}
                                         computeItemKey={(index) => finishedItems[index]?.id ?? index}
-                                        style={{ height: '100%', width: '100%' }}
+                                        style={{ width: '100%' }}
                                         useWindowScroll={true}
                                         data={finishedItems}
                                         overscan={isMobile ? 50 : 100}

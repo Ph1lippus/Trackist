@@ -172,11 +172,11 @@ const ListsDetail: React.FC = () => {
                 </h3>
                 <VirtuosoGrid
                     increaseViewportBy={{
-                        top: isMobile ? 600 : 1200,
-                        bottom: isMobile ? 2000 : 3000,
+                        top: isMobile ? 50 : 100,
+                        bottom: isMobile ? 100 : 200,
                     }}
                     computeItemKey={(index) => filteredWatchedItems[index]?.id ?? index}
-                    style={{ height: '100%', width: '100%' }}
+                    style={{ width: '100%' }}
                     useWindowScroll={true}
                     data={filteredWatchedItems}
                     overscan={isMobile ? 50 : 100}

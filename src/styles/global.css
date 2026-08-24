@@ -106,10 +106,10 @@
         margin: 0 auto;
         width: 95%;
     }
-    html, body {
-        overscroll-behavior: none;
-    }
 
+    html {
+        scroll-behavior: auto;
+    }
 
     .media-card__icon-btn {
         font-size: 0.7rem !important;
@@ -1260,13 +1260,11 @@ body::after {
 /* Card grid - responsive grid of media cards */
 .discover-grid {
     display: grid;
-    content-visibility: auto;
     gap: 1rem;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     width: 100%;
     margin: 0 auto;
     padding: 1rem 0;
-    overflow-anchor: none;
 }
 
 /* Smaller cards on phones */
@@ -4641,7 +4639,6 @@ button:focus-visible {
 /* ===== Media Card (unified replacement for discover-card) ===== */
 .media-card {
     overflow: hidden;
-    content-visibility: auto;
     transition: transform 0.2s ease, border-color 0.2s ease,
         box-shadow 0.2s ease;
     cursor: pointer;

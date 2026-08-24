@@ -256,7 +256,7 @@ const Discover: React.FC = () => {
                                         bottom: isMobile ? 400 : 800,
                                     }}
                                 computeItemKey={(index) => visibleResults[index]?.id ?? index}
-                                style={{ height: '100%', width: '100%' }}
+                                style={{ width: '100%' }}
                                 useWindowScroll={true}
                                 data={visibleResults}
                                 rangeChanged={(range) => {
