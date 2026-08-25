@@ -1,10 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { Navigate } from 'react-router-dom'
-import { supabase } from '../services/supabaseClient'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { uploadAvatar } from '../services/profileService'
+import { useAuthStore } from '../stores/useAuthStore'
 import ConfirmModal from '../components/modals/ConfirmModal'
-import type { User } from '@supabase/supabase-js'
 
 
 
@@ -47,9 +46,10 @@ interface UserStats {
 
 const Admin: React.FC = () => {
     usePageTitle('Trackist - Admin')
-    const [user, setUser] = useState<User | null>(null)
+    const globalUser = useAuthStore((state) => state.user)
+    const globalLoading = useAuthStore((state) => state.loading)
     const [profile, setProfile] = useState<{ role: string | null } | null>(null)
-    const [loading, setLoading] = useState(true)
+    const [adminLoading, setAdminLoading] = useState(true)
     const [authError, setAuthError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<TabType>('overview')
     const [profiles, setProfiles] = useState<ProfileRow[]>([])
@@ -79,7 +79,7 @@ const Admin: React.FC = () => {
     const [pendingAvatarUserId, setPendingAvatarUserId] = useState<string | null>(null)
     const avatarInputRef = useRef<HTMLInputElement>(null)
 
-    if (loading) return <div className="discover-loading"><div className="discover-spinner" /><p>Loading...</p></div>
+    if (adminLoading) return <div className="discover-loading"><div className="discover-spinner" /><p>Loading...</p></div>
     if (profile && profile.role !== "admin") return <Navigate to="/" replace />
 
     const isAdmin = profile?.role === "admin"
@@ -113,88 +113,73 @@ const Admin: React.FC = () => {
     }
 
     useEffect(() => {
+        if (globalLoading) return
+        if (!globalUser) {
+            setAdminLoading(false)
+            setProfile({ role: 'user' })
+            return
+        }
+
         let isMounted = true
-        const MAX_TIMEOUT = 15000
+        const MAX_TIMEOUT = 10000
 
         const safetyTimeout = setTimeout(() => {
-            if (isMounted && loading) {
-                console.warn('[Admin] Auth check timed out after 15s, forcing load complete')
-                setLoading(false)
+            if (isMounted && adminLoading) {
+                console.warn('[Admin] Admin check timed out after 10s')
+                setAdminLoading(false)
                 setProfile({ role: 'user' })
             }
         }, MAX_TIMEOUT)
 
-        const getSessionWithTimeout = async (ms: number) => {
-            return Promise.race([
-                supabase.auth.getSession(),
-                new Promise<never>((_, reject) => 
-                    setTimeout(() => reject(new Error('getSession timeout')), ms)
-                )
-            ])
-        }
-
-        const checkAuth = async () => {
+        const checkAdmin = async () => {
             try {
-                console.log('[Admin] Starting auth check...')
-                
-                const { data: { session } } = await getSessionWithTimeout(10000)
-                console.log('[Admin] Session:', session?.user?.email || 'no session')
-                
-                if (!isMounted) return
-                setUser(session?.user ?? null)
-
-                if (session?.access_token) {
-                    try {
-                        const controller = new AbortController()
-                        const timeoutId = setTimeout(() => controller.abort(), 8000)
-
-                        console.log('[Admin] Calling verify-admin...')
-                        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin`, {
-                            headers: { 'Authorization': `Bearer ${session.access_token}` },
-                            signal: controller.signal
-                        })
-
-                        clearTimeout(timeoutId)
-                        console.log('[Admin] verify-admin response:', res.status, res.statusText)
-
-                        if (res.ok) {
-                            const data = await res.json()
-                            console.log('[Admin] verify-admin data:', data)
-                            if (isMounted) setProfile({ role: data.isAdmin ? 'admin' : 'user' })
-                        } else {
-                            console.warn('[Admin] verify-admin returned non-ok:', res.status)
-                            if (isMounted) setProfile({ role: 'user' })
-                        }
-                    } catch (fetchError) {
-                        console.error('[Admin] verify-admin fetch failed:', fetchError)
-                        if (isMounted) setProfile({ role: 'user' })
+                if (!globalUser?.access_token) {
+                    if (isMounted) {
+                        setProfile({ role: 'user' })
+                        setAdminLoading(false)
                     }
-                } else {
-                    console.log('[Admin] No access_token, setting role to user')
-                    if (isMounted) setProfile({ role: 'user' })
+                    return
                 }
-            } catch (err) {
-                console.error('[Admin] Auth check error:', err)
-                if (isMounted) setAuthError('Authentication check failed.')
+
+                const controller = new AbortController()
+                const timeoutId = setTimeout(() => controller.abort(), 6000)
+
+                const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin`, {
+                    headers: { 'Authorization': `Bearer ${globalUser.access_token}` },
+                    signal: controller.signal
+                })
+
+                clearTimeout(timeoutId)
+
+                if (!isMounted) return
+
+                if (res.ok) {
+                    const data = await res.json()
+                    setProfile({ role: data.isAdmin ? 'admin' : 'user' })
+                } else {
+                    setProfile({ role: 'user' })
+                }
+            } catch (fetchError) {
+                console.error('[Admin] verify-admin fetch failed:', fetchError)
+                if (isMounted) setProfile({ role: 'user' })
             } finally {
                 if (isMounted) {
                     clearTimeout(safetyTimeout)
-                    console.log('[Admin] Auth check complete, setting loading false')
-                    setLoading(false)
+                    setAdminLoading(false)
                 }
             }
         }
-        
-        checkAuth()
-        
+
+        checkAdmin()
+
         return () => {
             isMounted = false
             clearTimeout(safetyTimeout)
         }
-    }, [])
+    }, [globalUser, globalLoading])
 
     useEffect(() => {
-        if (!user) return
+        if (!globalUser) return
 
         const fetchData = async () => {
             try {
@@ -286,10 +271,10 @@ const Admin: React.FC = () => {
         }
 
         fetchData()
-    }, [isAdmin, user])
+    }, [isAdmin, globalUser])
 
     useEffect(() => {
-        if (!isAdmin || !user || activeTab !== 'user-stats') return
+        if (!isAdmin || !globalUser || activeTab !== 'user-stats') return
 
         const fetchUserStats = async () => {
             setUserStatsLoading(true)
@@ -383,7 +368,7 @@ const Admin: React.FC = () => {
         }
 
         fetchUserStats()
-    }, [isAdmin, user, activeTab])
+    }, [isAdmin, globalUser, activeTab])
 
     const handleRoleChange = async () => {
         if (!roleConfirm) return
@@ -538,7 +523,7 @@ const Admin: React.FC = () => {
         )
     }
 
-    if (!isAdmin || !user) {
+    if (!isAdmin || !globalUser) {
         return <Navigate to="/" replace />
     }
 
@@ -700,7 +685,7 @@ const Admin: React.FC = () => {
                                             <td>{formatDate(profile.created_at)}</td>
                                             <td>{formatDate(profile.updated_at)}</td>
                                             <td>
-                                                {profile.id !== user.id && (
+                                                {profile.id !== globalUser.id && (
                                                     <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'center' }}>
                                                         <button
                                                             className="admin-action-btn"
@@ -786,7 +771,7 @@ const Admin: React.FC = () => {
                                             <span>Updated {formatDate(profile.updated_at)}</span>
                                         </div>
                                     </div>
-                                    {profile.id !== user.id && (
+                                    {profile.id !== globalUser.id && (
                                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                                             <button
                                                 className="admin-user-card__action"
