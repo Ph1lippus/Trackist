@@ -124,7 +124,6 @@ const Admin: React.FC = () => {
         }
 
         let isMounted = true
-        let safetyTimeout: ReturnType<typeof setTimeout>
         let maxTimeout: ReturnType<typeof setTimeout>
 
         const MAX_TIMEOUT = 15000
@@ -175,7 +174,6 @@ const Admin: React.FC = () => {
                 }
             } finally {
                 if (isMounted) {
-                    clearTimeout(safetyTimeout)
                     clearTimeout(maxTimeout)
                     console.log('[Admin] Setting adminLoading false')
                     setAdminLoading(false)
@@ -188,7 +186,6 @@ const Admin: React.FC = () => {
         return () => {
             console.log('[Admin] Effect cleanup')
             isMounted = false
-            clearTimeout(safetyTimeout)
             clearTimeout(maxTimeout)
         }
     }, [globalUser, globalAccessToken])
