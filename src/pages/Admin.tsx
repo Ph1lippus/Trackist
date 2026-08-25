@@ -150,30 +150,29 @@ const Admin: React.FC = () => {
 
                 console.log('[Admin] Calling verify-admin...')
                 
-                const fetchWithTimeout = Promise.race([
-                    fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin`, {
-                        headers: { 'Authorization': `Bearer ${globalAccessToken}` }
-                    }),
-                    new Promise<never>((_, reject) => {
-                        safetyTimeout = setTimeout(() => reject(new Error('verify-admin timeout')), 8000)
+                const controller = new AbortController()
+                const timeoutId = setTimeout(() => controller.abort(), 8000)
+
+                try {
+                    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin`, {
+                        headers: { 'Authorization': `Bearer ${globalAccessToken}` },
+                        signal: controller.signal
                     })
-                ])
+                    clearTimeout(timeoutId)
 
-                const res = await fetchWithTimeout
-                console.log('[Admin] verify-admin response:', res.status, res.statusText)
+                    if (!isMounted) return
 
-                if (!isMounted) return
-
-                if (res.ok) {
-                    const data = await res.json()
-                    console.log('[Admin] verify-admin data:', data)
-                    setProfile({ role: data.isAdmin ? 'admin' : 'user' })
-                } else {
-                    setProfile({ role: 'user' })
+                    if (res.ok) {
+                        const data = await res.json()
+                        console.log('[Admin] verify-admin data:', data)
+                        setProfile({ role: data.isAdmin ? 'admin' : 'user' })
+                    } else {
+                        setProfile({ role: 'user' })
+                    }
+                } catch (fetchError) {
+                    console.error('[Admin] verify-admin fetch failed:', fetchError)
+                    if (isMounted) setProfile({ role: 'user' })
                 }
-            } catch (fetchError) {
-                console.error('[Admin] verify-admin fetch failed:', fetchError)
-                if (isMounted) setProfile({ role: 'user' })
             } finally {
                 if (isMounted) {
                     clearTimeout(safetyTimeout)

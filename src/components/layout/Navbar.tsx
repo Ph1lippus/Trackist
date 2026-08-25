@@ -99,9 +99,15 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
 
                 if (session?.access_token) {
                     try {
+                        const controller = new AbortController()
+                        const timeoutId = setTimeout(() => controller.abort(), 8000)
+
                         const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin`, {
-                            headers: { 'Authorization': `Bearer ${session.access_token}` }
+                            headers: { 'Authorization': `Bearer ${session.access_token}` },
+                            signal: controller.signal
                         })
+                        clearTimeout(timeoutId)
+
                         if (res.ok) {
                             const data = await res.json()
                             setIsAdmin(data.isAdmin === true)

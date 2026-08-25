@@ -70,6 +70,13 @@ export default defineConfig({
             }
           },
           {
+            urlPattern: /^https:\/\/.*\.supabase\.co\/functions\/v1\/.*/i,
+            handler: 'NetworkOnly',
+            options: {
+              cacheName: 'supabase-api-cache',
+            }
+          },
+          {
             urlPattern: /^https:\/\/.*\.supabase\.co\/.*/i,
             handler: 'NetworkFirst',
             options: {
