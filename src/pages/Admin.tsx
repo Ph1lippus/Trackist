@@ -113,9 +113,34 @@ const Admin: React.FC = () => {
     }
 
     useEffect(() => {
+        let isMounted = true
+        const MAX_TIMEOUT = 15000
+
+        const safetyTimeout = setTimeout(() => {
+            if (isMounted && loading) {
+                console.warn('[Admin] Auth check timed out after 15s, forcing load complete')
+                setLoading(false)
+                setProfile({ role: 'user' })
+            }
+        }, MAX_TIMEOUT)
+
+        const getSessionWithTimeout = async (ms: number) => {
+            return Promise.race([
+                supabase.auth.getSession(),
+                new Promise<never>((_, reject) => 
+                    setTimeout(() => reject(new Error('getSession timeout')), ms)
+                )
+            ])
+        }
+
         const checkAuth = async () => {
             try {
-                const { data: { session } } = await supabase.auth.getSession()
+                console.log('[Admin] Starting auth check...')
+                
+                const { data: { session } } = await getSessionWithTimeout(10000)
+                console.log('[Admin] Session:', session?.user?.email || 'no session')
+                
+                if (!isMounted) return
                 setUser(session?.user ?? null)
 
                 if (session?.access_token) {
@@ -123,33 +148,49 @@ const Admin: React.FC = () => {
                         const controller = new AbortController()
                         const timeoutId = setTimeout(() => controller.abort(), 8000)
 
+                        console.log('[Admin] Calling verify-admin...')
                         const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin`, {
                             headers: { 'Authorization': `Bearer ${session.access_token}` },
                             signal: controller.signal
                         })
 
                         clearTimeout(timeoutId)
+                        console.log('[Admin] verify-admin response:', res.status, res.statusText)
 
                         if (res.ok) {
                             const data = await res.json()
-                            setProfile({ role: data.isAdmin ? 'admin' : 'user' })
+                            console.log('[Admin] verify-admin data:', data)
+                            if (isMounted) setProfile({ role: data.isAdmin ? 'admin' : 'user' })
                         } else {
-                            setProfile({ role: 'user' })
+                            console.warn('[Admin] verify-admin returned non-ok:', res.status)
+                            if (isMounted) setProfile({ role: 'user' })
                         }
                     } catch (fetchError) {
                         console.error('[Admin] verify-admin fetch failed:', fetchError)
-                        setProfile({ role: 'user' })
+                        if (isMounted) setProfile({ role: 'user' })
                     }
                 } else {
-                    setProfile({ role: 'user' })
+                    console.log('[Admin] No access_token, setting role to user')
+                    if (isMounted) setProfile({ role: 'user' })
                 }
-            } catch {
-                setAuthError('Authentication check failed.')
+            } catch (err) {
+                console.error('[Admin] Auth check error:', err)
+                if (isMounted) setAuthError('Authentication check failed.')
             } finally {
-                setLoading(false)
+                if (isMounted) {
+                    clearTimeout(safetyTimeout)
+                    console.log('[Admin] Auth check complete, setting loading false')
+                    setLoading(false)
+                }
             }
         }
+        
         checkAuth()
+        
+        return () => {
+            isMounted = false
+            clearTimeout(safetyTimeout)
+        }
     }, [])
 
     useEffect(() => {
