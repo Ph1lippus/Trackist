@@ -49,7 +49,6 @@ const Admin: React.FC = () => {
     usePageTitle('Trackist - Admin')
     const globalUser = useAuthStore((state) => state.user)
     const globalAccessToken = useAuthStore((state) => state.accessToken)
-    const globalLoading = useAuthStore((state) => state.loading)
     const [profile, setProfile] = useState<{ role: string | null } | null>(null)
     const [adminLoading, setAdminLoading] = useState(true)
     const [authError] = useState<string | null>(null)
