@@ -119,15 +119,29 @@ const Admin: React.FC = () => {
                 setUser(session?.user ?? null)
 
                 if (session?.access_token) {
-                    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin`, {
-                        headers: { 'Authorization': `Bearer ${session.access_token}` }
-                    })
-                    if (res.ok) {
-                        const data = await res.json()
-                        setProfile({ role: data.isAdmin ? 'admin' : 'user' })
-                    } else {
+                    try {
+                        const controller = new AbortController()
+                        const timeoutId = setTimeout(() => controller.abort(), 8000)
+
+                        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin`, {
+                            headers: { 'Authorization': `Bearer ${session.access_token}` },
+                            signal: controller.signal
+                        })
+
+                        clearTimeout(timeoutId)
+
+                        if (res.ok) {
+                            const data = await res.json()
+                            setProfile({ role: data.isAdmin ? 'admin' : 'user' })
+                        } else {
+                            setProfile({ role: 'user' })
+                        }
+                    } catch (fetchError) {
+                        console.error('[Admin] verify-admin fetch failed:', fetchError)
                         setProfile({ role: 'user' })
                     }
+                } else {
+                    setProfile({ role: 'user' })
                 }
             } catch {
                 setAuthError('Authentication check failed.')

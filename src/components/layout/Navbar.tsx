@@ -24,12 +24,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const [user, setUser] = useState<User | null>(null);
     const [menuOpen, setMenuOpen] = useState(false);
     const [closing, setClosing] = useState(false);
-    const [isFullscreen, setIsFullscreen] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
-    const [isPWA] = useState<boolean>(() => {
-        return window.matchMedia('(display-mode: standalone)').matches ||
-            (navigator as Navigator & { standalone?: boolean }).standalone === true
-    });
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [batchLoading, setBatchLoading] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -137,19 +132,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         return () => subscription.unsubscribe()
     }, [])
 
-    // Check fullscreen state
-    useEffect(() => {
-        const handleFullscreenChange = () => {
-            setIsFullscreen(!!document.fullscreenElement);
-        };
-
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-
-        return () => {
-            document.removeEventListener('fullscreenchange', handleFullscreenChange);
-        };
-    }, []);
-
     const closeMenu = useCallback(() => {
         setClosing(true);
         setTimeout(() => {
@@ -191,18 +173,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         setShowLogoutModal(false);
         await supabase.auth.signOut();
         navigate('/login');
-    };
-
-    const handleFullscreenToggle = () => {
-        if (!document.fullscreenElement) {
-            document.documentElement.requestFullscreen().catch((err) => {
-                console.error(`Error attempting to enable fullscreen: ${err.message}`);
-            });
-        } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            }
-        }
     };
 
     const handleSearchSubmit = (e: React.FormEvent) => {
@@ -504,12 +474,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                  }}>
                                      Credits
                                  </button>
-                                  {isPWA && (
-                                      <button className="t-dropdown-item" onClick={handleFullscreenToggle}>
-                                          <i className={isFullscreen ? "fa-solid fa-compress" : "fa-solid fa-expand"}></i>
-                                          {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
-                                      </button>
-                                  )}
                                   <button className="t-dropdown-item" onClick={handleLogout}>
                                       Logout
                                   </button>
