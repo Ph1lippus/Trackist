@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { Navigate } from 'react-router-dom'
+import { supabase } from '../services/supabaseClient'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { uploadAvatar } from '../services/profileService'
 import { useAuthStore } from '../stores/useAuthStore'
@@ -510,13 +511,13 @@ const Admin: React.FC = () => {
     }
 
 
-    if (loading) {
+    if (adminLoading) {
         return (
             <section className="dashboard-page">
                 <div className="dashboard-shell">
                     <div className="discover-loading">
-                        <div className="discover-spinner" />
-                        <p>Loading admin data...</p>
+                        <p style={{ color: '#ff6b6b' }}>{authError}</p>
+                        <button className="discover-loading__retry" onClick={() => window.location.reload()}>Retry</button>
                     </div>
                 </div>
             </section>
