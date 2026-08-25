@@ -48,10 +48,11 @@ interface UserStats {
 const Admin: React.FC = () => {
     usePageTitle('Trackist - Admin')
     const globalUser = useAuthStore((state) => state.user)
+    const globalAccessToken = useAuthStore((state) => state.accessToken)
     const globalLoading = useAuthStore((state) => state.loading)
     const [profile, setProfile] = useState<{ role: string | null } | null>(null)
     const [adminLoading, setAdminLoading] = useState(true)
-    const [authError, setAuthError] = useState<string | null>(null)
+    const [authError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<TabType>('overview')
     const [profiles, setProfiles] = useState<ProfileRow[]>([])
     const [stats, setStats] = useState<AdminStats>({
@@ -134,7 +135,7 @@ const Admin: React.FC = () => {
 
         const checkAdmin = async () => {
             try {
-                if (!globalUser?.access_token) {
+                if (!globalAccessToken) {
                     if (isMounted) {
                         setProfile({ role: 'user' })
                         setAdminLoading(false)
@@ -146,7 +147,7 @@ const Admin: React.FC = () => {
                 const timeoutId = setTimeout(() => controller.abort(), 6000)
 
                 const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin`, {
-                    headers: { 'Authorization': `Bearer ${globalUser.access_token}` },
+                    headers: { 'Authorization': `Bearer ${globalAccessToken}` },
                     signal: controller.signal
                 })
 
