@@ -1,5 +1,8 @@
 ﻿
 @media (max-width: 768px) {
+    .detail-page__cast-item {
+        backdrop-filter: blur(0px);
+    }
     .detail-page___person {
         max-width: 100% !important;
     }
