@@ -361,7 +361,7 @@ const TVShows: React.FC = () => {
                     </div>
                 )}
 
-                {currentlyWatching.length === 0 && notStarted.length === 0 && paused.length === 0 && (
+                {isInitialized && currentlyWatching.length === 0 && notStarted.length === 0 && paused.length === 0 && (
                     <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>
                         No TV shows or anime in your watchlist. Discover some!
                     </p>

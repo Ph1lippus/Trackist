@@ -15,6 +15,7 @@ const Finished: React.FC = () => {
     const { showIcons } = useMediaCardIcons()
 
     const finished = useLibraryStore((state) => state.finished)
+    const isLibraryInitialized = useLibraryStore((state) => state.isInitialized)
 
     const [unwatchModal, setUnwatchModal] = useState<{
         isOpen: boolean
@@ -217,7 +218,7 @@ const Finished: React.FC = () => {
                     </div>
                 )}
 
-                {finished.length === 0 && pausedItems.length === 0 && droppedItems.length === 0 && (
+                {isLibraryInitialized && finished.length === 0 && pausedItems.length === 0 && droppedItems.length === 0 && (
                     <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>
                         No finished movies, TV shows, or paused items yet. Complete some from your watchlist!
                     </p>

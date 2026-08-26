@@ -18,6 +18,8 @@ export interface UseListsLogicResult {
     publicLists: UserList[]
     selectedList: UserList | null
     listItems: ListItem[]
+    listItemsLoading: boolean
+    listDetailsLoading: boolean
     loading: boolean
     activeTab: TabType
     title: string
@@ -106,6 +108,8 @@ export const useListsLogic = (): UseListsLogicResult => {
     const [publicLists, setPublicLists] = useState<UserList[]>([])
     const [selectedList, setSelectedList] = useState<UserList | null>(null)
     const [listItems, setListItems] = useState<ListItem[]>([])
+    const [listItemsLoading, setListItemsLoading] = useState(false)
+    const [listDetailsLoading, setListDetailsLoading] = useState(false)
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState<TabType>('all')
 
@@ -228,13 +232,20 @@ export const useListsLogic = (): UseListsLogicResult => {
     }, [])
 
     const fetchListItems = useCallback(async (listId: string) => {
-        // Try cache first
-        const cacheKey = `list_items:${listId}`
-        const cachedItems = await cacheService.get<ListItem[]>(cacheKey, listId)
-        
-        if (cachedItems) {
-            setListItems(cachedItems)
-            setListItemIds(new Set(cachedItems.map(item => item.tmdb_id)))
+        setListItemsLoading(true)
+        try {
+            // Try cache first
+            const cacheKey = `list_items:${listId}`
+            const cachedItems = await cacheService.get<ListItem[]>(cacheKey, listId)
+            const items = cachedItems || (await supabase
+                .from('list_items')
+                .select('*')
+                .eq('list_id', listId)
+                .order('position', { ascending: true })).data || []
+
+            if (!cachedItems) {
+                await cacheService.set(cacheKey, listId, items, 5 * 60 * 1000)
+            }
 
             // Try to get watched items from cache first
             const watchedCacheKey = `list_watched:${listId}`
@@ -245,8 +256,8 @@ export const useListsLogic = (): UseListsLogicResult => {
             } else {
                 // Fetch which of these items are watched from database
                 const { data: { user } } = await supabase.auth.getUser()
-                if (user) {
-                    const tmdbIds = cachedItems.map(item => item.tmdb_id)
+                if (user && items.length > 0) {
+                    const tmdbIds = items.map(item => item.tmdb_id)
                     const { data: watchlistData } = await supabase
                         .from('watchlist')
                         .select('tmdb_id')
@@ -266,51 +277,14 @@ export const useListsLogic = (): UseListsLogicResult => {
                     setWatchedListItems(new Set())
                 }
             }
-            return
-        }
-
-        const { data, error } = await supabase
-            .from('list_items')
-            .select('*')
-            .eq('list_id', listId)
-            .order('position', { ascending: true })
-
-        if (!error && data) {
-            setListItems(data)
-            setListItemIds(new Set(data.map(item => item.tmdb_id)))
-            // Cache the result
-            await cacheService.set(cacheKey, listId, data, 5 * 60 * 1000)
-
-            // Try to get watched items from cache first
-            const watchedCacheKey = `list_watched:${listId}`
-            const cachedWatched = await cacheService.get<number[]>(watchedCacheKey, listId)
-
-            if (cachedWatched) {
-                setWatchedListItems(new Set(cachedWatched))
-            } else {
-                // Fetch which of these items are watched from database
-                const { data: { user } } = await supabase.auth.getUser()
-                if (user) {
-                    const tmdbIds = data.map(item => item.tmdb_id)
-                    const { data: watchlistData } = await supabase
-                        .from('watchlist')
-                        .select('tmdb_id')
-                        .eq('user_id', user.id)
-                        .in('tmdb_id', tmdbIds)
-                        .in('status', ['completed', 'caught_up'])
-
-                    if (watchlistData) {
-                        const watchedIds = watchlistData.map(item => item.tmdb_id)
-                        setWatchedListItems(new Set(watchedIds))
-                        // Cache the result
-                        await cacheService.set(watchedCacheKey, listId, watchedIds, 5 * 60 * 1000)
-                    } else {
-                        setWatchedListItems(new Set())
-                    }
-                } else {
-                    setWatchedListItems(new Set())
-                }
-            }
+            // Commit items only after watched status is known, preventing the
+            // initial grid from being reordered when watched data arrives.
+            setListItems(items)
+            setListItemIds(new Set(items.map(item => item.tmdb_id)))
+        } catch (error) {
+            console.error('Failed to load list items:', error)
+        } finally {
+            setListItemsLoading(false)
         }
     }, [])
 
@@ -329,6 +303,7 @@ export const useListsLogic = (): UseListsLogicResult => {
     }, [])
 
     const loadListDetails = useCallback(async (listId: string) => {
+        setListDetailsLoading(true)
         setLoading(true)
         try {
             // Try cache first
@@ -339,7 +314,6 @@ export const useListsLogic = (): UseListsLogicResult => {
                 setDescription(cachedList.description || '')
                 setIsPublic(cachedList.is_public || false)
                 setIsNewList(false)
-                setLoading(false)
                 await fetchListItems(listId)
             }
 
@@ -362,6 +336,7 @@ export const useListsLogic = (): UseListsLogicResult => {
             console.error('Failed to load list:', err)
         } finally {
             setLoading(false)
+            setListDetailsLoading(false)
         }
     }, [fetchListItems])
 
@@ -929,7 +904,7 @@ export const useListsLogic = (): UseListsLogicResult => {
 
     return {
         // State
-        lists, publicLists, selectedList, listItems, loading, activeTab,
+        lists, publicLists, selectedList, listItems, listItemsLoading, listDetailsLoading, loading, activeTab,
         title, description, isPublic, saving, isNewList,
         browseResults, browseLoading, browsePage, hasMore, browseMediaType,
         genres, selectedGenre, sortBy,

@@ -56,6 +56,7 @@ const ProfilePage: React.FC = () => {
     const [showUnfollowModal, setShowUnfollowModal] = useState(false)
     const [watchlistItems, setWatchlistItems] = useState<WatchlistItem[]>([])
     const [userLists, setUserLists] = useState<UserList[]>([])
+    const [isProfileDataLoaded, setIsProfileDataLoaded] = useState(false)
     const [activeTab, setActiveTab] = useState<TabType>('watching')
     const [currentUserWatchlistIds, setCurrentUserWatchlistIds] = useState<Set<number>>(new Set())
     const { showIcons } = useMediaCardIcons()
@@ -211,6 +212,8 @@ const ProfilePage: React.FC = () => {
                 }
             } catch (error) {
                 console.error('[Profile] Failed to load profile:', error)
+            } finally {
+                setIsProfileDataLoaded(true)
             }
         }
 
@@ -289,6 +292,27 @@ const ProfilePage: React.FC = () => {
     const finishedItems = useMemo(() => watchlistItems.filter(item =>
         item.status === 'completed' || item.status === 'caught_up'
     ), [watchlistItems])
+
+    useEffect(() => {
+        if (!isProfileDataLoaded) return
+
+        const hasItemsByTab: Record<TabType, boolean> = {
+            watching: watchingTVShows.length > 0,
+            movies: moviesToWatch.length > 0,
+            finished: finishedItems.length > 0,
+            lists: userLists.length > 0,
+        }
+
+        if (hasItemsByTab[activeTab]) return
+
+        const firstAvailableTab = (Object.keys(hasItemsByTab) as TabType[])
+            .find(tab => hasItemsByTab[tab])
+        if (firstAvailableTab) setActiveTab(firstAvailableTab)
+    }, [isProfileDataLoaded, activeTab, watchingTVShows.length, moviesToWatch.length, finishedItems.length, userLists.length])
+
+    if (!isProfileDataLoaded) {
+        return <section className="dashboard-page profile-page" />
+    }
 
     if (!profile) {
         return (

@@ -17,6 +17,8 @@ const ListsDetail: React.FC = () => {
     const {
         selectedList,
         listItems,
+        listItemsLoading,
+        listDetailsLoading,
         activeTab,
         setActiveTab,
         watchlistIds,
@@ -49,11 +51,17 @@ const ListsDetail: React.FC = () => {
         loadData()
     }, [id, loadListDetails, fetchWatchlistIds])
 
+    if (listDetailsLoading || listItemsLoading) {
+        return (
+            <section className="lists-page">
+            </section>
+        )
+    }
+
     if (!selectedList) {
         return (
             <section className="lists-page">
                 <div className="lists-page__empty-state">
-                    <i className="fa-solid fa-film"></i>
                     <p>List not found or still loading.</p>
                 </div>
             </section>
@@ -108,7 +116,6 @@ const ListsDetail: React.FC = () => {
                     {/* Empty state – no items at all */}
 {filteredListItems.length === 0 && filteredWatchedItems.length === 0 ? (
     <div className="lists-page__empty-state">
-        <i className="fa-solid fa-film"></i>
         <p>This list is empty. Click "Edit List" to add content!</p>
     </div>
 ) : (
@@ -151,7 +158,7 @@ const ListsDetail: React.FC = () => {
         {filteredWatchedItems.length > 0 && (
             <div className="lists-page__watched-section">
                 <h3 className="lists-page__watched-title">
-                    <i className="fa-solid fa-eye"></i> Watched ({filteredWatchedItems.length})
+                    Watched ( {filteredWatchedItems.length} )
                     {filteredListItems.length === 0 && (
                         <span style={{ marginLeft: '0.5rem', fontSize: '0.8rem', fontWeight: 'normal', color: 'rgba(255,255,255,0.5)' }}>
                             – All items in this list have been watched!

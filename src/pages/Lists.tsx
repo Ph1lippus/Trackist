@@ -9,6 +9,7 @@ const Lists: React.FC = () => {
         publicLists,
         filteredLists,
         committedQuery,
+        loading,
         fetchLists,
         navigate,
     } = useListsLogic()
@@ -29,7 +30,7 @@ const Lists: React.FC = () => {
                     </button>
                 </div>
 
-                {filteredLists.length === 0 ? (
+                {!loading && filteredLists.length === 0 ? (
                     <p className="lists-page__empty">
                         {committedQuery ? 'No lists match your search' : 'No lists yet. Create your first list!'}
                     </p>

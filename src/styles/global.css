@@ -3353,7 +3353,6 @@ html::before {
 }
 
 .lists-page__watched-title {
-    font-family: var(--font-title);
     font-size: 1.2rem;
     color: var(--color-platinum);
     margin: 0 0 1.5rem 0;
@@ -3362,9 +3361,6 @@ html::before {
     gap: 0.5rem;
 }
 
-.lists-page__watched-title i {
-    color: #68ffae;
-}
 
 .lists-page__discover-section {
     flex: 1;

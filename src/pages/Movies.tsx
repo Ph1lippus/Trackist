@@ -18,6 +18,7 @@ const Movies: React.FC = () => {
     const { showIcons } = useMediaCardIcons()
 
     const movies = useLibraryStore((state) => state.movies)
+    const isLibraryInitialized = useLibraryStore((state) => state.isInitialized)
 
     const [confirmModal, setConfirmModal] = useState<{
         isOpen: boolean
@@ -169,11 +170,11 @@ const Movies: React.FC = () => {
                                 )
                             })}
                         </div>
-                    ) : (
+                    ) : isLibraryInitialized ? (
                         <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
                             No movies to watch. Add some!
                         </p>
-                    )}
+                    ) : null}
                 </div>
 
                 {/* Not Released Movies */}
@@ -202,11 +203,11 @@ const Movies: React.FC = () => {
                                 )
                             })}
                         </div>
-                    ) : (
+                    ) : isLibraryInitialized ? (
                         <p style={{ textAlign: 'center', padding: '1.5rem', opacity: 0.6 }}>
                             No upcoming movies
                         </p>
-                    )}
+                    ) : null}
                 </div>
             </div>
 
