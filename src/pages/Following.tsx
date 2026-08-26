@@ -17,13 +17,16 @@ const FollowingPage = () => {
     const [searchResults, setSearchResults] = useState<any[]>([])
     const [isSearching, setIsSearching] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
+    const authUser = useAuthStore((state) => state.user)
+    const authLoading = useAuthStore((state) => state.loading)
     const { committedQuery } = useSearch()
 
     useEffect(() => {
         let active = true
         const load = async () => {
             try {
-                const user = useAuthStore.getState().user
+                if (authLoading) return
+                const user = authUser
                 if (!user || !active) return
 
                 setCurrentUser(user)
@@ -54,14 +57,14 @@ const FollowingPage = () => {
             } catch (error) {
                 console.error('Error loading data:', error)
             } finally {
-                if (active) setIsLoading(false)
+                if (active && !authLoading) setIsLoading(false)
             }
         }
         load()
         return () => {
             active = false
         }
-    }, [username])
+    }, [username, authUser, authLoading])
 
     useEffect(() => {
         const searchUsers = async () => {

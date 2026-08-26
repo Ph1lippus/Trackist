@@ -57,6 +57,7 @@ const ProfilePage: React.FC = () => {
     const [watchlistItems, setWatchlistItems] = useState<WatchlistItem[]>([])
     const [userLists, setUserLists] = useState<UserList[]>([])
     const [isProfileDataLoaded, setIsProfileDataLoaded] = useState(false)
+    const [isProfileContentLoaded, setIsProfileContentLoaded] = useState(false)
     const [activeTab, setActiveTab] = useState<TabType>('watching')
     const [currentUserWatchlistIds, setCurrentUserWatchlistIds] = useState<Set<number>>(new Set())
     const libraryWatchlistIds = useLibraryStore((state) => state.watchlistIds)
@@ -105,6 +106,7 @@ const ProfilePage: React.FC = () => {
         let active = true
         setProfile(null)
         setIsProfileDataLoaded(false)
+        setIsProfileContentLoaded(false)
 
         const loadProfile = async () => {
             try {
@@ -212,11 +214,15 @@ const ProfilePage: React.FC = () => {
                     setFollowingCount(followingCountData || 0)
                     setWatchlistItems(items)
                     setUserLists(listsWithCounts)
+                    setIsProfileContentLoaded(true)
                 }
             } catch (error) {
                 console.error('[Profile] Failed to load profile:', error)
             } finally {
-                if (active) setIsProfileDataLoaded(true)
+                if (active) {
+                    setIsProfileDataLoaded(true)
+                    setIsProfileContentLoaded(true)
+                }
             }
         }
 
@@ -302,7 +308,7 @@ const ProfilePage: React.FC = () => {
     ), [watchlistItems])
 
     useEffect(() => {
-        if (!isProfileDataLoaded) return
+        if (!isProfileContentLoaded) return
 
         const hasItemsByTab: Record<TabType, boolean> = {
             watching: watchingTVShows.length > 0,
@@ -316,7 +322,7 @@ const ProfilePage: React.FC = () => {
         const firstAvailableTab = (Object.keys(hasItemsByTab) as TabType[])
             .find(tab => hasItemsByTab[tab])
         if (firstAvailableTab) setActiveTab(firstAvailableTab)
-    }, [isProfileDataLoaded, activeTab, watchingTVShows.length, moviesToWatch.length, finishedItems.length, userLists.length])
+    }, [isProfileContentLoaded, activeTab, watchingTVShows.length, moviesToWatch.length, finishedItems.length, userLists.length])
 
     if (!isProfileDataLoaded) {
         return <section className="dashboard-page profile-page" />
@@ -442,6 +448,13 @@ const ProfilePage: React.FC = () => {
 
                 {/* Tab Content */}
                 <div className="profile-tab-content">
+                    {!isProfileContentLoaded ? (
+                        <div className="discover-loading" aria-live="polite">
+                            <div className="discover-spinner" />
+                            <p>Loading profile content...</p>
+                        </div>
+                    ) : (
+                    <>
                     {/* Watching Tab */}
                     {activeTab === 'watching' && (
                         <div className="profile-watchlist-section">
@@ -610,6 +623,8 @@ const ProfilePage: React.FC = () => {
                                 </div>
                             )}
                         </div>
+                    )}
+                    </>
                     )}
                 </div>
 
