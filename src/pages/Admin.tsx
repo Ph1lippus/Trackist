@@ -126,7 +126,7 @@ const Admin: React.FC = () => {
         let isActive = true
 
         const timeoutPromise = new Promise<never>((_, reject) => {
-            const id = setTimeout(() => reject(new Error('Admin check timeout')), 20000)
+            setTimeout(() => reject(new Error('Admin check timeout')), 20000)
         })
 
         const checkPromise = (async () => {
