@@ -23,6 +23,36 @@ interface UpcomingItem {
     }
 }
 
+const orderItemsByDay = (items: UpcomingItem[]): UpcomingItem[] => {
+    const movies = items.filter(item => item.type === 'movie')
+    const groups = new Map<string, UpcomingItem[]>()
+    for (const item of items) {
+        if (item.type !== 'episode') continue
+        const key = String(item.item.tmdb_id)
+        if (!groups.has(key)) groups.set(key, [])
+        groups.get(key)!.push(item)
+    }
+
+    const sortedGroups = Array.from(groups.values()).sort((a, b) => {
+        const quantityDifference = a.length - b.length
+        return quantityDifference || a[0].title.localeCompare(b[0].title)
+    })
+    const episodes: UpcomingItem[] = []
+    const pointers = sortedGroups.map(() => 0)
+    let addedEpisode = true
+    while (addedEpisode) {
+        addedEpisode = false
+        for (let index = 0; index < sortedGroups.length; index++) {
+            const group = sortedGroups[index]
+            if (pointers[index] < group.length) {
+                episodes.push(group[pointers[index]++])
+                addedEpisode = true
+            }
+        }
+    }
+    return [...movies, ...episodes]
+}
+
 const mapCalendarItem = (item: CalendarItem): UpcomingItem => ({
     id: item.id,
     title: item.title,
@@ -124,10 +154,7 @@ const UpcomingNew: React.FC = () => {
 
     const sortedGroupedItems = useMemo(() => {
         return Object.keys(groupedItems).sort().map(date => {
-            const items = [...groupedItems[date]].sort((a, b) => {
-                if (a.type !== b.type) return a.type === 'episode' ? -1 : 1
-                return a.title.localeCompare(b.title)
-            })
+            const items = orderItemsByDay(groupedItems[date])
             return { date, items }
         })
     }, [groupedItems])

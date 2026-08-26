@@ -28,13 +28,18 @@ interface UpcomingItem {
 }
 
 const orderItemsLikeMiniCards = (items: UpcomingItem[]): UpcomingItem[] => {
+    const movies = items.filter(item => item.type === 'movie')
+    const episodes = items.filter(item => item.type === 'episode')
     const groups = new Map<string, UpcomingItem[]>()
-    for (const item of items) {
+    for (const item of episodes) {
         const key = String(item.item.tmdb_id)
         if (!groups.has(key)) groups.set(key, [])
         groups.get(key)!.push(item)
     }
-    const sortedGroups = Array.from(groups.values()).sort((a, b) => a.length - b.length)
+    const sortedGroups = Array.from(groups.values()).sort((a, b) => {
+        const quantityDifference = a.length - b.length
+        return quantityDifference || a[0].title.localeCompare(b[0].title)
+    })
 
     const result: UpcomingItem[] = []
     const pointers = sortedGroups.map(() => 0)
@@ -52,7 +57,7 @@ const orderItemsLikeMiniCards = (items: UpcomingItem[]): UpcomingItem[] => {
         }
     } while (madeProgress)
 
-    return result
+    return [...movies, ...result]
 }
 
 const mapCalendarItem = (item: CalendarItem): UpcomingItem => ({
@@ -239,29 +244,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
 
                             const hasMore = dayItems.length > maxCards
 
-                            const groups = new Map<string, UpcomingItem[]>()
-                            for (const item of dayItems) {
-                                const key = String(item.item.tmdb_id)
-                                if (!groups.has(key)) groups.set(key, [])
-                                groups.get(key)!.push(item)
-                            }
-                            const sortedGroups = Array.from(groups.values()).sort((a, b) => a.length - b.length)
-
-                            const visibleItems: UpcomingItem[] = []
-                            const pointers = sortedGroups.map(() => 0)
-                            while (visibleItems.length < maxCards && visibleItems.length < dayItems.length) {
-                                let madeProgress = false
-                                for (let i = 0; i < sortedGroups.length && visibleItems.length < maxCards; i++) {
-                                    const group = sortedGroups[i]
-                                    const ptr = pointers[i]
-                                    if (ptr < group.length) {
-                                        visibleItems.push(group[ptr])
-                                        pointers[i] = ptr + 1
-                                        madeProgress = true
-                                    }
-                                }
-                                if (!madeProgress) break
-                            }
+                            const visibleItems = orderItemsLikeMiniCards(dayItems).slice(0, maxCards)
 
                             let dynamicOverlap = 0
                             if (visibleItems.length > 1 && dayCellInnerWidth > 0) {

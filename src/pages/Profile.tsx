@@ -59,6 +59,8 @@ const ProfilePage: React.FC = () => {
     const [isProfileDataLoaded, setIsProfileDataLoaded] = useState(false)
     const [activeTab, setActiveTab] = useState<TabType>('watching')
     const [currentUserWatchlistIds, setCurrentUserWatchlistIds] = useState<Set<number>>(new Set())
+    const libraryWatchlistIds = useLibraryStore((state) => state.watchlistIds)
+    const isLibraryInitialized = useLibraryStore((state) => state.isInitialized)
     const { showIcons } = useMediaCardIcons()
 
     useEffect(() => {
@@ -76,6 +78,11 @@ const ProfilePage: React.FC = () => {
                 return
             }
 
+            if (isLibraryInitialized) {
+                setCurrentUserWatchlistIds(new Set(libraryWatchlistIds))
+                return
+            }
+
             const { data } = await supabase
                 .from('watchlist')
                 .select('tmdb_id')
@@ -90,7 +97,7 @@ const ProfilePage: React.FC = () => {
         }
 
         void fetchCurrentUserWatchlist()
-    }, [currentUser])
+    }, [currentUser, isLibraryInitialized, libraryWatchlistIds])
 
     useEffect(() => {
         if (!username && !currentUser) return
@@ -135,10 +142,13 @@ const ProfilePage: React.FC = () => {
                     }
 
                     const isOwn = currentUser?.id === targetUserId
+                    const ownLibraryItems = isOwn && useLibraryStore.getState().isInitialized
+                        ? useLibraryStore.getState().allItems
+                        : null
                     const [{ count: followersCountData }, { count: followingCountData }, items, listsWithCounts] = await Promise.all([
                         getFollowers(targetUserId),
                         getFollowing(targetUserId),
-                        getCachedOrFetch(
+                        ownLibraryItems || getCachedOrFetch(
                             'profile-watchlist',
                             targetUserId,
                             async () => {

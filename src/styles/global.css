@@ -141,8 +141,8 @@
         margin: 0 auto;
     }
     .lists-page--view{
-        padding: 2rem 0rem !important;
-        max-width: 95%;
+        padding: 0rem !important;
+        max-width: 100%;
     }
     .detail-page__actions {
         margin: 0 auto ;
