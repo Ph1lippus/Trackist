@@ -14,7 +14,7 @@
         padding: 0rem 2rem;
     }
     .detail-page__cast-item {
-        backdrop-filter: blur(0px);
+        backdrop-filter: blur(0px) !important;
     }
     .detail-page___person {
         max-width: 100% !important;
