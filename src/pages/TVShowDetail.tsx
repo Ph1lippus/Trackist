@@ -4,7 +4,7 @@ import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getBestBa
 import { formatStatus } from '../utils/statusUtils'
 import { markEpisodeWatched, unmarkEpisodeWatched, getWatchedEpisodes, checkAndUpdateCompleted, markShowAsFullyWatched } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
-import { invalidateUserCache } from '../services/cacheService'
+import { invalidateUserCache, getCachedOrFetch } from '../services/cacheService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import EpisodeChoiceModal from '../components/modals/EpisodeChoiceModal'
 import type { TMDBResult, WatchlistItem } from '../types'
@@ -148,7 +148,12 @@ const TVShowDetail: React.FC = () => {
             if (!id) return
             setLoading(true)
             try {
-                const data = await getTVDetails(Number(id))
+                const data = await getCachedOrFetch(
+                    'tv-details',
+                    Number(id),
+                    () => getTVDetails(Number(id)),
+                    { ttl: 24 * 60 * 60 * 1000, staleWhileRevalidate: true }
+                )
                 setDetails(data)
                 
                 // Find trailer from videos
@@ -619,38 +624,25 @@ const TVShowDetail: React.FC = () => {
 
     const filteredEpisodes = episodes.filter(ep => ep.season_number === selectedSeason)
 
-    if (loading) {
-        return (
-            <div className="detail-page">
-                <div className="detail-page__content">
-                    <div className="discover-loading">
-                        <div className="discover-spinner" />
-                        <p>Loading TV show details...</p>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
-    if (!details) {
+    if (!details && !loading) {
         return <div className="detail-page-error">TV Show not found</div>
     }
 
-    const backdropUrl = isMobile ? imageUrl(getBestBackdropPath(details.images?.backdrops) ?? details.backdrop_path ?? null, "w1280") : imageUrlOriginal(getBestBackdropPath(details.images?.backdrops) ?? details.backdrop_path ?? null)
+    const backdropUrl = isMobile ? imageUrl(getBestBackdropPath(details?.images?.backdrops) ?? details?.backdrop_path ?? null, "w1280") : imageUrlOriginal(getBestBackdropPath(details?.images?.backdrops) ?? details?.backdrop_path ?? null)
     const logoUrl = getLogoUrl()
-    const title = details.name || 'Untitled'
-    const firstYear = details.first_air_date?.slice(0, 4) || ''
-    const lastYear = details.last_air_date?.slice(0, 4) || ''
+    const title = details?.name || ''
+    const firstYear = details?.first_air_date?.slice(0, 4) || ''
+    const lastYear = details?.last_air_date?.slice(0, 4) || ''
     const year = firstYear
-    ? (details.status === 'Ended' || details.status === 'Canceled'
+    ? (details?.status === 'Ended' || details?.status === 'Canceled'
         ? (lastYear && lastYear !== firstYear ? `${firstYear}-${lastYear}` : firstYear)
         : `${firstYear}-`)
     : ''
-    const rating = details.vote_average?.toFixed(1)
+    const rating = details?.vote_average?.toFixed(1)
     const ageRating = getAgeRating()
-    const overview = details.overview || 'No description available.'
-    const genres = details.genres || []
-    const cast = (details.credits?.cast || [])
+    const overview = details?.overview || 'No description available.'
+    const genres = details?.genres || []
+    const cast = (details?.credits?.cast || [])
         .slice(0, 10)
         .sort((a: { profile_path?: string | null }, b: { profile_path?: string | null }) => {
             if (a.profile_path && !b.profile_path) return -1
@@ -814,8 +806,9 @@ const TVShowDetail: React.FC = () => {
                                  {showStremioButton && !stremioLoading && (
                                      <button
                                          className="detail-page__icon-btn"
-                                         onClick={async () => {
-                                             let nextEp = getNextEpisodeToWatch()
+                                          onClick={async () => {
+                                              if (!details) return
+                                              let nextEp = getNextEpisodeToWatch()
 
                                              if (!nextEp && details) {
                                                  const watchedEps = episodes.filter(ep => ep.watched && isEpisodeReleased(ep))

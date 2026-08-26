@@ -1,22 +1,4 @@
-﻿/* ============================
-   Large tablets
-   ============================ */
-@media (max-width: 1200px) {
-
-}
-
-
-/* ============================
-   Tablets
-   ============================ */
-@media (max-width: 992px) {
-
-}
-
-
-/* ============================
-   Small tablets / large phones
-   ============================ */
+﻿
 @media (max-width: 768px) {
     .detail-page__main--movie .detail-page__overview {
         max-width: 100% !important;
@@ -205,45 +187,26 @@
     .friend-card{
         width: 100% !important;
     }
-    /* Mobile: static aurora-like background instead of animated layers */
-    body::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-        z-index: -2;
-        background-image:
-            radial-gradient(ellipse at 20% 25%, rgba(255,41,112,0.10) 0%, transparent 55%),
-            radial-gradient(ellipse at 80% 30%, rgba(114,46,240,0.09) 0%, transparent 60%),
-            radial-gradient(ellipse at 50% 80%, rgba(0,255,123,0.08) 0%, transparent 50%),
-            radial-gradient(ellipse at 25% 70%, rgba(0,191,255,0.08) 0%, transparent 55%),
-            radial-gradient(circle at 75% 75%, rgba(240,46,175,0.09) 0%, transparent 45%);
-        animation: none !important;
-        mix-blend-mode: normal !important;
-        opacity: 1 !important;
-    }
-
-    body::after {
+    /* Mobile: static starfield instead of animated layers */
+    html::before {
         content: "";
         position: fixed;
         inset: 0;
         pointer-events: none;
-        z-index: -1;
+        z-index: 0;
         background-image:
-            radial-gradient(1px 1px at 15% 20%, rgba(255,255,255,0.45), transparent),
-            radial-gradient(1.5px 1.5px at 35% 45%, rgba(133,230,255,0.4), transparent),
-            radial-gradient(1px 1px at 55% 75%, rgba(255,255,255,0.35), transparent),
-            radial-gradient(1.5px 1.5px at 75% 35%, rgba(255,255,255,0.4), transparent),
-            radial-gradient(1px 1px at 90% 65%, rgba(255,255,255,0.35), transparent),
-            radial-gradient(2px 2px at 25% 60%, rgba(255,255,255,0.5), transparent),
-            radial-gradient(1.5px 1.5px at 65% 85%, rgba(200,100,255,0.45), transparent),
-            radial-gradient(1px 1px at 45% 40%, rgba(255,255,255,0.4), transparent);
-        background-size: 350px 350px;
-        background-repeat: repeat;
+            linear-gradient(41deg, #0c0b11 0%, #16162a 50%, #33355e 100%),
+            radial-gradient(1px 1px at 15% 20%, rgba(255,255,255,0.35), transparent),
+            radial-gradient(1.5px 1.5px at 35% 45%, rgba(133,138,227,0.35), transparent),
+            radial-gradient(1px 1px at 55% 75%, rgba(255,255,255,0.3), transparent),
+            radial-gradient(1.5px 1.5px at 75% 35%, rgba(169,172,228,0.35), transparent),
+            radial-gradient(1px 1px at 90% 65%, rgba(255,255,255,0.3), transparent),
+            radial-gradient(2px 2px at 25% 60%, rgba(255,255,255,0.4), transparent),
+            radial-gradient(1.5px 1.5px at 65% 85%, rgba(200,100,255,0.35), transparent),
+            radial-gradient(1px 1px at 45% 40%, rgba(255,255,255,0.35), transparent);
+        background-size: 100% 100%, 350px 350px;
+        background-repeat: no-repeat, repeat;
         animation: none !important;
-        opacity: 0.35 !important;
     }
 
     /* Reduce backdrop-filter on mobile for GPU performance */
@@ -371,7 +334,7 @@ body.no-scroll {
 }
 
 body {
-    background: #050505;
+    background-color: transparent;
     color: var(--color-platinum);
     font-family: system-ui, "-apple-system", "Segoe UI", Roboto, sans-serif;
     min-height: 100vh;
@@ -381,106 +344,42 @@ body {
     position: relative;
 }
 
-/* Layer 1: Seamless Rotating Aurora (Over-sized to prevent black border gaps) */
-body::before {
-    content: "";
-    position: fixed;
-    /* Expanded padding ensures rotating corners never enter viewport */
-    inset: -50%; 
-    width: 200%;
-    height: 200%;
-    pointer-events: none;
-    z-index: -2;
-
-    background-image:
-        radial-gradient(ellipse at 20% 25%, rgba(255,41,112,0.22) 0%, transparent 60%),
-        radial-gradient(ellipse at 80% 30%, rgba(114,46,240,0.22) 0%, transparent 65%),
-        radial-gradient(ellipse at 50% 80%, rgba(0,255,123,0.20) 0%, transparent 55%),
-        radial-gradient(ellipse at 25% 70%, rgba(0,191,255,0.20) 0%, transparent 60%),
-        radial-gradient(circle at 75% 75%, rgba(240,46,175,0.22) 0%, transparent 50%);
-
-    mix-blend-mode: screen;
-    transform-origin: center center;
-    /* will-change removed for mobile performance */
-    animation: auroraFlow 40s linear infinite;
+html {
+    scroll-behavior: auto;
+    background: linear-gradient(41deg, #0c0b11 0%,  #282a4e 100%);
+    background-attachment: fixed;
 }
 
-/* Layer 2: Infinite Seamless Starfield */
-body::after {
+html::before {
     content: "";
     position: fixed;
-    inset: -450px;
+    inset: 0;
     pointer-events: none;
-    z-index: -1;
-
+    z-index: 0;
     background-image:
-        radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,0.95), transparent),
-        radial-gradient(1.5px 1.5px at 28% 42%, rgba(133,230,255,0.9), transparent),
+        radial-gradient(1px 1px at 12% 18%, rgba(255,255,255,0.85), transparent),
+        radial-gradient(1.5px 1.5px at 28% 42%, rgba(133,138,227,0.85), transparent),
         radial-gradient(1px 1px at 45% 72%, rgba(255,255,255,0.8), transparent),
-        radial-gradient(2px 2px at 62% 25%, rgba(255,200,255,0.95), transparent),
+        radial-gradient(2px 2px at 62% 25%, rgba(169,172,228,0.9), transparent),
         radial-gradient(1px 1px at 78% 64%, rgba(255,255,255,0.85), transparent),
         radial-gradient(1.5px 1.5px at 89% 38%, rgba(255,255,255,0.9), transparent),
         radial-gradient(1px 1px at 7% 81%, rgba(255,255,255,0.8), transparent),
         radial-gradient(1px 1px at 52% 51%, rgba(255,255,255,0.9), transparent),
 
         /* Accent Stars */
-        radial-gradient(3px 3px at 20% 30%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.5) 50%, transparent 100%),
-        radial-gradient(2.5px 2.5px at 40% 70%, rgba(0,242,255,0.95) 0%, rgba(0,242,255,0.5) 60%, transparent 100%),
-        radial-gradient(3px 3px at 70% 20%, rgba(255,220,100,0.95) 0%, rgba(255,220,100,0.5) 50%, transparent 100%),
-        radial-gradient(4px 4px at 85% 80%, rgba(200,100,255,0.9) 0%, rgba(200,100,255,0.4) 70%, transparent 100%),
-        radial-gradient(2.5px 2.5px at 55% 45%, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.5) 40%, transparent 100%);
+        radial-gradient(3px 3px at 20% 30%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.4) 50%, transparent 100%),
+        radial-gradient(2.5px 2.5px at 40% 70%, rgba(200,100,255,0.9) 0%, rgba(200,100,255,0.35) 60%, transparent 100%),
+        radial-gradient(3px 3px at 70% 20%, rgba(133,138,227,0.85) 0%, rgba(133,138,227,0.35) 50%, transparent 100%),
+        radial-gradient(4px 4px at 85% 80%, rgba(200,100,255,0.85) 0%, rgba(200,100,255,0.3) 70%, transparent 100%),
+        radial-gradient(2.5px 2.5px at 55% 45%, rgba(255,255,255,0.9) 0%, rgba(255,255,255,0.4) 40%, transparent 100%);
 
     background-size: 450px 450px;
     background-repeat: repeat;
-
-    /* will-change removed for mobile performance */
-    animation: 
-        starDrift 45s linear infinite,
-        twinkleGlow 5s ease-in-out infinite alternate;
+    animation: none !important;
+    opacity: 0.35 !important;
 }
 
-/* Mobile: faster, more dynamic star twinkle */
-@media (max-width: 480px) {
-    body::after {
-        animation: 
-            starDrift 30s linear infinite,
-            twinkleGlow 2.5s ease-in-out infinite alternate;
-    }
-}
 
-/* --- Animations --- */
-
-/* Smooth rotation with scale constraint prevents empty corners */
-@keyframes auroraFlow {
-    0% {
-        transform: rotate(0deg) scale(1.2);
-    }
-    50% {
-        transform: rotate(180deg) scale(1.3);
-    }
-    100% {
-        transform: rotate(360deg) scale(1.2);
-    }
-}
-
-/* Exact translation tile size (450px) guarantees infinite seamless drift without snapping */
-@keyframes starDrift {
-    0% {
-        transform: translate3d(0, 0, 0);
-    }
-    100% {
-        transform: translate3d(450px, 450px, 0);
-    }
-}
-
-@keyframes twinkleGlow {
-    0%, 100% {
-        opacity: 0.95;
-    }
-    50% {
-        opacity: 0.45;
-    }
-}
 
 .page-main {
     align-items: center;

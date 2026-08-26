@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { getMovieDetails, imageUrl, imageUrlOriginal, getBestBackdropPath } from '../services/tmdbService'
 import { formatStatus } from '../utils/statusUtils'
 import { useLibraryStore } from '../stores/useLibraryStore'
-import { invalidateUserCache } from '../services/cacheService'
+import { invalidateUserCache, getCachedOrFetch } from '../services/cacheService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult, WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -58,7 +58,12 @@ const MovieDetail: React.FC = () => {
             if (!id) return
             setLoading(true)
             try {
-                const data = await getMovieDetails(Number(id))
+                const data = await getCachedOrFetch(
+                    'movie-details',
+                    Number(id),
+                    () => getMovieDetails(Number(id)),
+                    { ttl: 24 * 60 * 60 * 1000, staleWhileRevalidate: true }
+                )
                 setDetails(data)
                 
                 // Find trailer from videos
@@ -185,33 +190,20 @@ const MovieDetail: React.FC = () => {
         }
     }
 
-    if (loading) {
-        return (
-            <div className="detail-page">
-                <div className="detail-page__content">
-                    <div className="discover-loading">
-                        <div className="discover-spinner" />
-                        <p>Loading movie details...</p>
-                    </div>
-                </div>
-            </div>
-        )
-    }
-
-    if (!details) {
+    if (!details && !loading) {
         return <div className="detail-page-error">Movie not found</div>
     }
 
-    const backdropUrl = imageUrlOriginal(getBestBackdropPath(details.images?.backdrops) ?? details.backdrop_path ?? null)    
+    const backdropUrl = imageUrlOriginal(getBestBackdropPath(details?.images?.backdrops) ?? details?.backdrop_path ?? null)    
     const logoUrl = getLogoUrl()
-    const title = details.title || 'Untitled'
-    const year = details.release_date?.slice(0, 4) || ''
-    const rating = details.vote_average?.toFixed(1)
-    const runtime = formatRuntime(details.runtime)
+    const title = details?.title || ''
+    const year = details?.release_date?.slice(0, 4) || ''
+    const rating = details?.vote_average?.toFixed(1)
+    const runtime = formatRuntime(details?.runtime)
     const ageRating = getAgeRating()
-    const overview = details.overview || 'No description available.'
-    const genres = details.genres || []
-    const cast = (details.credits?.cast || [])
+    const overview = details?.overview || 'No description available.'
+    const genres = details?.genres || []
+    const cast = (details?.credits?.cast || [])
         .slice(0, 10)
         .sort((a: { profile_path?: string | null }, b: { profile_path?: string | null }) => {
             if (a.profile_path && !b.profile_path) return -1
@@ -367,6 +359,7 @@ const MovieDetail: React.FC = () => {
                                 <button 
                                     className="detail-page__icon-btn"
                                     onClick={() => {
+                                        if (!details) return
                                         const sharingLink = createMovieDeepLink(details.id, (details.external_ids as { imdb_id?: string })?.imdb_id)
                                         openInStremio(sharingLink)
                                     }}
@@ -379,6 +372,7 @@ const MovieDetail: React.FC = () => {
                                 <button 
                                     className="detail-page__icon-btn detail-page__icon-btn--letterbox"
                                     onClick={() => {
+                                        if (!details) return
                                         const imdbId = details.external_ids?.imdb_id
                                         if (imdbId) {
                                             openExternal(`https://letterboxd.com/imdb/${imdbId}/`)
@@ -486,6 +480,7 @@ const MovieDetail: React.FC = () => {
                                 <button 
                                     className="detail-page__icon-btn"
                                     onClick={() => {
+                                        if (!details) return
                                         const sharingLink = createMovieDeepLink(details.id, (details.external_ids as { imdb_id?: string })?.imdb_id)
                                         openInStremio(sharingLink)
                                     }}
@@ -498,6 +493,7 @@ const MovieDetail: React.FC = () => {
                                 <button 
                                     className="detail-page__icon-btn detail-page__icon-btn--letterbox"
                                     onClick={() => {
+                                        if (!details) return
                                         const imdbId = details.external_ids?.imdb_id
                                         if (imdbId) {
                                             openExternal(`https://letterboxd.com/imdb/${imdbId}/`)
