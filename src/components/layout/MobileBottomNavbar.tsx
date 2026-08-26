@@ -6,8 +6,8 @@ const MobileBottomNavbar: React.FC = () => {
     const { user } = useAuth();
 
     const navItems = [
-        { to: '/MobileTVShows', icon: 'fa-tv', label: 'Shows'},
-        { to: '/MobileMovies', icon: 'fa-film', label: 'Movies'},
+        { to: '/MobileTVShows', icon: 'fa-tv', label: 'TV Shows'},
+        { to: '/Movies', icon: 'fa-film', label: 'Movies'},
         { to: '/Discover', icon: 'fa-compass', label: 'Discover'},
         { to: '/UpcomingNew', icon: 'fa-calendar-check', label: 'Upcoming'},
         { to: '/Profile', icon: 'fa-circle-user', label: 'Profile'},

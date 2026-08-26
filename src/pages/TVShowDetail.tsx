@@ -710,10 +710,10 @@ const TVShowDetail: React.FC = () => {
                         </div>
 
                         <div className="detail-page__overview-section">
-                            <h2 className="detail-page__section-title">Overview</h2>
+                            <h2 className="detail-page__section-title">Description</h2>
                             <p className="detail-page__overview">{overview}</p>
                             
-                            {isInWatchlist && watchlistStatus && (
+                            {isInWatchlist && (watchlistStatus === 'paused' || watchlistStatus === 'dropped') && (
                                 <div className="detail-page__status">
                                     <span className="detail-page__status-label">Status:</span>
                                     <span className="detail-page__status-value">{formatStatus(watchlistStatus || "").label}</span>

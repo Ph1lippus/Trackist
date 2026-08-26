@@ -228,7 +228,7 @@ const EpisodeDetail: React.FC = () => {
                         
 
                         <div className="detail-page__overview-section">
-                            <h2 className="detail-page__section-title">Overview</h2>
+                            <h2 className="detail-page__section-title">Description</h2>
                             <p className="detail-page__overview">{episodeData.overview || 'No description available.'}</p>
                             
                             <div className="detail-page__actions">

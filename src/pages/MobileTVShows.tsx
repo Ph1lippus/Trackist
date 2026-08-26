@@ -75,7 +75,7 @@ const MobileTVShows: React.FC = () => {
 
     useEffect(() => {
         let active = true
-        const shows = [...watching, ...toWatch, ...paused]
+        const shows = [...watching, ...toWatch, ...paused].slice(0, 12)
         const loadEpisodeTitles = async () => {
             const titleEntries = await Promise.all(shows.map(async (show) => {
                 if (!show.tmdb_id) return null
@@ -169,7 +169,7 @@ const MobileTVShows: React.FC = () => {
             await Promise.allSettled(checks)
             }
 
-        checkForNewEpisodes()
+        const initialCheckTimeout = setTimeout(checkForNewEpisodes, 2000)
 
         const interval = setInterval(() => { checkForNewEpisodes() }, 15 * 60 * 1000)
 
@@ -183,6 +183,7 @@ const MobileTVShows: React.FC = () => {
         document.addEventListener('visibilitychange', handleVisibilityChange)
 
         return () => {
+            clearTimeout(initialCheckTimeout)
             clearInterval(interval)
             document.removeEventListener('visibilitychange', handleVisibilityChange)
         }
@@ -416,7 +417,7 @@ const MobileTVShows: React.FC = () => {
                 )}
             </div>
         )
-    }, [addingEpisode, completedEpisode, handleAddEpisode, getEpisodesLeft, getEpisodeInfo, isMobile, navigate])
+    }, [addingEpisode, completedEpisode, episodeTitles, handleAddEpisode, getEpisodesLeft, getEpisodeInfo, isMobile, navigate])
 
     return (
         <section className="dashboard-page mobile-tvshows-page">
@@ -428,8 +429,16 @@ const MobileTVShows: React.FC = () => {
                 <i className="fa-solid fa-list"></i>
             </button>
 <div className="dashboard-shell mobile-tvshows-shell">
-                {watching.length === 0 && toWatch.length === 0 && paused.length === 0 ? (
+                {!isInitialized ? (
+                    <div className="discover-loading" aria-live="polite">
+                        <div className="discover-spinner" />
+                        <p>Loading TV shows...</p>
+                    </div>
+                ) : watching.length === 0 && toWatch.length === 0 && paused.length === 0 ? (
                     <div className="mobile-tvshows-empty">
+                        <i className="fa-solid fa-tv"></i>
+                        <h3>No TV shows yet</h3>
+                        <p>Add TV shows to your watchlist to see them here</p>
                     </div>
                 ) : (
                     <div className="mobile-tvshows-list">

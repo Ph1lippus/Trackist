@@ -238,7 +238,12 @@ const Discover: React.FC = () => {
                     )}
                 </div>
 
-                {visibleResults.length === 0 ? (
+                {loading.isLoading ? (
+                    <div className="discover-loading" aria-live="polite">
+                        <div className="discover-spinner" />
+                        <p>Loading results...</p>
+                    </div>
+                ) : visibleResults.length === 0 ? (
                     <div className="discover-empty">
                         <p>{filters.query ? 'No results found' : 'Nothing to show'}</p>
                     </div>
