@@ -102,20 +102,26 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                         const controller = new AbortController()
                         const timeoutId = setTimeout(() => controller.abort(), 8000)
 
-                        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin`, {
-                            headers: { 'Authorization': `Bearer ${session.access_token}` },
-                            signal: controller.signal
-                        })
-                        clearTimeout(timeoutId)
+                        try {
+                            const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin?_t=${Date.now()}`, {
+                                headers: { 'Authorization': `Bearer ${session.access_token}` },
+                                signal: controller.signal,
+                                cache: 'no-store'
+                            })
 
-                        if (res.ok) {
-                            const data = await res.json()
-                            setIsAdmin(data.isAdmin === true)
-                        } else {
+                            if (res.ok) {
+                                const data = await res.json()
+                                setIsAdmin(data.isAdmin === true)
+                            } else {
+                                setIsAdmin(false)
+                            }
+                        } catch (fetchError) {
+                            console.error('[Navbar] verify-admin fetch failed:', fetchError)
                             setIsAdmin(false)
+                        } finally {
+                            clearTimeout(timeoutId)
                         }
-                    } catch (fetchError) {
-                        console.error('[Navbar] verify-admin fetch failed:', fetchError)
+                    } catch {
                         setIsAdmin(false)
                     }
                 }

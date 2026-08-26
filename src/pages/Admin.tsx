@@ -125,11 +125,12 @@ const Admin: React.FC = () => {
 
         let isMounted = true
         let maxTimeout: ReturnType<typeof setTimeout>
+        let timeoutId: ReturnType<typeof setTimeout>
 
-        const MAX_TIMEOUT = 15000
+        const MAX_TIMEOUT = 20000
 
         maxTimeout = setTimeout(() => {
-            console.warn('[Admin] MAX timeout reached (15s), forcing load complete')
+            console.warn('[Admin] MAX timeout reached (20s), forcing load complete')
             if (isMounted && adminLoading) {
                 setAdminLoading(false)
                 setProfile({ role: 'user' })
@@ -153,11 +154,11 @@ const Admin: React.FC = () => {
                 const timeoutId = setTimeout(() => controller.abort(), 8000)
 
                 try {
-                    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin`, {
+                    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin?_t=${Date.now()}`, {
                         headers: { 'Authorization': `Bearer ${globalAccessToken}` },
-                        signal: controller.signal
+                        signal: controller.signal,
+                        cache: 'no-store'
                     })
-                    clearTimeout(timeoutId)
 
                     if (!isMounted) return
 
@@ -171,6 +172,8 @@ const Admin: React.FC = () => {
                 } catch (fetchError) {
                     console.error('[Admin] verify-admin fetch failed:', fetchError)
                     if (isMounted) setProfile({ role: 'user' })
+                } finally {
+                    clearTimeout(timeoutId)
                 }
             } finally {
                 if (isMounted) {
@@ -186,6 +189,7 @@ const Admin: React.FC = () => {
         return () => {
             console.log('[Admin] Effect cleanup')
             isMounted = false
+            clearTimeout(timeoutId)
             clearTimeout(maxTimeout)
         }
     }, [globalUser, globalAccessToken])
