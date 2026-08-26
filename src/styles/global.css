@@ -1,5 +1,18 @@
 ﻿
 @media (max-width: 768px) {
+    .lists-page__action-btn {
+        width: 100%;
+    }
+    .lists-page__view-header {
+        border-bottom: none !important;
+        margin-bottom: 0px !important;
+    }
+    .lists-page__tabs {
+        padding: 0rem 1rem !important;
+    }
+    .lists-page__view-header {
+        padding: 0rem 2rem;
+    }
     .detail-page__cast-item {
         backdrop-filter: blur(0px);
     }
@@ -142,8 +155,8 @@
     }
     .lists-page--view{
         padding: 0rem !important;
-        max-width: 100%;
-    }
+        max-width: 100% !important;
+    }   
     .detail-page__actions {
         margin: 0 auto ;
     }
@@ -8928,7 +8941,6 @@ i.fa-solid.fa-trash:hover {
 .lists-page__view-header {
     margin-bottom: 2rem;
     padding-bottom: 1.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .lists-page__view-description {
@@ -8999,12 +9011,6 @@ i.fa-solid.fa-trash:hover {
     max-width: 85%;
     margin: 0 auto;
     padding: 2rem;
-}
-
-.lists-page__view-header {
-    margin-bottom: 2rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .lists-page__view-header-content {
