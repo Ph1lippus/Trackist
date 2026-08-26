@@ -16,7 +16,7 @@ import { useLibraryStore } from '../stores/useLibraryStore'
 import type { WatchlistItem, TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
-import { getCachedOrFetch } from '../services/cacheService'
+import { cacheService, getCachedOrFetch } from '../services/cacheService'
 import { VirtuosoGrid } from 'react-virtuoso'
 import { useMobile } from '../contexts/useMobile'
 import MediaCard from '../components/media/MediaCard'
@@ -134,81 +134,66 @@ const ProfilePage: React.FC = () => {
                         setIsFollowingUser(following)
                     }
 
-                    // Load followers and following counts
-                    const [{ count: followersCountData }, { count: followingCountData }] = await Promise.all([
+                    const isOwn = currentUser?.id === targetUserId
+                    const [{ count: followersCountData }, { count: followingCountData }, items, listsWithCounts] = await Promise.all([
                         getFollowers(targetUserId),
-                        getFollowing(targetUserId)
+                        getFollowing(targetUserId),
+                        getCachedOrFetch(
+                            'profile-watchlist',
+                            targetUserId,
+                            async () => {
+                                const { data, error } = await supabase
+                                    .from('watchlist')
+                                    .select('*')
+                                    .eq('user_id', targetUserId)
+                                    .order('added_at', { ascending: false })
+                                if (error) throw error
+                                return (data || []) as WatchlistItem[]
+                            },
+                            { ttl: 2 * 60 * 1000, staleWhileRevalidate: true }
+                        ),
+                        getCachedOrFetch(
+                            'profile-lists',
+                            `${targetUserId}:${isOwn ? 'own' : 'public'}`,
+                            async () => {
+                                let listsQuery = supabase
+                                    .from('lists')
+                                    .select('*')
+                                    .eq('user_id', targetUserId)
+                                    .order('updated_at', { ascending: false })
+
+                                if (!isOwn) listsQuery = listsQuery.eq('is_public', true)
+
+                                const { data: listsData, error: listsError } = await listsQuery
+                                if (listsError) throw listsError
+                                const rawLists = (listsData || []) as UserList[]
+                                if (rawLists.length === 0) return []
+
+                                const { data: listItems, error: listItemsError } = await supabase
+                                    .from('list_items')
+                                    .select('list_id, watched_at')
+                                    .in('list_id', rawLists.map(list => list.id))
+                                if (listItemsError) throw listItemsError
+
+                                const counts: Record<string, { item_count: number; watched_count: number }> = {}
+                                for (const item of listItems || []) {
+                                    counts[item.list_id] ??= { item_count: 0, watched_count: 0 }
+                                    counts[item.list_id].item_count++
+                                    if (item.watched_at) counts[item.list_id].watched_count++
+                                }
+                                return rawLists.map(list => ({
+                                    ...list,
+                                    item_count: counts[list.id]?.item_count || 0,
+                                    watched_count: counts[list.id]?.watched_count || 0
+                                }))
+                            },
+                            { ttl: 2 * 60 * 1000, staleWhileRevalidate: true }
+                        )
                     ])
                     setFollowersCount(followersCountData || 0)
                     setFollowingCount(followingCountData || 0)
-
-                    // Load watchlist
-                    const { data: watchlistData, error: watchlistError } = await supabase
-                        .from('watchlist')
-                        .select('*')
-                        .eq('user_id', targetUserId)
-                        .order('added_at', { ascending: false })
-                    
-                    if (watchlistError) {
-                        console.error('[Profile] Failed to load watchlist:', watchlistError)
-                    }
-                    
-                    const items = (watchlistData || []) as WatchlistItem[]
                     setWatchlistItems(items)
-
-                    // Load lists - query lists table directly and compute counts from list_items
-                    const isOwn = currentUser?.id === targetUserId
-                    let listsQuery = supabase
-                        .from('lists')
-                        .select('*')
-                        .eq('user_id', targetUserId)
-                        .order('updated_at', { ascending: false })
-
-                    if (!isOwn) {
-                        listsQuery = listsQuery.eq('is_public', true)
-                    }
-
-                    const { data: listsData, error: listsError } = await listsQuery
-                    
-                    if (listsError) {
-                        console.error('[Profile] Failed to load lists:', listsError)
-                    }
-                    
-                    const rawLists = (listsData || []) as UserList[]
-
-                    // Compute item counts from list_items
-                    if (rawLists.length > 0) {
-                        const listIds = rawLists.map(l => l.id)
-                        const { data: listItems, error: listItemsError } = await supabase
-                            .from('list_items')
-                            .select('list_id, watched_at')
-                            .in('list_id', listIds)
-
-                        if (listItemsError) {
-                            console.error('[Profile] Failed to load list_items:', listItemsError)
-                        }
-
-                        const counts: Record<string, { item_count: number; watched_count: number }> = {}
-                        if (listItems) {
-                            listItems.forEach((item: { list_id: string; watched_at: string | null }) => {
-                                if (!counts[item.list_id]) {
-                                    counts[item.list_id] = { item_count: 0, watched_count: 0 }
-                                }
-                                counts[item.list_id].item_count++
-                                if (item.watched_at) counts[item.list_id].watched_count++
-                            })
-                        }
-
-                        const listsWithCounts = rawLists.map(list => ({
-                            ...list,
-                            item_count: counts[list.id]?.item_count || 0,
-                            watched_count: counts[list.id]?.watched_count || 0
-                        }))
-
-                        setUserLists(listsWithCounts)
-                    } else {
-                        setUserLists([])
-                    }
+                    setUserLists(listsWithCounts)
                 }
             } catch (error) {
                 console.error('[Profile] Failed to load profile:', error)
@@ -255,6 +240,7 @@ const ProfilePage: React.FC = () => {
             const libraryItem = useLibraryStore.getState().allItems.find(item => item.tmdb_id === tmdbId)
             if (libraryItem) {
                 await useLibraryStore.getState().removeItem(libraryItem.id)
+                await cacheService.clearPattern('profile-watchlist')
                 setCurrentUserWatchlistIds(prev => {
                     const next = new Set(prev)
                     next.delete(tmdbId)
@@ -277,6 +263,7 @@ const ProfilePage: React.FC = () => {
                 updated_at: new Date().toISOString(),
             }
             await useLibraryStore.getState().addItem(newItem)
+            await cacheService.clearPattern('profile-watchlist')
             setCurrentUserWatchlistIds(prev => new Set(prev).add(tmdbId))
         }
     }

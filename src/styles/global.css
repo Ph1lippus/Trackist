@@ -9508,7 +9508,7 @@ i.fa-solid.fa-trash:hover {
 
 @media (max-width: 768px) {
     .mobile-view-toggle-fixed {
-        top: calc(var(--navbar-height) + 4rem);
+        top: calc(var(--navbar-height));
     }
 }
 

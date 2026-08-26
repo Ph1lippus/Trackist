@@ -72,36 +72,43 @@ const UpcomingNew: React.FC = () => {
                 setUpcomingItems(items.map(mapCalendarItem))
             })
 
+            setHasLoaded(true)
+
+            void checkForNewSeasons(user.id).catch(err => {
+                console.error('Background season check failed:', err)
+            })
+
+        }
+        const checkForNewSeasons = async (userId: string) => {
             const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
             const { data: staleShows } = await supabase
                 .from('watchlist')
                 .select('id')
-                .eq('user_id', user.id)
+                .eq('user_id', userId)
                 .eq('media_type', 'tv')
                 .not('last_season_number', 'is', null)
                 .or(`last_season_check.is.null,last_season_check.lt.${sixHoursAgo}`)
                 .limit(1)
 
-            if (staleShows && staleShows.length > 0) {
-                const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim()
-                supabase.auth.getSession().then(({ data: { session } }) => {
-                    if (session?.access_token && supabaseUrl) {
-                        fetch(`${supabaseUrl}/functions/v1/check-new-seasons`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${session.access_token}`
-                            },
-                            body: JSON.stringify({ userId: user.id })
-                        }).catch(err => {
-                            console.error('Background season check failed:', err)
-                        })
-                    }
-                }).catch(() => {})
-            }
+            if (!staleShows || staleShows.length === 0) return
 
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim()
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session?.access_token || !supabaseUrl) return
+
+            await fetch(`${supabaseUrl}/functions/v1/check-new-seasons`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({ userId })
+            })
         }
-        fetchUpcoming().finally(() => setHasLoaded(true))
+        fetchUpcoming().catch(err => {
+            console.error('Failed to load upcoming items:', err)
+            setHasLoaded(true)
+        })
     }, [])
 
     const groupedItems = useMemo(() => {
