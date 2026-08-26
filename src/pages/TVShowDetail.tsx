@@ -68,6 +68,7 @@ const TVShowDetail: React.FC = () => {
     const [episodeModalLoading, setEpisodeModalLoading] = useState<'all' | 'one' | null>(null)
 
     const watchlistItem = useLibraryStore((state) => state.allItems.find((item) => item.tmdb_id === Number(id)))
+    const isLibraryInitialized = useLibraryStore((state) => state.isInitialized)
     const isInWatchlist = !!watchlistItem
     const watchlistId = watchlistItem?.id ?? null
     const watchlistStatus = watchlistItem?.status ?? null
@@ -126,6 +127,9 @@ const TVShowDetail: React.FC = () => {
         hasUserSelectedSeason.current = false
         hasAutoPositioned.current = false
         episodeToScrollRef.current = null
+        seasonCache.current.clear()
+        watchedKeysCache.current.clear()
+        setEpisodes([])
     }, [id])
 
     useEffect(() => {
@@ -222,7 +226,7 @@ const TVShowDetail: React.FC = () => {
 
     useEffect(() => {
         const loadEpisodes = async () => {
-            if (!details || !id) return
+            if (!details || !id || !isLibraryInitialized) return
             
             try {
                 // Filter out seasons with 0 episodes (empty seasons)
@@ -296,7 +300,7 @@ const TVShowDetail: React.FC = () => {
             }
         }
         loadEpisodes()
-    }, [details, id, isInWatchlist, watchlistId])
+    }, [details, id, isInWatchlist, watchlistId, isLibraryInitialized])
 
     const handleAddToWatchlist = async () => {
         const user = useAuthStore.getState().user
