@@ -51,7 +51,6 @@ const Admin: React.FC = () => {
     const globalAccessToken = useAuthStore((state) => state.accessToken)
     const [profile, setProfile] = useState<{ role: string | null } | null>(null)
     const [adminLoading, setAdminLoading] = useState(true)
-    const [authError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<TabType>('overview')
     const [profiles, setProfiles] = useState<ProfileRow[]>([])
     const [stats, setStats] = useState<AdminStats>({
@@ -79,9 +78,6 @@ const Admin: React.FC = () => {
     const [avatarMessage, setAvatarMessage] = useState<{ userId: string; text: string; type: 'success' | 'error' } | null>(null)
     const [pendingAvatarUserId, setPendingAvatarUserId] = useState<string | null>(null)
     const avatarInputRef = useRef<HTMLInputElement>(null)
-
-    if (adminLoading) return <div className="discover-loading"><div className="discover-spinner" /><p>Loading...</p></div>
-    if (profile && profile.role !== "admin") return <Navigate to="/" replace />
 
     const isAdmin = profile?.role === "admin"
 
@@ -520,7 +516,6 @@ const Admin: React.FC = () => {
             <section className="dashboard-page">
                 <div className="dashboard-shell">
                     <div className="discover-loading">
-                        <p style={{ color: '#ff6b6b' }}>{authError}</p>
                         <button className="discover-loading__retry" onClick={() => window.location.reload()}>Retry</button>
                     </div>
                 </div>
@@ -530,19 +525,6 @@ const Admin: React.FC = () => {
 
     if (!isAdmin || !globalUser) {
         return <Navigate to="/" replace />
-    }
-
-    if (authError) {
-        return (
-            <section className="dashboard-page">
-                <div className="dashboard-shell">
-                    <div className="discover-loading">
-                        <p style={{ color: '#ff6b6b' }}>{authError}</p>
-                        <button className="discover-loading__retry" onClick={() => window.location.reload()}>Retry</button>
-                    </div>
-                </div>
-            </section>
-        )
     }
 
     const formatDate = (dateStr: string) => {
