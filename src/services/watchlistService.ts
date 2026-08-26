@@ -225,6 +225,92 @@ export const saveAllEpisodesForShow = async (tmdbId: number, watchlistId: string
     }
 }
 
+type WatchedEpisodeData = {
+    season_number: number
+    episode_number: number
+    tmdb_episode_id?: number
+    title?: string
+    still_path?: string
+    overview?: string
+    vote_average?: number
+    air_date?: string
+    runtime?: number
+}
+
+/**
+ * Mark multiple episodes as watched with batched database writes.
+ * Unwatched episodes are never inserted into watchlist_episodes.
+ */
+export const markEpisodesWatched = async (
+    watchlistId: string,
+    episodes: WatchedEpisodeData[]
+): Promise<boolean> => {
+    if (episodes.length === 0) return true
+
+    const episodeRows = episodes.map(episode => ({
+        watchlist_id: watchlistId,
+        season_number: episode.season_number,
+        episode_number: episode.episode_number,
+        tmdb_episode_id: episode.tmdb_episode_id,
+        title: episode.title,
+        still_path: episode.still_path,
+        overview: episode.overview,
+        vote_average: episode.vote_average,
+        air_date: episode.air_date,
+        runtime: episode.runtime
+    }))
+
+    const { error } = await supabase
+        .from('watchlist_episodes')
+        .upsert(episodeRows, {
+            onConflict: 'watchlist_id,season_number,episode_number'
+        })
+
+    if (error) {
+        console.error('Failed to mark episodes as watched:', error)
+        return false
+    }
+
+    return true
+}
+
+/**
+ * Mark multiple episodes as unwatched with one delete per affected season.
+ * Unwatched episodes are removed rather than saved with a false flag.
+ */
+export const unmarkEpisodesWatched = async (
+    watchlistId: string,
+    episodes: Pick<WatchedEpisodeData, 'season_number' | 'episode_number'>[]
+): Promise<boolean> => {
+    if (episodes.length === 0) return true
+
+    const episodesBySeason = new Map<number, number[]>()
+    for (const episode of episodes) {
+        const seasonEpisodes = episodesBySeason.get(episode.season_number) || []
+        seasonEpisodes.push(episode.episode_number)
+        episodesBySeason.set(episode.season_number, seasonEpisodes)
+    }
+
+    const results = await Promise.all(
+        Array.from(episodesBySeason, ([seasonNumber, episodeNumbers]) =>
+            supabase
+                .from('watchlist_episodes')
+                .delete()
+                .eq('watchlist_id', watchlistId)
+                .eq('season_number', seasonNumber)
+                .in('episode_number', episodeNumbers)
+        )
+    )
+
+    const failed = results.find(result => result.error)
+    if (failed?.error) {
+        console.error('Failed to unmark episodes:', failed.error)
+        return false
+    }
+
+    return true
+}
+
 /**
  * Mark an episode as watched by INSERTING it into watchlist_episodes.
  * If it already exists (unique constraint), this is a no-op.
