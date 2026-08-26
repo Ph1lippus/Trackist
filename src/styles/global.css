@@ -1801,13 +1801,13 @@ html::before {
     height: 10px;
 }
 ::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.03);
+    background: transparent;
     border-radius: 5px;
 }
 ::-webkit-scrollbar-thumb {
     background: rgba(133, 138, 227, 0.4);
     border-radius: 5px;
-    border: 2px solid rgba(255, 255, 255, 0.03);
+    border: 2px solid transparent;
     transition: background 0.2s ease;
 }
 ::-webkit-scrollbar-thumb:hover {
@@ -1820,7 +1820,6 @@ html::before {
 /* Firefox scrollbar */
 * {
     scrollbar-width: thin;
-    scrollbar-color: rgba(133, 138, 227, 0.4) rgba(255, 255, 255, 0.03);
 }
 
 /* Consistent scrollbar for common scrollable containers */
@@ -1832,7 +1831,7 @@ html::before {
 .settings-sidebar,
 .upcoming-new-scroll-container {
     scrollbar-width: thin;
-    scrollbar-color: rgba(133, 138, 227, 0.4) rgba(255, 255, 255, 0.03);
+    scrollbar-color: rgba(133, 138, 227, 0.4) transparent;
 }
 
 .modal-content::-webkit-scrollbar,
@@ -1853,7 +1852,7 @@ html::before {
 .profile-tabs::-webkit-scrollbar-track,
 .settings-sidebar::-webkit-scrollbar-track,
 .upcoming-new-scroll-container::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.03);
+    background: transparent;
     border-radius: 5px;
 }
 
@@ -1866,7 +1865,7 @@ html::before {
 .upcoming-new-scroll-container::-webkit-scrollbar-thumb {
     background: rgba(133, 138, 227, 0.4);
     border-radius: 5px;
-    border: 2px solid rgba(255, 255, 255, 0.03);
+    border: 2px solid transparent;
 }
 
 .modal-content::-webkit-scrollbar-thumb:hover,
@@ -2556,8 +2555,8 @@ html::before {
     gap: 1rem;
 }
 .detail-page__season-nav {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: #ffffff0d;
+    border: 1px solid rgba(255, 255, 255, 0.06);
     color: var(--color-platinum);
     padding: 0.6rem 1rem;
     border-radius: 25px;
@@ -2570,21 +2569,16 @@ html::before {
     min-width: 44px;
     height: 44px;
 }
-.detail-page__season-nav:hover:not(:disabled) {
-    background: rgba(133, 138, 227, 0.15);
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-}
+
 .detail-page__season-nav:disabled {
     opacity: 0.3;
     cursor: not-allowed;
 }
 .detail-page__season-select {
     padding: 0.6rem 2.5rem 0.6rem 1.2rem;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: #ffffff0d;
+    border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: 25px;
-    backdrop-filter: blur(5px);
     color: var(--color-platinum);
     font-size: 0.9rem;
     font-weight: 500;
@@ -2605,6 +2599,7 @@ html::before {
     background-size: 12px;
     padding-right: 2.5rem;
 }
+
 .detail-page__season-select:focus {
     border-color: var(--color-primary);
     background-color: rgba(255, 255, 255, 0.12);
@@ -2613,6 +2608,7 @@ html::before {
     background-position: right 0.8rem center;
     background-size: 12px;
 }
+
 .detail-page__season-select option {
     background: rgba(20, 20, 28, 0.98);
     color: var(--color-platinum);
@@ -2621,6 +2617,7 @@ html::before {
     text-align-last: center;
     font-size: 0.9rem;
     border: none;
+    margin: 0 auto;
 }
 .detail-page__episode-list {
     display: flex;
