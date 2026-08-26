@@ -30,6 +30,11 @@ const MovieDetail: React.FC = () => {
     const [showTrailer, setShowTrailer] = useState(false)
     const [trailerKey, setTrailerKey] = useState<string | null>(null)
     const [showCast, setShowCast] = useState(false)
+    const [showAllCast, setShowAllCast] = useState(false)
+
+    useEffect(() => {
+        if (!showCast) setShowAllCast(false)
+    }, [showCast])
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean } | null>(null)
     const [markWatchedModal, setMarkWatchedModal] = useState<{ isOpen: boolean; markAsWatched: boolean } | null>(null)
     const [modalLoading, setModalLoading] = useState(false)
@@ -545,9 +550,8 @@ const MovieDetail: React.FC = () => {
 
                     {showCast && cast.length > 0 && (
                         <div className="detail-page__cast-section">
-                            {showCast && (
-                                <div className="detail-page__cast-list">
-                                {cast.map((c: { id: number; name: string; profile_path?: string | null; character: string; order: number }) => (
+                            <div className="detail-page__cast-list">
+                                {cast.slice(0, isMobile && !showAllCast ? 12 : undefined).map((c: { id: number; name: string; profile_path?: string | null; character: string; order: number }) => (
                                     <div 
                                         key={c.id} 
                                         className="detail-page__cast-item"
@@ -569,7 +573,11 @@ const MovieDetail: React.FC = () => {
                                         </div>
                                     </div>
                                 ))}
-                                </div>
+                            </div>
+                            {isMobile && !showAllCast && cast.length > 12 && (
+                                <button className="detail-page__cast-more" onClick={() => setShowAllCast(true)}>
+                                    Show all cast
+                                </button>
                             )}
                         </div>
                     )}

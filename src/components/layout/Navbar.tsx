@@ -261,6 +261,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         if (selectedCount === 0) return;
 
         setBatchLoading(true);
+        let shouldCelebrate = false;
         try {
             if (isMoviesPage) {
                 const selectedItems = movies.filter(item => moviesSelectedIds.has(item.id));
@@ -276,19 +277,25 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                     if (isMovieReleased(item)) {
                         await useLibraryStore.getState().updateStatus(item.id, 'completed');
                         if (item.status === 'planning') {
-                            launchCosmicConfetti();
+                            shouldCelebrate = true;
                         }
                     }
                 }
             } else if (isTVShowsPage) {
                 const selectedItems = tvShows.filter(item => tvShowsSelectedIds.has(item.id));
+                const refreshedIds: string[] = [];
                 
                 for (const item of selectedItems) {
                     if (item.tmdb_id) {
-                        await markShowAsFullyWatched(item.id, item.tmdb_id);
-                        await useLibraryStore.getState().refreshItem(item.id);
+                        const newStatus = await markShowAsFullyWatched(item.id, item.tmdb_id);
+                        if (newStatus === 'completed' || newStatus === 'caught_up') {
+                            shouldCelebrate = true;
+                        }
+                        refreshedIds.push(item.id);
                     }
                 }
+
+                await Promise.all(refreshedIds.map(id => useLibraryStore.getState().refreshItem(id)));
             } else if (isFinishedPage) {
                 const selectedTVShows = finished.filter(item => (item.media_type === 'tv' || item.media_type === 'anime') && finishedSelectedIds.has(item.id));
                 const selectedMovies = finished.filter(item => item.media_type === 'movie' && finishedSelectedIds.has(item.id));
@@ -302,6 +309,10 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                     await useLibraryStore.getState().updateStatus(item.id, 'planning');
                     await useLibraryStore.getState().refreshItem(item.id);
                 }
+            }
+
+            if (shouldCelebrate) {
+                launchCosmicConfetti();
             }
             
             handleClearSelection();

@@ -64,6 +64,11 @@ const TVShowDetail: React.FC = () => {
         episode: LocalEpisode
     } | null>(null)
     const [showCast, setShowCast] = useState(false)
+    const [showAllCast, setShowAllCast] = useState(false)
+
+    useEffect(() => {
+        if (!showCast) setShowAllCast(false)
+    }, [showCast])
     const [modalLoading, setModalLoading] = useState(false)
     const [episodeModalLoading, setEpisodeModalLoading] = useState<'all' | 'one' | null>(null)
 
@@ -882,9 +887,8 @@ const TVShowDetail: React.FC = () => {
 
                         {showCast && cast.length > 0 && (
                             <div className="detail-page__cast-section">
-                                {showCast && (
-                                    <div className="detail-page__cast-list">
-                                        {cast.map((c: { id: number; name: string; profile_path?: string | null; character: string; order: number }) => (
+                                <div className="detail-page__cast-list">
+                                        {cast.slice(0, isMobile && !showAllCast ? 12 : undefined).map((c: { id: number; name: string; profile_path?: string | null; character: string; order: number }) => (
                                             <div 
                                                 key={c.id} 
                                                 className="detail-page__cast-item"
@@ -906,7 +910,11 @@ const TVShowDetail: React.FC = () => {
                                                 </div>
                                             </div>
                                         ))}
-                                    </div>
+                                </div>
+                                {isMobile && !showAllCast && cast.length > 12 && (
+                                    <button className="detail-page__cast-more" onClick={() => setShowAllCast(true)}>
+                                        Show all cast
+                                    </button>
                                 )}
                             </div>
                         )}
