@@ -52,6 +52,7 @@ const UpcomingNew: React.FC = () => {
     const navigate = useNavigate()
     usePageTitle('Trackist - Upcoming')
     const [upcomingItems, setUpcomingItems] = useState<UpcomingItem[]>([])
+    const [hasLoaded, setHasLoaded] = useState(false)
 
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -61,10 +62,11 @@ const UpcomingNew: React.FC = () => {
         const fetchUpcoming = async () => {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) {
+                setHasLoaded(true)
                 return
             }
 
-            loadCalendar(user.id, (freshItems) => {
+            await loadCalendar(user.id, (freshItems) => {
                 setUpcomingItems(freshItems.map(mapCalendarItem))
             }).then((items) => {
                 setUpcomingItems(items.map(mapCalendarItem))
@@ -99,7 +101,7 @@ const UpcomingNew: React.FC = () => {
             }
 
         }
-        fetchUpcoming()
+        fetchUpcoming().finally(() => setHasLoaded(true))
     }, [])
 
     const groupedItems = useMemo(() => {
@@ -126,12 +128,12 @@ const UpcomingNew: React.FC = () => {
     return (
         <section className="dashboard-page upcoming-new-page">
             <div className="dashboard-shell upcoming-new-shell">
-                {sortedGroupedItems.length === 0 ? (
+                {hasLoaded && sortedGroupedItems.length === 0 ? (
                     <div className="upcoming-new-empty">
                         <h3>Nothing upcoming</h3>
                         <p>No episodes or movie releases are scheduled. Add more shows to your watchlist!</p>
                     </div>
-                ) : (
+                ) : hasLoaded ? (
                     <div className="upcoming-new-list">
                         {sortedGroupedItems.map(({ date, items }) => (
                             <div key={date} className="upcoming-new-date-group">
@@ -209,7 +211,7 @@ const UpcomingNew: React.FC = () => {
                             </div>
                         ))}
                     </div>
-                )}
+                ) : null}
             </div>
             <button className="upcoming-new-scroll-top" onClick={scrollToTop} aria-label="Scroll to top" title="Back to top">
                 <i className="fas fa-arrow-up"></i>

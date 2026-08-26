@@ -1,7 +1,7 @@
 ﻿import React, { useEffect, useMemo, useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getTVDetails, getTVSeasonDetails, imageUrl } from '../services/tmdbService'
-import { markEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
+import { getTVDetails, getTVSeasonDetails, getTVEpisodeDetails, imageUrl } from '../services/tmdbService'
+import { markEpisodesWatched, checkAndUpdateCompleted } from '../services/watchlistService'
 
 import { useLibraryStore } from '../stores/useLibraryStore'
 import type { WatchlistItem } from '../types'
@@ -10,6 +10,7 @@ import { useMobile } from '../contexts/useMobile'
 import { useSearch } from '../hooks/useSearch'
 import { supabase } from '../services/supabaseClient'
 import ConfirmModal from '../components/modals/ConfirmModal'
+import { getCachedOrFetch } from '../services/cacheService'
 
 const MobileTVShows: React.FC = () => {
     const { isMobile } = useMobile()
@@ -19,6 +20,8 @@ const MobileTVShows: React.FC = () => {
     const tvShows = useLibraryStore((state) => state.tvShows)
     const isInitialized = useLibraryStore((state) => state.isInitialized)
     const [addingEpisode, setAddingEpisode] = useState<string | null>(null)
+    const [completedEpisode, setCompletedEpisode] = useState<string | null>(null)
+    const [episodeTitles, setEpisodeTitles] = useState<Record<string, string>>({})
     const [confirmModal, setConfirmModal] = useState<{
         isOpen: boolean
         action: 'resume' | null
@@ -69,6 +72,43 @@ const MobileTVShows: React.FC = () => {
     useEffect(() => {
         window.scrollTo(0, 0)
     }, [])
+
+    useEffect(() => {
+        let active = true
+        const shows = [...watching, ...toWatch, ...paused]
+        const loadEpisodeTitles = async () => {
+            const titleEntries = await Promise.all(shows.map(async (show) => {
+                if (!show.tmdb_id) return null
+                const season = show.next_season_number || (show.status === 'planning' ? 1 : show.current_season)
+                const episode = show.next_episode_number || (show.status === 'planning' ? 1 : show.current_episode)
+                if (!season || !episode) return null
+
+                try {
+                    const data = await getCachedOrFetch(
+                        'tv-episode-details',
+                        `${show.tmdb_id}-${season}-${episode}`,
+                        () => getTVEpisodeDetails(show.tmdb_id!, season, episode),
+                        { ttl: 24 * 60 * 60 * 1000, staleWhileRevalidate: true }
+                    )
+                    return data.name ? [`${show.id}:${season}:${episode}`, data.name] as const : null
+                } catch {
+                    return null
+                }
+            }))
+
+            if (active) {
+                const validTitleEntries = titleEntries.filter(entry => entry !== null)
+                setEpisodeTitles(previous => ({
+                    ...previous,
+                    ...Object.fromEntries(validTitleEntries)
+                }))
+            }
+        }
+        void loadEpisodeTitles()
+        return () => {
+            active = false
+        }
+    }, [watching, toWatch, paused])
 
     // Check for new episodes on completed/caught_up shows so they move back to "watching"
     useEffect(() => {
@@ -219,23 +259,25 @@ const MobileTVShows: React.FC = () => {
             return
         }
 
-        const success = await markEpisodeWatched(
-            show.id,
-            nextEp.season_number,
-            nextEp.episode_number,
-            {
-                tmdb_episode_id: nextEp.tmdb_episode_id,
-                title: nextEp.title,
-                still_path: nextEp.still_path ?? undefined,
-                overview: nextEp.overview,
-                air_date: nextEp.air_date,
-                runtime: nextEp.runtime
-            }
-        )
+        const success = await markEpisodesWatched(show.id, [{
+            ...nextEp,
+            still_path: nextEp.still_path ?? undefined
+        }])
 
         if (!success) {
             return
         }
+
+        const nextEpisodeNumber = nextEp.episode_number + 1
+        void useLibraryStore.getState().updateItem(show.id, {
+            current_season: nextEp.season_number,
+            current_episode: nextEp.episode_number,
+            watched_episodes_count: (show.watched_episodes_count ?? 0) + 1,
+            next_season_number: nextEp.season_number,
+            next_episode_number: nextEpisodeNumber,
+            status: 'watching'
+        })
+        setCompletedEpisode(show.id)
 
         setTimeout(async () => {
             // Update data behind the sweep
@@ -284,21 +326,21 @@ const MobileTVShows: React.FC = () => {
                 return
             }
 
-            const success = await markEpisodeWatched(
-                show.id,
-                nextEp.season_number,
-                nextEp.episode_number,
-                {
-                    tmdb_episode_id: nextEp.tmdb_episode_id,
-                    title: nextEp.title,
-                    still_path: nextEp.still_path ?? undefined,
-                    overview: nextEp.overview,
-                    air_date: nextEp.air_date,
-                    runtime: nextEp.runtime
-                }
-            )
+            const success = await markEpisodesWatched(show.id, [{
+                ...nextEp,
+                still_path: nextEp.still_path ?? undefined
+            }])
 
             if (success) {
+                    void useLibraryStore.getState().updateItem(show.id, {
+                    current_season: nextEp.season_number,
+                    current_episode: nextEp.episode_number,
+                    watched_episodes_count: (show.watched_episodes_count ?? 0) + 1,
+                    next_season_number: nextEp.season_number,
+                    next_episode_number: nextEp.episode_number + 1,
+                    status: 'watching'
+                })
+                setCompletedEpisode(show.id)
                 setTimeout(async () => {
                     if (show.tmdb_id) {
                         await checkAndUpdateCompleted(show.id, show.tmdb_id)
@@ -316,10 +358,15 @@ const MobileTVShows: React.FC = () => {
 
     const renderShowCard = useCallback((show: WatchlistItem) => {
         const isAdding = addingEpisode === show.id
+        const isDone = completedEpisode === show.id
         const isCompleted = show.status === 'completed' || show.status === 'caught_up'
         const isDroppedOrPaused = show.status === 'dropped' || show.status === 'paused'
         const episodesLeft = getEpisodesLeft(show)
         const episodeInfo = getEpisodeInfo(show)
+        const episodeTitleKey = episodeInfo
+            ? `${show.id}:${show.next_season_number || (show.status === 'planning' ? 1 : show.current_season)}:${show.next_episode_number || (show.status === 'planning' ? 1 : show.current_episode)}`
+            : null
+        const episodeTitle = episodeTitleKey ? episodeTitles[episodeTitleKey] : undefined
 
         return (
             <div
@@ -342,7 +389,10 @@ const MobileTVShows: React.FC = () => {
                         <span className="mobile-tvshow-card-episode">+{episodesLeft}</span>
                     )}
                     {(!isCompleted || isDroppedOrPaused) && episodeInfo && (
-                        <span className="mobile-tvshow-card-episode-info">{episodeInfo}</span>
+                        <span className="mobile-tvshow-card-episode-info">Next: {episodeInfo}</span>
+                    )}
+                    {episodeTitle && (
+                        <span className="mobile-tvshow-card-episode-title">&quot;{episodeTitle}&quot;</span>
                     )}
                 </div>
                 {(!isCompleted || isDroppedOrPaused) && (
@@ -357,6 +407,8 @@ const MobileTVShows: React.FC = () => {
                     >
                         {isAdding ? (
                             <div className="mobile-tvshow-card-spinner" />
+                        ) : isDone ? (
+                            <i className="fa-solid fa-check"></i>
                         ) : (
                             <i className={`fa-solid fa-check`}></i>
                         )}
@@ -364,7 +416,7 @@ const MobileTVShows: React.FC = () => {
                 )}
             </div>
         )
-    }, [addingEpisode, handleAddEpisode, getEpisodesLeft, getEpisodeInfo, isMobile, navigate])
+    }, [addingEpisode, completedEpisode, handleAddEpisode, getEpisodesLeft, getEpisodeInfo, isMobile, navigate])
 
     return (
         <section className="dashboard-page mobile-tvshows-page">
@@ -373,7 +425,7 @@ const MobileTVShows: React.FC = () => {
                 onClick={handleSwitchToNormal}
                 title="Switch to Normal View"
             >
-                <i className="fa-solid fa-desktop"></i>
+                <i className="fa-solid fa-list"></i>
             </button>
 <div className="dashboard-shell mobile-tvshows-shell">
                 {watching.length === 0 && toWatch.length === 0 && paused.length === 0 ? (

@@ -9486,8 +9486,7 @@ i.fa-solid.fa-trash:hover {
 .mobile-view-toggle-fixed {
     position: fixed;
     right: 0;
-    top: 50%;
-    transform: translateY(-50%);
+    top: calc(var(--navbar-height) + 5rem);
     background: rgba(18, 18, 28, 1);
     border: none;
     color: var(--color-platinum);
@@ -9501,6 +9500,13 @@ i.fa-solid.fa-trash:hover {
     transition: all 0.2s ease;
     font-size: 1.1rem;
     z-index: 1000;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 768px) {
+    .mobile-view-toggle-fixed {
+        top: calc(var(--navbar-height) + 4rem);
+    }
 }
 
 .selection-action-bar {
@@ -9663,6 +9669,15 @@ i.fa-solid.fa-trash:hover {
     font-weight: 500;
 }
 
+.mobile-tvshow-card-episode-title {
+    font-size: 0.72rem;
+    color: rgba(255, 255, 255, 0.55);
+    font-style: italic;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .mobile-tvshow-card-add-btn {
     flex-shrink: 0;
     width: 40px;
@@ -9812,11 +9827,9 @@ i.fa-solid.fa-trash:hover {
 
 .mobile-bottom-navbar-link {
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0.15rem;
-    padding: 0.8rem 1rem;
+    padding: 0.7rem 1rem;
     color: var(--color-platinum);
     text-decoration: none;
     font-size: 0.6rem;
@@ -9829,7 +9842,7 @@ i.fa-solid.fa-trash:hover {
 }
 
 .mobile-bottom-navbar-link i {
-    font-size: 0.95rem;
+    font-size: 1.15rem;
     transition: all 0.2s ease;
     line-height: 1;
 }
@@ -9844,6 +9857,8 @@ i.fa-solid.fa-trash:hover {
 
 .mobile-bottom-navbar-link.active {
     color: var(--color-primary);
+    background: rgba(133, 138, 227, 0.12);
+    border-radius: 14px;
 }
 
 .mobile-bottom-navbar-link.active i {

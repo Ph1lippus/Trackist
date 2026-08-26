@@ -140,7 +140,7 @@ const MobileMovies: React.FC = () => {
                 onClick={handleSwitchToNormal}
                 title="Switch to Normal View"
             >
-                <i className="fa-solid fa-desktop"></i>
+                <i className="fa-solid fa-list"></i>
             </button>
 <div className="dashboard-shell mobile-tvshows-shell">
                 {toWatch.length === 0 && watched.length === 0 ? (

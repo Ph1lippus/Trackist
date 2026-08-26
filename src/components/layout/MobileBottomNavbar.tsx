@@ -6,11 +6,11 @@ const MobileBottomNavbar: React.FC = () => {
     const { user } = useAuth();
 
     const navItems = [
-        { to: '/MobileTVShows', icon: 'fa-tv'},
-        { to: '/Movies', icon: 'fa-film'},
-        { to: '/Discover', icon: 'fa-compass'},
-        { to: '/UpcomingNew', icon: 'fa-calendar'},
-        { to: '/Profile', icon: 'fa-user'},
+        { to: '/MobileTVShows', icon: 'fa-tv', label: 'Shows'},
+        { to: '/MobileMovies', icon: 'fa-film', label: 'Movies'},
+        { to: '/Discover', icon: 'fa-compass', label: 'Discover'},
+        { to: '/UpcomingNew', icon: 'fa-calendar-check', label: 'Upcoming'},
+        { to: '/Profile', icon: 'fa-circle-user', label: 'Profile'},
     ];
 
     // Don't render if no user
@@ -26,6 +26,8 @@ const MobileBottomNavbar: React.FC = () => {
                         className={({ isActive }) =>
                             `mobile-bottom-navbar-link${isActive ? ' active' : ''}`
                         }
+                        title={item.label}
+                        aria-label={item.label}
                     >
                         <i className={`fas ${item.icon}`}></i>
                     </NavLink>

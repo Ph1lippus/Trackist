@@ -129,7 +129,7 @@ const Movies: React.FC = () => {
                     onClick={handleSwitchToMobile}
                     title="Switch to Mobile View"
                 >
-                    <i className="fa-solid fa-mobile-screen"></i>
+                    <i className="fa-solid fa-table-cells-large"></i>
                 </button>
             )}
             <div className="discover-container" style={{ width: '85%' }}>
