@@ -137,16 +137,6 @@ const AppContent: React.FC = () => {
         setShowUpdateModal(false)
     }
 
-    if (loading) {
-        return (
-            <div className="page-loader" aria-live="polite">
-                <div className="page-loader__content">
-                    <img src="/TRACK1ST-FULLNAMELGO.png?v=3" alt="Trackist" className="page-loader__logo" />
-                </div>
-            </div>
-        )
-    }
-
     const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Friends', '/Statistics', '/Finished', '/Lists', '/Profile', '/Admin', '/MobileTVShows', '/MobileMovies', '/Followers', '/Following']
     const hideFooter = Boolean(user) && (mediaPages.includes(location.pathname) || location.pathname === '/Settings' || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname.startsWith('/Lists/') || location.pathname.startsWith('/Profile/') || location.pathname.startsWith('/Movies/') || location.pathname.startsWith('/Followers') || location.pathname.startsWith('/Following'))
     

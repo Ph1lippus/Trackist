@@ -24,7 +24,6 @@ const MovieDetail: React.FC = () => {
     const { showLetterboxButton, loading: letterboxLoading } = useShowLetterboxButton()
     const { isMobile } = useMobile()
     const [details, setDetails] = useState<TMDBResult | null>(null)
-    const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
     const [showTrailer, setShowTrailer] = useState(false)
@@ -56,7 +55,6 @@ const MovieDetail: React.FC = () => {
     useEffect(() => {
         const fetchDetails = async () => {
             if (!id) return
-            setLoading(true)
             try {
                 const data = await getCachedOrFetch(
                     'movie-details',
@@ -76,7 +74,6 @@ const MovieDetail: React.FC = () => {
             } catch (err) {
                 console.error('Failed to load movie details:', err)
             }
-            setLoading(false)
         }
         fetchDetails()
     }, [id])
@@ -190,7 +187,7 @@ const MovieDetail: React.FC = () => {
         }
     }
 
-    if (!details && !loading) {
+    if (!details) {
         return <div className="detail-page-error">Movie not found</div>
     }
 

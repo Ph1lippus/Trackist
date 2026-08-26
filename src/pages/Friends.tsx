@@ -10,7 +10,6 @@ const FriendsPage = () => {
     usePageTitle('Trackist - Friends')
     const [currentUser, setCurrentUser] = useState<any>(null)
     const [following, setFollowing] = useState<any[]>([])
-    const [loading, setLoading] = useState(true)
     const [searchResults, setSearchResults] = useState<any[]>([])
     const [isSearching, setIsSearching] = useState(false)
     const { committedQuery } = useSearch()
@@ -34,10 +33,6 @@ const FriendsPage = () => {
                 }
             } catch (error) {
                 console.error('Error loading data:', error)
-            } finally {
-                if (active) {
-                    setLoading(false)
-                }
             }
         }
         load()
@@ -100,19 +95,6 @@ const FriendsPage = () => {
                 setFollowing(prev => [...prev, data])
             }
         }
-    }
-
-    if (loading) {
-        return (
-            <section className="friends-page">
-                <div className="friends-container">
-                    <div className="discover-loading">
-                        <div className="discover-spinner"></div>
-                        <p>Loading...</p>
-                    </div>
-                </div>
-            </section>
-        )
     }
 
     return (

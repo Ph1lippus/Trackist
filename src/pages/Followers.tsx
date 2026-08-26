@@ -13,7 +13,6 @@ const FollowersPage = () => {
     const [targetUser, setTargetUser] = useState<any>(null)
     const [followers, setFollowers] = useState<any[]>([])
     const [followLoading, setFollowLoading] = useState<Record<string, boolean>>({})
-    const [loading, setLoading] = useState(true)
     const [searchResults, setSearchResults] = useState<any[]>([])
     const [isSearching, setIsSearching] = useState(false)
     const { committedQuery } = useSearch()
@@ -43,10 +42,6 @@ const FollowersPage = () => {
                 }
             } catch (error) {
                 console.error('Error loading data:', error)
-            } finally {
-                if (active) {
-                    setLoading(false)
-                }
             }
         }
         load()
@@ -119,19 +114,6 @@ const FollowersPage = () => {
 
         setFollowLoading(prev => ({ ...prev, [userId]: false }))
     }, [currentUser, followingSet])
-
-    if (loading) {
-        return (
-            <section className="friends-page">
-                <div className="friends-container">
-                    <div className="discover-loading">
-                        <div className="discover-spinner"></div>
-                        <p>Loading...</p>
-                    </div>
-                </div>
-            </section>
-        )
-    }
 
     const displayName = targetUser?.display_name || 'your'
 

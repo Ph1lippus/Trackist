@@ -4,6 +4,7 @@ import { supabase } from '../services/supabaseClient'
 import type { User } from '@supabase/supabase-js'
 import { requestPasswordReset, updateUserEmail, getProfile, updateProfile } from '../services/profileService'
 import { useCache } from '../hooks/useCache'
+import { getCachedOrFetch } from '../services/cacheService'
 import { usePWAInstall } from '../hooks/usePWAInstall'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
@@ -18,7 +19,6 @@ const Settings: React.FC = () => {
     const navigate = useNavigate()
     const [currentUser, setCurrentUser] = useState<User | null>(null)
     const [activeSection, setActiveSection] = useState<SettingsSection>('account')
-    const [loading, setLoading] = useState(true)
 
     // Account states
     const [email, setEmail] = useState('')
@@ -69,7 +69,17 @@ const Settings: React.FC = () => {
             if (user) {
                 setEmail(user.email || '')
 
-                const { data: profileData } = await getProfile(user.id)
+                const cacheKey = `profile:${user.id}`
+                const profileData = await getCachedOrFetch(
+                    cacheKey,
+                    user.id,
+                    async () => {
+                        const { data } = await getProfile(user.id)
+                        return data
+                    },
+                    { ttl: 15 * 60 * 1000, staleWhileRevalidate: true }
+                )
+
                 if (profileData) {
                     setDisplayName(profileData.display_name || '')
                     setBio(profileData.bio || '')
@@ -78,8 +88,6 @@ const Settings: React.FC = () => {
                     setShowMediaCardIcons(profileData.show_media_card_icons === true)
                 }
             }
-
-            setLoading(false)
         }
 
         void loadSettings()
@@ -335,19 +343,6 @@ const Settings: React.FC = () => {
         }
 
         setIconsMessage('Preference updated successfully')
-    }
-
-    if (loading) {
-        return (
-            <section className="dashboard-page">
-                <div className="dashboard-shell">
-                    <div className="discover-loading">
-                        <div className="discover-spinner"></div>
-                        <p>Loading settings...</p>
-                    </div>
-                </div>
-            </section>
-        )
     }
 
     const sections: { id: SettingsSection; label: string; icon: string }[] = [

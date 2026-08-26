@@ -35,7 +35,6 @@ const ListsEditPage: React.FC = () => {
     const {
         selectedList,
         listItems,
-        loading,
         activeTab,
         setActiveTab,
         title,
@@ -103,17 +102,6 @@ const ListsEditPage: React.FC = () => {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selectedList, browseMediaType, sortBy, selectedGenre, committedQuery])
-
-    if (loading) {
-        return (
-            <section className="lists-page">
-                <div className="discover-loading">
-                    <div className="discover-spinner" />
-                    <p>Loading...</p>
-                </div>
-            </section>
-        )
-    }
 
     return (
         <div className="lists-page lists-page--split">

@@ -16,6 +16,7 @@ import { useLibraryStore } from '../stores/useLibraryStore'
 import type { WatchlistItem, TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
+import { getCachedOrFetch } from '../services/cacheService'
 import { VirtuosoGrid } from 'react-virtuoso'
 import { useMobile } from '../contexts/useMobile'
 import MediaCard from '../components/media/MediaCard'
@@ -53,7 +54,6 @@ const ProfilePage: React.FC = () => {
     const [isFollowingUser, setIsFollowingUser] = useState(false)
     const [followLoading, setFollowLoading] = useState(false)
     const [showUnfollowModal, setShowUnfollowModal] = useState(false)
-    const [loading, setLoading] = useState(true)
     const [watchlistItems, setWatchlistItems] = useState<WatchlistItem[]>([])
     const [userLists, setUserLists] = useState<UserList[]>([])
     const [activeTab, setActiveTab] = useState<TabType>('watching')
@@ -95,19 +95,33 @@ const ProfilePage: React.FC = () => {
         if (!username && !currentUser) return
 
         const loadProfile = async () => {
-            setLoading(true)
-
             try {
                 let profileData: ProfileData | null = null
                 let targetUserId: string | null = null
 
                 if (username) {
-                    const { data } = await getProfileByUsername(username)
-                    profileData = data as ProfileData | null
+                    const cacheKey = `profile:${username}`
+                    profileData = await getCachedOrFetch(
+                        cacheKey,
+                        username,
+                        async () => {
+                            const { data } = await getProfileByUsername(username)
+                            return data as ProfileData | null
+                        },
+                        { ttl: 15 * 60 * 1000, staleWhileRevalidate: true }
+                    )
                     targetUserId = profileData?.id || null
                 } else if (currentUser) {
-                    const { data } = await getProfile(currentUser.id)
-                    profileData = data as ProfileData | null
+                    const cacheKey = `profile:${currentUser.id}`
+                    profileData = await getCachedOrFetch(
+                        cacheKey,
+                        currentUser.id,
+                        async () => {
+                            const { data } = await getProfile(currentUser.id)
+                            return data as ProfileData | null
+                        },
+                        { ttl: 15 * 60 * 1000, staleWhileRevalidate: true }
+                    )
                     targetUserId = currentUser.id
                 }
 
@@ -197,8 +211,6 @@ const ProfilePage: React.FC = () => {
                 }
             } catch (error) {
                 console.error('[Profile] Failed to load profile:', error)
-            } finally {
-                setLoading(false)
             }
         }
 
@@ -277,19 +289,6 @@ const ProfilePage: React.FC = () => {
     const finishedItems = useMemo(() => watchlistItems.filter(item =>
         item.status === 'completed' || item.status === 'caught_up'
     ), [watchlistItems])
-
-    if (loading) {
-        return (
-            <section className="dashboard-page">
-                <div className="dashboard-shell">
-                    <div className="discover-loading">
-                        <div className="discover-spinner"></div>
-                        <p>Loading profile...</p>
-                    </div>
-                </div>
-            </section>
-        )
-    }
 
     if (!profile) {
         return (

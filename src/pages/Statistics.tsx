@@ -17,7 +17,6 @@ const formatHours = (minutes: number): string => {
 const Statistics: React.FC = () => {
     usePageTitle('Trackist - Statistics')
     const [episodeStats, setEpisodeStats] = useState<EpisodeStats>({ totalEpisodesWatched: 0, totalWatchTimeMinutes: 0 })
-    const [loading, setLoading] = useState(true)
 
     useEffect(() => {
         const fetchEpisodeStats = async () => {
@@ -32,7 +31,6 @@ const Statistics: React.FC = () => {
             } catch (err) {
                 console.error('Failed to fetch episode statistics:', err)
             }
-            setLoading(false)
         }
         fetchEpisodeStats()
     }, [])
@@ -167,14 +165,6 @@ const Statistics: React.FC = () => {
 
     const maxScoreCount = Math.max(...stats.scoreBuckets.map(b => b.count), 1)
     const maxYearCount = Math.max(...stats.yearsAdded.map(y => y.count), 1)
-
-    if (loading) return (
-        <section className="dashboard-page">
-            <div className="dashboard-shell">
-                <div className="discover-loading"><div className="discover-spinner" /><p>Loading statistics...</p></div>
-            </div>
-        </section>
-    )
 
     return (
         <div className="statistics-page">

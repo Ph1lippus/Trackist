@@ -50,7 +50,6 @@ const Admin: React.FC = () => {
     const globalUser = useAuthStore((state) => state.user)
     const globalAccessToken = useAuthStore((state) => state.accessToken)
     const [profile, setProfile] = useState<{ role: string | null } | null>(null)
-    const [adminLoading, setAdminLoading] = useState(true)
     const [activeTab, setActiveTab] = useState<TabType>('overview')
     const [profiles, setProfiles] = useState<ProfileRow[]>([])
     const [stats, setStats] = useState<AdminStats>({
@@ -110,11 +109,10 @@ const Admin: React.FC = () => {
     }
 
     useEffect(() => {
-        console.log('[Admin] Effect triggered:', { globalUser: !!globalUser, globalAccessToken: !!globalAccessToken, adminLoading })
+        console.log('[Admin] Effect triggered:', { globalUser: !!globalUser, globalAccessToken: !!globalAccessToken, adminLoading: false })
         
         if (!globalUser || !globalAccessToken) {
-            console.log('[Admin] No user or token, setting adminLoading false')
-            setAdminLoading(false)
+            console.log('[Admin] No user or token, setting profile to user')
             setProfile({ role: 'user' })
             return
         }
@@ -164,12 +162,6 @@ const Admin: React.FC = () => {
                 if (isActive) {
                     console.error('[Admin] checkAdmin race failed:', err)
                     setProfile({ role: 'user' })
-                }
-            })
-            .finally(() => {
-                if (isActive) {
-                    console.log('[Admin] Setting adminLoading false')
-                    setAdminLoading(false)
                 }
             })
 
@@ -510,18 +502,6 @@ const Admin: React.FC = () => {
         }
     }
 
-
-    if (adminLoading) {
-        return (
-            <section className="dashboard-page">
-                <div className="dashboard-shell">
-                    <div className="discover-loading">
-                        <button className="discover-loading__retry" onClick={() => window.location.reload()}>Retry</button>
-                    </div>
-                </div>
-            </section>
-        )
-    }
 
     if (!isAdmin || !globalUser) {
         return <Navigate to="/" replace />

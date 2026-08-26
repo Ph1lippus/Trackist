@@ -4,6 +4,7 @@ import { getTVDetails, getTVSeasonDetails, imageUrlOriginal } from '../services/
 import { markEpisodeWatched, unmarkEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { supabase } from '../services/supabaseClient'
+import { getCachedOrFetch } from '../services/cacheService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -24,7 +25,6 @@ const EpisodeDetail: React.FC = () => {
     usePageTitle('Trackist - Episode Detail')
     const [tvDetails, setTvDetails] = useState<TMDBResult | null>(null)
     const [episodeData, setEpisodeData] = useState<EpisodeData | null>(null)
-    const [loading, setLoading] = useState(true)
     const [isInWatchlist, setIsInWatchlist] = useState(false)
     const [watchlistId, setWatchlistId] = useState<string | null>(null)
     const [watched, setWatched] = useState(false)
@@ -37,11 +37,20 @@ const EpisodeDetail: React.FC = () => {
     useEffect(() => {
         const fetchData = async () => {
             if (!id || !season || !episode) return
-            setLoading(true)
             try {
                 const [tvData, seasonData] = await Promise.all([
-                    getTVDetails(Number(id)),
-                    getTVSeasonDetails(Number(id), Number(season))
+                    getCachedOrFetch(
+                        'tv-details',
+                        Number(id),
+                        () => getTVDetails(Number(id)),
+                        { ttl: 24 * 60 * 60 * 1000, staleWhileRevalidate: true }
+                    ),
+                    getCachedOrFetch(
+                        `tv-season-details:${id}-${season}`,
+                        `${id}-${season}`,
+                        () => getTVSeasonDetails(Number(id), Number(season)),
+                        { ttl: 24 * 60 * 60 * 1000, staleWhileRevalidate: true }
+                    )
                 ])
                 setTvDetails(tvData)
 
@@ -70,7 +79,6 @@ const EpisodeDetail: React.FC = () => {
             } catch (err) {
                 console.error('Failed to load episode details:', err)
             }
-            setLoading(false)
         }
         fetchData()
     }, [id, season, episode])
@@ -153,19 +161,6 @@ const EpisodeDetail: React.FC = () => {
             setWatched(true)
             console.error('Failed to unwatch episode:', err)
         }
-    }
-
-    if (loading) {
-        return (
-            <div className="detail-page">
-                <div className="detail-page__content">
-                    <div className="discover-loading">
-                        <div className="discover-spinner" />
-                        <p>Loading episode details...</p>
-                    </div>
-                </div>
-            </div>
-        )
     }
 
     if (!tvDetails || !episodeData) {

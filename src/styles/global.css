@@ -8349,7 +8349,7 @@ i.fa-solid.fa-trash:hover {
     right: 0;
     top: var(--navbar-height);
     bottom: 0;
-    width: 400px;
+    width: 450px;
     max-width: 90vw;
     height: 90vh;
     z-index: 50;
@@ -8942,8 +8942,6 @@ i.fa-solid.fa-trash:hover {
 /* ===== UPCOMING NEW PAGE (CARD LIST VIEW) ===== */
 .upcoming-new-page {
     padding: 0rem 0rem 2rem;
-    height: 100vh;
-    overflow: hidden;
 }
 
 .upcoming-new-shell {
@@ -8951,8 +8949,6 @@ i.fa-solid.fa-trash:hover {
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    height: 100%;
-    overflow-y: auto;
 }
 
 .upcoming-new-header {

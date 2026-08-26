@@ -17,7 +17,6 @@ const ListsDetail: React.FC = () => {
     const {
         selectedList,
         listItems,
-        loading,
         activeTab,
         setActiveTab,
         watchlistIds,
@@ -50,23 +49,12 @@ const ListsDetail: React.FC = () => {
         loadData()
     }, [id, loadListDetails, fetchWatchlistIds])
 
-    if (loading) {
-        return (
-            <section className="lists-page">
-                <div className="discover-loading">
-                    <div className="discover-spinner" />
-                    <p>Loading...</p>
-                </div>
-            </section>
-        )
-    }
-
     if (!selectedList) {
         return (
             <section className="lists-page">
-                <div className="discover-loading">
-                    <div className="discover-spinner" />
-                    <p>Loading...</p>
+                <div className="lists-page__empty-state">
+                    <i className="fa-solid fa-film"></i>
+                    <p>List not found or still loading.</p>
                 </div>
             </section>
         )

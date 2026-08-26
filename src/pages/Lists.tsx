@@ -7,7 +7,6 @@ const Lists: React.FC = () => {
     usePageTitle('Trackist - Lists')
     const {
         publicLists,
-        loading,
         filteredLists,
         committedQuery,
         fetchLists,
@@ -17,17 +16,6 @@ const Lists: React.FC = () => {
     useEffect(() => {
         fetchLists()
     }, [fetchLists])
-
-    if (loading) {
-        return (
-            <section className="lists-page">
-                <div className="discover-loading">
-                    <div className="discover-spinner" />
-                    <p>Loading...</p>
-                </div>
-            </section>
-        )
-    }
 
     return (
         <div className="lists-page">

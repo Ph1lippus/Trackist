@@ -88,7 +88,6 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
     const navigate = useNavigate()
     usePageTitle('Trackist - Upcoming')
     const [upcomingItems, setUpcomingItems] = useState<UpcomingItem[]>([])
-    const [loading, setLoading] = useState(true)
     const [selectedDate, setSelectedDate] = useState<{dateKey: string, items: UpcomingItem[]} | null>(null)
     const [dayCellInnerWidth, setDayCellInnerWidth] = useState(0)
     const calendarGridRef = useRef<HTMLDivElement>(null)
@@ -148,7 +147,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
     }, [])
 
     useEffect(() => {
-        if (loading) return
+        if (calendarGridRef.current) return
         const grid = calendarGridRef.current
         if (!grid) return
 
@@ -166,13 +165,12 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
             clearTimeout(timeout)
             observer.disconnect()
         }
-    }, [loading, measureDayCell])
+    }, [measureDayCell])
 
     useEffect(() => {
         const fetchUpcoming = async () => {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) {
-                setLoading(false)
                 return
             }
 
@@ -208,7 +206,6 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                 setUpcomingItems(freshItems.map(mapCalendarItem))
             }).then((items) => {
                 setUpcomingItems(items.map(mapCalendarItem))
-                setLoading(false)
             })
             return
         }
@@ -216,14 +213,6 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
     }, [])
 
     const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
-    if (loading) return (
-        <section className="dashboard-page">
-            <div className="dashboard-shell">
-                <div className="discover-loading"><div className="discover-spinner" /><p>Loading...</p></div>
-            </div>
-        </section>
-    )
 
     return (
         <section className="dashboard-page" style={{ height: '100vh', overflow: 'hidden' }}>

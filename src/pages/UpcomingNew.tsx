@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useMemo, useRef } from 'react'
+﻿import React, { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
@@ -52,18 +52,15 @@ const UpcomingNew: React.FC = () => {
     const navigate = useNavigate()
     usePageTitle('Trackist - Upcoming')
     const [upcomingItems, setUpcomingItems] = useState<UpcomingItem[]>([])
-    const [loading, setLoading] = useState(true)
-    const shellRef = useRef<HTMLDivElement>(null)
 
     const scrollToTop = () => {
-        shellRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+        window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
     useEffect(() => {
         const fetchUpcoming = async () => {
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) {
-                setLoading(false)
                 return
             }
 
@@ -99,7 +96,6 @@ const UpcomingNew: React.FC = () => {
                 setUpcomingItems(freshItems.map(mapCalendarItem))
             }).then((items) => {
                 setUpcomingItems(items.map(mapCalendarItem))
-                setLoading(false)
             })
         }
         fetchUpcoming()
@@ -126,17 +122,9 @@ const UpcomingNew: React.FC = () => {
         })
     }, [groupedItems])
 
-    if (loading) return (
-        <section className="dashboard-page">
-            <div className="dashboard-shell">
-                <div className="discover-loading"><div className="discover-spinner" /><p>Loading...</p></div>
-            </div>
-        </section>
-    )
-
     return (
         <section className="dashboard-page upcoming-new-page">
-            <div className="dashboard-shell upcoming-new-shell" ref={shellRef}>
+            <div className="dashboard-shell upcoming-new-shell">
                 {sortedGroupedItems.length === 0 ? (
                     <div className="upcoming-new-empty">
                         <h3>Nothing upcoming</h3>

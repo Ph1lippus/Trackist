@@ -154,6 +154,19 @@ export const useListsLogic = (): UseListsLogicResult => {
             return
         }
 
+        // Try cache first
+        const cachedLists = await cacheService.get<UserList[]>('lists', user.id)
+        const cachedPublicLists = await cacheService.get<UserList[]>('public-lists', user.id)
+        
+        if (cachedLists) {
+            setLists(cachedLists)
+            setLoading(false)
+        }
+        if (cachedPublicLists) {
+            setPublicLists(cachedPublicLists)
+            setLoading(false)
+        }
+
         // 1. Fetch lists (both user's own and public)
         const [userResult, publicResult] = await Promise.all([
             supabase
@@ -208,9 +221,54 @@ export const useListsLogic = (): UseListsLogicResult => {
         setLists(userListsWithPoster)
         setPublicLists(publicListsWithPoster)
         setLoading(false)
-}, [])
+        
+        // Cache results
+        await cacheService.set('lists', user.id, userListsWithPoster, 5 * 60 * 1000)
+        await cacheService.set('public-lists', user.id, publicListsWithPoster, 5 * 60 * 1000)
+    }, [])
 
     const fetchListItems = useCallback(async (listId: string) => {
+        // Try cache first
+        const cacheKey = `list_items:${listId}`
+        const cachedItems = await cacheService.get<ListItem[]>(cacheKey, listId)
+        
+        if (cachedItems) {
+            setListItems(cachedItems)
+            setListItemIds(new Set(cachedItems.map(item => item.tmdb_id)))
+
+            // Try to get watched items from cache first
+            const watchedCacheKey = `list_watched:${listId}`
+            const cachedWatched = await cacheService.get<number[]>(watchedCacheKey, listId)
+
+            if (cachedWatched) {
+                setWatchedListItems(new Set(cachedWatched))
+            } else {
+                // Fetch which of these items are watched from database
+                const { data: { user } } = await supabase.auth.getUser()
+                if (user) {
+                    const tmdbIds = cachedItems.map(item => item.tmdb_id)
+                    const { data: watchlistData } = await supabase
+                        .from('watchlist')
+                        .select('tmdb_id')
+                        .eq('user_id', user.id)
+                        .in('tmdb_id', tmdbIds)
+                        .in('status', ['completed', 'caught_up'])
+
+                    if (watchlistData) {
+                        const watchedIds = watchlistData.map(item => item.tmdb_id)
+                        setWatchedListItems(new Set(watchedIds))
+                        // Cache the result
+                        await cacheService.set(watchedCacheKey, listId, watchedIds, 5 * 60 * 1000)
+                    } else {
+                        setWatchedListItems(new Set())
+                    }
+                } else {
+                    setWatchedListItems(new Set())
+                }
+            }
+            return
+        }
+
         const { data, error } = await supabase
             .from('list_items')
             .select('*')
@@ -220,10 +278,12 @@ export const useListsLogic = (): UseListsLogicResult => {
         if (!error && data) {
             setListItems(data)
             setListItemIds(new Set(data.map(item => item.tmdb_id)))
+            // Cache the result
+            await cacheService.set(cacheKey, listId, data, 5 * 60 * 1000)
 
             // Try to get watched items from cache first
-            const cacheKey = `list_watched:${listId}`
-            const cachedWatched = await cacheService.get<number[]>(cacheKey, listId)
+            const watchedCacheKey = `list_watched:${listId}`
+            const cachedWatched = await cacheService.get<number[]>(watchedCacheKey, listId)
 
             if (cachedWatched) {
                 setWatchedListItems(new Set(cachedWatched))
@@ -243,7 +303,7 @@ export const useListsLogic = (): UseListsLogicResult => {
                         const watchedIds = watchlistData.map(item => item.tmdb_id)
                         setWatchedListItems(new Set(watchedIds))
                         // Cache the result
-                        await cacheService.set(cacheKey, listId, watchedIds, 5 * 60 * 1000)
+                        await cacheService.set(watchedCacheKey, listId, watchedIds, 5 * 60 * 1000)
                     } else {
                         setWatchedListItems(new Set())
                     }
@@ -271,6 +331,18 @@ export const useListsLogic = (): UseListsLogicResult => {
     const loadListDetails = useCallback(async (listId: string) => {
         setLoading(true)
         try {
+            // Try cache first
+            const cachedList = await cacheService.get<UserList>('list-details', listId)
+            if (cachedList) {
+                setSelectedList(cachedList)
+                setTitle(cachedList.title)
+                setDescription(cachedList.description || '')
+                setIsPublic(cachedList.is_public || false)
+                setIsNewList(false)
+                setLoading(false)
+                await fetchListItems(listId)
+            }
+
             const { data, error } = await supabase
                 .from('lists')
                 .select('*')
@@ -283,6 +355,7 @@ export const useListsLogic = (): UseListsLogicResult => {
                 setDescription(data.description || '')
                 setIsPublic(data.is_public || false)
                 setIsNewList(false)
+                await cacheService.set('list-details', listId, data, 5 * 60 * 1000)
                 await fetchListItems(listId)
             }
         } catch (err) {

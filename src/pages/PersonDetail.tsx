@@ -7,6 +7,7 @@ import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
 import MediaCard from '../components/media/MediaCard'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { useAuthStore } from '../stores/useAuthStore'
+import { getCachedOrFetch } from '../services/cacheService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 
 interface PersonDetails {
@@ -29,7 +30,6 @@ const PersonDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>()
     usePageTitle('Trackist - Person Detail')
     const [details, setDetails] = useState<PersonDetails | null>(null)
-    const [loading, setLoading] = useState(true)
     const [movies, setMovies] = useState<FilmographyItem[]>([])
     const [tvShows, setTVShows] = useState<FilmographyItem[]>([])
     const watchlistIds = useLibraryStore((state) => state.watchlistIds)
@@ -79,14 +79,17 @@ const PersonDetail: React.FC = () => {
     useEffect(() => {
         const fetchDetails = async () => {
             if (!id) return
-            setLoading(true)
             try {
-                const data = await getPersonDetails(Number(id))
+                const data = await getCachedOrFetch(
+                    'person-details',
+                    Number(id),
+                    () => getPersonDetails(Number(id)),
+                    { ttl: 24 * 60 * 60 * 1000, staleWhileRevalidate: true }
+                )
                 setDetails(data)
             } catch (err) {
                 console.error('Failed to load person details:', err)
             }
-            setLoading(false)
         }
         fetchDetails()
     }, [id])
@@ -133,19 +136,6 @@ const PersonDetail: React.FC = () => {
         }
         fetchCredits()
     }, [id])
-
-    if (loading) {
-        return (
-            <div className="detail-page">
-                <div className="detail-page__content">
-                    <div className="discover-loading">
-                        <div className="discover-spinner" />
-                        <p>Loading person details...</p>
-                    </div>
-                </div>
-            </div>
-        )
-    }
 
     if (!details) {
         return <div className="detail-page-error">Person not found</div>
