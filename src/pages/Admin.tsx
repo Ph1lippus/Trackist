@@ -116,81 +116,70 @@ const Admin: React.FC = () => {
     useEffect(() => {
         console.log('[Admin] Effect triggered:', { globalUser: !!globalUser, globalAccessToken: !!globalAccessToken, adminLoading })
         
-        if (!globalUser) {
-            console.log('[Admin] No globalUser, setting adminLoading false')
+        if (!globalUser || !globalAccessToken) {
+            console.log('[Admin] No user or token, setting adminLoading false')
             setAdminLoading(false)
             setProfile({ role: 'user' })
             return
         }
 
-        let isMounted = true
-        let maxTimeout: ReturnType<typeof setTimeout>
-        let timeoutId: ReturnType<typeof setTimeout>
+        let isActive = true
 
-        const MAX_TIMEOUT = 20000
+        const timeoutPromise = new Promise<never>((_, reject) => {
+            const id = setTimeout(() => reject(new Error('Admin check timeout')), 20000)
+        })
 
-        maxTimeout = setTimeout(() => {
-            console.warn('[Admin] MAX timeout reached (20s), forcing load complete')
-            if (isMounted && adminLoading) {
-                setAdminLoading(false)
-                setProfile({ role: 'user' })
-            }
-        }, MAX_TIMEOUT)
+        const checkPromise = (async () => {
+            const controller = new AbortController()
+            const timeoutId = setTimeout(() => controller.abort(), 8000)
 
-        const checkAdmin = async () => {
             try {
-                if (!globalAccessToken) {
-                    console.log('[Admin] No access token, setting role to user')
-                    if (isMounted) {
-                        setProfile({ role: 'user' })
-                        setAdminLoading(false)
-                    }
-                    return
+                const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin?_t=${Date.now()}`, {
+                    headers: { 'Authorization': `Bearer ${globalAccessToken}` },
+                    signal: controller.signal,
+                    cache: 'no-store'
+                })
+
+                if (!isActive) return null
+
+                if (res.ok) {
+                    const data = await res.json()
+                    console.log('[Admin] verify-admin data:', data)
+                    return { role: data.isAdmin ? 'admin' : 'user' }
+                } else {
+                    return { role: 'user' }
                 }
-
-                console.log('[Admin] Calling verify-admin...')
-                
-                const controller = new AbortController()
-                timeoutId = setTimeout(() => controller.abort(), 8000)
-
-                try {
-                    const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin?_t=${Date.now()}`, {
-                        headers: { 'Authorization': `Bearer ${globalAccessToken}` },
-                        signal: controller.signal,
-                        cache: 'no-store'
-                    })
-
-                    if (!isMounted) return
-
-                    if (res.ok) {
-                        const data = await res.json()
-                        console.log('[Admin] verify-admin data:', data)
-                        setProfile({ role: data.isAdmin ? 'admin' : 'user' })
-                    } else {
-                        setProfile({ role: 'user' })
-                    }
-                } catch (fetchError) {
-                    console.error('[Admin] verify-admin fetch failed:', fetchError)
-                    if (isMounted) setProfile({ role: 'user' })
-                } finally {
-                    clearTimeout(timeoutId)
-                }
+            } catch (fetchError) {
+                console.error('[Admin] verify-admin fetch failed:', fetchError)
+                if (!isActive) return null
+                return { role: 'user' }
             } finally {
-                if (isMounted) {
-                    clearTimeout(maxTimeout)
+                clearTimeout(timeoutId)
+            }
+        })()
+
+        Promise.race([checkPromise, timeoutPromise])
+            .then(result => {
+                if (isActive && result) {
+                    setProfile(result)
+                }
+            })
+            .catch(err => {
+                if (isActive) {
+                    console.error('[Admin] checkAdmin race failed:', err)
+                    setProfile({ role: 'user' })
+                }
+            })
+            .finally(() => {
+                if (isActive) {
                     console.log('[Admin] Setting adminLoading false')
                     setAdminLoading(false)
                 }
-            }
-        }
-
-        checkAdmin()
+            })
 
         return () => {
             console.log('[Admin] Effect cleanup')
-            isMounted = false
-            clearTimeout(timeoutId)
-            clearTimeout(maxTimeout)
+            isActive = false
         }
     }, [globalUser, globalAccessToken])
 
