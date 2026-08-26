@@ -3296,6 +3296,7 @@ html::before {
     flex-direction: column;
     gap: 1rem;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    padding-bottom: 2rem;
 }
 
 .lists-page__tabs {
@@ -3365,7 +3366,12 @@ html::before {
 .lists-page__discover-section {
     flex: 1;
     padding: 2rem;
+    padding-bottom: 4rem;
     overflow-y: auto;
+}
+
+.lists-page--split .lists-page__discover-section .discover-controls {
+    margin-bottom: 1.5rem;
 }
 
 .lists-page__discover-header {
@@ -4772,6 +4778,17 @@ button:focus-visible {
 .media-card__list-icon:hover {
     color: var(--color-primary);
     
+}
+
+.lists-page--split .media-card__list-icon,
+.lists-page--split .media-card__icon-btn {
+    display: flex;
+}
+
+@media (max-width: 768px) {
+    .lists-page--split .media-card__icon-btn {
+        display: flex !important;
+    }
 }
 
 .media-card__icon-btn {

@@ -23,6 +23,7 @@ export interface MediaCardProps {
     onSelect?: (item: ResultItem) => void
     hideAddButton?: boolean
     showIcons?: boolean
+    forceActionIcons?: boolean
 }
 /**
  * Stable, memoized media card.
@@ -50,6 +51,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
     onSelect,
     hideAddButton = false,
     showIcons = true,
+    forceActionIcons = false,
 }) => {
     const { isMobile } = useMobile()
     const isPerson = item.media_type === 'person'
@@ -120,10 +122,11 @@ const MediaCard: React.FC<MediaCardProps> = ({
         [onDelete, item],
     )
     const showAddButton = !compact && onAdd && !listMode && !hideAddButton && showIcons
-    const showAddToListButton = !compact && onAddToList && !isPerson && !listMode && showIcons
-    const showMarkWatched = !compact && !isPerson && onMarkWatched && !onMarkUnwatched && showIcons
-    const showMarkUnwatched = !compact && !isPerson && onMarkUnwatched && !onMarkWatched && showIcons
-    const showDeleteButton = !compact && onDelete && !isPerson && listMode && showIcons
+    const actionIconsVisible = showIcons || forceActionIcons
+    const showAddToListButton = !compact && onAddToList && !isPerson && !listMode && actionIconsVisible
+    const showMarkWatched = !compact && !isPerson && onMarkWatched && !onMarkUnwatched && actionIconsVisible
+    const showMarkUnwatched = !compact && !isPerson && onMarkUnwatched && !onMarkWatched && actionIconsVisible
+    const showDeleteButton = !compact && onDelete && !isPerson && listMode && actionIconsVisible
     const showInWatchlistIndicator =
         !compact && !isPerson && !onMarkWatched && !onMarkUnwatched && !onAdd && !onDelete && !listMode && !onAddToList && !selectable && !hideAddButton && showIcons
 
@@ -282,7 +285,8 @@ export default React.memo(MediaCard, (prev, next) => {
         prev.selectable === next.selectable &&
         prev.onSelect === next.onSelect &&
         prev.hideAddButton === next.hideAddButton &&
-        prev.showIcons === next.showIcons
+        prev.showIcons === next.showIcons &&
+        prev.forceActionIcons === next.forceActionIcons
     )
 })
 

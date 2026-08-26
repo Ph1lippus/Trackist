@@ -79,8 +79,8 @@ export interface UseListsLogicResult {
     handleDeleteItem: (item: ListItem) => void
     confirmDeleteItem: () => Promise<void>
     cancelDeleteItem: () => void
-    handleMoveUp: (item: ListItem, currentIndex: number) => Promise<void>
-    handleMoveDown: (item: ListItem, currentIndex: number) => Promise<void>
+    handleMoveUp: (item: ListItem) => Promise<void>
+    handleMoveDown: (item: ListItem) => Promise<void>
 
     // Computed
     filteredLists: UserList[]
@@ -400,6 +400,7 @@ export const useListsLogic = (): UseListsLogicResult => {
                     page,
                     sort_by: sortBy,
                     with_genres: selectedGenre ? String(selectedGenre) : undefined,
+                    vote_count_gte: browseMediaType === 'tv' ? 200 : 100,
                 }
 
                 if (browseMediaType === 'movie') {
@@ -783,10 +784,11 @@ export const useListsLogic = (): UseListsLogicResult => {
     }, [])
 
     // Reorder handlers
-    const handleMoveUp = useCallback(async (item: ListItem, currentIndex: number) => {
-        if (currentIndex === 0 || reordering) return
+    const handleMoveUp = useCallback(async (item: ListItem) => {
+        const itemIndex = listItems.findIndex(listItem => listItem.id === item.id)
+        if (itemIndex <= 0 || reordering) return
 
-        const prevItem = listItems[currentIndex - 1]
+        const prevItem = listItems[itemIndex - 1]
         if (!prevItem) return
 
         setReordering(item.id)
@@ -803,10 +805,11 @@ export const useListsLogic = (): UseListsLogicResult => {
         }
     }, [selectedList, listItems, reordering, fetchListItems, libraryStore])
 
-    const handleMoveDown = useCallback(async (item: ListItem, currentIndex: number) => {
-        if (currentIndex >= listItems.length - 1 || reordering) return
+    const handleMoveDown = useCallback(async (item: ListItem) => {
+        const itemIndex = listItems.findIndex(listItem => listItem.id === item.id)
+        if (itemIndex < 0 || itemIndex >= listItems.length - 1 || reordering) return
 
-        const nextItem = listItems[currentIndex + 1]
+        const nextItem = listItems[itemIndex + 1]
         if (!nextItem) return
 
         setReordering(item.id)
@@ -841,14 +844,8 @@ export const useListsLogic = (): UseListsLogicResult => {
         } else if (activeTab === 'tv') {
             items = listItems.filter(item => item.media_type === 'tv' || item.media_type === 'anime')
         }
-        // Exclude watched items from main list and sort by added_at (oldest first)
-        return [...items]
-            .filter(item => !watchedListItems.has(item.tmdb_id))
-            .sort((a, b) => {
-                const dateA = new Date(a.added_at || 0)
-                const dateB = new Date(b.added_at || 0)
-                return dateA.getTime() - dateB.getTime()
-            })
+        // Exclude watched items while preserving the saved list position.
+        return items.filter(item => !watchedListItems.has(item.tmdb_id))
     }, [listItems, activeTab, watchedListItems])
 
     // Filter watched items based on active tab
@@ -859,12 +856,7 @@ export const useListsLogic = (): UseListsLogicResult => {
         } else if (activeTab === 'tv') {
             items = items.filter(item => item.media_type === 'tv' || item.media_type === 'anime')
         }
-        // Sort by added_at to maintain consistent order (oldest first for stability)
-        return [...items].sort((a, b) => {
-            const dateA = new Date(a.added_at || 0)
-            const dateB = new Date(b.added_at || 0)
-            return dateA.getTime() - dateB.getTime()
-        })
+        return items
     }, [listItems, activeTab, watchedListItems])
 
     // Filter browse results to exclude items already in the list

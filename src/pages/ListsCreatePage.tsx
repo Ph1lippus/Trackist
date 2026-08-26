@@ -1,7 +1,6 @@
 import React, { useEffect, memo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
 import { useListsLogic } from '../hooks/useListsLogic'
 import MediaCard from '../components/media/MediaCard'
 import { VirtuosoGrid } from 'react-virtuoso'
@@ -10,24 +9,21 @@ import { useMobile } from '../contexts/useMobile'
 import type { TMDBResult } from '../types'
 
 // Memoized item renderer to prevent re-mounts during scroll
-const BrowseCard = memo(({ item, onAdd, showIcons }: { 
+const BrowseCard = memo(({ item, onAdd }: { 
     item: TMDBResult
     onAdd: (item: TMDBResult) => void
-    showIcons: boolean
 }) => (
     <MediaCard
         item={item}
         onAddToList={onAdd}
         isInWatchlist={false}
-        showIcons={showIcons}
+        forceActionIcons={true}
     />
 ))
 
 const ListsCreatePage: React.FC = () => {
     usePageTitle('Trackist - Create List')
     const navigate = useNavigate()
-    const { showIcons } = useMediaCardIcons()
-
     const { isMobile } = useMobile()
     
     const {
@@ -61,9 +57,15 @@ const ListsCreatePage: React.FC = () => {
     // Initialize new list and fetch browse data on mount
     useEffect(() => {
         initNewList()
-        fetchBrowseData(1, true)
         fetchWatchlistIds()
-    }, [initNewList, fetchBrowseData, fetchWatchlistIds])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initNewList, fetchWatchlistIds])
+
+    useEffect(() => {
+        fetchBrowseData(1, true)
+        // Fetch again whenever the Movies/TV Shows browse tab changes.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [browseMediaType])
 
     const handleCreate = async () => {
         await handleSave()
@@ -201,7 +203,6 @@ const ListsCreatePage: React.FC = () => {
                                     <BrowseCard
                                         item={item}
                                         onAdd={handleAddToList}
-                                        showIcons={showIcons}
                                     />
                                 )
                             }}

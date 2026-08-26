@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, memo } from 'react'
 import { useParams } from 'react-router-dom'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
 import { useListsLogic } from '../hooks/useListsLogic'
 import MediaCard from '../components/media/MediaCard'
 import { VirtuosoGrid } from 'react-virtuoso'
@@ -11,23 +10,21 @@ import { useMobile } from '../contexts/useMobile'
 import type { TMDBResult } from '../types'
 
 // Memoized item renderer to prevent re-mounts during scroll
-const BrowseCard = memo(({ item, onAdd, showIcons }: { 
+const BrowseCard = memo(({ item, onAdd }: { 
     item: TMDBResult
     onAdd: (item: TMDBResult) => void
-    showIcons: boolean
 }) => (
     <MediaCard
         item={item}
         onAddToList={onAdd}
         isInWatchlist={false}
-        showIcons={showIcons}
+        forceActionIcons={true}
     />
 ))
 
 const ListsEditPage: React.FC = () => {
     usePageTitle('Trackist - Lists')
     const { id } = useParams<{ id: string }>()
-    const { showIcons } = useMediaCardIcons()
     const hasInitializedRef = useRef(false)
 
     const { isMobile } = useMobile()
@@ -198,21 +195,21 @@ const ListsEditPage: React.FC = () => {
                         </div>
                     ) : (
                         <div className="lists-page__items-grid">
-                            {filteredListItems.map((item, index) => (
+                            {filteredListItems.map((item) => (
                                 <div key={item.id} className="lists-page__item-wrapper">
                                     <div className="lists-page__reorder-controls">
                                         <button
                                             className="lists-page__reorder-btn"
-                                            onClick={() => handleMoveUp(item, index)}
-                                            disabled={index === 0 || reordering === item.id}
+                                            onClick={() => handleMoveUp(item)}
+                                            disabled={listItems.indexOf(item) === 0 || reordering === item.id}
                                             title="Move up"
                                         >
                                             <i className="fa-solid fa-arrow-up"></i>
                                         </button>
                                         <button
                                             className="lists-page__reorder-btn"
-                                            onClick={() => handleMoveDown(item, index)}
-                                            disabled={index === listItems.length - 1 || reordering === item.id}
+                                            onClick={() => handleMoveDown(item)}
+                                            disabled={listItems.indexOf(item) === listItems.length - 1 || reordering === item.id}
                                             title="Move down"
                                         >
                                             <i className="fa-solid fa-arrow-down"></i>
@@ -228,7 +225,7 @@ const ListsEditPage: React.FC = () => {
                                         isInWatchlist={watchlistIds.has(item.tmdb_id)}
                                         listMode={true}
                                         onDelete={() => handleDeleteItem(item)}
-                                        showIcons={showIcons}
+                                        forceActionIcons={true}
                                     />
                                 </div>
                             ))}
@@ -303,7 +300,6 @@ const ListsEditPage: React.FC = () => {
                                     <BrowseCard
                                         item={item}
                                         onAdd={handleAddToList}
-                                        showIcons={showIcons}
                                     />
                                 )
                             }}

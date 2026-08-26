@@ -309,10 +309,19 @@ export const addToList = async (listId: string, item: {
     overview?: string
     vote_average?: number
 }) => {
+    const { data: lastItem } = await supabase
+        .from('list_items')
+        .select('position')
+        .eq('list_id', listId)
+        .order('position', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+
     return supabase
         .from('list_items')
         .insert({
             list_id: listId,
+            position: (lastItem?.position ?? -1) + 1,
             ...item
         })
 }
