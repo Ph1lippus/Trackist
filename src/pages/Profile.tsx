@@ -102,6 +102,10 @@ const ProfilePage: React.FC = () => {
     useEffect(() => {
         if (!username && !currentUser) return
 
+        let active = true
+        setProfile(null)
+        setIsProfileDataLoaded(false)
+
         const loadProfile = async () => {
             try {
                 let profileData: ProfileData | null = null
@@ -133,7 +137,10 @@ const ProfilePage: React.FC = () => {
                     targetUserId = currentUser.id
                 }
 
+                if (!active) return
                 setProfile(profileData)
+                // Let the profile header render while secondary profile data loads.
+                setIsProfileDataLoaded(true)
 
                 if (targetUserId && profileData) {
                     if (currentUser && currentUser.id !== targetUserId) {
@@ -200,6 +207,7 @@ const ProfilePage: React.FC = () => {
                             { ttl: 2 * 60 * 1000, staleWhileRevalidate: true }
                         )
                     ])
+                    if (!active) return
                     setFollowersCount(followersCountData || 0)
                     setFollowingCount(followingCountData || 0)
                     setWatchlistItems(items)
@@ -208,11 +216,14 @@ const ProfilePage: React.FC = () => {
             } catch (error) {
                 console.error('[Profile] Failed to load profile:', error)
             } finally {
-                setIsProfileDataLoaded(true)
+                if (active) setIsProfileDataLoaded(true)
             }
         }
 
         void loadProfile()
+        return () => {
+            active = false
+        }
     }, [username, currentUser])
 
     const handleFollow = async () => {
@@ -439,13 +450,13 @@ const ProfilePage: React.FC = () => {
                                     <VirtuosoGrid
                                         increaseViewportBy={{
                                             top: isMobile ? 200 : 400,
-                                            bottom: isMobile ? 400 : 800,
+                                            bottom: isMobile ? 120 : 240,
                                         }}
                                         computeItemKey={(index) => watchingTVShows[index]?.id ?? index}
                                         style={{ width: '100%' }}
                                         useWindowScroll={true}
                                         data={watchingTVShows}
-                                        overscan={isMobile ? 50 : 100}
+                                        overscan={isMobile ? 10 : 20}
                                         listClassName="discover-grid"
                                         itemContent={(index) => {
                                             const item = watchingTVShows[index]
@@ -484,13 +495,13 @@ const ProfilePage: React.FC = () => {
                                     <VirtuosoGrid
                                         increaseViewportBy={{
                                             top: isMobile ? 200 : 400,
-                                            bottom: isMobile ? 400 : 800,
+                                            bottom: isMobile ? 120 : 240,
                                         }}
                                         computeItemKey={(index) => moviesToWatch[index]?.id ?? index}
                                         style={{ width: '100%' }}
                                         useWindowScroll={true}
                                         data={moviesToWatch}
-                                        overscan={isMobile ? 50 : 100}
+                                        overscan={isMobile ? 10 : 20}
                                         listClassName="discover-grid"
                                         itemContent={(index) => {
                                             const item = moviesToWatch[index]
@@ -529,13 +540,13 @@ const ProfilePage: React.FC = () => {
                                     <VirtuosoGrid
                                         increaseViewportBy={{
                                             top: isMobile ? 200 : 400,
-                                            bottom: isMobile ? 400 : 800,
+                                            bottom: isMobile ? 120 : 240,
                                         }}
                                         computeItemKey={(index) => finishedItems[index]?.id ?? index}
                                         style={{ width: '100%' }}
                                         useWindowScroll={true}
                                         data={finishedItems}
-                                        overscan={isMobile ? 50 : 100}
+                                        overscan={isMobile ? 10 : 20}
                                         listClassName="discover-grid"
                                         itemContent={(index) => {
                                             const item = finishedItems[index]

@@ -49,7 +49,9 @@ const Admin: React.FC = () => {
     usePageTitle('Trackist - Admin')
     const globalUser = useAuthStore((state) => state.user)
     const globalAccessToken = useAuthStore((state) => state.accessToken)
+    const globalAuthLoading = useAuthStore((state) => state.loading)
     const [profile, setProfile] = useState<{ role: string | null } | null>(null)
+    const [adminCheckLoading, setAdminCheckLoading] = useState(true)
     const [activeTab, setActiveTab] = useState<TabType>('overview')
     const [profiles, setProfiles] = useState<ProfileRow[]>([])
     const [stats, setStats] = useState<AdminStats>({
@@ -114,6 +116,7 @@ const Admin: React.FC = () => {
         if (!globalUser || !globalAccessToken) {
             console.log('[Admin] No user or token, setting profile to user')
             setProfile({ role: 'user' })
+            setAdminCheckLoading(false)
             return
         }
 
@@ -141,12 +144,22 @@ const Admin: React.FC = () => {
                     console.log('[Admin] verify-admin data:', data)
                     return { role: data.isAdmin ? 'admin' : 'user' }
                 } else {
-                    return { role: 'user' }
+                    const { data: profileData } = await supabase
+                        .from('profiles')
+                        .select('role')
+                        .eq('id', globalUser.id)
+                        .single()
+                    return { role: profileData?.role || 'user' }
                 }
             } catch (fetchError) {
                 console.error('[Admin] verify-admin fetch failed:', fetchError)
                 if (!isActive) return null
-                return { role: 'user' }
+                const { data: profileData } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', globalUser.id)
+                    .single()
+                return { role: profileData?.role || 'user' }
             } finally {
                 clearTimeout(timeoutId)
             }
@@ -156,12 +169,14 @@ const Admin: React.FC = () => {
             .then(result => {
                 if (isActive && result) {
                     setProfile(result)
+                    setAdminCheckLoading(false)
                 }
             })
             .catch(err => {
                 if (isActive) {
                     console.error('[Admin] checkAdmin race failed:', err)
                     setProfile({ role: 'user' })
+                    setAdminCheckLoading(false)
                 }
             })
 
@@ -195,32 +210,21 @@ const Admin: React.FC = () => {
                 const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
                 const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
 
-                const { count: watchlistCount } = await supabase
-                    .from('watchlist')
-                    .select('*', { count: 'exact', head: true })
-
-                const { count: listsCount } = await supabase
-                    .from('lists')
-                    .select('*', { count: 'exact', head: true })
-
-                const { count: moviesCount } = await supabase
-                    .from('watchlist')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('media_type', 'movie')
-
-                const { count: tvCount } = await supabase
-                    .from('watchlist')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('media_type', 'tv')
-
-                const { count: completedCount } = await supabase
-                    .from('watchlist')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('status', 'completed')
-
-                const { count: episodesCount } = await supabase
-                    .from('watchlist_episodes')
-                    .select('*', { count: 'exact', head: true })
+                const [
+                    { count: watchlistCount },
+                    { count: listsCount },
+                    { count: moviesCount },
+                    { count: tvCount },
+                    { count: completedCount },
+                    { count: episodesCount }
+                ] = await Promise.all([
+                    supabase.from('watchlist').select('*', { count: 'exact', head: true }),
+                    supabase.from('lists').select('*', { count: 'exact', head: true }),
+                    supabase.from('watchlist').select('*', { count: 'exact', head: true }).eq('media_type', 'movie'),
+                    supabase.from('watchlist').select('*', { count: 'exact', head: true }).eq('media_type', 'tv'),
+                    supabase.from('watchlist').select('*', { count: 'exact', head: true }).eq('status', 'completed'),
+                    supabase.from('watchlist_episodes').select('*', { count: 'exact', head: true })
+                ])
 
                 const scoreData = await fetchAll<{ vote_average: number | null }>(
                     supabase
@@ -234,15 +238,10 @@ const Admin: React.FC = () => {
                     ? Math.round((scoreData.reduce((sum, item) => sum + (item.vote_average || 0), 0) / scoreData.length) * 10) / 10
                     : null
 
-                const { count: weekCount } = await supabase
-                    .from('profiles')
-                    .select('*', { count: 'exact', head: true })
-                    .gte('created_at', weekAgo)
-
-                const { count: monthCount } = await supabase
-                    .from('profiles')
-                    .select('*', { count: 'exact', head: true })
-                    .gte('created_at', monthAgo)
+                const [{ count: weekCount }, { count: monthCount }] = await Promise.all([
+                    supabase.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', weekAgo),
+                    supabase.from('profiles').select('*', { count: 'exact', head: true }).gte('created_at', monthAgo)
+                ])
 
                 setStats({
                     totalUsers: profilesData?.length || 0,
@@ -502,6 +501,10 @@ const Admin: React.FC = () => {
         }
     }
 
+
+    if (globalAuthLoading || (globalUser && adminCheckLoading)) {
+        return <div className="detail-page-loading" aria-live="polite">Checking admin access...</div>
+    }
 
     if (!isAdmin || !globalUser) {
         return <Navigate to="/" replace />
