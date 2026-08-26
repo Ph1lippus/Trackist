@@ -300,7 +300,7 @@
     }
 
     .credits-grid {
-        grid-template-columns: 1fr !important;
+        grid-template-columns: 1fr 1fr !important;
         gap: 0.75rem !important;
         margin-top: 1rem !important;
     }
