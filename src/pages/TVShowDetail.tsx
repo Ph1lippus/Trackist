@@ -242,6 +242,14 @@ const TVShowDetail: React.FC = () => {
                     .map((s: { season_number: number }) => s.season_number)
                 setSeasons(seasonList)
 
+                // Use stored progress before querying watched episodes so Season 1
+                // is never rendered briefly for shows the user has already started.
+                const storedSeason = watchlistItem?.current_season
+                const initialSeason = storedSeason && seasonList.includes(storedSeason)
+                    ? storedSeason
+                    : seasonList[0] || 1
+                setSelectedSeason(initialSeason)
+
                 // Get watched episodes from DB (these are episodes in watchlist_episodes table)
                 if (isInWatchlist && watchlistId) {
                     const watchedEps = await getWatchedEpisodes(watchlistId)
