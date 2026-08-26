@@ -151,7 +151,7 @@ const Admin: React.FC = () => {
                 console.log('[Admin] Calling verify-admin...')
                 
                 const controller = new AbortController()
-                const timeoutId = setTimeout(() => controller.abort(), 8000)
+                timeoutId = setTimeout(() => controller.abort(), 8000)
 
                 try {
                     const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-admin?_t=${Date.now()}`, {
