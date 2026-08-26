@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/useAuthStore'
 import { getProfileByUsername, getProfile, getFollowersList, followUser, unfollowUser } from '../services/profileService'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { cacheService, getCachedOrFetch } from '../services/cacheService'
 
 const FollowersPage = () => {
     usePageTitle('Trackist - Followers')
@@ -15,13 +16,13 @@ const FollowersPage = () => {
     const [followLoading, setFollowLoading] = useState<Record<string, boolean>>({})
     const [searchResults, setSearchResults] = useState<any[]>([])
     const [isSearching, setIsSearching] = useState(false)
+    const [isLoading, setIsLoading] = useState(true)
     const { committedQuery } = useSearch()
 
     useEffect(() => {
         let active = true
         const load = async () => {
             try {
-                await Promise.resolve()
                 const user = useAuthStore.getState().user
                 if (!user || !active) return
 
@@ -29,19 +30,31 @@ const FollowersPage = () => {
 
                 let targetUserId = user.id
                 if (username) {
-                    const { data: profileData } = await getProfileByUsername(username)
+                    const profileData = await getCachedOrFetch(
+                        'profile',
+                        username,
+                        async () => (await getProfileByUsername(username)).data,
+                        { ttl: 15 * 60 * 1000, staleWhileRevalidate: true }
+                    )
                     if (profileData && active) {
                         setTargetUser(profileData)
                         targetUserId = profileData.id
                     }
                 }
 
-                const { data: followersData } = await getFollowersList(targetUserId)
+                const followersData = await getCachedOrFetch(
+                    'followers',
+                    targetUserId,
+                    async () => (await getFollowersList(targetUserId)).data || [],
+                    { ttl: 2 * 60 * 1000, staleWhileRevalidate: true }
+                )
                 if (followersData && active) {
                     setFollowers(followersData)
                 }
             } catch (error) {
                 console.error('Error loading data:', error)
+            } finally {
+                if (active) setIsLoading(false)
             }
         }
         load()
@@ -101,10 +114,12 @@ const FollowersPage = () => {
 
         if (isCurrentlyFollowing) {
             await unfollowUser(currentUser.id, userId)
+            await cacheService.clearPattern('followers')
             setFollowers(prev => prev.filter(f => f.id !== userId))
             
         } else {
             await followUser(currentUser.id, userId)
+            await cacheService.clearPattern('followers')
             const { data } = await getProfile(userId)
             if (data) {
                 setFollowers(prev => [...prev, data])
@@ -175,7 +190,12 @@ const FollowersPage = () => {
                     </div>
                 )}
 
-                {followers.length > 0 ? (
+                {isLoading ? (
+                    <div className="discover-loading" aria-live="polite">
+                        <div className="discover-spinner"></div>
+                        <p>Loading followers...</p>
+                    </div>
+                ) : followers.length > 0 ? (
                     <div className="friends-results">
                         {followers.map((user) => (
                             <div key={user.id} className="friend-card">
