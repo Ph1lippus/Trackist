@@ -1829,6 +1829,7 @@ html::before {
 .detail-page__content,
 .profile-tabs,
 .settings-sidebar,
+.upcoming-side-panel-content,
 .upcoming-new-scroll-container {
     scrollbar-width: thin;
     scrollbar-color: rgba(133, 138, 227, 0.4) transparent;
@@ -1840,6 +1841,7 @@ html::before {
 .detail-page__content::-webkit-scrollbar,
 .profile-tabs::-webkit-scrollbar,
 .settings-sidebar::-webkit-scrollbar,
+.upcoming-side-panel-content::-webkit-scrollbar,
 .upcoming-new-scroll-container::-webkit-scrollbar {
     width: 10px;
     height: 10px;
@@ -1851,6 +1853,7 @@ html::before {
 .detail-page__content::-webkit-scrollbar-track,
 .profile-tabs::-webkit-scrollbar-track,
 .settings-sidebar::-webkit-scrollbar-track,
+.upcoming-side-panel-content::-webkit-scrollbar-track,
 .upcoming-new-scroll-container::-webkit-scrollbar-track {
     background: transparent;
     border-radius: 5px;
@@ -1862,6 +1865,7 @@ html::before {
 .detail-page__content::-webkit-scrollbar-thumb,
 .profile-tabs::-webkit-scrollbar-thumb,
 .settings-sidebar::-webkit-scrollbar-thumb,
+.upcoming-side-panel-content::-webkit-scrollbar-thumb,
 .upcoming-new-scroll-container::-webkit-scrollbar-thumb {
     background: rgba(133, 138, 227, 0.4);
     border-radius: 5px;
@@ -1874,6 +1878,7 @@ html::before {
 .detail-page__content::-webkit-scrollbar-thumb:hover,
 .profile-tabs::-webkit-scrollbar-thumb:hover,
 .settings-sidebar::-webkit-scrollbar-thumb:hover,
+.upcoming-side-panel-content::-webkit-scrollbar-thumb:hover,
 .upcoming-new-scroll-container::-webkit-scrollbar-thumb:hover {
     background: rgba(133, 138, 227, 0.65);
 }
@@ -2308,7 +2313,7 @@ html::before {
 }
 
 .detail-page__main--movie .detail-page__overview {
-    max-width: 50%;
+    max-width: 5%;
 }
 .detail-page__status {
     display: flex;

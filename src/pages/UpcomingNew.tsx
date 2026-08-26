@@ -64,6 +64,12 @@ const UpcomingNew: React.FC = () => {
                 return
             }
 
+            loadCalendar(user.id, (freshItems) => {
+                setUpcomingItems(freshItems.map(mapCalendarItem))
+            }).then((items) => {
+                setUpcomingItems(items.map(mapCalendarItem))
+            })
+
             const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
             const { data: staleShows } = await supabase
                 .from('watchlist')
@@ -92,11 +98,6 @@ const UpcomingNew: React.FC = () => {
                 }).catch(() => {})
             }
 
-            loadCalendar(user.id, (freshItems) => {
-                setUpcomingItems(freshItems.map(mapCalendarItem))
-            }).then((items) => {
-                setUpcomingItems(items.map(mapCalendarItem))
-            })
         }
         fetchUpcoming()
     }, [])

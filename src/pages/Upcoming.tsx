@@ -147,7 +147,6 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
     }, [])
 
     useEffect(() => {
-        if (calendarGridRef.current) return
         const grid = calendarGridRef.current
         if (!grid) return
 
@@ -173,6 +172,12 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
             if (!user) {
                 return
             }
+
+            loadCalendar(user.id, (freshItems) => {
+                setUpcomingItems(freshItems.map(mapCalendarItem))
+            }).then((items) => {
+                setUpcomingItems(items.map(mapCalendarItem))
+            })
 
             const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
             const { data: staleShows } = await supabase
@@ -202,11 +207,6 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                 }).catch(() => {})
             }
 
-            loadCalendar(user.id, (freshItems) => {
-                setUpcomingItems(freshItems.map(mapCalendarItem))
-            }).then((items) => {
-                setUpcomingItems(items.map(mapCalendarItem))
-            })
             return
         }
         fetchUpcoming()

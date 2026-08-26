@@ -1130,7 +1130,7 @@ const TVShowDetail: React.FC = () => {
                 <ConfirmModal
                     isOpen={statusChangeModal.isOpen}
                     title="Change Status"
-                    message="Choose a new status for this TV show. Paused shows will appear in your TV shows list, while dropped shows will appear in your finished list."
+                    message="Choose a new status for this TV show. Watching and paused shows will appear in your TV shows list, while dropped shows will appear in your finished list."
                     onConfirm={() => {}}
                     onCancel={() => setStatusChangeModal(null)}
                     confirmText=""
@@ -1138,6 +1138,33 @@ const TVShowDetail: React.FC = () => {
                     confirmColor="success"
                     customContent={
                         <div className="confirm-modal-actions" style={{ gap: '0.5rem' }}>
+                            {watchlistStatus !== 'watching' && (
+                                <button
+                                    onClick={async () => {
+                                        if (!watchlistId) return
+                                        setModalLoading(true)
+                                        try {
+                                            await useLibraryStore.getState().updateStatus(watchlistId, 'watching')
+                                            setStatusChangeModal(null)
+                                        } catch (err) {
+                                            console.error('Failed to update status:', err)
+                                        } finally {
+                                            setModalLoading(false)
+                                        }
+                                    }}
+                                    disabled={modalLoading}
+                                    className="confirm-modal-btn"
+                                    style={{
+                                        borderColor: 'rgba(104, 255, 174, 0.3)',
+                                        color: '#68ffae',
+                                        opacity: modalLoading ? 0.5 : 1,
+                                        cursor: modalLoading ? 'not-allowed' : 'pointer'
+                                    }}
+                                >
+                                    {modalLoading ? 'Updating...' : 'Watching'}
+                                </button>
+                            )}
+                            {watchlistStatus !== 'paused' && (
                             <button
                                 onClick={async () => {
                                     if (!watchlistId) return
@@ -1176,6 +1203,8 @@ const TVShowDetail: React.FC = () => {
                             >
                                 {modalLoading ? 'Updating...' : 'Paused'}
                             </button>
+                            )}
+                            {watchlistStatus !== 'dropped' && (
                             <button
                                 onClick={async () => {
                                     if (!watchlistId) return
@@ -1214,6 +1243,7 @@ const TVShowDetail: React.FC = () => {
                             >
                                 {modalLoading ? 'Updating...' : 'Dropped'}
                             </button>
+                            )}
                         </div>
                     }
                 />
