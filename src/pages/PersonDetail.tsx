@@ -30,6 +30,7 @@ const PersonDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>()
     usePageTitle('Trackist - Person Detail')
     const [details, setDetails] = useState<PersonDetails | null>(null)
+    const [detailsLoading, setDetailsLoading] = useState(true)
     const [movies, setMovies] = useState<FilmographyItem[]>([])
     const [tvShows, setTVShows] = useState<FilmographyItem[]>([])
     const watchlistIds = useLibraryStore((state) => state.watchlistIds)
@@ -77,8 +78,14 @@ const PersonDetail: React.FC = () => {
     }, [removeConfirmItem])
 
     useEffect(() => {
+        let active = true
         const fetchDetails = async () => {
-            if (!id) return
+            setDetails(null)
+            setDetailsLoading(true)
+            if (!id) {
+                setDetailsLoading(false)
+                return
+            }
             try {
                 const data = await getCachedOrFetch(
                     'person-details',
@@ -86,12 +93,17 @@ const PersonDetail: React.FC = () => {
                     () => getPersonDetails(Number(id)),
                     { ttl: 24 * 60 * 60 * 1000, staleWhileRevalidate: true }
                 )
-                setDetails(data)
+                if (active) setDetails(data)
             } catch (err) {
                 console.error('Failed to load person details:', err)
+            } finally {
+                if (active) setDetailsLoading(false)
             }
         }
-        fetchDetails()
+        void fetchDetails()
+        return () => {
+            active = false
+        }
     }, [id])
 
     useEffect(() => {
@@ -136,6 +148,10 @@ const PersonDetail: React.FC = () => {
         }
         fetchCredits()
     }, [id])
+
+    if (detailsLoading) {
+        return <div className="detail-page-loading" aria-live="polite">Loading person...</div>
+    }
 
     if (!details) {
         return <div className="detail-page-error">Person not found</div>
