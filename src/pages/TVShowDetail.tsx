@@ -37,6 +37,7 @@ const TVShowDetail: React.FC = () => {
     const { showStremioButton, loading: stremioLoading } = useShowStremioButton()
     const { isMobile } = useMobile()
     const [details, setDetails] = useState<TMDBResult | null>(null)
+    const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
     
@@ -144,7 +145,11 @@ const TVShowDetail: React.FC = () => {
 
     useEffect(() => {
         const fetchDetails = async () => {
-            if (!id) return
+            setLoading(true)
+            if (!id) {
+                setLoading(false)
+                return
+            }
             try {
                 const data = await getCachedOrFetch(
                     'tv-details',
@@ -163,6 +168,8 @@ const TVShowDetail: React.FC = () => {
                 }
             } catch (err) {
                 console.error('Failed to load TV show details:', err)
+            } finally {
+                setLoading(false)
             }
         }
         fetchDetails()
@@ -620,6 +627,10 @@ const TVShowDetail: React.FC = () => {
     }
 
     const filteredEpisodes = episodes.filter(ep => ep.season_number === selectedSeason)
+
+    if (loading) {
+        return <div className="detail-page-loading" aria-live="polite">Loading TV show...</div>
+    }
 
     if (!details) {
         return <div className="detail-page-error">TV Show not found</div>

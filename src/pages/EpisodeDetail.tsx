@@ -25,6 +25,7 @@ const EpisodeDetail: React.FC = () => {
     usePageTitle('Trackist - Episode Detail')
     const [tvDetails, setTvDetails] = useState<TMDBResult | null>(null)
     const [episodeData, setEpisodeData] = useState<EpisodeData | null>(null)
+    const [loading, setLoading] = useState(true)
     const [isInWatchlist, setIsInWatchlist] = useState(false)
     const [watchlistId, setWatchlistId] = useState<string | null>(null)
     const [watched, setWatched] = useState(false)
@@ -36,7 +37,11 @@ const EpisodeDetail: React.FC = () => {
 
     useEffect(() => {
         const fetchData = async () => {
-            if (!id || !season || !episode) return
+            setLoading(true)
+            if (!id || !season || !episode) {
+                setLoading(false)
+                return
+            }
             try {
                 const [tvData, seasonData] = await Promise.all([
                     getCachedOrFetch(
@@ -78,6 +83,8 @@ const EpisodeDetail: React.FC = () => {
                 }
             } catch (err) {
                 console.error('Failed to load episode details:', err)
+            } finally {
+                setLoading(false)
             }
         }
         fetchData()
@@ -161,6 +168,10 @@ const EpisodeDetail: React.FC = () => {
             setWatched(true)
             console.error('Failed to unwatch episode:', err)
         }
+    }
+
+    if (loading) {
+        return <div className="detail-page-loading" aria-live="polite">Loading episode...</div>
     }
 
     if (!tvDetails || !episodeData) {

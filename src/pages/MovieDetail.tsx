@@ -24,6 +24,7 @@ const MovieDetail: React.FC = () => {
     const { showLetterboxButton, loading: letterboxLoading } = useShowLetterboxButton()
     const { isMobile } = useMobile()
     const [details, setDetails] = useState<TMDBResult | null>(null)
+    const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
     const [showTrailer, setShowTrailer] = useState(false)
@@ -54,7 +55,11 @@ const MovieDetail: React.FC = () => {
 
     useEffect(() => {
         const fetchDetails = async () => {
-            if (!id) return
+            setLoading(true)
+            if (!id) {
+                setLoading(false)
+                return
+            }
             try {
                 const data = await getCachedOrFetch(
                     'movie-details',
@@ -73,6 +78,8 @@ const MovieDetail: React.FC = () => {
                 }
             } catch (err) {
                 console.error('Failed to load movie details:', err)
+            } finally {
+                setLoading(false)
             }
         }
         fetchDetails()
@@ -185,6 +192,10 @@ const MovieDetail: React.FC = () => {
         } finally {
             setModalLoading(false)
         }
+    }
+
+    if (loading) {
+        return <div className="detail-page-loading" aria-live="polite">Loading movie...</div>
     }
 
     if (!details) {
