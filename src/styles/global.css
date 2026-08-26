@@ -2313,7 +2313,7 @@ html::before {
 }
 
 .detail-page__main--movie .detail-page__overview {
-    max-width: 5%;
+    max-width: 65%;
 }
 .detail-page__status {
     display: flex;
