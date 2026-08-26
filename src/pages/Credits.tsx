@@ -1,6 +1,10 @@
 import React from 'react'
 import tmdbLogo from '../assets/TMDBLOGO.svg'
 import supaBaseLogo from '../assets/supabase-logo-icon.png'
+import reactLogo from '../assets/react-favicon.ico'
+import viteLogo from '../assets/vite-logo.svg'
+import vercelLogo from '../assets/vercel-favicon.ico'
+import fontAwesomeLogo from '../assets/fontawesome-favicon.ico'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 const credits = [
@@ -19,25 +23,25 @@ const credits = [
     {
         title: 'React',
         text: 'Built with React',
-        logo: 'https://react.dev/favicon.ico',
+        logo: reactLogo,
         link: 'https://react.dev/'
     },
     {
         title: 'Vite',
         text: 'Built with Vite',
-        logo: 'https://vite.dev/logo.svg',
+        logo: viteLogo,
         link: 'https://vite.dev/'
     },
     {
         title: 'Vercel',
         text: 'Deployed on Vercel',
-        logo: 'https://assets.vercel.com/image/upload/front/favicon/favicon.ico',
+        logo: vercelLogo,
         link: 'https://vercel.com/'
     },
     {
         title: 'Font Awesome',
         text: 'Icons by Font Awesome',
-        logo: 'https://fontawesome.com/favicon.ico',
+        logo: fontAwesomeLogo,
         link: 'https://fontawesome.com/'
     }
 ]
