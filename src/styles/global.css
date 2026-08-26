@@ -1,5 +1,8 @@
 ﻿
 @media (max-width: 768px) {
+    .detail-page___person {
+        max-width: 100% !important;
+    }
     .detail-page__main--movie .detail-page__overview {
         max-width: 100% !important;
     }

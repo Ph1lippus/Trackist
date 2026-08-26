@@ -10,6 +10,7 @@ const FriendsPage = () => {
     usePageTitle('Trackist - Friends')
     const [currentUser, setCurrentUser] = useState<any>(null)
     const [following, setFollowing] = useState<any[]>([])
+    const [isFollowingLoaded, setIsFollowingLoaded] = useState(false)
     const [searchResults, setSearchResults] = useState<any[]>([])
     const [isSearching, setIsSearching] = useState(false)
     const { committedQuery } = useSearch()
@@ -33,6 +34,8 @@ const FriendsPage = () => {
                 }
             } catch (error) {
                 console.error('Error loading data:', error)
+            } finally {
+                if (active) setIsFollowingLoaded(true)
             }
         }
         load()
@@ -193,12 +196,12 @@ const FriendsPage = () => {
                                 </div>
                             ))}
                         </div>
-                    ) : (
+                    ) : isFollowingLoaded ? (
                         <div className="discover-empty">
                             <i className="fa-solid fa-users-slash" style={{ fontSize: '2rem', opacity: 0.3, marginBottom: '1rem' }}></i>
                             <p>You're not following anyone yet. Use the search bar to find users.</p>
                         </div>
-                    )}
+                    ) : null}
                 </div>
             </div>
         </section>
