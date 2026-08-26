@@ -79,6 +79,14 @@ const AppContent: React.FC = () => {
     }, [])
 
     useEffect(() => {
+        if (isMobile && isPWA) {
+            document.documentElement.classList.add('pwa-mobile')
+        } else {
+            document.documentElement.classList.remove('pwa-mobile')
+        }
+    }, [isMobile, isPWA])
+
+    useEffect(() => {
         if (!loading && user && !hasUpdatedLastActive.current) {
             hasUpdatedLastActive.current = true
             void updateLastActive(user.id)

@@ -350,6 +350,11 @@ html {
     background-attachment: fixed;
 }
 
+.pwa-mobile,
+.pwa-mobile body {
+    overscroll-behavior-y: none;
+}
+
 html::before {
     content: "";
     position: fixed;
