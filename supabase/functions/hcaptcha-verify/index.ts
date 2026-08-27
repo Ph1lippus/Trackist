@@ -60,21 +60,8 @@ serve(async (req) => {
             )
         }
 
-        // Check score for enterprise features (score >= 0.5)
-        const score = result.score
-        if (typeof score === 'number' && score < 0.5) {
-            return new Response(
-                JSON.stringify({ 
-                    success: false, 
-                    error: 'Captcha score too low. Please try again.',
-                    score 
-                }),
-                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            )
-        }
-
         return new Response(
-            JSON.stringify({ success: true, score }),
+            JSON.stringify({ success: true, score: result.score }),
             { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
 
