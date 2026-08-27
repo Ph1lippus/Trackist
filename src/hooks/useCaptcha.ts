@@ -21,7 +21,8 @@ export function useCaptcha(): UseCaptchaReturn {
             })
 
             if (error) {
-                setCaptchaError(error.message || 'Captcha verification failed')
+                const message = typeof error === 'string' ? error : (error as any)?.message || 'Captcha verification failed'
+                setCaptchaError(message)
                 return false
             }
 
@@ -31,9 +32,9 @@ export function useCaptcha(): UseCaptchaReturn {
             }
 
             return true
-        } catch (err) {
+        } catch (err: any) {
             console.error('Captcha verification error:', err)
-            setCaptchaError('Captcha verification failed. Please try again.')
+            setCaptchaError(err?.message || 'Captcha verification failed. Please try again.')
             return false
         } finally {
             setVerifying(false)

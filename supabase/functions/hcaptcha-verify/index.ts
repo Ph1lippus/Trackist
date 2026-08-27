@@ -37,7 +37,10 @@ serve(async (req) => {
 
         const response = await fetch('https://hcaptcha.com/siteverify', {
             method: 'POST',
-            body: formData
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: formData.toString()
         })
 
         const result = await response.json()
