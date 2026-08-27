@@ -35,9 +35,11 @@ const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify, onError, ac
     const initializedRef = useRef(false)
     const onVerifyRef = useRef(onVerify)
     const onErrorRef = useRef(onError)
+    const actionRef = useRef(action)
 
     onVerifyRef.current = onVerify
     onErrorRef.current = onError
+    actionRef.current = action
 
     const cleanup = useCallback(() => {
         if (widgetIdRef.current && window.hcaptcha) {
@@ -59,9 +61,11 @@ const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify, onError, ac
                     console.error('hCaptcha execute error:', err)
                     onErrorRef.current?.('Captcha execution failed. Please try again.')
                 }
+            } else {
+                console.warn('hCaptcha not initialized for action:', actionRef.current)
             }
         }
-    }), [])
+    }), [cleanup])
 
     useEffect(() => {
         const siteKey = import.meta.env.VITE_HCAPTCHA_SITE_KEY
@@ -94,19 +98,23 @@ const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify, onError, ac
             widgetIdRef.current = window.hcaptcha!.render(containerRef.current, {
                 sitekey: siteKey,
                 callback: (token: string) => {
+                    console.log('hCaptcha verified for action:', actionRef.current)
                     onVerifyRef.current(token)
                 },
                 'expired-callback': () => {
+                    console.warn('hCaptcha expired for action:', actionRef.current)
                     if (widgetIdRef.current) {
                         window.hcaptcha!.reset(widgetIdRef.current)
                     }
                 },
-                'error-callback': () => {
+                'error-callback': (err: any) => {
+                    console.error('hCaptcha error for action:', actionRef.current, err)
                     onErrorRef.current?.('Captcha verification failed. Please try again.')
                 },
                 size: 'invisible'
             })
             initializedRef.current = true
+            console.log('hCaptcha initialized for action:', action)
         }
 
         if (!document.getElementById('hcaptcha-script')) {
