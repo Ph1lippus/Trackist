@@ -455,31 +455,85 @@ const TVShowDetail: React.FC = () => {
         if (!watchlistId || !details) return
 
         if (markAll) {
-            // Mark all episodes up to and including this one
-            const episodesToMark = episodes.filter(ep => {
-                if (ep.season_number < episode.season_number) {
-                    if (!isEpisodeReleased(ep)) return false
-                    return true
-                }
-                if (ep.season_number === episode.season_number && ep.episode_number <= episode.episode_number) {
-                    if (!isEpisodeReleased(ep)) return false
-                    return true
-                }
-                return false
-            })
+            const episodesToMark: LocalEpisode[] = []
 
-            // Optimistically update local state
-            setEpisodes(prev => prev.map(ep => {
-                const shouldMark = isEpisodeReleased(ep) && (
-                    ep.season_number < episode.season_number ||
-                    (ep.season_number === episode.season_number && ep.episode_number <= episode.episode_number)
-                )
-                return shouldMark ? { ...ep, watched: true } : ep
-            }))
+            for (const ep of episodes) {
+                if (ep.season_number < episode.season_number && isEpisodeReleased(ep)) {
+                    episodesToMark.push(ep)
+                } else if (ep.season_number === episode.season_number && ep.episode_number <= episode.episode_number && isEpisodeReleased(ep)) {
+                    episodesToMark.push(ep)
+                }
+            }
+
+            const uncachedEarlierSeasons = seasons.filter(s => s < episode.season_number && !seasonCache.current.has(s))
+
+            const seasonPromises = uncachedEarlierSeasons.map(s =>
+                getTVSeasonDetails(Number(id), s).then(data => data.episodes || [])
+            )
+            const earlierSeasonEpisodes = await Promise.all(seasonPromises)
+
+            for (let i = 0; i < earlierSeasonEpisodes.length; i++) {
+                const s = uncachedEarlierSeasons[i]
+                for (const ep of earlierSeasonEpisodes[i]) {
+                    const localEp: LocalEpisode = {
+                        id: `${id}-${s}-${ep.episode_number}`,
+                        season_number: s,
+                        episode_number: ep.episode_number,
+                        tmdb_episode_id: ep.id,
+                        title: ep.name,
+                        still_path: ep.still_path ?? undefined,
+                        overview: ep.overview,
+                        vote_average: ep.vote_average,
+                        air_date: ep.air_date,
+                        runtime: ep.runtime,
+                        watched: false
+                    }
+                    if (isEpisodeReleased(localEp)) {
+                        episodesToMark.push(localEp)
+                    }
+                }
+            }
 
             try {
                 const success = await markEpisodesWatched(watchlistId, episodesToMark)
                 if (!success) throw new Error('Failed to mark episodes as watched')
+
+                const newCurrentSeason = episode.season_number
+                const newCurrentEpisode = episode.episode_number
+                const newStatus = 'watching'
+
+                useLibraryStore.setState(state => ({
+                    allItems: state.allItems.map(item =>
+                        item.id === watchlistId ? { ...item, current_season: newCurrentSeason, current_episode: newCurrentEpisode, status: newStatus, updated_at: new Date().toISOString() } : item
+                    ),
+                    tvShows: state.tvShows.map(item =>
+                        item.id === watchlistId ? { ...item, current_season: newCurrentSeason, current_episode: newCurrentEpisode, status: newStatus, updated_at: new Date().toISOString() } : item
+                    ),
+                    movies: state.movies.map(item =>
+                        item.id === watchlistId ? { ...item, current_season: newCurrentSeason, current_episode: newCurrentEpisode, status: newStatus, updated_at: new Date().toISOString() } : item
+                    ),
+                    finished: state.finished.filter(item => item.id !== watchlistId)
+                }))
+
+                for (const ep of episodesToMark) {
+                    const key = `${ep.season_number}-${ep.episode_number}`
+                    watchedKeysCache.current.add(key)
+                    const cached = seasonCache.current.get(ep.season_number)
+                    if (cached) {
+                        const idx = cached.findIndex(c => c.season_number === ep.season_number && c.episode_number === ep.episode_number)
+                        if (idx !== -1) {
+                            cached[idx] = { ...cached[idx], watched: true }
+                        }
+                    }
+                }
+
+                setEpisodes(prev => prev.map(ep => {
+                    const shouldMark = isEpisodeReleased(ep) && (
+                        ep.season_number < episode.season_number ||
+                        (ep.season_number === episode.season_number && ep.episode_number <= episode.episode_number)
+                    )
+                    return shouldMark ? { ...ep, watched: true } : ep
+                }))
 
                 void (async () => {
                     try {
@@ -492,7 +546,6 @@ const TVShowDetail: React.FC = () => {
                 })()
             } catch (err) {
                 console.error('Failed to mark episodes:', err)
-                // Revert on error
                 setEpisodes(prev => prev.map(ep => {
                     const shouldMark = isEpisodeReleased(ep) && (
                         ep.season_number < episode.season_number ||
