@@ -15,8 +15,6 @@ serve(async (req) => {
         const body = await req.json().catch(() => null)
         const token = body?.token
 
-        console.log('hcaptcha-verify request body keys:', Object.keys(body || {}))
-
         if (!token || typeof token !== 'string' || token.trim().length === 0) {
             return new Response(
                 JSON.stringify({ success: false, error: 'Missing captcha token' }),
@@ -37,6 +35,11 @@ serve(async (req) => {
         const formData = new URLSearchParams()
         formData.append('secret', secretKey)
         formData.append('response', token.trim())
+
+        const remoteIp = req.headers.get('x-real_ip') || req.headers.get('cf_connecting_ip')
+        if (remoteIp) {
+            formData.append('remoteip', remoteIp)
+        }
 
         const response = await fetch('https://hcaptcha.com/siteverify', {
             method: 'POST',
