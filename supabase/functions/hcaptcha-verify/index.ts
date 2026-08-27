@@ -12,9 +12,12 @@ serve(async (req) => {
     }
 
     try {
-        const { token } = await req.json()
+        const body = await req.json().catch(() => null)
+        const token = body?.token
 
-        if (!token) {
+        console.log('hcaptcha-verify request body keys:', Object.keys(body || {}))
+
+        if (!token || typeof token !== 'string' || token.trim().length === 0) {
             return new Response(
                 JSON.stringify({ success: false, error: 'Missing captcha token' }),
                 { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -33,7 +36,7 @@ serve(async (req) => {
 
         const formData = new URLSearchParams()
         formData.append('secret', secretKey)
-        formData.append('response', token)
+        formData.append('response', token.trim())
 
         const response = await fetch('https://hcaptcha.com/siteverify', {
             method: 'POST',
@@ -45,6 +48,7 @@ serve(async (req) => {
 
         const result = await response.json()
 
+        console.log('hCaptcha siteverify status:', response.status)
         console.log('hCaptcha siteverify result:', JSON.stringify(result))
 
         if (!result.success) {
