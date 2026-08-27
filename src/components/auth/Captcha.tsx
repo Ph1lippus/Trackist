@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useCallback } from 'react'
 
 interface CaptchaProps {
     onVerify: (token: string) => void
@@ -29,6 +29,17 @@ const Captcha: React.FC<CaptchaProps> = ({ onVerify, onError, action = 'login' }
     const containerRef = useRef<HTMLDivElement>(null)
     const widgetIdRef = useRef<string | null>(null)
     const scriptLoadedRef = useRef(false)
+    const initializedRef = useRef(false)
+
+    const cleanup = useCallback(() => {
+        if (widgetIdRef.current && window.hcaptcha) {
+            try {
+                window.hcaptcha.reset(widgetIdRef.current)
+            } catch {
+            }
+            widgetIdRef.current = null
+        }
+    }, [])
 
     useEffect(() => {
         const siteKey = import.meta.env.VITE_HCAPTCHA_SITE_KEY
@@ -37,6 +48,9 @@ const Captcha: React.FC<CaptchaProps> = ({ onVerify, onError, action = 'login' }
             console.warn('hCaptcha site key not configured')
             return
         }
+
+        // Cleanup previous widget if any
+        cleanup()
 
         const loadScript = () => {
             if (scriptLoadedRef.current || document.getElementById('hcaptcha-script')) {
@@ -58,7 +72,7 @@ const Captcha: React.FC<CaptchaProps> = ({ onVerify, onError, action = 'login' }
         }
 
         const initCaptcha = () => {
-            if (!window.hcaptcha || !containerRef.current) return
+            if (!window.hcaptcha || !containerRef.current || initializedRef.current) return
 
             try {
                 widgetIdRef.current = window.hcaptcha.render(containerRef.current, {
@@ -76,6 +90,7 @@ const Captcha: React.FC<CaptchaProps> = ({ onVerify, onError, action = 'login' }
                     },
                     size: 'invisible'
                 })
+                initializedRef.current = true
             } catch (err) {
                 console.error('hCaptcha init error:', err)
                 onError?.('Captcha initialization failed')
@@ -85,14 +100,10 @@ const Captcha: React.FC<CaptchaProps> = ({ onVerify, onError, action = 'login' }
         loadScript()
 
         return () => {
-            if (widgetIdRef.current && window.hcaptcha) {
-                try {
-                    window.hcaptcha.reset(widgetIdRef.current)
-                } catch {
-                }
-            }
+            cleanup()
+            initializedRef.current = false
         }
-    }, [action, onVerify, onError])
+    }, [action, onVerify, onError, cleanup])
 
     return (
         <div ref={containerRef} style={{ display: 'none' }} aria-hidden="true" />
