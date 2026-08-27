@@ -99,7 +99,7 @@ const Movies: React.FC = () => {
     }, [movies, committedQuery])
 
     const isMovieReleased = (item: WatchlistItem): boolean => {
-        if (!item.release_date) return true
+        if (!item.release_date) return false
         const releaseDate = new Date(item.release_date)
         const today = new Date()
         return releaseDate <= today

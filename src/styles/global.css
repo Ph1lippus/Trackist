@@ -6812,6 +6812,81 @@ i.fa-solid.fa-trash:hover {
     background: rgba(133, 138, 227, 0.1);
 }
 
+.admin-refresh-section {
+    display: flex;
+    justify-content: center;
+}
+
+.admin-refresh-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 20px;
+    padding: 1.25rem 1.5rem;
+    width: 100%;
+    flex-wrap: wrap;
+}
+
+.admin-refresh-card__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: rgba(133, 138, 227, 0.1);
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.admin-refresh-card__content {
+    flex: 1;
+    min-width: 200px;
+}
+
+.admin-refresh-card__content h3 {
+    margin: 0 0 0.25rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-platinum);
+}
+
+.admin-refresh-card__content p {
+    margin: 0;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.admin-refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1.25rem;
+    border: none;
+    border-radius: 12px;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.admin-refresh-btn:hover:not(:disabled) {
+    background: rgba(133, 138, 227, 0.85);
+    transform: translateY(-1px);
+}
+
+.admin-refresh-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
 .admin-users-cards {
     display: none;
     flex-direction: column;

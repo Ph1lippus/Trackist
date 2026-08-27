@@ -78,6 +78,7 @@ const Admin: React.FC = () => {
     const [avatarUploading, setAvatarUploading] = useState(false)
     const [avatarMessage, setAvatarMessage] = useState<{ userId: string; text: string; type: 'success' | 'error' } | null>(null)
     const [pendingAvatarUserId, setPendingAvatarUserId] = useState<string | null>(null)
+    const [refreshingUpcoming, setRefreshingUpcoming] = useState(false)
     const avatarInputRef = useRef<HTMLInputElement>(null)
 
     const isAdmin = profile?.role === "admin"
@@ -501,6 +502,43 @@ const Admin: React.FC = () => {
         }
     }
 
+    const handleRefreshUpcoming = async () => {
+        if (refreshingUpcoming || !globalUser) return
+        setRefreshingUpcoming(true)
+        try {
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL?.trim()
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session?.access_token) throw new Error('No active session')
+
+            const cacheKey = `trackist-calendar:${globalUser.id}`
+            localStorage.removeItem(cacheKey)
+
+            const res = await fetch(`${supabaseUrl}/functions/v1/get-upcoming-calendar`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`
+                },
+                body: JSON.stringify({ userId: globalUser.id })
+            })
+
+            if (!res.ok) throw new Error(`Edge function failed with status ${res.status}`)
+
+            const data = await res.json()
+            const upcoming = data.upcoming || []
+
+            const cache = { upcoming, last_fetched_timestamp: Date.now() }
+            localStorage.setItem(cacheKey, JSON.stringify(cache))
+
+            setAvatarMessage(null)
+        } catch (err) {
+            console.error('Failed to refresh upcoming cache:', err)
+            setAvatarMessage({ userId: globalUser.id, text: 'Failed to refresh upcoming cache.', type: 'error' })
+        } finally {
+            setRefreshingUpcoming(false)
+        }
+    }
+
 
     if (globalAuthLoading || (globalUser && adminCheckLoading)) {
         return <div className="detail-page-loading" aria-live="polite">Checking admin access...</div>
@@ -552,6 +590,7 @@ const Admin: React.FC = () => {
                 </div>
 
                 {activeTab === 'overview' && (
+                    <>
                     <div className="admin-stats-grid">
                         <div className="stats-hero-card stats-hero-card--primary">
                             <div className="stats-hero-card__icon"><i className="fas fa-users"></i></div>
@@ -604,6 +643,30 @@ const Admin: React.FC = () => {
                             <div className="stats-hero-card__label">New This Month</div>
                         </div>
                     </div>
+
+                    <div className="admin-refresh-section">
+                        <div className="admin-refresh-card">
+                            <div className="admin-refresh-card__icon">
+                                <i className="fas fa-rotate"></i>
+                            </div>
+                            <div className="admin-refresh-card__content">
+                                <h3>Upcoming Cache</h3>
+                                <p>Force refresh the upcoming calendar cache and reload the edge function.</p>
+                            </div>
+                            <button
+                                className="admin-refresh-btn"
+                                onClick={handleRefreshUpcoming}
+                                disabled={refreshingUpcoming}
+                            >
+                                {refreshingUpcoming ? (
+                                    <><i className="fas fa-spinner fa-spin"></i> Refreshing...</>
+                                ) : (
+                                    <><i className="fas fa-rotate"></i> Refresh Cache</>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                    </>
                 )}
 
                 {activeTab === 'users' && (
