@@ -1,9 +1,13 @@
-import React, { useEffect, useRef, useCallback } from 'react'
+import React, { useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react'
 
 interface CaptchaProps {
     onVerify: (token: string) => void
     onError?: (error: string) => void
     action?: string
+}
+
+export interface CaptchaHandle {
+    execute: () => void
 }
 
 declare global {
@@ -25,7 +29,7 @@ declare global {
     }
 }
 
-const Captcha: React.FC<CaptchaProps> = ({ onVerify, onError, action = 'login' }) => {
+const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify, onError, action = 'login' }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null)
     const widgetIdRef = useRef<string | null>(null)
     const initializedRef = useRef(false)
@@ -45,6 +49,19 @@ const Captcha: React.FC<CaptchaProps> = ({ onVerify, onError, action = 'login' }
         }
         initializedRef.current = false
     }, [])
+
+    useImperativeHandle(ref, () => ({
+        execute: () => {
+            if (widgetIdRef.current && window.hcaptcha) {
+                try {
+                    window.hcaptcha.execute(widgetIdRef.current)
+                } catch (err) {
+                    console.error('hCaptcha execute error:', err)
+                    onErrorRef.current?.('Captcha execution failed. Please try again.')
+                }
+            }
+        }
+    }), [])
 
     useEffect(() => {
         const siteKey = import.meta.env.VITE_HCAPTCHA_SITE_KEY
@@ -114,6 +131,8 @@ const Captcha: React.FC<CaptchaProps> = ({ onVerify, onError, action = 'login' }
     return (
         <div ref={containerRef} style={{ display: 'none' }} aria-hidden="true" />
     )
-}
+})
+
+Captcha.displayName = 'Captcha'
 
 export default Captcha

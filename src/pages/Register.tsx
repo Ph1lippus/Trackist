@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { checkDisplayNameExists } from '../services/profileService'
@@ -7,7 +7,7 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import { useAuthRateLimit } from '../hooks/useAuthRateLimit'
 import { useCaptcha } from '../hooks/useCaptcha'
 import { checkPasswordBreach, isHIBPEnabled } from '../services/hibpService'
-import Captcha from '../components/auth/Captcha'
+import Captcha, { CaptchaHandle } from '../components/auth/Captcha'
 import PasswordStrengthMeter from '../components/auth/PasswordStrengthMeter'
 
 const Register: React.FC = () => {
@@ -26,6 +26,7 @@ const Register: React.FC = () => {
     const rateLimited = !allowed && !isChecking
     const { verifyCaptcha, captchaError, verifying } = useCaptcha()
     const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+    const captchaRef = useRef<CaptchaHandle>(null)
 
     const handleCaptchaVerify = (token: string) => {
         setCaptchaToken(token)
@@ -41,7 +42,7 @@ const Register: React.FC = () => {
         
         // Verify captcha first
         if (!captchaToken) {
-            // Trigger invisible captcha
+            captchaRef.current?.execute()
             return
         }
 
@@ -222,7 +223,7 @@ const Register: React.FC = () => {
                             {captchaError && (
                                 <div className="auth-alert auth-alert--error">{captchaError}</div>
                             )}
-                            <Captcha onVerify={handleCaptchaVerify} onError={(err: string) => setError(err)} action="register" />
+                            <Captcha ref={captchaRef} onVerify={handleCaptchaVerify} onError={(err: string) => setError(err)} action="register" />
                             <button type="submit" className="auth-submit-btn" disabled={loading || rateLimited || verifying}>
                                 {loading || verifying ? 'Creating...' : 'Create Account'}
                             </button>

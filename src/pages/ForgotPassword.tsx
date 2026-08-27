@@ -1,10 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { requestPasswordReset } from '../services/profileService'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useAuthRateLimit } from '../hooks/useAuthRateLimit'
 import { useCaptcha } from '../hooks/useCaptcha'
-import Captcha from '../components/auth/Captcha'
+import Captcha, { CaptchaHandle } from '../components/auth/Captcha'
 
 const ForgotPassword: React.FC = () => {
     usePageTitle('Trackist - Forgot Password')
@@ -17,6 +17,7 @@ const ForgotPassword: React.FC = () => {
     const rateLimited = !allowed && !isChecking
     const { verifyCaptcha, captchaError, verifying } = useCaptcha()
     const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+    const captchaRef = useRef<CaptchaHandle>(null)
 
     const handleCaptchaVerify = (token: string) => {
         setCaptchaToken(token)
@@ -32,7 +33,7 @@ const ForgotPassword: React.FC = () => {
         
         // Verify captcha first
         if (!captchaToken) {
-            // Trigger invisible captcha
+            captchaRef.current?.execute()
             return
         }
 
@@ -98,7 +99,7 @@ const ForgotPassword: React.FC = () => {
                             {captchaError && (
                                 <div className="auth-alert auth-alert--error">{captchaError}</div>
                             )}
-                            <Captcha onVerify={handleCaptchaVerify} onError={(err: string) => setError(err)} action="passwordReset" />
+                            <Captcha ref={captchaRef} onVerify={handleCaptchaVerify} onError={(err: string) => setError(err)} action="passwordReset" />
                             {message && <div className="auth-alert auth-alert--info">{message}</div>}
                             <button type="submit" className="auth-submit-btn" disabled={loading || rateLimited || verifying}>
                                 {loading || verifying ? 'Sending...' : 'Send reset link'}

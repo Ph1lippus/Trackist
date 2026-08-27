@@ -1,10 +1,10 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { signInWithEmail } from '../services/profileService'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useAuthRateLimit } from '../hooks/useAuthRateLimit'
 import { useCaptcha } from '../hooks/useCaptcha'
-import Captcha from '../components/auth/Captcha'
+import Captcha, { CaptchaHandle } from '../components/auth/Captcha'
 
 const Login: React.FC = () => {
     usePageTitle('Trackist - Login')
@@ -20,6 +20,7 @@ const Login: React.FC = () => {
     const rateLimited = !allowed && !isChecking
     const { verifyCaptcha, captchaError, verifying } = useCaptcha()
     const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+    const captchaRef = useRef<CaptchaHandle>(null)
 
     const handleCaptchaVerify = (token: string) => {
         setCaptchaToken(token)
@@ -35,7 +36,7 @@ const Login: React.FC = () => {
         
         // Verify captcha first
         if (!captchaToken) {
-            // Trigger invisible captcha
+            captchaRef.current?.execute()
             return
         }
 
@@ -120,7 +121,7 @@ const Login: React.FC = () => {
                             {captchaError && (
                                 <div className="auth-alert auth-alert--error">{captchaError}</div>
                             )}
-                            <Captcha onVerify={handleCaptchaVerify} onError={(err: string) => setError(err)} action="login" />
+                            <Captcha ref={captchaRef} onVerify={handleCaptchaVerify} onError={(err: string) => setError(err)} action="login" />
                             <button type="submit" className="auth-submit-btn" disabled={loading || rateLimited || verifying}>
                                 {loading || verifying ? 'Logging in...' : 'Login'}
                             </button>
