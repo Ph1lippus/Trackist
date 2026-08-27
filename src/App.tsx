@@ -42,6 +42,10 @@ import Finished from './pages/Finished'
 import MobileTVShows from './pages/MobileTVShows'
 import MobileMovies from './pages/MobileMovies'
 import DetailLayout from './components/layout/DetailLayout'
+import MFA from './pages/MFA'
+import Sessions from './pages/Sessions'
+import AdminSecurity from './pages/AdminSecurity'
+import { useSessionSecurity } from './hooks/useSessionSecurity'
 
 // Legacy redirect component for /Lists/:id -> /ListsDetail/:id
 const LegacyListRedirect: React.FC = () => {
@@ -96,6 +100,9 @@ const AppContent: React.FC = () => {
             void invalidateCalendarCache(user.id)
         }
     }, [loading, user])
+
+    // Session security (auto-refresh, inactivity timeout, device tracking)
+    useSessionSecurity()
 
     // PWA service worker registration - only for PWA context
     useEffect(() => {
@@ -197,6 +204,9 @@ const AppContent: React.FC = () => {
                     <Route path="/Statistics" element={user ? <Statistics /> : <Navigate to="/login" replace />} />
                     <Route path="/Settings" element={user ? <Settings /> : <Navigate to="/login" replace />} />
                     <Route path="/Admin" element={<Admin />} />
+                    <Route path="/AdminSecurity" element={user ? <AdminSecurity /> : <Navigate to="/login" replace />} />
+                    <Route path="/MFA" element={user ? <MFA /> : <Navigate to="/login" replace />} />
+                    <Route path="/Sessions" element={user ? <Sessions /> : <Navigate to="/login" replace />} />
                     <Route path="/Credits" element={<Credits />} />
                     <Route path="/login" element={user ? <Navigate to={defaultRoute} replace /> : <Login />} />
                     <Route path="/register" element={user ? <Navigate to={defaultRoute} replace /> : <Register />} />

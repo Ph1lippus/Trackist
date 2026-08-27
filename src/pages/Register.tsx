@@ -4,6 +4,11 @@ import { supabase } from '../services/supabaseClient'
 import { checkDisplayNameExists } from '../services/profileService'
 import { validateUsername, validateEmail, validatePassword } from '../utils/validation'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useAuthRateLimit } from '../hooks/useAuthRateLimit'
+import { useCaptcha } from '../hooks/useCaptcha'
+import { checkPasswordBreach, isHIBPEnabled } from '../services/hibpService'
+import Captcha from '../components/auth/Captcha'
+import PasswordStrengthMeter from '../components/auth/PasswordStrengthMeter'
 
 const Register: React.FC = () => {
     usePageTitle('Trackist - Register')
@@ -16,9 +21,36 @@ const Register: React.FC = () => {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
+    
+    const { allowed, recordAttempt, retryAfterFormatted, isChecking } = useAuthRateLimit('register')
+    const rateLimited = !allowed && !isChecking
+    const { verifyCaptcha, captchaError, verifying } = useCaptcha()
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+
+    const handleCaptchaVerify = (token: string) => {
+        setCaptchaToken(token)
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        
+        if (rateLimited) {
+            setError(`Too many registration attempts. Please try again in ${retryAfterFormatted}.`)
+            return
+        }
+        
+        // Verify captcha first
+        if (!captchaToken) {
+            // Trigger invisible captcha
+            return
+        }
+
+        const captchaValid = await verifyCaptcha(captchaToken)
+        if (!captchaValid) {
+            setCaptchaToken(null) // Reset token to force new challenge
+            return
+        }
+        
         setError('')
 
         // Validate username
@@ -47,22 +79,31 @@ const Register: React.FC = () => {
             return
         }
 
+        // Check password against breach database (HIBP)
+        if (isHIBPEnabled() && password.length >= 8) {
+            const hibpResult = await checkPasswordBreach(password)
+            if (hibpResult.pwned) {
+                setError(`This password appeared in ${hibpResult.count} data breaches. Please choose another. <a href="https://haveibeenpwned.com/Passwords" target="_blank" rel="noopener noreferrer" className="auth-link">Learn more</a>`)
+                return
+            }
+        }
+
         const cleanedUsername = username.trim()
         const cleanedEmail = email.trim().toLowerCase()
 
         setLoading(true)
 
-        // Check if username already exists
-        try {
-            const exists = await checkDisplayNameExists(cleanedUsername)
-            if (exists) {
-                setError('Username already taken')
-                setLoading(false)
-                return
-            }
-        } catch {
-            // Continue with registration even if username check fails
+        // Check if username already exists - fail closed on error
+        const exists = await checkDisplayNameExists(cleanedUsername)
+        if (exists) {
+            recordAttempt()
+            setError('Account creation failed')
+            setLoading(false)
+            return
         }
+
+        // Small random delay for constant-time response (50-150ms)
+        await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100))
 
         try {
             const { error: signUpError } = await supabase.auth.signUp({
@@ -74,7 +115,8 @@ const Register: React.FC = () => {
             })
 
             if (signUpError) {
-                let errorMessage = signUpError.message || 'Registration failed'
+                recordAttempt()
+                let errorMessage = 'Registration failed. Please try again.'
                 if (signUpError.message?.includes('No API key') || signUpError.message?.includes('Invalid path')) {
                     errorMessage = 'Unable to connect to authentication service. Please try again later.'
                 }
@@ -87,9 +129,8 @@ const Register: React.FC = () => {
             navigate('/login')
         } catch (err) {
             console.error('Registration error:', err)
-            const errorObj = err as { message?: string; error?: string }
-            const errorMessage = errorObj?.message || errorObj?.error || 'Registration failed. Please try again.'
-            setError(errorMessage)
+            recordAttempt()
+            setError('Registration failed. Please try again.')
             setLoading(false)
         }
     }
@@ -132,11 +173,11 @@ const Register: React.FC = () => {
                                         type={showPassword ? 'text' : 'password'}
                                         className="auth-input"
                                         id="password"
-                                        placeholder="Min. 8 characters"
+                                        placeholder="Min. 12 characters"
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
                                         required
-                                        minLength={8}
+                                        minLength={12}
                                     />
                                     <button
                                         type="button"
@@ -147,6 +188,7 @@ const Register: React.FC = () => {
                                         <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                                     </button>
                                 </div>
+                                <PasswordStrengthMeter password={password} showWhenEmpty />
                             </div>
                             <div className="auth-field">
                                 <label htmlFor="confirmPassword" className="auth-label">Confirm Password</label>
@@ -171,8 +213,18 @@ const Register: React.FC = () => {
                                 </div>
                             </div>
                             {error && <div className="auth-alert auth-alert--error">{error}</div>}
-                            <button type="submit" className="auth-submit-btn" disabled={loading}>
-                                {loading ? 'Creating...' : 'Create Account'}
+                            {rateLimited && (
+                                <div className="auth-alert auth-alert--error rate-limit-message">
+                                    <i className="fa-solid fa-clock"></i>
+                                    Too many registration attempts. Please try again in {retryAfterFormatted}.
+                                </div>
+                            )}
+                            {captchaError && (
+                                <div className="auth-alert auth-alert--error">{captchaError}</div>
+                            )}
+                            <Captcha onVerify={handleCaptchaVerify} onError={(err: string) => setError(err)} action="register" />
+                            <button type="submit" className="auth-submit-btn" disabled={loading || rateLimited || verifying}>
+                                {loading || verifying ? 'Creating...' : 'Create Account'}
                             </button>
                         </form>
                         <p className="auth-text">

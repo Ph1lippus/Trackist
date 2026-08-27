@@ -2,6 +2,9 @@ import React, { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { requestPasswordReset } from '../services/profileService'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useAuthRateLimit } from '../hooks/useAuthRateLimit'
+import { useCaptcha } from '../hooks/useCaptcha'
+import Captcha from '../components/auth/Captcha'
 
 const ForgotPassword: React.FC = () => {
     usePageTitle('Trackist - Forgot Password')
@@ -9,20 +12,53 @@ const ForgotPassword: React.FC = () => {
     const [error, setError] = useState('')
     const [message, setMessage] = useState('')
     const [loading, setLoading] = useState(false)
+    
+    const { allowed, recordAttempt, retryAfterFormatted, isChecking } = useAuthRateLimit('passwordReset')
+    const rateLimited = !allowed && !isChecking
+    const { verifyCaptcha, captchaError, verifying } = useCaptcha()
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+
+    const handleCaptchaVerify = (token: string) => {
+        setCaptchaToken(token)
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        
+        if (rateLimited) {
+            setError(`Too many reset attempts. Please try again in ${retryAfterFormatted}.`)
+            return
+        }
+        
+        // Verify captcha first
+        if (!captchaToken) {
+            // Trigger invisible captcha
+            return
+        }
+
+        const captchaValid = await verifyCaptcha(captchaToken)
+        if (!captchaValid) {
+            setCaptchaToken(null) // Reset token to force new challenge
+            return
+        }
+        
         setError('')
         setMessage('')
         setLoading(true)
 
         const trimmedEmail = email.trim().toLowerCase()
+        
+        // Small random delay for constant-time response (50-150ms)
+        await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100))
+        
         const { error } = await requestPasswordReset(trimmedEmail)
 
         setLoading(false)
 
         if (error) {
-            setError(error.message)
+            recordAttempt()
+            setCaptchaToken(null)
+            setError('Unable to process request. Please try again later.')
             return
         }
 
@@ -53,9 +89,19 @@ const ForgotPassword: React.FC = () => {
                                 />
                             </div>
                             {error && <div className="auth-alert auth-alert--error">{error}</div>}
+                            {rateLimited && (
+                                <div className="auth-alert auth-alert--error rate-limit-message">
+                                    <i className="fa-solid fa-clock"></i>
+                                    Too many reset attempts. Please try again in {retryAfterFormatted}.
+                                </div>
+                            )}
+                            {captchaError && (
+                                <div className="auth-alert auth-alert--error">{captchaError}</div>
+                            )}
+                            <Captcha onVerify={handleCaptchaVerify} onError={(err: string) => setError(err)} action="passwordReset" />
                             {message && <div className="auth-alert auth-alert--info">{message}</div>}
-                            <button type="submit" className="auth-submit-btn" disabled={loading}>
-                                {loading ? 'Sending...' : 'Send reset link'}
+                            <button type="submit" className="auth-submit-btn" disabled={loading || rateLimited || verifying}>
+                                {loading || verifying ? 'Sending...' : 'Send reset link'}
                             </button>
                         </form>
                         <p className="auth-text">

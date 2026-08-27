@@ -2,6 +2,9 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { signInWithEmail } from '../services/profileService'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useAuthRateLimit } from '../hooks/useAuthRateLimit'
+import { useCaptcha } from '../hooks/useCaptcha'
+import Captcha from '../components/auth/Captcha'
 
 const Login: React.FC = () => {
     usePageTitle('Trackist - Login')
@@ -12,19 +15,51 @@ const Login: React.FC = () => {
     const [error, setError] = useState('')
     const [message, setMessage] = useState('')
     const [loading, setLoading] = useState(false)
+    
+    const { allowed, recordAttempt, retryAfterFormatted, isChecking } = useAuthRateLimit('login')
+    const rateLimited = !allowed && !isChecking
+    const { verifyCaptcha, captchaError, verifying } = useCaptcha()
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null)
+
+    const handleCaptchaVerify = (token: string) => {
+        setCaptchaToken(token)
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
+        
+        if (rateLimited) {
+            setError(`Too many attempts. Please try again in ${retryAfterFormatted}.`)
+            return
+        }
+        
+        // Verify captcha first
+        if (!captchaToken) {
+            // Trigger invisible captcha
+            return
+        }
+
+        const captchaValid = await verifyCaptcha(captchaToken)
+        if (!captchaValid) {
+            setCaptchaToken(null) // Reset token to force new challenge
+            return
+        }
+        
         setError('')
         setMessage('')
         setLoading(true)
+
+        // Small random delay for constant-time response (50-150ms)
+        await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100))
 
         const { data, error: signInError } = await signInWithEmail(email.trim().toLowerCase(), password)
 
         setLoading(false)
 
         if (signInError) {
-            setError(signInError.message)
+            recordAttempt()
+            setCaptchaToken(null) // Reset captcha on failure
+            setError('Invalid email or password')
             return
         }
 
@@ -76,8 +111,18 @@ const Login: React.FC = () => {
                             </div>
                             {error && <div className="auth-alert auth-alert--error">{error}</div>}
                             {message && <div className="auth-alert auth-alert--info">{message}</div>}
-                            <button type="submit" className="auth-submit-btn" disabled={loading}>
-                                {loading ? 'Logging in...' : 'Login'}
+                            {rateLimited && (
+                                <div className="auth-alert auth-alert--error rate-limit-message">
+                                    <i className="fa-solid fa-clock"></i>
+                                    Too many login attempts. Please try again in {retryAfterFormatted}.
+                                </div>
+                            )}
+                            {captchaError && (
+                                <div className="auth-alert auth-alert--error">{captchaError}</div>
+                            )}
+                            <Captcha onVerify={handleCaptchaVerify} onError={(err: string) => setError(err)} action="login" />
+                            <button type="submit" className="auth-submit-btn" disabled={loading || rateLimited || verifying}>
+                                {loading || verifying ? 'Logging in...' : 'Login'}
                             </button>
                         </form>
                         <div className="auth-extra-links">
