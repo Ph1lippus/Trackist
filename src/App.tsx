@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
+import { SpeedInsights } from '@vercel/speed-insights/react'
 import { updateLastActive } from './services/profileService'
 import { initializeAuth, useAuthStore } from './stores/useAuthStore'
 import { SearchProvider } from './contexts/SearchContext'
@@ -244,6 +245,7 @@ const App: React.FC = () => {
                     <AppContent />
                 </MobileProvider>
             </SearchProvider>
+            <SpeedInsights />
         </BrowserRouter>
     )
 }
