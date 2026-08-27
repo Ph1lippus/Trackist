@@ -4,7 +4,8 @@ import { signInWithEmail } from '../services/profileService'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useAuthRateLimit } from '../hooks/useAuthRateLimit'
 import { useCaptcha } from '../hooks/useCaptcha'
-import Captcha, { CaptchaHandle } from '../components/auth/Captcha'
+import Captcha from '../components/auth/Captcha'
+import type { CaptchaHandle } from '../components/auth/Captcha'
 
 const Login: React.FC = () => {
     usePageTitle('Trackist - Login')

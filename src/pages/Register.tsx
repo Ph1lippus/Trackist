@@ -7,7 +7,8 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import { useAuthRateLimit } from '../hooks/useAuthRateLimit'
 import { useCaptcha } from '../hooks/useCaptcha'
 import { checkPasswordBreach, isHIBPEnabled } from '../services/hibpService'
-import Captcha, { CaptchaHandle } from '../components/auth/Captcha'
+import Captcha from '../components/auth/Captcha'
+import type { CaptchaHandle } from '../components/auth/Captcha'
 import PasswordStrengthMeter from '../components/auth/PasswordStrengthMeter'
 
 const Register: React.FC = () => {

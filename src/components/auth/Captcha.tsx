@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react'
+import { useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react'
 
 interface CaptchaProps {
     onVerify: (token: string) => void
