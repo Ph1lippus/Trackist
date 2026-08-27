@@ -43,37 +43,34 @@ const Captcha: React.FC<CaptchaProps> = ({ onVerify, onError, action = 'login' }
         initPromiseRef.current = null
     }, [])
 
-    const waitForHcaptcha = (): Promise<void> => {
-        return new Promise((resolve) => {
-            if (window.hcaptcha?.render) {
-                resolve()
-                return
-            }
-            const check = setInterval(() => {
-                if (window.hcaptcha?.render) {
-                    clearInterval(check)
-                    resolve()
-                }
-            }, 50)
-        })
-    }
-
     const initCaptcha = useCallback(async () => {
         if (initializedRef.current || !containerRef.current) return
 
         try {
-            await waitForHcaptcha()
+            // Wait for hCaptcha API to be ready
+            const hasHcaptcha = () => !!window.hcaptcha && typeof window.hcaptcha.render === 'function'
+            
+            if (!hasHcaptcha()) {
+                await new Promise<void>((resolve) => {
+                    const check = setInterval(() => {
+                        if (hasHcaptcha()) {
+                            clearInterval(check)
+                            resolve()
+                        }
+                    }, 50)
+                })
+            }
             
             if (!containerRef.current || initializedRef.current) return
 
-            widgetIdRef.current = window.hcaptcha.render(containerRef.current, {
+            widgetIdRef.current = window.hcaptcha!.render(containerRef.current, {
                 sitekey: import.meta.env.VITE_HCAPTCHA_SITE_KEY,
                 callback: (token: string) => {
                     onVerify(token)
                 },
                 'expired-callback': () => {
                     if (widgetIdRef.current) {
-                        window.hcaptcha.reset(widgetIdRef.current)
+                        window.hcaptcha!.reset(widgetIdRef.current)
                     }
                 },
                 'error-callback': () => {
