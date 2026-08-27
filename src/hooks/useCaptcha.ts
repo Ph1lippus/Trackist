@@ -28,7 +28,8 @@ export function useCaptcha(): UseCaptchaReturn {
 
             if (!data?.success) {
                 const codes = Array.isArray(data?.['error-codes']) ? data['error-codes'].join(', ') : ''
-                setCaptchaError(data?.error || 'Captcha verification failed' + (codes ? ` (${codes})` : ''))
+                const details = codes || data?.error || 'Captcha verification failed'
+                setCaptchaError(details)
                 return false
             }
 

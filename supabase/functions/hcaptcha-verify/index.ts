@@ -45,12 +45,16 @@ serve(async (req) => {
 
         const result = await response.json()
 
+        console.log('hCaptcha siteverify result:', JSON.stringify(result))
+
         if (!result.success) {
+            console.error('hCaptcha verification failed:', result['error-codes'])
             return new Response(
                 JSON.stringify({ 
                     success: false, 
                     error: 'Captcha verification failed',
-                    'error-codes': result['error-codes']
+                    'error-codes': result['error-codes'],
+                    details: result
                 }),
                 { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
             )
