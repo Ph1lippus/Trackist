@@ -107,8 +107,8 @@ const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify, onError, ac
                         window.hcaptcha!.reset(widgetIdRef.current)
                     }
                 },
-                'error-callback': (err: any) => {
-                    console.error('hCaptcha error for action:', actionRef.current, err)
+                'error-callback': () => {
+                    console.error('hCaptcha error for action:', actionRef.current)
                     onErrorRef.current?.('Captcha verification failed. Please try again.')
                 },
                 size: 'invisible'
