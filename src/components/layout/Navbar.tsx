@@ -208,7 +208,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         if (isMoviesPage) {
             const planning = movies.filter(m => m.status === 'planning')
             const pool = planning.filter(m => {
-                if (!m.release_date) return true
+                if (!m.release_date) return false
                 return new Date(m.release_date) <= new Date()
             })
             if (pool.length > 0) {
@@ -221,7 +221,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         } else if (isTVShowsPage) {
             const planning = tvShows.filter(show => show.status === 'planning')
             const pool = planning.filter(show => {
-                if (!show.release_date) return true
+                if (!show.release_date) return false
                 return new Date(show.release_date) <= new Date()
             })
             if (pool.length > 0) {
