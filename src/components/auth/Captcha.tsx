@@ -28,8 +28,8 @@ declare global {
 const Captcha: React.FC<CaptchaProps> = ({ onVerify, onError, action = 'login' }) => {
     const containerRef = useRef<HTMLDivElement>(null)
     const widgetIdRef = useRef<string | null>(null)
-    const scriptLoadedRef = useRef(false)
     const initializedRef = useRef(false)
+    const initPromiseRef = useRef<Promise<void> | null>(null)
 
     const cleanup = useCallback(() => {
         if (widgetIdRef.current && window.hcaptcha) {
@@ -39,7 +39,54 @@ const Captcha: React.FC<CaptchaProps> = ({ onVerify, onError, action = 'login' }
             }
             widgetIdRef.current = null
         }
+        initializedRef.current = false
+        initPromiseRef.current = null
     }, [])
+
+    const waitForHcaptcha = (): Promise<void> => {
+        return new Promise((resolve) => {
+            if (window.hcaptcha?.render) {
+                resolve()
+                return
+            }
+            const check = setInterval(() => {
+                if (window.hcaptcha?.render) {
+                    clearInterval(check)
+                    resolve()
+                }
+            }, 50)
+        })
+    }
+
+    const initCaptcha = useCallback(async () => {
+        if (initializedRef.current || !containerRef.current) return
+
+        try {
+            await waitForHcaptcha()
+            
+            if (!containerRef.current || initializedRef.current) return
+
+            widgetIdRef.current = window.hcaptcha.render(containerRef.current, {
+                sitekey: import.meta.env.VITE_HCAPTCHA_SITE_KEY,
+                callback: (token: string) => {
+                    onVerify(token)
+                },
+                'expired-callback': () => {
+                    if (widgetIdRef.current) {
+                        window.hcaptcha.reset(widgetIdRef.current)
+                    }
+                },
+                'error-callback': () => {
+                    onError?.('Captcha verification failed. Please try again.')
+                },
+                size: 'invisible'
+            })
+            initializedRef.current = true
+        } catch (err) {
+            console.error('hCaptcha init error:', err)
+            onError?.('Captcha initialization failed')
+        }
+    }, [onVerify, onError])
 
     useEffect(() => {
         const siteKey = import.meta.env.VITE_HCAPTCHA_SITE_KEY
@@ -49,61 +96,25 @@ const Captcha: React.FC<CaptchaProps> = ({ onVerify, onError, action = 'login' }
             return
         }
 
-        // Cleanup previous widget if any
         cleanup()
 
-        const loadScript = () => {
-            if (scriptLoadedRef.current || document.getElementById('hcaptcha-script')) {
-                initCaptcha()
-                return
-            }
-
+        // Load script if not already loaded
+        if (!document.getElementById('hcaptcha-script')) {
             const script = document.createElement('script')
             script.id = 'hcaptcha-script'
             script.src = 'https://js.hcaptcha.com/1/api.js?render=explicit'
             script.async = true
             script.defer = true
-            script.onload = initCaptcha
-            script.onerror = () => {
-                onError?.('Failed to load hCaptcha')
-            }
             document.head.appendChild(script)
-            scriptLoadedRef.current = true
         }
 
-        const initCaptcha = () => {
-            if (!window.hcaptcha || !containerRef.current || initializedRef.current) return
-
-            try {
-                widgetIdRef.current = window.hcaptcha.render(containerRef.current, {
-                    sitekey: siteKey,
-                    callback: (token: string) => {
-                        onVerify(token)
-                    },
-                    'expired-callback': () => {
-                        if (widgetIdRef.current) {
-                            window.hcaptcha.reset(widgetIdRef.current)
-                        }
-                    },
-                    'error-callback': () => {
-                        onError?.('Captcha verification failed. Please try again.')
-                    },
-                    size: 'invisible'
-                })
-                initializedRef.current = true
-            } catch (err) {
-                console.error('hCaptcha init error:', err)
-                onError?.('Captcha initialization failed')
-            }
-        }
-
-        loadScript()
+        // Initialize after script loads
+        initPromiseRef.current = initCaptcha()
 
         return () => {
             cleanup()
-            initializedRef.current = false
         }
-    }, [action, onVerify, onError, cleanup])
+    }, [action, initCaptcha, cleanup])
 
     return (
         <div ref={containerRef} style={{ display: 'none' }} aria-hidden="true" />
