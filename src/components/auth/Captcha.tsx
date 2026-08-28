@@ -5,10 +5,12 @@ interface CaptchaProps {
     onVerify: (token: string) => void
     onError?: (error: string) => void
     action?: string
+    autoExecute?: boolean
 }
 
 export interface CaptchaHandle {
     execute: () => void
+    isReady: () => boolean
 }
 
 declare global {
@@ -30,10 +32,12 @@ declare global {
     }
 }
 
-const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify, onError, action = 'login' }, ref) => {
+const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify, onError, action = 'login', autoExecute = false }, ref) => {
     const containerRef = useRef<HTMLDivElement>(null)
     const widgetIdRef = useRef<string | null>(null)
     const initializedRef = useRef(false)
+    const autoExecutedRef = useRef(false)
+    const autoExecuteRef = useRef(autoExecute)
     const onVerifyRef = useRef(onVerify)
     const onErrorRef = useRef(onError)
     const actionRef = useRef(action)
@@ -41,12 +45,14 @@ const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify, onError, ac
     onVerifyRef.current = onVerify
     onErrorRef.current = onError
     actionRef.current = action
+    autoExecuteRef.current = autoExecute
 
     const cleanup = useCallback(() => {
         if (widgetIdRef.current && window.hcaptcha) {
             try {
                 window.hcaptcha.reset(widgetIdRef.current)
             } catch {
+                // ignore reset errors during teardown
             }
             widgetIdRef.current = null
         }
@@ -72,8 +78,9 @@ const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify, onError, ac
             } else {
                 console.warn('hCaptcha not initialized for action:', actionRef.current)
             }
-        }
-    }), [cleanup])
+        },
+        isReady: () => !!widgetIdRef.current && typeof window.hcaptcha?.execute === 'function'
+    }), [])
 
     useEffect(() => {
         const siteKey = import.meta.env.VITE_HCAPTCHA_SITE_KEY
@@ -127,6 +134,17 @@ const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify, onError, ac
             })
             initializedRef.current = true
             console.log('hCaptcha initialized for action:', action)
+
+            // Pre-solve the challenge once on mount so the token is usually
+            // ready by the time the user submits, removing the perceived delay.
+            if (autoExecuteRef.current && !autoExecutedRef.current) {
+                autoExecutedRef.current = true
+                try {
+                    window.hcaptcha!.execute(widgetIdRef.current)
+                } catch (err) {
+                    console.error('hCaptcha auto-execute error:', err)
+                }
+            }
         }
 
         if (!document.getElementById('hcaptcha-script')) {

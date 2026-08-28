@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { signInWithEmail } from '../services/profileService'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -22,10 +22,51 @@ const Login: React.FC = () => {
     const { verifyCaptcha, captchaError, verifying } = useCaptcha()
     const [captchaToken, setCaptchaToken] = useState<string | null>(null)
     const captchaRef = useRef<CaptchaHandle>(null)
+    const pendingSubmitRef = useRef(false)
 
-    const handleCaptchaVerify = (token: string) => {
+    const performLogin = useCallback(async (token?: string) => {
+        if (loading) return
+        setError('')
+        setMessage('')
+        setLoading(true)
+
+        if (isCaptchaEnabled() && token) {
+            const captchaValid = await verifyCaptcha(token)
+            if (!captchaValid) {
+                setCaptchaToken(null) // Reset token to force new challenge
+                setLoading(false)
+                pendingSubmitRef.current = false
+                return
+            }
+        }
+
+        // Small random delay for constant-time response (50-150ms)
+        await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100))
+
+        const { data, error: signInError } = await signInWithEmail(email.trim().toLowerCase(), password)
+
+        setLoading(false)
+        pendingSubmitRef.current = false
+
+        if (signInError) {
+            recordAttempt()
+            setCaptchaToken(null) // Reset captcha on failure
+            setError('Invalid email or password')
+            return
+        }
+
+        if (data?.session) {
+            navigate('/')
+        }
+    }, [email, password, loading, verifyCaptcha, recordAttempt, navigate])
+
+    const handleCaptchaVerify = useCallback((token: string) => {
         setCaptchaToken(token)
-    }
+        if (pendingSubmitRef.current && token !== '__captcha_disabled__') {
+            pendingSubmitRef.current = false
+            void performLogin(token)
+        }
+    }, [performLogin])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -38,38 +79,16 @@ const Login: React.FC = () => {
         // Verify captcha first (skipped when captcha is disabled, e.g. local dev)
         if (isCaptchaEnabled()) {
             if (!captchaToken) {
+                pendingSubmitRef.current = true
                 captchaRef.current?.execute()
                 return
             }
 
-            const captchaValid = await verifyCaptcha(captchaToken)
-            if (!captchaValid) {
-                setCaptchaToken(null) // Reset token to force new challenge
-                return
-            }
-        }
-        
-        setError('')
-        setMessage('')
-        setLoading(true)
-
-        // Small random delay for constant-time response (50-150ms)
-        await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100))
-
-        const { data, error: signInError } = await signInWithEmail(email.trim().toLowerCase(), password)
-
-        setLoading(false)
-
-        if (signInError) {
-            recordAttempt()
-            setCaptchaToken(null) // Reset captcha on failure
-            setError('Invalid email or password')
+            await performLogin(captchaToken)
             return
         }
 
-        if (data?.session) {
-            navigate('/')
-        }
+        await performLogin()
     }
 
     return (
@@ -124,7 +143,7 @@ const Login: React.FC = () => {
                             {captchaError && (
                                 <div className="auth-alert auth-alert--error">{captchaError}</div>
                             )}
-                            <Captcha ref={captchaRef} onVerify={handleCaptchaVerify} onError={(err: string) => setError(err)} action="login" />
+                            <Captcha ref={captchaRef} onVerify={handleCaptchaVerify} onError={(err: string) => setError(err)} action="login" autoExecute={isCaptchaEnabled()} />
                             <button type="submit" className="auth-submit-btn" disabled={loading || rateLimited || verifying}>
                                 {loading || verifying ? 'Logging in...' : 'Login'}
                             </button>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { checkDisplayNameExists } from '../services/profileService'
@@ -28,39 +28,26 @@ const Register: React.FC = () => {
     const { verifyCaptcha, captchaError, verifying } = useCaptcha()
     const [captchaToken, setCaptchaToken] = useState<string | null>(null)
     const captchaRef = useRef<CaptchaHandle>(null)
+    const pendingSubmitRef = useRef(false)
 
-    const handleCaptchaVerify = (token: string) => {
-        setCaptchaToken(token)
-    }
+    const performRegister = useCallback(async (token?: string) => {
+        if (loading) return
+        setError('')
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-        
-        if (rateLimited) {
-            setError(`Too many registration attempts. Please try again in ${retryAfterFormatted}.`)
-            return
-        }
-        
-        // Verify captcha first (skipped when captcha is disabled, e.g. local dev)
-        if (isCaptchaEnabled()) {
-            if (!captchaToken) {
-                captchaRef.current?.execute()
-                return
-            }
-
-            const captchaValid = await verifyCaptcha(captchaToken)
+        if (isCaptchaEnabled() && token) {
+            const captchaValid = await verifyCaptcha(token)
             if (!captchaValid) {
                 setCaptchaToken(null) // Reset token to force new challenge
+                pendingSubmitRef.current = false
                 return
             }
         }
-        
-        setError('')
 
         // Validate username
         const usernameError = validateUsername(username)
         if (usernameError) {
             setError(usernameError)
+            pendingSubmitRef.current = false
             return
         }
 
@@ -68,6 +55,7 @@ const Register: React.FC = () => {
         const emailError = validateEmail(email)
         if (emailError) {
             setError(emailError)
+            pendingSubmitRef.current = false
             return
         }
 
@@ -75,11 +63,13 @@ const Register: React.FC = () => {
         const passwordError = validatePassword(password)
         if (passwordError) {
             setError(passwordError)
+            pendingSubmitRef.current = false
             return
         }
 
         if (password !== confirmPassword) {
             setError('Passwords do not match')
+            pendingSubmitRef.current = false
             return
         }
 
@@ -88,6 +78,7 @@ const Register: React.FC = () => {
             const hibpResult = await checkPasswordBreach(password)
             if (hibpResult.pwned) {
                 setError(`This password appeared in ${hibpResult.count} data breaches. Please choose another. <a href="https://haveibeenpwned.com/Passwords" target="_blank" rel="noopener noreferrer" className="auth-link">Learn more</a>`)
+                pendingSubmitRef.current = false
                 return
             }
         }
@@ -103,6 +94,7 @@ const Register: React.FC = () => {
             recordAttempt()
             setError('Account creation failed')
             setLoading(false)
+            pendingSubmitRef.current = false
             return
         }
 
@@ -126,17 +118,51 @@ const Register: React.FC = () => {
                 }
                 setError(errorMessage)
                 setLoading(false)
+                pendingSubmitRef.current = false
                 return
             }
 
             setLoading(false)
+            pendingSubmitRef.current = false
             navigate('/login')
         } catch (err) {
             console.error('Registration error:', err)
             recordAttempt()
             setError('Registration failed. Please try again.')
             setLoading(false)
+            pendingSubmitRef.current = false
         }
+    }, [loading, username, email, password, confirmPassword, verifyCaptcha, recordAttempt, navigate])
+
+    const handleCaptchaVerify = useCallback((token: string) => {
+        setCaptchaToken(token)
+        if (pendingSubmitRef.current && token !== '__captcha_disabled__') {
+            pendingSubmitRef.current = false
+            void performRegister(token)
+        }
+    }, [performRegister])
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        
+        if (rateLimited) {
+            setError(`Too many registration attempts. Please try again in ${retryAfterFormatted}.`)
+            return
+        }
+        
+        // Verify captcha first (skipped when captcha is disabled, e.g. local dev)
+        if (isCaptchaEnabled()) {
+            if (!captchaToken) {
+                pendingSubmitRef.current = true
+                captchaRef.current?.execute()
+                return
+            }
+
+            await performRegister(captchaToken)
+            return
+        }
+
+        await performRegister()
     }
 
     return (
@@ -226,7 +252,7 @@ const Register: React.FC = () => {
                             {captchaError && (
                                 <div className="auth-alert auth-alert--error">{captchaError}</div>
                             )}
-                            <Captcha ref={captchaRef} onVerify={handleCaptchaVerify} onError={(err: string) => setError(err)} action="register" />
+                            <Captcha ref={captchaRef} onVerify={handleCaptchaVerify} onError={(err: string) => setError(err)} action="register" autoExecute={isCaptchaEnabled()} />
                             <button type="submit" className="auth-submit-btn" disabled={loading || rateLimited || verifying}>
                                 {loading || verifying ? 'Creating...' : 'Create Account'}
                             </button>

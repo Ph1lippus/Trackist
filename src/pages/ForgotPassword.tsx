@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import { requestPasswordReset } from '../services/profileService'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -19,10 +19,52 @@ const ForgotPassword: React.FC = () => {
     const { verifyCaptcha, captchaError, verifying } = useCaptcha()
     const [captchaToken, setCaptchaToken] = useState<string | null>(null)
     const captchaRef = useRef<CaptchaHandle>(null)
+    const pendingSubmitRef = useRef(false)
 
-    const handleCaptchaVerify = (token: string) => {
+    const performReset = useCallback(async (token?: string) => {
+        if (loading) return
+        setError('')
+        setMessage('')
+
+        if (isCaptchaEnabled() && token) {
+            const captchaValid = await verifyCaptcha(token)
+            if (!captchaValid) {
+                setCaptchaToken(null) // Reset token to force new challenge
+                pendingSubmitRef.current = false
+                return
+            }
+        }
+
+        setLoading(true)
+
+        const trimmedEmail = email.trim().toLowerCase()
+        
+        // Small random delay for constant-time response (50-150ms)
+        await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100))
+        
+        const { error } = await requestPasswordReset(trimmedEmail)
+
+        setLoading(false)
+        pendingSubmitRef.current = false
+
+        if (error) {
+            recordAttempt()
+            setCaptchaToken(null)
+            setError('Unable to process request. Please try again later.')
+            return
+        }
+
+        setMessage(`If an account exists with this email, a password reset link has been sent to ${trimmedEmail}.`)
+        setEmail('')
+    }, [loading, email, verifyCaptcha, recordAttempt])
+
+    const handleCaptchaVerify = useCallback((token: string) => {
         setCaptchaToken(token)
-    }
+        if (pendingSubmitRef.current && token !== '__captcha_disabled__') {
+            pendingSubmitRef.current = false
+            void performReset(token)
+        }
+    }, [performReset])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -35,39 +77,16 @@ const ForgotPassword: React.FC = () => {
         // Verify captcha first (skipped when captcha is disabled, e.g. local dev)
         if (isCaptchaEnabled()) {
             if (!captchaToken) {
+                pendingSubmitRef.current = true
                 captchaRef.current?.execute()
                 return
             }
 
-            const captchaValid = await verifyCaptcha(captchaToken)
-            if (!captchaValid) {
-                setCaptchaToken(null) // Reset token to force new challenge
-                return
-            }
-        }
-        
-        setError('')
-        setMessage('')
-        setLoading(true)
-
-        const trimmedEmail = email.trim().toLowerCase()
-        
-        // Small random delay for constant-time response (50-150ms)
-        await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100))
-        
-        const { error } = await requestPasswordReset(trimmedEmail)
-
-        setLoading(false)
-
-        if (error) {
-            recordAttempt()
-            setCaptchaToken(null)
-            setError('Unable to process request. Please try again later.')
+            await performReset(captchaToken)
             return
         }
 
-        setMessage(`If an account exists with this email, a password reset link has been sent to ${trimmedEmail}.`)
-        setEmail('')
+        await performReset()
     }
 
     return (
@@ -102,7 +121,7 @@ const ForgotPassword: React.FC = () => {
                             {captchaError && (
                                 <div className="auth-alert auth-alert--error">{captchaError}</div>
                             )}
-                            <Captcha ref={captchaRef} onVerify={handleCaptchaVerify} onError={(err: string) => setError(err)} action="passwordReset" />
+                            <Captcha ref={captchaRef} onVerify={handleCaptchaVerify} onError={(err: string) => setError(err)} action="passwordReset" autoExecute={isCaptchaEnabled()} />
                             {message && <div className="auth-alert auth-alert--info">{message}</div>}
                             <button type="submit" className="auth-submit-btn" disabled={loading || rateLimited || verifying}>
                                 {loading || verifying ? 'Sending...' : 'Send reset link'}
