@@ -2,7 +2,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getBestBackdropPath } from '../services/tmdbService'
 import { formatStatus } from '../utils/statusUtils'
-import { markEpisodeWatched, unmarkEpisodeWatched, markEpisodesWatched, unmarkEpisodesWatched, getWatchedEpisodes, checkAndUpdateCompleted, markShowAsFullyWatched } from '../services/watchlistService'
+import { markEpisodeWatched, unmarkEpisodeWatched, markEpisodesWatched, unmarkEpisodesWatched, getWatchedEpisodes, checkAndUpdateCompleted, markShowAsFullyWatched, removeAllWatchedEpisodes } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { invalidateUserCache, getCachedOrFetch } from '../services/cacheService'
 import ConfirmModal from '../components/modals/ConfirmModal'
@@ -1125,36 +1125,53 @@ const TVShowDetail: React.FC = () => {
                 <ConfirmModal
                     isOpen={markWatchedModal.isOpen}
                     title={markWatchedModal.markAsWatched ? 'Mark as Watched' : 'Mark as Unwatched'}
-                    message={markWatchedModal.markAsWatched ? 'Are you sure you want to mark all released episodes as watched?' : 'Are you sure you want to mark all episodes as unwatched?'}
+                    message={markWatchedModal.markAsWatched ? 'Are you sure you want to mark the entire show as watched?' : 'Are you sure you want to mark all episodes as unwatched?'}
                     onConfirm={async () => {
                         if (!watchlistId || !details) return
                         setModalLoading(true)
                         try {
                             const newWatchedState = markWatchedModal.markAsWatched
-                            
-                            // Mark/unmark all released episodes in batches
-                            const releasedEpisodes = episodes.filter(ep => isEpisodeReleased(ep))
-                            const success = newWatchedState
-                                ? await markEpisodesWatched(watchlistId, releasedEpisodes)
-                                : await unmarkEpisodesWatched(watchlistId, releasedEpisodes)
-                            if (!success) throw new Error('Failed to update episodes')
 
-                            setEpisodes(prev => prev.map(ep => 
-                                isEpisodeReleased(ep) ? { ...ep, watched: newWatchedState } : ep
-                            ))
+                            if (newWatchedState) {
+                                const newStatus = await markShowAsFullyWatched(watchlistId, details.id)
+                                const watchedEps = await getWatchedEpisodes(watchlistId)
+                                watchedKeysCache.current = new Set(
+                                    watchedEps.map(ep => `${ep.season_number}-${ep.episode_number}`)
+                                )
+                                if (newStatus === 'completed' || newStatus === 'caught_up') {
+                                    launchCosmicConfetti()
+                                }
+                            } else {
+                                const success = await removeAllWatchedEpisodes(watchlistId)
+                                if (!success) throw new Error('Failed to unmark all episodes')
+                                watchedKeysCache.current = new Set()
+                            }
+
+                            const refreshCached = () => {
+                                Array.from(seasonCache.current.entries()).forEach(([seasonNum, seasonEps]) => {
+                                    seasonCache.current.set(seasonNum, seasonEps.map(ep => ({
+                                        ...ep,
+                                        watched: watchedKeysCache.current.has(`${ep.season_number}-${ep.episode_number}`)
+                                    })))
+                                })
+                                setEpisodes(prev => prev.map(ep => ({
+                                    ...ep,
+                                    watched: watchedKeysCache.current.has(`${ep.season_number}-${ep.episode_number}`)
+                                })))
+                            }
+                            refreshCached()
+
                             setMarkWatchedModal(null)
 
                             void (async () => {
                                 try {
-                                    await checkAndUpdateCompleted(watchlistId, details.id)
                                     await useLibraryStore.getState().refreshItem(watchlistId)
-                                    if (newWatchedState) {
-                                        launchCosmicConfetti()
-                                    }
                                 } catch (syncError) {
-                                    console.error('Failed to synchronize progress after updating episodes:', syncError)
+                                    console.error('Failed to synchronize watchlist after eye toggle:', syncError)
                                 }
                             })()
+                        } catch (err) {
+                            console.error('Failed to toggle whole-show watched state via eye icon:', err)
                         } finally {
                             setModalLoading(false)
                         }
