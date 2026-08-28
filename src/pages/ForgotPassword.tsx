@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { requestPasswordReset } from '../services/profileService'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useAuthRateLimit } from '../hooks/useAuthRateLimit'
-import { useCaptcha } from '../hooks/useCaptcha'
+import { useCaptcha, isCaptchaEnabled } from '../hooks/useCaptcha'
 import Captcha from '../components/auth/Captcha'
 import type { CaptchaHandle } from '../components/auth/Captcha'
 
@@ -32,16 +32,18 @@ const ForgotPassword: React.FC = () => {
             return
         }
         
-        // Verify captcha first
-        if (!captchaToken) {
-            captchaRef.current?.execute()
-            return
-        }
+        // Verify captcha first (skipped when captcha is disabled, e.g. local dev)
+        if (isCaptchaEnabled()) {
+            if (!captchaToken) {
+                captchaRef.current?.execute()
+                return
+            }
 
-        const captchaValid = await verifyCaptcha(captchaToken)
-        if (!captchaValid) {
-            setCaptchaToken(null) // Reset token to force new challenge
-            return
+            const captchaValid = await verifyCaptcha(captchaToken)
+            if (!captchaValid) {
+                setCaptchaToken(null) // Reset token to force new challenge
+                return
+            }
         }
         
         setError('')

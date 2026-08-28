@@ -1,4 +1,5 @@
 import { useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react'
+import { isCaptchaEnabled } from '../../hooks/useCaptcha'
 
 interface CaptchaProps {
     onVerify: (token: string) => void
@@ -54,6 +55,13 @@ const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify, onError, ac
 
     useImperativeHandle(ref, () => ({
         execute: () => {
+            // Captcha disabled (e.g. local dev) - resolve immediately so the
+            // form submission flow isn't blocked waiting for a token
+            if (!isCaptchaEnabled()) {
+                onVerifyRef.current('__captcha_disabled__')
+                return
+            }
+
             if (widgetIdRef.current && window.hcaptcha) {
                 try {
                     window.hcaptcha.execute(widgetIdRef.current)
@@ -69,9 +77,13 @@ const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify, onError, ac
 
     useEffect(() => {
         const siteKey = import.meta.env.VITE_HCAPTCHA_SITE_KEY
-        
-        if (!siteKey) {
-            console.warn('hCaptcha site key not configured')
+
+        if (!isCaptchaEnabled()) {
+            if (import.meta.env.DEV) {
+                console.info('hCaptcha disabled (local development)')
+            } else if (!siteKey) {
+                console.warn('hCaptcha site key not configured')
+            }
             return
         }
 
