@@ -13,7 +13,7 @@ import { validateDisplayName, validateEmail } from '../utils/validation'
 import { getUTCTodayString } from '../utils/dateUtils'
 import { useAuthStore } from '../stores/useAuthStore'
 
-type SettingsSection = 'account' | 'profile' | 'notifications' | 'data' | 'additions' | 'danger'
+type SettingsSection = 'account' | 'profile' | 'security' | 'notifications' | 'data' | 'additions' | 'danger'
 type NotificationPrefField = 'notify_new_episode' | 'notify_new_season' | 'notify_release_date'
 
 const escapeCSV = (value: unknown): string => {
@@ -439,6 +439,7 @@ const Settings: React.FC = () => {
     const sections: { id: SettingsSection; label: string; icon: string }[] = [
         { id: 'account', label: 'Account', icon: 'fa-user-shield' },
         { id: 'profile', label: 'Profile', icon: 'fa-id-card' },
+        { id: 'security', label: 'Security', icon: 'fa-shield-halved' },
         { id: 'notifications', label: 'Notifications', icon: 'fa-bell' },
         { id: 'data', label: 'Data & Cache', icon: 'fa-database' },
         { id: 'additions', label: 'Additions', icon: 'fa-puzzle-piece' },
@@ -570,6 +571,37 @@ const Settings: React.FC = () => {
                                         <i className="fa-solid fa-image"></i> Edit Avatar
                                     </button>
                                 </div>
+                            </div>
+                        )}
+
+                        {activeSection === 'security' && (
+                            <div className="settings-panel">
+                                <div className="settings-panel__header">
+                                    <h3>Security</h3>
+                                    <p>Protect your account and manage your active sessions</p>
+                                </div>
+
+                                <div className="settings-data-card settings-data-card--clickable" onClick={() => navigate('/MFA')}>
+                                    <div className="settings-data-card__info">
+                                        <span className="settings-data-card__label">Two-Factor Authentication</span>
+                                        <span className="settings-data-card__value">Add an extra layer of security with TOTP codes from an authenticator app</span>
+                                    </div>
+                                </div>
+                                <button className="settings-btn settings-btn--secondary" type="button" onClick={() => navigate('/MFA')}>
+                                    <i className="fa-solid fa-shield-halved"></i> Manage Two-Factor Authentication
+                                </button>
+
+                                <div className="settings-divider"></div>
+
+                                <div className="settings-data-card settings-data-card--clickable" onClick={() => navigate('/Sessions')}>
+                                    <div className="settings-data-card__info">
+                                        <span className="settings-data-card__label">Active Sessions</span>
+                                        <span className="settings-data-card__value">Review which devices are signed in and revoke any you don't recognize</span>
+                                    </div>
+                                </div>
+                                <button className="settings-btn settings-btn--secondary" type="button" onClick={() => navigate('/Sessions')}>
+                                    <i className="fa-solid fa-computer"></i> Manage Sessions
+                                </button>
                             </div>
                         )}
 

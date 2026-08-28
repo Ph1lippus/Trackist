@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams, useNavigate } from 'react-router-dom'
 import { updateLastActive } from './services/profileService'
 import { initializeAuth, useAuthStore } from './stores/useAuthStore'
 import { SearchProvider } from './contexts/SearchContext'
@@ -46,7 +46,7 @@ import MFA from './pages/MFA'
 import Sessions from './pages/Sessions'
 import AdminSecurity from './pages/AdminSecurity'
 import { useSessionSecurity } from './hooks/useSessionSecurity'
-
+import mfaService from './services/mfaService'
 // Legacy redirect component for /Lists/:id -> /ListsDetail/:id
 const LegacyListRedirect: React.FC = () => {
     const { id } = useParams<{ id: string }>()
@@ -55,6 +55,7 @@ const LegacyListRedirect: React.FC = () => {
 
 const AppContent: React.FC = () => {
     const location = useLocation()
+    const navigate = useNavigate()
     const user = useAuthStore((state) => state.user)
     const loading = useAuthStore((state) => state.loading)
     const [currentMonth, setCurrentMonth] = useState(new Date())
@@ -103,6 +104,38 @@ const AppContent: React.FC = () => {
 
     // Session security (auto-refresh, inactivity timeout, device tracking)
     useSessionSecurity()
+
+    // Enforce 2FA: if the current session is only at "aal1" (password verified,
+    // second factor NOT yet verified) but the user has a verified factor, send
+    // them to the challenge screen before letting them into the app. Runs once
+    // per navigation to avoid looping. Skipped when already on an auth/MFA page.
+    const aal = useAuthStore((state) => state.aal)
+    useEffect(() => {
+        if (loading || !user) return
+        if (aal === 'aal2') return
+        if (aal !== 'aal1') return
+        const path = location.pathname
+        if (path === '/MFA' || path === '/login' || path === '/register') return
+
+        let cancelled = false
+        ;(async () => {
+            try {
+                const factors = await mfaService.listFactors()
+                if (cancelled) return
+                const verified = factors.find((f) => f.status === 'verified')
+                if (verified) {
+                    navigate(`/MFA?challenge=${encodeURIComponent(verified.id)}`, { replace: true })
+                }
+            } catch {
+                // Ignore: treat as no verified factors, let the user proceed.
+            }
+        })()
+
+        return () => {
+            cancelled = true
+        }
+    }, [loading, user, aal, location.pathname, navigate])
+
 
     // PWA service worker registration - only for PWA context
     useEffect(() => {

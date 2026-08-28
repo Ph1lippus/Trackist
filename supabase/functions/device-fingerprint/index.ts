@@ -88,34 +88,25 @@ serve(async (req) => {
         let location = 'Unknown'
         // In production, integrate with a GeoIP service here
 
-        // Check if this session already exists
-        const { data: existing } = await supabase
+        // Atomic upsert: one row per (user_id, session_id). Concurrent calls
+        // now collapse onto the same row instead of each inserting a duplicate.
+        const nowIso = new Date().toISOString()
+        await supabase
             .from('user_sessions')
-            .select('id')
-            .eq('user_id', user.id)
-            .eq('session_id', session_id)
-            .single()
-
-        if (existing) {
-            // Update last_active
-            await supabase
-                .from('user_sessions')
-                .update({ last_active: new Date().toISOString() })
-                .eq('id', existing.id)
-        } else {
-            // Create new session record
-            await supabase
-                .from('user_sessions')
-                .insert({
+            .upsert(
+                {
                     user_id: user.id,
                     session_id,
                     device_info: deviceInfo,
                     ip_hash: ipHash,
                     location,
-                    created_at: new Date().toISOString(),
-                    last_active: new Date().toISOString()
-                })
-        }
+                    last_active: nowIso
+                },
+                {
+                    onConflict: 'user_id,session_id',
+                    ignoreDuplicates: false
+                }
+            )
 
         return new Response(
             JSON.stringify({ 

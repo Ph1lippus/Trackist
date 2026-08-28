@@ -8468,6 +8468,16 @@ i.fa-solid.fa-trash:hover {
     justify-content: flex-end;
 }
 
+.settings-data-card--clickable {
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.settings-data-card--clickable:hover {
+    border-color: rgba(99, 102, 241, 0.4);
+    background-color: rgba(99, 102, 241, 0.04);
+}
+
 /* Danger Card */
 .settings-danger-card {
     padding: 1.25rem;

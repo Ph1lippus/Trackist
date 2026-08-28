@@ -47,12 +47,14 @@ serve(async (req) => {
         const { action, code } = await req.json()
 
         if (action === 'generate') {
-            const codes: Array<{ code: string; used: boolean; created_at: string }> = []
+            const plainCodes: string[] = []
+            const storedCodes: Array<{ code: string; used: boolean; created_at: string }> = []
             
             for (let i = 0; i < 8; i++) {
                 const plainCode = generateBackupCode()
                 const hashedCode = await hash(plainCode)
-                codes.push({
+                plainCodes.push(plainCode)
+                storedCodes.push({
                     code: hashedCode,
                     used: false,
                     created_at: new Date().toISOString()
@@ -63,32 +65,22 @@ serve(async (req) => {
                 .from('user_mfa_backup_codes')
                 .upsert({
                     user_id: user.id,
-                    codes: codes,
+                    codes: storedCodes,
                     updated_at: new Date().toISOString()
                 }, { onConflict: 'user_id' })
 
             if (error) throw error
 
-            // Return plain codes only once
-            const plainCodes = codes.map(c => ({
-                code: c.code, // This is actually the hashed version
-                used: false,
-                created_at: c.created_at
-            }))
-
-            // Need to return the plain codes that were generated
-            // Regenerate for response
-            const responseCodes = []
-            for (let i = 0; i < 8; i++) {
-                responseCodes.push(generateBackupCode())
-            }
-
+            // Return the ACTUAL plain codes (ones whose hashes we stored), so
+            // the user can use them later to log in. Returning freshly
+            // regenerated random codes here would make the stored hashes
+            // unusable (they'd never match).
             return new Response(
-                JSON.stringify({ 
-                    codes: responseCodes.map((c, i) => ({
+                JSON.stringify({
+                    codes: plainCodes.map((c, i) => ({
                         code: c,
                         used: false,
-                        created_at: codes[i].created_at
+                        created_at: storedCodes[i].created_at
                     }))
                 }),
                 { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

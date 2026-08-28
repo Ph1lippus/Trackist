@@ -48,6 +48,24 @@ const Login: React.FC = () => {
         setLoading(false)
         pendingSubmitRef.current = false
 
+        // A user with 2FA enabled returns no session yet — instead we get an
+        // MFA-required signal and the list of factors to verify. Route them to
+        // the challenge screen (which verifies the TOTP code and completes login).
+        const mfaRequired = !!data && (
+            (data as { factors?: unknown[] }).factors ||
+            ['mfa_verification_required', 'mfa_enrollment_required'].includes(signInError?.code || '')
+        )
+
+        if (mfaRequired) {
+            const factors = (data as { factors?: Array<{ id?: string }> }).factors
+            const factorId = factors?.[0]?.id
+            if (factorId) {
+                navigate(`/MFA?challenge=${encodeURIComponent(factorId)}`)
+                return
+            }
+            // No factor id resolvable — fall through to error.
+        }
+
         if (signInError) {
             recordAttempt()
             setCaptchaToken(null) // Reset captcha on failure

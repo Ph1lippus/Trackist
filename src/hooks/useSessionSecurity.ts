@@ -8,6 +8,7 @@ export function useSessionSecurity() {
     const inactivityTimerRef = useRef<number | null>(null)
     const lastActivityRef = useRef<number>(Date.now())
     const deviceFingerprintRef = useRef<string>('')
+    const registeredSessionRef = useRef<string | null>(null)
 
     // Generate device fingerprint
     const generateFingerprint = useCallback(() => {
@@ -41,6 +42,13 @@ export function useSessionSecurity() {
     // Register device session
     const registerSession = useCallback(async () => {
         if (!session?.access_token || !user) return
+
+        // Dedupe: only register once per distinct access token. The effect
+        // re-runs on every session object change (auth store updates, the 5-min
+        // auto-refresh), which previously fired many concurrent register calls
+        // and each crossed the server's check-then-insert -> duplicate rows.
+        if (registeredSessionRef.current === session.access_token) return
+        registeredSessionRef.current = session.access_token
 
         try {
             const fingerprint = generateFingerprint()

@@ -26,6 +26,8 @@ CREATE TABLE public.watchlist (
   watched_episodes_count integer DEFAULT 0,
   next_season_number integer DEFAULT 1,
   next_episode_number integer DEFAULT 1,
+  next_air_at text,
+  last_notified_ref text,
   CONSTRAINT watchlist_pkey PRIMARY KEY (id),
   CONSTRAINT watchlist_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
@@ -106,6 +108,7 @@ CREATE TABLE public.profiles (
   notify_new_episode boolean NOT NULL DEFAULT true,
   notify_new_season boolean NOT NULL DEFAULT true,
   notify_release_date boolean NOT NULL DEFAULT true,
+  timezone text DEFAULT 'UTC'::text,
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );
