@@ -233,16 +233,16 @@ const TVShows: React.FC = () => {
                 .delete()
                 .eq('watchlist_id', item.id)
 
-            // Reset to watching status with fresh episode tracking
+            // Reset to planning status with fresh episode tracking
             await supabase
                 .from('watchlist')
                 .update({
-                    status: 'watching',
-                    total_episodes: 0,
-                    total_episodes_watched: 0,
-                    total_seasons: 0,
+                    status: 'planning',
                     current_season: 1,
                     current_episode: 0,
+                    watched_episodes_count: 0,
+                    next_season_number: 1,
+                    next_episode_number: 1,
                     completed_at: null,
                     updated_at: new Date().toISOString()
                 })

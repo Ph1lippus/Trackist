@@ -238,6 +238,38 @@ type WatchedEpisodeData = {
 }
 
 /**
+ * Recalculate and persist all denormalized progress fields for a watchlist item.
+ * Used after batch episode mutations to keep the watchlist row in sync.
+ */
+const recalculateWatchlistDenormalizedFields = async (watchlistId: string): Promise<void> => {
+    const { season: newCurrentSeason, episode: newCurrentEpisode } =
+        await getCurrentSeasonAndEpisodeFromWatched(watchlistId)
+
+    const newWatchedCount = await getWatchedEpisodeCount(watchlistId)
+    const nextEp = await getNextEpisodeToWatch(watchlistId, true)
+
+    const updates: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+        current_episode: newCurrentEpisode,
+        current_season: newCurrentSeason,
+        watched_episodes_count: newWatchedCount
+    }
+
+    if (nextEp) {
+        updates.next_season_number = nextEp.season_number
+        updates.next_episode_number = nextEp.episode_number
+    } else {
+        updates.next_season_number = null
+        updates.next_episode_number = null
+    }
+
+    await supabase
+        .from('watchlist')
+        .update(updates)
+        .eq('id', watchlistId)
+}
+
+/**
  * Mark multiple episodes as watched with batched database writes.
  * Unwatched episodes are never inserted into watchlist_episodes.
  */
@@ -270,6 +302,10 @@ export const markEpisodesWatched = async (
         console.error('Failed to mark episodes as watched:', error)
         return false
     }
+
+    await recalculateWatchlistDenormalizedFields(watchlistId)
+    await updateStatusToWatching(watchlistId)
+    await invalidateUserCache()
 
     return true
 }
@@ -307,6 +343,9 @@ export const unmarkEpisodesWatched = async (
         console.error('Failed to unmark episodes:', failed.error)
         return false
     }
+
+    await recalculateWatchlistDenormalizedFields(watchlistId)
+    await invalidateUserCache()
 
     return true
 }
@@ -495,6 +534,9 @@ export const removeAllWatchedEpisodes = async (watchlistId: string): Promise<boo
             status: 'planning',
             current_episode: 0,
             current_season: 1,
+            watched_episodes_count: 0,
+            next_season_number: 1,
+            next_episode_number: 1,
             completed_at: null,
             updated_at: new Date().toISOString()
         })
@@ -569,6 +611,9 @@ export const markShowAsFullyWatched = async (watchlistId: string, tmdbId: number
                 current_season: details.number_of_seasons || 1,
                 total_episodes: details.number_of_episodes || 0,
                 total_seasons: details.number_of_seasons || 1,
+                watched_episodes_count: details.number_of_episodes || 0,
+                next_season_number: null,
+                next_episode_number: null,
                 updated_at: new Date().toISOString()
             })
             .eq('id', watchlistId)
