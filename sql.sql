@@ -94,7 +94,7 @@ CREATE TABLE public.list_follows (
 );
 CREATE TABLE public.profiles (
   id uuid NOT NULL,
-  display_name text,
+  display_name text UNIQUE,
   bio text,
   avatar_url text,
   created_at timestamp with time zone DEFAULT now(),
@@ -106,3 +106,380 @@ CREATE TABLE public.profiles (
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );
+CREATE TABLE public.user_sessions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  session_id text NOT NULL,
+  device_info jsonb,
+  ip_hash text,
+  location text,
+  created_at timestamp with time zone DEFAULT now(),
+  last_active timestamp with time zone DEFAULT now(),
+  revoked_at timestamp with time zone,
+  CONSTRAINT user_sessions_pkey PRIMARY KEY (id),
+  CONSTRAINT user_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.user_mfa_backup_codes (
+  user_id uuid NOT NULL,
+  codes jsonb NOT NULL DEFAULT '[]'::jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT user_mfa_backup_codes_pkey PRIMARY KEY (user_id),
+  CONSTRAINT user_mfa_backup_codes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.auth_audit_log (
+  id bigint NOT NULL DEFAULT nextval('auth_audit_log_id_seq'::regclass),
+  user_id uuid,
+  event_type text NOT NULL,
+  ip_hash text,
+  user_agent text,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  risk_score integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT auth_audit_log_pkey PRIMARY KEY (id),
+  CONSTRAINT auth_audit_log_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.blocked_ips (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  ip_hash text NOT NULL UNIQUE,
+  reason text NOT NULL,
+  attempt_count integer DEFAULT 0,
+  blocked_at timestamp with time zone DEFAULT now(),
+  expires_at timestamp with time zone,
+  created_by uuid,
+  CONSTRAINT blocked_ips_pkey PRIMARY KEY (id),
+  CONSTRAINT blocked_ips_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id)
+);
+
+
+
+Policies
+Manage Row Level Security policies for your tables
+
+Docs
+
+schema
+
+public
+
+Filter tables and policies
+auth_audit_log
+
+Disable RLS
+
+Create policy
+
+Name	Command	Applied to	Actions
+
+Admins can view all audit logs
+SELECT	
+public
+
+
+Service role can insert audit logs
+INSERT	
+public
+
+
+Users can view own audit logs
+SELECT	
+public
+
+blocked_ips
+
+Disable RLS
+
+Create policy
+
+Name	Command	Applied to	Actions
+
+Admins can manage blocked IPs
+ALL	
+public
+
+list_follows
+
+Disable RLS
+
+Create policy
+
+Name	Command	Applied to	Actions
+
+Users can follow lists
+INSERT	
+public
+
+
+Users can unfollow lists
+DELETE	
+public
+
+
+Users can view own list follows
+SELECT	
+public
+
+
+Users can view public list follows
+SELECT	
+public
+
+list_items
+
+Disable RLS
+
+Create policy
+
+Name	Command	Applied to	Actions
+
+Users can delete own list items
+DELETE	
+public
+
+
+Users can insert own list items
+INSERT	
+public
+
+
+Users can update own list items
+UPDATE	
+public
+
+
+Users can view public list items
+SELECT	
+public
+
+lists
+
+Disable RLS
+
+Create policy
+
+Name	Command	Applied to	Actions
+
+Public read lists
+SELECT	
+public
+
+
+Users can delete own lists
+DELETE	
+public
+
+
+Users can insert own lists
+INSERT	
+public
+
+
+Users can update own lists
+UPDATE	
+public
+
+
+Users can view public lists
+SELECT	
+public
+
+profiles
+
+Disable RLS
+
+Create policy
+
+Name	Command	Applied to	Actions
+
+Admins can update roles
+UPDATE	
+authenticated
+
+
+Admins can view all profiles
+SELECT	
+authenticated
+
+
+Anyone can view public profiles
+SELECT	
+public
+
+
+Users can delete own profile
+DELETE	
+public
+
+
+Users can insert own profile
+INSERT	
+public
+
+
+Users can update own profile
+UPDATE	
+authenticated
+
+
+Users can view own profile
+SELECT	
+authenticated
+
+
+Users manage own profile
+ALL	
+public
+
+user_follows
+
+Disable RLS
+
+Create policy
+
+Name	Command	Applied to	Actions
+
+Anyone can view follows
+SELECT	
+public
+
+
+Users can follow others
+INSERT	
+public
+
+
+Users can unfollow others
+DELETE	
+public
+
+
+Users manage own follows
+ALL	
+public
+
+user_mfa_backup_codes
+
+Disable RLS
+
+Create policy
+
+Name	Command	Applied to	Actions
+
+Users can insert own backup codes
+INSERT	
+public
+
+
+Users can update own backup codes
+UPDATE	
+public
+
+
+Users can view own backup codes
+SELECT	
+public
+
+user_sessions
+
+Disable RLS
+
+Create policy
+
+Name	Command	Applied to	Actions
+
+Users can delete own sessions
+DELETE	
+public
+
+
+Users can insert own sessions
+INSERT	
+public
+
+
+Users can update own sessions
+UPDATE	
+public
+
+
+Users can view own sessions
+SELECT	
+public
+
+watchlist
+
+Disable RLS
+
+Create policy
+
+Name	Command	Applied to	Actions
+
+Admins can view all watchlist items
+SELECT	
+authenticated
+
+
+Public read watchlist
+SELECT	
+public
+
+
+Users can delete own watchlist
+DELETE	
+public
+
+
+Users can insert own watchlist
+INSERT	
+public
+
+
+Users can update own watchlist
+UPDATE	
+public
+
+
+Users can view own watchlist
+SELECT	
+public
+
+
+Users manage own watchlist
+ALL	
+public
+
+watchlist_episodes
+
+Disable RLS
+
+Create policy
+
+Name	Command	Applied to	Actions
+
+Admins can view all watchlist episodes
+SELECT	
+authenticated
+
+
+Users can delete own episodes
+DELETE	
+public
+
+
+Users can insert own episodes
+INSERT	
+public
+
+
+Users can update own episodes
+UPDATE	
+public
+
+
+Users can view own episodes
+SELECT	
+public
+
+
+
+
