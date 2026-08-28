@@ -280,10 +280,6 @@ const Sessions: React.FC = () => {
                                 <li>Enable two-factor authentication for added security</li>
                             </ul>
                         </div>
-
-                        <div className="auth-extra-links">
-                            <a href="/settings" className="auth-link">← Back to Settings</a>
-                        </div>
                     </div>
                 </div>
             </div>

@@ -1,6 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { hash, verify } from 'https://deno.land/x/bcrypt@v0.4.1/mod.ts'
 
 const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
@@ -12,6 +11,68 @@ const supabaseUrl = Deno.env.get('SUPABASE_URL')!
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
+
+const PBKDF2_ITERATIONS = 120000
+
+function bytesToBase64Url(bytes: Uint8Array): string {
+    let binary = ''
+    for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i])
+    }
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
+}
+
+function base64UrlToBytes(base64url: string): Uint8Array {
+    const base64 = base64url.replace(/-/g, '+').replace(/_/g, '/')
+    const padding = base64.length % 4 === 0 ? '' : '='.repeat(4 - (base64.length % 4))
+    const binary = atob(base64 + padding)
+    const bytes = new Uint8Array(binary.length)
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i)
+    }
+    return bytes
+}
+
+async function deriveKeyHash(password: string, salt: Uint8Array): Promise<Uint8Array> {
+    const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        new TextEncoder().encode(password),
+        'PBKDF2',
+        false,
+        ['deriveBits']
+    )
+    const bits = await crypto.subtle.deriveBits(
+        {
+            name: 'PBKDF2',
+            salt: salt as BufferSource,
+            iterations: PBKDF2_ITERATIONS,
+            hash: 'SHA-256'
+        },
+        keyMaterial,
+        256
+    )
+    return new Uint8Array(bits as ArrayBuffer)
+}
+
+async function hashCode(plain: string): Promise<string> {
+    const salt = crypto.getRandomValues(new Uint8Array(16))
+    const hash = await deriveKeyHash(plain, salt)
+    return `${bytesToBase64Url(salt)}:${bytesToBase64Url(hash)}`
+}
+
+async function verifyCode(plain: string, stored: string): Promise<boolean> {
+    const [saltB64, hashB64] = stored.split(':')
+    if (!saltB64 || !hashB64) return false
+    const salt = base64UrlToBytes(saltB64)
+    const expected = base64UrlToBytes(hashB64)
+    const actual = await deriveKeyHash(plain, salt)
+    if (expected.length !== actual.length) return false
+    let diff = 0
+    for (let i = 0; i < expected.length; i++) {
+        diff |= expected[i] ^ actual[i]
+    }
+    return diff === 0
+}
 
 function generateBackupCode(): string {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
@@ -52,7 +113,7 @@ serve(async (req) => {
             
             for (let i = 0; i < 8; i++) {
                 const plainCode = generateBackupCode()
-                const hashedCode = await hash(plainCode)
+                const hashedCode = await hashCode(plainCode)
                 plainCodes.push(plainCode)
                 storedCodes.push({
                     code: hashedCode,
@@ -71,10 +132,6 @@ serve(async (req) => {
 
             if (error) throw error
 
-            // Return the ACTUAL plain codes (ones whose hashes we stored), so
-            // the user can use them later to log in. Returning freshly
-            // regenerated random codes here would make the stored hashes
-            // unusable (they'd never match).
             return new Response(
                 JSON.stringify({
                     codes: plainCodes.map((c, i) => ({
@@ -112,7 +169,7 @@ serve(async (req) => {
             
             for (let i = 0; i < codes.length; i++) {
                 if (!codes[i].used) {
-                    const valid = await verify(code, codes[i].code)
+                    const valid = await verifyCode(code, codes[i].code)
                     if (valid) {
                         codes[i].used = true
                         

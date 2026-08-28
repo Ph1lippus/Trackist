@@ -98,7 +98,7 @@ const mfaService = {
         })
         
         if (error) throw error
-        return data as BackupCode[]
+        return (data as { codes?: BackupCode[] })?.codes || []
     },
 
     async verifyBackupCode(code: string): Promise<boolean> {
@@ -116,7 +116,7 @@ const mfaService = {
         })
         
         if (error) throw error
-        return data as BackupCode[]
+        return (data as { codes?: BackupCode[] })?.codes || []
     }
 }
 

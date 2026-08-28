@@ -72,7 +72,8 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                           location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/);
     const isListDetailPage = location.pathname.match(/^\/ListsDetail\/[a-f0-9-]+$/);
     const isListEditPage = location.pathname.match(/^\/ListsEditPage\/(new|[a-f0-9-]+)$/);
-    const showBackButton = Boolean(isDetailPage || isListDetailPage || isListEditPage);
+    const isSettingsSubPage = ['/MFA', '/Sessions', '/Settings', '/EditProfile', '/AdminSecurity'].includes(location.pathname);
+    const showBackButton = Boolean(isDetailPage || isListDetailPage || isListEditPage || isSettingsSubPage);
     
     const showSearchBar = !['/login', '/register'].includes(location.pathname) && 
         (['/Discover', '/Movies', '/Tvshows', '/', '/Finished', '/Friends', '/Followers', '/Following', '/Lists', '/MobileTVShows', '/MobileMovies'].includes(location.pathname) || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname.startsWith('/Followers/') || location.pathname.startsWith('/Following/') || location.pathname === '/MobileTVShows' || location.pathname === '/MobileMovies');

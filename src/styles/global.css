@@ -4555,6 +4555,12 @@ button:focus-visible {
     color: rgba(255, 255, 255, 0.9);
 }
 
+.auth-alert--success {
+    background: rgba(104, 255, 174, 0.1);
+    border: 1px solid rgba(104, 255, 174, 0.3);
+    color: #68ffae;
+}
+
 .password-input-wrap {
     position: relative;
 }
@@ -10253,6 +10259,17 @@ i.fa-solid.fa-trash:hover {
     border-color: #ff6b6b;
 }
 
+.mfa-btn--download {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+
+.mfa-btn--download:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
 .mfa-info {
     margin-top: 2rem;
     padding-top: 1.5rem;
@@ -10296,6 +10313,21 @@ i.fa-solid.fa-trash:hover {
     padding: 2rem;
     text-align: center;
     color: rgba(255, 255, 255, 0.6);
+}
+
+.mfa-step-error {
+    color: #ff6b6b;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.mfa-step-error-icon {
+    font-size: 2.25rem;
+    color: #ff6b6b;
+}
+
+.mfa-step-success-icon {
+    color: #68ffae;
 }
 
 .spinner {
@@ -10454,6 +10486,16 @@ i.fa-solid.fa-trash:hover {
     letter-spacing: 0.1em;
 }
 
+.mfa-backup-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.6);
+}
+
 .mfa-backup-actions {
     display: flex;
     gap: 0.75rem;
@@ -10539,5 +10581,234 @@ i.fa-solid.fa-trash:hover {
 .mfa-resend {
     width: 100%;
     margin-top: 1rem;
+}
+
+.sessions-page {
+    padding: 2rem 2.5rem;
+}
+
+.sessions-header {
+    margin-bottom: 1.5rem;
+}
+
+.sessions-description {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.9rem;
+    line-height: 1.6;
+    margin-top: 0.5rem;
+    text-align: center;
+}
+
+.sessions-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 2.5rem 0;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.sessions-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    padding: 2.5rem 0;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.sessions-empty i {
+    font-size: 2.5rem;
+    color: var(--color-primary);
+}
+
+.sessions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.session-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.session-card.current {
+    border-color: rgba(104, 255, 174, 0.35);
+    background: rgba(104, 255, 174, 0.05);
+}
+
+.session-card.revoked {
+    opacity: 0.5;
+}
+
+.session-device {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+}
+
+.session-device-icon {
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    background: rgba(133, 138, 227, 0.12);
+    color: var(--color-primary);
+    font-size: 1.15rem;
+}
+
+.session-device-info {
+    min-width: 0;
+    flex: 1;
+}
+
+.session-device-name {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    flex-wrap: wrap;
+}
+
+.session-current-badge {
+    background: rgba(104, 255, 174, 0.15);
+    color: #68ffae;
+    border: 1px solid rgba(104, 255, 174, 0.35);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+}
+
+.session-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-top: 0.4rem;
+}
+
+.session-location,
+.session-time {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.session-location i,
+.session-time i {
+    color: var(--color-primary);
+    font-size: 0.7rem;
+}
+
+.session-location.unknown {
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.session-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.session-revoke-btn {
+    background: rgba(255, 107, 107, 0.1);
+    border: 1px solid rgba(255, 107, 107, 0.35);
+    color: #ff6b6b;
+    padding: 0.45rem 1.1rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.session-revoke-btn:hover:not(:disabled) {
+    background: rgba(255, 107, 107, 0.2);
+}
+
+.session-current-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #68ffae;
+}
+
+.session-revoked-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.45);
+}
+
+.sessions-bulk-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 1rem 0 1.25rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 1.5rem;
+}
+
+.sessions-bulk-actions .auth-submit-btn {
+    margin-top: 0;
+}
+
+.sessions-bulk-note {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.78rem;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.sessions-security-tips {
+    background: rgba(133, 138, 227, 0.06);
+    border: 1px solid rgba(133, 138, 227, 0.15);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+}
+
+.sessions-security-tips h4 {
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
+}
+
+.sessions-security-tips ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.sessions-security-tips li {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.sessions-security-tips li::before {
+    content: '\f00c';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    color: var(--color-primary);
+    font-size: 0.75rem;
+    line-height: 1.4;
 }
 

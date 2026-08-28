@@ -18,25 +18,62 @@ const MFASetup: React.FC<MFASetupProps> = ({ onSuccess, onClose }) => {
     const [showBackupCodes, setShowBackupCodes] = useState(false)
     const [verifying, setVerifying] = useState(false)
     const [creatingChallenge, setCreatingChallenge] = useState(false)
+    const [enrolling, setEnrolling] = useState(true)
+    const [enrollFailed, setEnrollFailed] = useState(false)
+    const [alreadyEnabled, setAlreadyEnabled] = useState(false)
+    const [backupError, setBackupError] = useState<string | null>(null)
+    const [backupLoading, setBackupLoading] = useState(false)
+
+    const removeStaleFactors = async (): Promise<boolean> => {
+        try {
+            const existing = await mfaService.listFactors()
+            let hasVerifiedTOTP = false
+            for (const factor of existing) {
+                if (factor.factorType === 'totp' && factor.status === 'unverified') {
+                    await mfaService.unenroll(factor.id)
+                } else if (factor.factorType === 'totp' && factor.status === 'verified') {
+                    hasVerifiedTOTP = true
+                }
+            }
+            return hasVerifiedTOTP
+        } catch {
+            return false
+        }
+    }
+
+    const startEnroll = async () => {
+        clearError()
+        setEnrolling(true)
+        setEnrollFailed(false)
+        setAlreadyEnabled(false)
+        try {
+            const hasVerifiedTOTP = await removeStaleFactors()
+            if (hasVerifiedTOTP) {
+                setEnrolling(false)
+                setAlreadyEnabled(true)
+                return
+            }
+            const data = await enroll('totp', 'Trackist Authenticator')
+            if (data?.totp) {
+                setEnrollData({
+                    qrCode: data.totp.qrCode,
+                    secret: data.totp.secret,
+                    uri: data.totp.uri,
+                    factorId: data.id
+                })
+                setStep('verify')
+            } else {
+                setEnrolling(false)
+                setEnrollFailed(true)
+            }
+        } catch {
+            setEnrolling(false)
+            setEnrollFailed(true)
+        }
+    }
 
     useEffect(() => {
-        const setup = async () => {
-            clearError()
-            try {
-                const data = await enroll('totp', 'Trackist Authenticator')
-                if (data?.totp) {
-                    setEnrollData({
-                        qrCode: data.totp.qrCode,
-                        secret: data.totp.secret,
-                        uri: data.totp.uri,
-                        factorId: data.id
-                    })
-                    setStep('verify')
-                }
-            } catch {
-            }
-        }
-        setup()
+        startEnroll()
     }, [enroll, clearError])
 
     const handleCreateChallenge = async () => {
@@ -77,11 +114,21 @@ const MFASetup: React.FC<MFASetupProps> = ({ onSuccess, onClose }) => {
     }
 
     const generateBackupCodes = async () => {
+        setBackupError(null)
+        setBackupLoading(true)
         try {
             const codes = await mfaService.generateBackupCodes()
-            setBackupCodes(codes.map(c => c.code))
-            setShowBackupCodes(true)
-        } catch {
+            if (codes.length > 0) {
+                setBackupCodes(codes.map(c => c.code))
+                setShowBackupCodes(true)
+            } else {
+                setBackupError('The server returned no backup codes. Make sure the mfa-backup-codes edge function is deployed and the user_mfa_backup_codes table exists.')
+            }
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Unknown error'
+            setBackupError(`Failed to generate backup codes: ${message}`)
+        } finally {
+            setBackupLoading(false)
         }
     }
 
@@ -90,12 +137,92 @@ const MFASetup: React.FC<MFASetupProps> = ({ onSuccess, onClose }) => {
         onClose?.()
     }
 
+    const copyText = async (text: string) => {
+        try {
+            await navigator.clipboard.writeText(text)
+        } catch {
+            const textarea = document.createElement('textarea')
+            textarea.value = text
+            textarea.style.position = 'fixed'
+            textarea.style.opacity = '0'
+            document.body.appendChild(textarea)
+            textarea.select()
+            document.execCommand('copy')
+            document.body.removeChild(textarea)
+        }
+    }
+
+    const downloadBackupCodes = () => {
+        const header = 'Trackist - Backup Codes\n========================\nEach code can be used once.\n\n'
+        const body = backupCodes.join('\n')
+        const blob = new Blob([header + body + '\n'], { type: 'text/plain;charset=utf-8' })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = 'trackist-backup-codes.txt'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+    }
+
+    const qrUriWithIcon = enrollData
+        ? enrollData.uri.includes('?')
+            ? `${enrollData.uri}&image=${encodeURIComponent(`${window.location.origin}/TRACK1ST-FULLNAMELGO.png`)}`
+            : `${enrollData.uri}?image=${encodeURIComponent(`${window.location.origin}/TRACK1ST-FULLNAMELGO.png`)}`
+        : ''
+
     if (step === 'enroll') {
         return (
             <div className="mfa-setup">
                 <div className="mfa-step">
-                    <div className="spinner"></div>
-                    <p>Setting up 2FA...</p>
+                    {enrolling && !enrollFailed && !alreadyEnabled ? (
+                        <>
+                            <div className="spinner"></div>
+                            <p>Setting up 2FA...</p>
+                        </>
+                    ) : alreadyEnabled ? (
+                        <>
+                            <i className="fa-solid fa-shield-check mfa-step-error-icon mfa-step-success-icon"></i>
+                            <p className="mfa-step-error">
+                                Two-factor authentication is already enabled on this account.
+                            </p>
+                            <p className="mfa-instruction">
+                                To set it up again, first remove the existing method from the
+                                Two-Factor Authentication page, then come back to enable it.
+                            </p>
+                            <div className="mfa-actions">
+                                <button
+                                    className="mfa-btn mfa-btn--primary"
+                                    onClick={onClose}
+                                >
+                                    Go to 2FA settings
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <i className="fa-solid fa-circle-exclamation mfa-step-error-icon"></i>
+                            <p className="mfa-step-error">
+                                {error || 'We could not start two-factor authentication setup. Please try again.'}
+                            </p>
+                            <div className="mfa-actions">
+                                <button
+                                    className="mfa-btn mfa-btn--primary"
+                                    onClick={startEnroll}
+                                    disabled={enrolling}
+                                >
+                                    {enrolling ? 'Retrying...' : 'Retry Setup'}
+                                </button>
+                                <button
+                                    className="mfa-btn mfa-btn--secondary"
+                                    onClick={onClose}
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         )
@@ -113,7 +240,7 @@ const MFASetup: React.FC<MFASetupProps> = ({ onSuccess, onClose }) => {
                 {enrollData && (
                     <div className="mfa-qr-container">
                         <QRCodeSVG 
-                            value={enrollData.uri} 
+                            value={qrUriWithIcon} 
                             size={200}
                             level="M"
                             includeMargin={true}
@@ -123,7 +250,7 @@ const MFASetup: React.FC<MFASetupProps> = ({ onSuccess, onClose }) => {
                             <button 
                                 type="button"
                                 className="copy-btn"
-                                onClick={() => navigator.clipboard.writeText(enrollData.secret)}
+                                onClick={() => copyText(enrollData.secret)}
                             >
                                 Copy
                             </button>
@@ -184,35 +311,61 @@ const MFASetup: React.FC<MFASetupProps> = ({ onSuccess, onClose }) => {
                 </p>
 
                 <div className="mfa-backup-codes">
-                    {backupCodes.map((code, index) => (
-                        <div key={index} className="backup-code">
-                            <span>{code}</span>
-                            <button 
-                                type="button"
-                                className="copy-btn"
-                                onClick={() => navigator.clipboard.writeText(code)}
-                            >
-                                Copy
-                            </button>
+                    {backupCodes.length === 0 ? (
+                        <div className="mfa-backup-empty">
+                            {backupLoading ? (
+                                <div className="mfa-step">
+                                    <div className="spinner"></div>
+                                    <p>Generating backup codes...</p>
+                                </div>
+                            ) : (
+                                <>
+                                    {backupError && <p className="mfa-step-error">{backupError}</p>}
+                                    <p className="mfa-instruction">
+                                        No backup codes are available. You can retry generating them.
+                                    </p>
+                                    <button
+                                        className="mfa-btn mfa-btn--primary"
+                                        onClick={generateBackupCodes}
+                                    >
+                                        Retry Generating Codes
+                                    </button>
+                                </>
+                            )}
                         </div>
-                    ))}
+                    ) : (
+                        backupCodes.map((code, index) => (
+                            <div key={index} className="backup-code">
+                                <span>{code}</span>
+                                <button 
+                                    type="button"
+                                    className="copy-btn"
+                                    onClick={() => copyText(code)}
+                                >
+                                    Copy
+                                </button>
+                            </div>
+                        ))
+                    )}
                 </div>
 
                 <div className="mfa-backup-actions">
                     <button 
                         className="mfa-btn mfa-btn--primary"
                         onClick={() => {
-                            navigator.clipboard.writeText(backupCodes.join('\n'))
+                            copyText(backupCodes.join('\n'))
                             alert('All codes copied to clipboard')
                         }}
+                        disabled={backupCodes.length === 0}
                     >
                         Copy All Codes
                     </button>
                     <button 
-                        className="mfa-btn mfa-btn--secondary"
-                        onClick={() => window.print()}
+                        className="mfa-btn mfa-btn--download"
+                        onClick={downloadBackupCodes}
+                        disabled={backupCodes.length === 0}
                     >
-                        Print Codes
+                        <i className="fa-solid fa-download"></i> Download Codes
                     </button>
                 </div>
 
