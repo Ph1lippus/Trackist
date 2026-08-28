@@ -8460,6 +8460,14 @@ i.fa-solid.fa-trash:hover {
     color: rgba(255, 255, 255, 0.4);
 }
 
+.settings-data-card__actions {
+    display: flex;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+}
+
 /* Danger Card */
 .settings-danger-card {
     padding: 1.25rem;
