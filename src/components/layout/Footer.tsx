@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 
 interface FooterProps {
@@ -63,7 +63,7 @@ const Footer: React.FC<FooterProps> = ({ loggedIn = false }) => {
                 <div className="footer__bottom">
                     <p className="footer__copyright">
                         &copy; 2026 <strong>Trackist</strong>. Open source. 
-                        Built with â¤ï¸ by <a href="https://github.com/Ph1lippus" target="_blank" rel="noopener noreferrer">Ph1lippus</a>
+                        Built with ❤ by <a href="https://github.com/Ph1lippus" target="_blank" rel="noopener noreferrer">Ph1lippus</a>
                     </p>
                 </div>
             </div>

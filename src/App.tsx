@@ -198,7 +198,17 @@ const AppContent: React.FC = () => {
     }
 
     const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Friends', '/Statistics', '/Finished', '/Lists', '/Profile', '/Admin', '/MobileTVShows', '/MobileMovies', '/Followers', '/Following', '/Credits']
-    const hideFooter = Boolean(user) && (mediaPages.includes(location.pathname) || location.pathname === '/Settings' || location.pathname === '/MFA' || location.pathname === '/Sessions' || location.pathname === '/AdminSecurity' || location.pathname === '/EditProfile' || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname.startsWith('/Lists/') || location.pathname.startsWith('/Profile/') || location.pathname.startsWith('/Movies/') || location.pathname.startsWith('/Followers') || location.pathname.startsWith('/Following'))
+    const settingsPages = ['/Settings', '/MFA', '/Sessions', '/AdminSecurity', '/EditProfile']
+    const isSubpage = (path: string) => (
+        path.startsWith('/ListsDetail/') ||
+        path.startsWith('/ListsEditPage/') ||
+        path.startsWith('/Lists/') ||
+        path.startsWith('/Profile/') ||
+        path.startsWith('/Movies/') ||
+        path.startsWith('/Followers') ||
+        path.startsWith('/Following')
+    )
+    const hideFooter = Boolean(user) && (mediaPages.includes(location.pathname) || settingsPages.includes(location.pathname) || isSubpage(location.pathname))
     
     const navigateMonth = (direction: number) => {
         setCurrentMonth(prev => {
@@ -284,7 +294,7 @@ const AppContent: React.FC = () => {
             </main>
             <SecondaryNavbar />
             <MobileBottomNavbar />
-            {!hideFooter && !isDetailPage && <Footer />}
+            {!hideFooter && !isDetailPage && <Footer loggedIn={Boolean(user)} />}
             <PWAUpdateModal
                 isOpen={showUpdateModal}
                 onUpdate={handleUpdate}

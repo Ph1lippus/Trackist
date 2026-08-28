@@ -4039,8 +4039,7 @@ html::before {
 
 .footer {
     background-color: var(--color-primary);
-    padding: 2rem 0 0;
-    padding-bottom: 0;
+    padding: 2rem 0 calc(env(safe-area-inset-bottom, 0px));
     margin-top: auto;
 }
 
@@ -4134,6 +4133,7 @@ html::before {
     flex-direction: column;
     gap: 0.5rem;
     align-items: flex-start;
+    min-width: 0;
 }
 
 .footer__links-title {
@@ -4152,6 +4152,8 @@ html::before {
     transition: all 0.2s ease;
     font-weight: 500;
     cursor: pointer;
+    overflow-wrap: anywhere;
+    min-width: 0;
 }
 
 .footer a:hover {
