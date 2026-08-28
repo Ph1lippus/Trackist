@@ -59,6 +59,10 @@
         transition: all 0.25s ease!important;
         position: relative!important;
     }
+    .detail-page__episode-card.no-poster{
+        border-radius: 0px!important;
+        padding: 0.6rem 1.1rem 0.6rem 1.1rem!important;
+    }
     .media-card__episodes-left {
         display: none!important;
     }

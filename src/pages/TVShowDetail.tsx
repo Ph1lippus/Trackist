@@ -88,42 +88,44 @@ const TVShowDetail: React.FC = () => {
         return new Date(episode.air_date) <= new Date()
     }
 
-    const getNextEpisodeToWatch = (): { season: number; episode: number } | null => {
-        if (!episodes.length) return null
+    const getResumeEpisodeToWatch = async (): Promise<{ season: number; episode: number } | null> => {
+        const watchedKeys = watchedKeysCache.current
 
-        const watchedEps = episodes.filter(ep => ep.watched && isEpisodeReleased(ep))
-        if (watchedEps.length === 0) return null
-
-        const lastWatched = watchedEps.reduce((max, ep) => {
-            if (ep.season_number > max.season_number) return ep
-            if (ep.season_number === max.season_number && ep.episode_number > max.episode_number) return ep
-            return max
-        }, watchedEps[0])
-
-        const episodesInLastSeason = episodes.filter(ep => ep.season_number === lastWatched.season_number)
-        const releasedInLastSeason = episodesInLastSeason.filter(ep => isEpisodeReleased(ep))
-        const allReleasedWatched = releasedInLastSeason.length > 0 && releasedInLastSeason.every(ep => ep.watched)
-
-        if (allReleasedWatched) {
-            const nextSeason = seasons.find(s => s > lastWatched.season_number)
-            if (nextSeason) {
-                const firstEpOfNextSeason = episodes.find(ep => ep.season_number === nextSeason && isEpisodeReleased(ep))
-                if (firstEpOfNextSeason) {
-                    return { season: nextSeason, episode: firstEpOfNextSeason.episode_number }
-                }
-            }
-            return null
+        // No progress at all -> fall back to first released episode of first season (S1E1)
+        if (watchedKeys.size === 0) {
+            if (!seasons.length) return null
+            const first = seasons[0]
+            const eps = await ensureSeasonLoaded(first)
+            const released = eps.find(isEpisodeReleased)
+            return released ? { season: first, episode: released.episode_number } : null
         }
 
-        const nextEp = episodes.find(ep =>
-            ep.season_number === lastWatched.season_number &&
-            ep.episode_number === lastWatched.episode_number + 1 &&
-            isEpisodeReleased(ep)
-        )
-        if (nextEp) {
-            return { season: nextEp.season_number, episode: nextEp.episode_number }
+        // Last watched episode across the whole show
+        let last: { season: number; episode: number } | null = null
+        for (const key of watchedKeys) {
+            const [s, e] = key.split('-').map(Number)
+            if (!last || s > last.season || (s === last.season && e > last.episode)) last = { season: s, episode: e }
         }
+        if (!last) return null
 
+        const sEps = await ensureSeasonLoaded(last.season)
+        const releasedInSeason = sEps.filter(isEpisodeReleased)
+
+        // Next released episode in the same season (e.g. S2E4 watched -> S2E5)
+        const nextInSeason = releasedInSeason.find(ep => ep.episode_number === last!.episode + 1)
+        if (nextInSeason) return { season: last.season, episode: nextInSeason.episode_number }
+
+        // Current season still has (unreleased) later episodes -> nothing to resume now
+        const hasLaterInSeason = sEps.some(ep => ep.episode_number > last!.episode)
+        if (hasLaterInSeason) return null
+
+        // Current season complete -> advance to next season's first released episode
+        const idx = seasons.indexOf(last.season)
+        for (let i = idx + 1; i < seasons.length; i++) {
+            const neps = await ensureSeasonLoaded(seasons[i])
+            const firstReleased = neps.find(isEpisodeReleased)
+            if (firstReleased) return { season: seasons[i], episode: firstReleased.episode_number }
+        }
         return null
     }
 
@@ -226,6 +228,33 @@ const TVShowDetail: React.FC = () => {
             setEpisodes(seasonEpisodes)
         } catch (err) {
             console.error('Failed to load season:', err)
+        }
+    }
+
+    const ensureSeasonLoaded = async (seasonNumber: number): Promise<LocalEpisode[]> => {
+        if (seasonCache.current.has(seasonNumber)) return seasonCache.current.get(seasonNumber)!
+        if (!id || !details) return []
+        try {
+            const seasonData = await getTVSeasonDetails(Number(id), seasonNumber)
+            const sEpisodes = seasonData.episodes || []
+            const seasonEpisodes: LocalEpisode[] = sEpisodes.map(ep => ({
+                id: `${id}-${seasonNumber}-${ep.episode_number}`,
+                season_number: seasonNumber,
+                episode_number: ep.episode_number,
+                tmdb_episode_id: ep.id,
+                title: ep.name,
+                still_path: ep.still_path ?? undefined,
+                overview: ep.overview,
+                vote_average: ep.vote_average,
+                air_date: ep.air_date,
+                runtime: ep.runtime,
+                watched: watchedKeysCache.current.has(`${seasonNumber}-${ep.episode_number}`),
+            }))
+            seasonCache.current.set(seasonNumber, seasonEpisodes)
+            return seasonEpisodes
+        } catch (err) {
+            console.error('Failed to load season:', err)
+            return []
         }
     }
 
@@ -875,47 +904,14 @@ const TVShowDetail: React.FC = () => {
                                  {showStremioButton && !stremioLoading && (
                                      <button
                                          className="detail-page__icon-btn"
-                                          onClick={async () => {
-                                              if (!details) return
-                                              let nextEp = getNextEpisodeToWatch()
-
-                                             if (!nextEp && details) {
-                                                 const watchedEps = episodes.filter(ep => ep.watched && isEpisodeReleased(ep))
-                                                 if (watchedEps.length > 0) {
-                                                     const lastWatched = watchedEps.reduce((max, ep) => {
-                                                         if (ep.season_number > max.season_number) return ep
-                                                         if (ep.season_number === max.season_number && ep.episode_number > max.episode_number) return ep
-                                                         return max
-                                                     }, watchedEps[0])
-
-                                                     const nextSeason = seasons.find(s => s > lastWatched.season_number)
-                                                     if (nextSeason) {
-                                                         await loadSeason(nextSeason)
-                                                         const nextSeasonEps = seasonCache.current.get(nextSeason) || []
-                                                         const firstReleased = nextSeasonEps.find(ep => isEpisodeReleased(ep))
-                                                         if (firstReleased) {
-                                                             nextEp = { season: nextSeason, episode: firstReleased.episode_number }
-                                                         }
-                                                     }
-                                                 } else if (seasons.length > 0) {
-                                                     const firstSeason = seasons[0]
-                                                     const firstSeasonEps = seasonCache.current.get(firstSeason) || []
-                                                     if (firstSeasonEps.length === 0) {
-                                                         await loadSeason(firstSeason)
-                                                     }
-                                                     const loadedEps = seasonCache.current.get(firstSeason) || []
-                                                     const firstReleased = loadedEps.find(ep => isEpisodeReleased(ep))
-                                                     if (firstReleased) {
-                                                         nextEp = { season: firstSeason, episode: firstReleased.episode_number }
-                                                     }
-                                                 }
-                                             }
-
-                                             const sharingLink = nextEp
-                                                 ? createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids?.imdb_id)
-                                                 : createTVDeepLink(details.id, details.external_ids?.imdb_id)
-                                             openInStremio(sharingLink)
-                                         }}
+                                           onClick={async () => {
+                                            if (!details) return
+                                            const nextEp = await getResumeEpisodeToWatch()
+                                            const sharingLink = nextEp
+                                                ? createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids?.imdb_id)
+                                                : createTVDeepLink(details.id, details.external_ids?.imdb_id)
+                                            openInStremio(sharingLink)
+                                        }}
                                          title="Open in Stremio"
                                      >
                                          <img src={stremioIcon} alt="Stremio" className="detail-page__stremio-logo" />
@@ -1026,7 +1022,7 @@ const TVShowDetail: React.FC = () => {
                                     <div 
                                         key={ep.id} 
                                         ref={(el) => { episodeRefs.current[ep.id] = el }}
-                                        className={`detail-page__episode-card ${ep.watched ? 'watched' : ''} ${!isEpisodeReleased(ep) ? 'unreleased' : ''}`}
+                                        className={`detail-page__episode-card ${ep.watched ? 'watched' : ''} ${!isEpisodeReleased(ep) ? 'unreleased' : ''} ${!ep.still_path ? 'no-poster' : ''}`}
                                         style={{ cursor: isEpisodeReleased(ep) ? 'pointer' : 'default' }}
                                     >
                                         {ep.still_path && (
