@@ -103,6 +103,9 @@ CREATE TABLE public.profiles (
   show_stremio_button boolean NOT NULL DEFAULT false,
   show_letterbox_button boolean NOT NULL DEFAULT false,
   show_media_card_icons boolean NOT NULL DEFAULT false,
+  notify_new_episode boolean NOT NULL DEFAULT true,
+  notify_new_season boolean NOT NULL DEFAULT true,
+  notify_release_date boolean NOT NULL DEFAULT true,
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );
@@ -149,6 +152,17 @@ CREATE TABLE public.blocked_ips (
   created_by uuid,
   CONSTRAINT blocked_ips_pkey PRIMARY KEY (id),
   CONSTRAINT blocked_ips_created_by_fkey FOREIGN KEY (created_by) REFERENCES auth.users(id)
+);
+CREATE TABLE public.push_subscriptions (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  endpoint text NOT NULL UNIQUE,
+  keys jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(keys) = 'object'::text),
+  user_agent text,
+  created_at timestamp with time zone DEFAULT now(),
+  last_seen timestamp with time zone DEFAULT now(),
+  CONSTRAINT push_subscriptions_pkey PRIMARY KEY (id),
+  CONSTRAINT push_subscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
 
 

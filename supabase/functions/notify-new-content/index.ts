@@ -11,8 +11,9 @@ const corsHeaders = {
 
 const TMDB_API_KEY = Deno.env.get('TMDB_API_KEY')
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3'
-const WATCHLIST_PAGE_SIZE = 1000
+const GMAP_PAGE_SIZE = 1000
 const TMDB_CONCURRENCY = 6
+const SCHEDULE_THROTTLE_MS = 6 * 60 * 60 * 1000
 
 interface TVShowRow {
   id: string
@@ -21,6 +22,9 @@ interface TVShowRow {
   poster_path: string | null
   status: string | null
   last_season_number?: number | null
+  next_air_at?: string | null
+  last_notified_ref?: string | null
+  last_season_check?: string | null
 }
 
 interface MovieRow {
@@ -29,6 +33,8 @@ interface MovieRow {
   title: string
   poster_path: string | null
   release_date?: string | null
+  next_air_at?: string | null
+  last_notified_ref?: string | null
 }
 
 interface SubscriptionRow {
@@ -37,20 +43,20 @@ interface SubscriptionRow {
   keys: { p256dh?: string; auth?: string }
 }
 
-interface TMDBEpisode {
-  id: number
-  episode_number: number
-  name?: string
-  air_date?: string | null
-  still_path?: string | null
-}
-
 interface PushPayload {
   title: string
   body: string
   url: string
   tag: string
   icon?: string
+}
+
+interface TMDBEpisode {
+  id: number
+  episode_number: number
+  name?: string
+  air_date?: string | null
+  still_path?: string | null
 }
 
 const getUTCDateString = (date: Date): string =>
@@ -74,13 +80,13 @@ async function fetchAllRows<T>(query: PagedQuery<T>): Promise<T[]> {
 
   while (true) {
     const { data, error } = await query
-      .range(page * WATCHLIST_PAGE_SIZE, (page + 1) * WATCHLIST_PAGE_SIZE - 1)
+      .range(page * GMAP_PAGE_SIZE, (page + 1) * GMAP_PAGE_SIZE - 1)
 
     if (error) throw error
     if (!data || data.length === 0) break
 
     rows.push(...data as T[])
-    if (data.length < WATCHLIST_PAGE_SIZE) break
+    if (data.length < GMAP_PAGE_SIZE) break
     page++
   }
 
@@ -109,6 +115,21 @@ async function mapWithConcurrency<T, R>(
   return results
 }
 
+function todayInTimezone(timezone: string, now: Date = new Date()): string {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(now)
+    const get = (t: string) => parts.find((p) => p.type === t)?.value || '00'
+    return `${get('year')}-${get('month')}-${get('day')}`
+  } catch {
+    return getUTCDateString(now)
+  }
+}
+
 serve(async (req: Request) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -119,6 +140,9 @@ serve(async (req: Request) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Supabase environment variables are not set')
+    }
+    if (!TMDB_API_KEY) {
+      throw new Error('TMDB_API_KEY is not configured')
     }
 
     const cronSecret = Deno.env.get('CRON_SECRET')
@@ -153,8 +177,12 @@ serve(async (req: Request) => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
-    const todayStr = getUTCDateString(new Date())
+    const now = new Date()
 
+    // ------------------------------------------------------------------
+    // 1. Fetch subscriptions and join to their user's timezone + prefs.
+    //    (one lightweight query; still tiny)
+    // ------------------------------------------------------------------
     const { data: subRows } = await supabase
       .from('push_subscriptions')
       .select('user_id')
@@ -167,44 +195,57 @@ serve(async (req: Request) => {
       })
     }
 
+    const { data: profileRows } = await supabase
+      .from('profiles')
+      .select('id, timezone, notify_new_episode, notify_new_season, notify_release_date')
+      .in('id', userIds)
+
+    const profileMap = new Map<string, Record<string, unknown>>(
+      (profileRows || []).map((p) => [p.id as string, p as Record<string, unknown>])
+    )
+
     let notificationsSent = 0
     let errors = 0
     let usersProcessed = 0
+    let itemsScheduled = 0
     let staleSubscriptionsRemoved = 0
 
     for (const userId of userIds) {
       try {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('notify_new_episode, notify_new_season, notify_release_date')
-          .eq('id', userId)
-          .maybeSingle()
-
-        const prefs = profile ?? { notify_new_episode: true, notify_new_season: true, notify_release_date: true }
-
-        const wantEpisode = prefs.notify_new_episode !== false
-        const wantSeason = prefs.notify_new_season !== false
-        const wantRelease = prefs.notify_release_date !== false
+        const profile = profileMap.get(userId) ?? {}
+        const timezone = typeof profile.timezone === 'string' ? profile.timezone : 'UTC'
+        const wantEpisode = profile.notify_new_episode !== false
+        const wantSeason = profile.notify_new_season !== false
+        const wantRelease = profile.notify_release_date !== false
 
         if (!wantEpisode && !wantSeason && !wantRelease) continue
 
+        const todayStr = todayInTimezone(timezone, now)
+
+        // ------------------------------------------------------------------
+        // 2. Fetch ONLY items that are due today (in the user's timezone) OR
+        //    not yet scheduled. This is the whole point: we never scan the
+        //    entire library — only items whose scheduled air DATE has arrived.
+        // ------------------------------------------------------------------
         const [tvShows, movies] = await Promise.all([
-          wantEpisode || wantSeason
+          (wantEpisode || wantSeason)
             ? fetchAllRows<TVShowRow>(
                 supabase
                   .from('watchlist')
-                  .select('id, tmdb_id, title, poster_path, status, last_season_number')
+                  .select('id, tmdb_id, title, poster_path, status, last_season_number, next_air_at, last_notified_ref, last_season_check')
                   .eq('user_id', userId)
                   .eq('media_type', 'tv')
+                  .or(`next_air_at.is.null,next_air_at.lte.${todayStr}`)
               )
             : Promise.resolve([]),
           wantRelease
             ? fetchAllRows<MovieRow>(
                 supabase
                   .from('watchlist')
-                  .select('id, tmdb_id, title, poster_path, release_date')
+                  .select('id, tmdb_id, title, poster_path, release_date, next_air_at, last_notified_ref')
                   .eq('user_id', userId)
                   .eq('media_type', 'movie')
+                  .or(`next_air_at.is.null,release_date.eq.${todayStr}`)
               )
             : Promise.resolve([]),
         ])
@@ -217,6 +258,9 @@ serve(async (req: Request) => {
           notifications.push(payload)
         }
 
+        // ------------------------------------------------------------------
+        // 3. TV shows: resolve each due item, send, roll next_air_at forward.
+        // ------------------------------------------------------------------
         if (tvShows.length > 0) {
           const seasonResults = await mapWithConcurrency(
             tvShows,
@@ -241,50 +285,131 @@ serve(async (req: Request) => {
           )
 
           for (const { show, seasonNumber, episodes } of seasonResults) {
-            if (!show.tmdb_id) continue
+            if (!show.tmdb_id || episodes.length === 0) continue
 
-            for (const episode of episodes) {
-              if (!episode.air_date || episode.air_date !== todayStr) continue
+            // Sort ascending so we can find the next unreleased episode.
+            const sorted = [...episodes].sort((a, b) => {
+              const da = a.air_date || ''
+              const db = b.air_date || ''
+              return da < db ? -1 : da > db ? 1 : a.episode_number - b.episode_number
+            })
 
-              const firstEpisodeOfSeason = episode.episode_number === 1
+            // Identify the episode whose air date == the stored next_air_at (i.e. due now).
+            const nextAirDate = show.next_air_at || null
+            const dueEpisode = nextAirDate
+              ? sorted.find((ep) => ep.air_date === nextAirDate)
+              : null
+
+            // Backfill / refresh: if next_air_at is null (new or legacy item), compute it.
+            if (!show.next_air_at) {
+              const lastCheck = show.last_season_check ? new Date(show.last_season_check).getTime() : 0
+              const nextUnreleased = sorted.find((ep) =>
+                ep.air_date && ep.air_date > todayStr
+              )
+
+              if (Date.now() - lastCheck > SCHEDULE_THROTTLE_MS) {
+                await supabase
+                  .from('watchlist')
+                  .update({ next_air_at: nextUnreleased?.air_date ?? null, last_season_check: now.toISOString() })
+                  .eq('id', show.id)
+                if (nextUnreleased) itemsScheduled++
+              }
+              continue
+            }
+
+            // If the due episode exists and IS today (in the user's tz), notify.
+            if (dueEpisode && dueEpisode.air_date === todayStr) {
+              const newRef = `S${seasonNumber}E${dueEpisode.episode_number}:${dueEpisode.air_date}`
+              const seasonRef = `S${seasonNumber}premiere:${dueEpisode.air_date}`
+              const firstEpisodeOfSeason = dueEpisode.episode_number === 1
               const userWasCaughtUp = show.status === 'caught_up' || show.status === 'completed'
+              const isPremiere = firstEpisodeOfSeason && userWasCaughtUp && wantSeason
 
-              if (wantEpisode) {
+              // A season premiere for a caught-up user gets ONE standout "new season"
+              // alert instead of being drowned out by a routine episode ping.
+              if (isPremiere) {
+                if (show.last_notified_ref !== seasonRef) {
+                  addNotification({
+                    title: show.title,
+                    body: `New season · S${seasonNumber}${dueEpisode.name ? ` — ${dueEpisode.name}` : ''}`,
+                    url: `/tv/${show.tmdb_id}`,
+                    tag: `season:${show.id}:${seasonRef}`,
+                    icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
+                  })
+                  await supabase
+                    .from('watchlist')
+                    .update({ last_notified_ref: seasonRef })
+                    .eq('id', show.id)
+                }
+              } else if (wantEpisode && show.last_notified_ref !== newRef) {
                 addNotification({
                   title: show.title,
-                  body: firstEpisodeOfSeason
-                    ? `S${seasonNumber} premieres today`
-                    : `New episode S${seasonNumber}E${episode.episode_number}${episode.name ? ` — ${episode.name}` : ''}`,
+                  body: `S${seasonNumber} · E${dueEpisode.episode_number}${dueEpisode.name ? ` — ${dueEpisode.name}` : ''}`,
                   url: `/tv/${show.tmdb_id}`,
-                  tag: `episode:${show.id}`,
+                  tag: `episode:${show.id}:${newRef}`,
                   icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
                 })
+                await supabase
+                  .from('watchlist')
+                  .update({ last_notified_ref: newRef })
+                  .eq('id', show.id)
               }
+            }
 
-              if (wantSeason && firstEpisodeOfSeason && userWasCaughtUp) {
-                addNotification({
-                  title: show.title,
-                  body: `New season S${seasonNumber} premieres today`,
-                  url: `/tv/${show.tmdb_id}`,
-                  tag: `season:${show.id}`,
-                  icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
-                })
-              }
+            // Roll next_air_at forward to the next unreleased episode after today.
+            const lastCheck = show.last_season_check ? new Date(show.last_season_check).getTime() : 0
+            if (Date.now() - lastCheck > SCHEDULE_THROTTLE_MS) {
+              const nextUnreleased = sorted.find((ep) =>
+                ep.air_date && ep.air_date > todayStr
+              )
+              await supabase
+                .from('watchlist')
+                .update({ next_air_at: nextUnreleased?.air_date ?? null, last_season_check: now.toISOString() })
+                .eq('id', show.id)
+              if (nextUnreleased) itemsScheduled++
             }
           }
         }
 
+        // ------------------------------------------------------------------
+        // 4. Movies: notify once when release_date == today (user's timezone).
+        // ------------------------------------------------------------------
         if (wantRelease) {
           for (const movie of movies) {
-            if (!movie.tmdb_id || movie.release_date !== todayStr) continue
+            if (!movie.tmdb_id || !movie.release_date) continue
 
-            addNotification({
-              title: movie.title,
-              body: 'Releases today',
-              url: `/movie/${movie.tmdb_id}`,
-              tag: `movie:${movie.id}`,
-              icon: movie.poster_path ? `https://image.tmdb.org/t/p/w92${movie.poster_path}` : undefined,
-            })
+            const newRef = movie.release_date
+            const due = movie.release_date === todayStr
+
+            if (due && movie.last_notified_ref !== newRef) {
+              addNotification({
+                title: movie.title,
+                body: 'Released today',
+                url: `/movie/${movie.tmdb_id}`,
+                tag: `movie:${movie.id}:${newRef}`,
+                icon: movie.poster_path ? `https://image.tmdb.org/t/p/w92${movie.poster_path}` : undefined,
+              })
+              await supabase
+                .from('watchlist')
+                .update({ last_notified_ref: newRef })
+                .eq('id', movie.id)
+            }
+
+            // Future release: schedule it (its release_date is its due date).
+            if (!movie.next_air_at && movie.release_date > todayStr) {
+              await supabase
+                .from('watchlist')
+                .update({ next_air_at: movie.release_date })
+                .eq('id', movie.id)
+              itemsScheduled++
+            }
+            // Past release that's already been alerted: clear scheduling.
+            else if (movie.last_notified_ref === movie.release_date && movie.next_air_at) {
+              await supabase
+                .from('watchlist')
+                .update({ next_air_at: null })
+                .eq('id', movie.id)
+            }
           }
         }
 
@@ -340,6 +465,7 @@ serve(async (req: Request) => {
       JSON.stringify({
         users_processed: usersProcessed,
         notifications_sent: notificationsSent,
+        items_scheduled: itemsScheduled,
         stale_subscriptions_removed: staleSubscriptionsRemoved,
         errors,
       }),

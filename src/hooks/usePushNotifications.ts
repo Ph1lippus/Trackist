@@ -150,6 +150,8 @@ export const usePushNotifications = () => {
                 throw new Error(`Failed to save the subscription: ${upsertError.message}`)
             }
 
+            await saveTimezone(user.id)
+
             setSubscribed(true)
             return { ok: true }
         } catch (err) {
@@ -204,4 +206,17 @@ export const usePushNotifications = () => {
         enable,
         disable,
     }
+}
+
+const detectTimezone = (): string => {
+    try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+    } catch {
+        return 'UTC'
+    }
+}
+
+const saveTimezone = async (userId: string): Promise<void> => {
+    const timezone = detectTimezone()
+    await supabase.from('profiles').update({ timezone }).eq('id', userId)
 }

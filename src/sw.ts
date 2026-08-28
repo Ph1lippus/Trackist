@@ -93,9 +93,10 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(data.title, {
       body: data.body,
       tag: data.tag,
-      icon: data.icon || '/android-chrome-512x512.png',
-      badge: '/favicon.ico',
+      icon: data.icon || '/TRACK1ST-FULLNAMELGO.png',
+      badge: '/TRACK1ST-FULLNAMELGO.png',
       data: { url: data.url },
+      renotify: !!data.tag,
     })
   )
 })
