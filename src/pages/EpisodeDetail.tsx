@@ -8,6 +8,8 @@ import { getCachedOrFetch } from '../services/cacheService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { useMobile } from '../contexts/useMobile'
+import ShareButton from '../components/media/ShareButton'
 
 interface EpisodeData {
     id: number
@@ -22,6 +24,7 @@ interface EpisodeData {
 
 const EpisodeDetail: React.FC = () => {
     const { id, season, episode } = useParams<{ id: string; season: string; episode: string }>()
+    const { isMobile } = useMobile()
     usePageTitle('Trackist - Episode Detail')
     const [tvDetails, setTvDetails] = useState<TMDBResult | null>(null)
     const [episodeData, setEpisodeData] = useState<EpisodeData | null>(null)
@@ -231,7 +234,11 @@ const EpisodeDetail: React.FC = () => {
                             <h2 className="detail-page__section-title">Description</h2>
                             <p className="detail-page__overview">{episodeData.overview || 'No description available.'}</p>
                             
-                            <div className="detail-page__actions">
+                            <div className={isMobile ? 'detail-page__actions-mobile' : 'detail-page__actions'}>
+                                <ShareButton
+                                    url={window.location.href}
+                                    text={`${title} S${season}E${episode} - ${episodeTitle} on Trackist`}
+                                />
                                 {isInWatchlist && (
                                     <button 
                                         className="detail-page__icon-btn"

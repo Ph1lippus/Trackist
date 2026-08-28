@@ -15,6 +15,7 @@ import { useShowStremioButton } from '../hooks/useShowStremioButton'
 import { useMobile } from '../contexts/useMobile'
 import { useAuthStore } from '../stores/useAuthStore'
 import stremioIcon from '../assets/stremio-logo-icon-only-fullcolor.svg'
+import ShareButton from '../components/media/ShareButton'
 
 interface LocalEpisode {
     id: string
@@ -993,10 +994,10 @@ const TVShowDetail: React.FC = () => {
                                         <i className="fa-solid fa-users"></i>
                                     </button>
                                 )}
-                                 {showStremioButton && !stremioLoading && (
+{showStremioButton && !stremioLoading && (
                                      <button
                                          className="detail-page__icon-btn"
-                                           onClick={async () => {
+                                         onClick={async () => {
                                             if (!details) return
                                             const nextEp = await getResumeEpisodeToWatch()
                                             const sharingLink = nextEp
@@ -1009,6 +1010,7 @@ const TVShowDetail: React.FC = () => {
                                          <img src={stremioIcon} alt="Stremio" className="detail-page__stremio-logo" />
                                      </button>
                                  )}
+                                <ShareButton url={window.location.href} text={`Check out ${title} on Trackist`} />
                             </div>
 
                             {/* Action buttons (desktop inline / mobile fixed sidebar) */}

@@ -14,6 +14,7 @@ import { useMobile } from '../contexts/useMobile'
 import { useAuthStore } from '../stores/useAuthStore'
 import stremioIcon from '../assets/stremio-logo-icon-only-fullcolor.svg'
 import letterboxdIcon from '../assets/letterboxd-decal-dots-pos-rgb-500px.png'
+import ShareButton from '../components/media/ShareButton'
 
 const MovieDetail: React.FC = () => {
     usePageTitle('Trackist - Movie Detail')
@@ -395,6 +396,7 @@ const MovieDetail: React.FC = () => {
                                     <img src={letterboxdIcon} alt="Letterboxd" className="detail-page__letterbox-logo" />
                                 </button>
                             )}
+                            <ShareButton url={window.location.href} text={`Check out ${title} on Trackist`} />
                         </div>
 
                         {/* Mobile fixed action container */}
@@ -516,6 +518,7 @@ const MovieDetail: React.FC = () => {
                                     <img src={letterboxdIcon} alt="Letterboxd" className="detail-page__letterbox-logo" />
                                 </button>
                             )}
+                            <ShareButton url={window.location.href} text={`Check out ${title} on Trackist`} />
                         </div>
 
                         {!isMobile && showTrailer && trailerKey && (
