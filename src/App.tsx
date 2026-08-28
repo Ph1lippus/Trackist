@@ -137,14 +137,13 @@ const AppContent: React.FC = () => {
     }, [loading, user, aal, location.pathname, navigate])
 
 
-    // PWA service worker registration - only for PWA context
+    // PWA service worker registration - required for installability and offline.
+    // Register unconditionally; a registered SW is what makes beforeinstallprompt
+    // fire and lets the app be installed from the browser.
     useEffect(() => {
-        const registerServiceWorker = async () => {
-            // Only register service worker and show updates in PWA mode
-            if (!isPWA) {
-                return
-            }
+        const updateIntervalIds: number[] = []
 
+        const registerServiceWorker = async () => {
             try {
                 const swUpdate = registerSW({
                     onNeedRefresh() {
@@ -152,7 +151,14 @@ const AppContent: React.FC = () => {
                     },
                     onOfflineReady() {
                     },
-                    onRegistered(_registration) {
+                    onRegistered(registration) {
+                        // Periodically check for updates so long-lived tabs still
+                        // surface the "Update Available" prompt.
+                        updateIntervalIds.push(
+                            window.setInterval(() => {
+                                registration.update()
+                            }, 60 * 60 * 1000)
+                        )
                     },
                     onRegisterError(error: Error) {
                         console.error('Service worker registration error:', error)
@@ -165,6 +171,12 @@ const AppContent: React.FC = () => {
         }
 
         registerServiceWorker()
+
+        return () => {
+            for (const id of updateIntervalIds) {
+                window.clearInterval(id)
+            }
+        }
     }, [])
 
     const handleUpdate = async () => {

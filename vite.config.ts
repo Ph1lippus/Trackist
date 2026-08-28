@@ -23,13 +23,19 @@ export default defineConfig({
         start_url: '/', 
         icons: [
           {
-            src: '/TRACK1ST-FULLNAMELGO.png?v=3',
+            src: '/android-chrome-192x192.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any'
+          },
+          {
+            src: '/TRACK1ST-FULLNAMELGO.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'any'
           },
           {
-            src: '/TRACK1ST-FULLNAMELGO.png?v=3',
+            src: '/TRACK1ST-FULLNAMELGO.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable'

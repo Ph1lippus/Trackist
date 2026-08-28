@@ -10,7 +10,6 @@ declare let self: ServiceWorkerGlobalScope
 precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()
 clientsClaim()
-self.skipWaiting()
 
 // SPA navigation fallback to the precached shell
 registerRoute(
@@ -41,6 +40,13 @@ registerRoute(
       new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 }),
     ],
   })
+)
+
+// Supabase Auth - never cache (tokens, sessions, refresh). Must precede the
+// generic supabase.co route below so auth responses are always network-only.
+registerRoute(
+  ({ url }) => url.hostname.endsWith('supabase.co') && url.pathname.startsWith('/auth/v1/'),
+  new NetworkOnly()
 )
 
 // Supabase edge functions - never cache
@@ -104,10 +110,11 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
 
-  const targetUrl = new URL(
-    event.notification.data?.url || '/',
-    self.location.origin
-  ).toString()
+  const targetUrl = new URL(event.notification.data?.url || '/', self.location.origin)
+  if (targetUrl.origin !== self.location.origin) {
+    return
+  }
+  const urlString = targetUrl.toString()
 
   event.waitUntil(
     self.clients
@@ -115,11 +122,11 @@ self.addEventListener('notificationclick', (event) => {
       .then((windowClients) => {
         for (const client of windowClients) {
           if ('focus' in client && 'navigate' in client) {
-            void client.navigate(targetUrl)
+            void client.navigate(urlString)
             return client.focus()
           }
         }
-        return self.clients.openWindow(targetUrl)
+        return self.clients.openWindow(urlString)
       })
   )
 })
