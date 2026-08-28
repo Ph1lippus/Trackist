@@ -234,6 +234,7 @@ const MobileTVShows: React.FC = () => {
     const handleAddEpisodeInternal = async (show: WatchlistItem) => {
         // Use the cached next episode from store if available, otherwise fetch from TMDB
         let nextEp: { season_number: number; episode_number: number; tmdb_episode_id?: number; title?: string; still_path?: string | null; overview?: string; air_date?: string; runtime?: number } | null = null
+        let followingNext: { season_number: number; episode_number: number } | undefined
         if (show.next_season_number && show.next_episode_number && show.tmdb_id) {
             const { getTVSeasonDetails } = await import('../services/tmdbService')
             const seasonData = await getTVSeasonDetails(show.tmdb_id, show.next_season_number)
@@ -249,6 +250,18 @@ const MobileTVShows: React.FC = () => {
                     air_date: ep.air_date,
                     runtime: ep.runtime
                 }
+                // Compute the episode after the one we're about to mark from the
+                // season data we already fetched, so the service layer can skip
+                // the TMDB-heavy next-episode lookup (keeps "add episode" fast).
+                const released = (seasonData.episodes || []).filter(
+                    (e: { air_date?: string }) => !e.air_date || new Date(e.air_date) <= new Date()
+                )
+                const nextSame = released.find(
+                    (e: { episode_number: number }) => e.episode_number === ep.episode_number + 1
+                )
+                if (nextSame) {
+                    followingNext = { season_number: show.next_season_number, episode_number: nextSame.episode_number }
+                }
             }
         }
         if (!nextEp) {
@@ -263,7 +276,7 @@ const MobileTVShows: React.FC = () => {
         const success = await markEpisodesWatched(show.id, [{
             ...nextEp,
             still_path: nextEp.still_path ?? undefined
-        }])
+        }], followingNext)
 
         if (!success) {
             return
@@ -300,6 +313,7 @@ const MobileTVShows: React.FC = () => {
             // Then proceed with episode addition logic (reuse the same logic)
             const show = confirmModal.item
             let nextEp: { season_number: number; episode_number: number; tmdb_episode_id?: number; title?: string; still_path?: string | null; overview?: string; air_date?: string; runtime?: number } | null = null
+            let followingNext: { season_number: number; episode_number: number } | undefined
             if (show.next_season_number && show.next_episode_number && show.tmdb_id) {
                 const { getTVSeasonDetails } = await import('../services/tmdbService')
                 const seasonData = await getTVSeasonDetails(show.tmdb_id, show.next_season_number)
@@ -314,6 +328,15 @@ const MobileTVShows: React.FC = () => {
                         overview: ep.overview,
                         air_date: ep.air_date,
                         runtime: ep.runtime
+                    }
+                    const released = (seasonData.episodes || []).filter(
+                        (e: { air_date?: string }) => !e.air_date || new Date(e.air_date) <= new Date()
+                    )
+                    const nextSame = released.find(
+                        (e: { episode_number: number }) => e.episode_number === ep.episode_number + 1
+                    )
+                    if (nextSame) {
+                        followingNext = { season_number: show.next_season_number, episode_number: nextSame.episode_number }
                     }
                 }
             }
@@ -330,7 +353,7 @@ const MobileTVShows: React.FC = () => {
             const success = await markEpisodesWatched(show.id, [{
                 ...nextEp,
                 still_path: nextEp.still_path ?? undefined
-            }])
+            }], followingNext)
 
             if (success) {
                     void useLibraryStore.getState().updateItem(show.id, {

@@ -2,7 +2,7 @@
 import { useParams, useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getBestBackdropPath } from '../services/tmdbService'
 import { formatStatus } from '../utils/statusUtils'
-import { markEpisodeWatched, unmarkEpisodeWatched, markEpisodesWatched, unmarkEpisodesWatched, getWatchedEpisodes, checkAndUpdateCompleted, markShowAsFullyWatched, removeAllWatchedEpisodes } from '../services/watchlistService'
+import { markEpisodeWatched, unmarkEpisodeWatched, markEpisodesWatched, unmarkEpisodesWatched, recomputeDenormalizedFields, getWatchedEpisodes, checkAndUpdateCompleted, markShowAsFullyWatched, removeAllWatchedEpisodes } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { invalidateUserCache, getCachedOrFetch } from '../services/cacheService'
 import ConfirmModal from '../components/modals/ConfirmModal'
@@ -480,6 +480,65 @@ const TVShowDetail: React.FC = () => {
         return tooltips[rating] || rating
     }
 
+    /**
+     * Compute the next episode to watch using season data already cached in the
+     * component (seasonCache / watchedKeysCache), so we avoid the TMDB-heavy
+     * getNextEpisodeToWatch lookup on the hot path. `extraWatched` contains keys
+     * that are about to be marked by the current operation (so they aren't
+     * treated as gaps). Seasons that aren't cached are loaded on demand (at most
+     * the single next season), which is still cheaper than the old full scan.
+     */
+    const computeNextEpisodeForMutation = async (
+        afterSeason: number,
+        afterEpisode: number,
+        extraWatched: Set<string> = new Set()
+    ): Promise<{ season_number: number; episode_number: number } | null | undefined> => {
+        const isWatched = (s: number, e: number) =>
+            watchedKeysCache.current.has(`${s}-${e}`) || extraWatched.has(`${s}-${e}`)
+        const ordered = [...seasons].sort((a, b) => a - b)
+        const startIdx = ordered.indexOf(afterSeason)
+
+        // Use ONLY seasons already cached in seasonCache. Never call TMDB (e.g.
+        // ensureSeasonLoaded) on this critical path, or the modal spinner would
+        // block on a network round-trip. If a required season isn't cached we
+        // return undefined so the caller can defer the next-episode lookup.
+        const same = seasonCache.current.get(afterSeason)
+        if (same) {
+            const nextInSame = same
+                .filter(ep => ep.episode_number > afterEpisode && isEpisodeReleased(ep) && !isWatched(afterSeason, ep.episode_number))
+                .sort((a, b) => a.episode_number - b.episode_number)[0]
+            if (nextInSame) return { season_number: afterSeason, episode_number: nextInSame.episode_number }
+        } else if (startIdx !== -1) {
+            // The anchored season exists in the show but isn't cached -> defer.
+            return undefined
+        }
+
+        for (let i = (startIdx === -1 ? 0 : startIdx + 1); i < ordered.length; i++) {
+            const s = ordered[i]
+            const eps = seasonCache.current.get(s)
+            if (!eps) return undefined
+            const first = eps
+                .filter(ep => isEpisodeReleased(ep) && !isWatched(s, ep.episode_number))
+                .sort((a, b) => a.episode_number - b.episode_number)[0]
+            if (first) return { season_number: s, episode_number: first.episode_number }
+        }
+        return null
+    }
+
+    /**
+     * Highest watched (season, episode) after excluding one key (used when an
+     * episode is being removed). Returns null when nothing remains watched.
+     */
+    const computeMaxWatchedExcluding = (excludeKey?: string): { season: number; episode: number } | null => {
+        let max: { season: number; episode: number } | null = null
+        for (const key of watchedKeysCache.current) {
+            if (key === excludeKey) continue
+            const [s, e] = key.split('-').map(Number)
+            if (!max || s > max.season || (s === max.season && e > max.episode)) max = { season: s, episode: e }
+        }
+        return max
+    }
+
     const markEpisodeAsWatched = async (episode: LocalEpisode, markAll: boolean) => {
         if (!watchlistId || !details) return
 
@@ -524,7 +583,15 @@ const TVShowDetail: React.FC = () => {
             }
 
             try {
-                const success = await markEpisodesWatched(watchlistId, episodesToMark)
+                const extraWatched = new Set(
+                    episodesToMark.map(ep => `${ep.season_number}-${ep.episode_number}`)
+                )
+                const nextEp = await computeNextEpisodeForMutation(
+                    episode.season_number,
+                    episode.episode_number,
+                    extraWatched
+                )
+                const success = await markEpisodesWatched(watchlistId, episodesToMark, nextEp)
                 if (!success) throw new Error('Failed to mark episodes as watched')
 
                 const newCurrentSeason = episode.season_number
@@ -602,6 +669,12 @@ const TVShowDetail: React.FC = () => {
             try {
                 if (newWatchedState) {
                     // INSERT into watchlist_episodes
+                    const extraWatched = new Set([`${episode.season_number}-${episode.episode_number}`])
+                    const nextEp = await computeNextEpisodeForMutation(
+                        episode.season_number,
+                        episode.episode_number,
+                        extraWatched
+                    )
                     const success = await markEpisodeWatched(watchlistId, episode.season_number, episode.episode_number, {
                         tmdb_episode_id: episode.tmdb_episode_id,
                         title: episode.title,
@@ -610,7 +683,7 @@ const TVShowDetail: React.FC = () => {
                         vote_average: episode.vote_average,
                         air_date: episode.air_date,
                         runtime: episode.runtime
-                    })
+                    }, nextEp)
                     if (!success) {
                         setEpisodes(prev => prev.map(ep => 
                             ep.id === episode.id ? { ...ep, watched: false } : ep
@@ -621,7 +694,12 @@ const TVShowDetail: React.FC = () => {
                     await checkAndUpdateCompleted(watchlistId, details.id)
                 } else {
                     // DELETE from watchlist_episodes
-                    const success = await unmarkEpisodeWatched(watchlistId, episode.season_number, episode.episode_number)
+                    const key = `${episode.season_number}-${episode.episode_number}`
+                    const maxWatched = computeMaxWatchedExcluding(key)
+                    const nextEp = maxWatched
+                        ? await computeNextEpisodeForMutation(maxWatched.season, maxWatched.episode)
+                        : null
+                    const success = await unmarkEpisodeWatched(watchlistId, episode.season_number, episode.episode_number, nextEp)
                     if (!success) {
                         setEpisodes(prev => prev.map(ep => 
                             ep.id === episode.id ? { ...ep, watched: true } : ep
@@ -683,7 +761,20 @@ const TVShowDetail: React.FC = () => {
                 ep.id === episode.id ? { ...ep, watched: false } : ep
             ))
 
-            const success = await unmarkEpisodesWatched(watchlistId, [episode])
+            const key = `${episode.season_number}-${episode.episode_number}`
+            const maxWatched = computeMaxWatchedExcluding(key)
+            const nextEp = maxWatched
+                ? await computeNextEpisodeForMutation(maxWatched.season, maxWatched.episode)
+                : null
+            // nextEp: {s,e} = definite next, null = no next, undefined = needed
+            // season not cached. On a cache miss we skip the TMDB next-episode
+            // lookup on this critical path and recompute it in the background below.
+            const success = await unmarkEpisodesWatched(
+                watchlistId,
+                [episode],
+                nextEp ?? undefined,
+                nextEp === undefined
+            )
             if (!success) {
                 setEpisodes(prev => prev.map(ep => 
                     ep.id === episode.id ? { ...ep, watched: true } : ep
@@ -699,6 +790,7 @@ const TVShowDetail: React.FC = () => {
             void (async () => {
                 try {
                     await checkAndUpdateCompleted(watchlistId, details.id)
+                    await recomputeDenormalizedFields(watchlistId)
                     await useLibraryStore.getState().refreshItem(watchlistId)
                     await invalidateUserCache()
                 } catch (syncError) {
