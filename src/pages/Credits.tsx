@@ -5,6 +5,19 @@ import reactLogo from '../assets/react-favicon.ico'
 import viteLogo from '../assets/vite-logo.svg'
 import vercelLogo from '../assets/vercel-favicon.ico'
 import fontAwesomeLogo from '../assets/fontawesome-favicon.ico'
+import bootstrapLogo from '../assets/bootstrap-logo.svg'
+import reactRouterLogo from '../assets/react-router-logo.svg'
+import typescriptLogo from '../assets/typescript-logo.svg'
+import pwaLogo from '../assets/pwa-logo.svg'
+import zustandLogo from '../assets/zustand-logo.svg'
+import hcaptchaLogo from '../assets/hcaptcha-logo.svg'
+import stremioLogo from '../assets/stremio-logo-icon-only-fullcolor.svg'
+import letterboxdLogo from '../assets/letterboxd-decal-dots-pos-rgb-500px.png'
+import qrcodeLogo from '../assets/qrcode-icon.svg'
+import zxcvbnLogo from '../assets/zxcvbn-icon.svg'
+import virtuosoLogo from '../assets/bi-list.svg'
+import confettiLogo from '../assets/bi-stars.svg'
+import cropLogo from '../assets/bi-crop.svg'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 const credits = [
@@ -43,6 +56,84 @@ const credits = [
         text: 'Icons by Font Awesome',
         logo: fontAwesomeLogo,
         link: 'https://fontawesome.com/'
+    },
+    {
+        title: 'Bootstrap',
+        text: 'UI framework',
+        logo: bootstrapLogo,
+        link: 'https://getbootstrap.com/'
+    },
+    {
+        title: 'React Router',
+        text: 'Client-side routing',
+        logo: reactRouterLogo,
+        link: 'https://reactrouter.com/'
+    },
+    {
+        title: 'Zustand',
+        text: 'State management',
+        logo: zustandLogo,
+        link: 'https://zustand.docs.pmnd.rs/'
+    },
+    {
+        title: 'React Virtuoso',
+        text: 'Virtualized lists',
+        logo: virtuosoLogo,
+        link: 'https://virtuoso.dev/'
+    },
+    {
+        title: 'TypeScript',
+        text: 'Typed JavaScript',
+        logo: typescriptLogo,
+        link: 'https://www.typescriptlang.org/'
+    },
+    {
+        title: 'PWA',
+        text: 'Offline support & installability',
+        logo: pwaLogo,
+        link: 'https://vite-pwa-org.netlify.app/'
+    },
+    {
+        title: 'hCaptcha',
+        text: 'Bot & spam protection',
+        logo: hcaptchaLogo,
+        link: 'https://www.hcaptcha.com/'
+    },
+    {
+        title: 'Stremio',
+        text: 'Open episodes in your media player',
+        logo: stremioLogo,
+        link: 'https://www.stremio.com/'
+    },
+    {
+        title: 'Letterboxd',
+        text: 'Jump to movie pages on Letterboxd',
+        logo: letterboxdLogo,
+        link: 'https://letterboxd.com/'
+    },
+    {
+        title: 'qrcode.react',
+        text: 'QR codes for 2FA',
+        logo: qrcodeLogo,
+        link: 'https://github.com/zpao/qrcode.react'
+    },
+    {
+        title: 'zxcvbn-ts',
+        text: 'Password strength estimator',
+        logo: zxcvbnLogo,
+        link: 'https://zxcvbn-ts.github.io/zxcvbn/'
+    },
+    {
+        title: 'canvas-confetti',
+        text: 'Celebrations & confetti',
+        logo: confettiLogo,
+        link: 'https://github.com/catdad/canvas-confetti'
+    },
+    {
+        title: 'react-easy-crop',
+        text: 'Avatar image cropping',
+        logo: cropLogo,
+        link: 'https://github.com/ValentinH/react-easy-crop'
     }
 ]
 
@@ -71,6 +162,7 @@ const Credits: React.FC = () => {
 
                 <div className="tmdb-attribution">
                     <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+                    <p>hCaptcha is a registered trademark of Intuition Machines, Inc.</p>
                 </div>
             </div>
         </section>

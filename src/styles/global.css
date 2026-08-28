@@ -3891,11 +3891,12 @@ html::before {
 }
 
 .credits-page {
-    height: 100vh;
+    min-height: 100vh;
     width: 100%;
     max-width: 980px;
     margin: 0 auto;
     padding: 1rem 0 4rem;
+    overflow: visible;
 }
 
 .credits-grid {
@@ -3954,6 +3955,10 @@ html::before {
     text-align: center;
     font-size: 0.875rem;
     color: var(--color-platinum, #aaa);
+}
+
+.tmdb-attribution p + p {
+    margin-top: 0.35rem;
 }
 
 /* ===== MORE PAGE ===== */
