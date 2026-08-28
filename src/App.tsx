@@ -213,6 +213,10 @@ const AppContent: React.FC = () => {
         setCurrentMonth(new Date())
     }
 
+    if (loading) {
+        return <div className="detail-page-loading" aria-live="polite">Loading...</div>
+    }
+
     return (
         <div className="d-flex flex-column min-vh-100">
             <Navbar 
