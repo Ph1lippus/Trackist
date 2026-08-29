@@ -1,6 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import webpush from 'https://esm.sh/web-push@3.6.7?target=deno'
+import { sendPushNotification } from './web-push.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -53,6 +53,15 @@ interface PushPayload {
   url: string
   tag: string
   icon?: string
+}
+
+interface PendingWrite {
+  id: string
+  patch: Record<string, unknown>
+}
+
+interface NotifyItem extends PushPayload {
+  write: PendingWrite
 }
 
 interface TMDBEpisode {
@@ -184,10 +193,13 @@ serve(async (req: Request) => {
     const isService = bearer === supabaseServiceKey
 
     let targetUserId: string | null = null
+    let testMode = false
+    let requestBody: Record<string, unknown> | null = null
     if (!isCron) {
       try {
-        const body = await req.json()
-        targetUserId = body.userId || null
+        requestBody = await req.json()
+        targetUserId = typeof requestBody.userId === 'string' ? requestBody.userId : null
+        testMode = !!requestBody.test
       } catch {
         // body parse failed, continue with cron/service auth
       }
@@ -211,11 +223,58 @@ serve(async (req: Request) => {
       })
     }
 
-    webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey)
-
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
+
+    if (testMode) {
+      if (!targetUserId) {
+        return new Response(JSON.stringify({ error: 'test mode requires a userId' }), {
+          status: 400,
+          headers: corsHeaders,
+        })
+      }
+
+      let testSent = 0
+      let testErrors = 0
+      const { data: testSubscriptions } = await supabase
+        .from('push_subscriptions')
+        .select('id, endpoint, keys')
+        .eq('user_id', targetUserId)
+
+      for (const sub of (testSubscriptions || []) as SubscriptionRow[]) {
+        if (!sub.endpoint || !sub.keys?.p256dh || !sub.keys?.auth) continue
+        try {
+          await sendPushNotification(
+            { endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth },
+            JSON.stringify({
+              title: 'Trackist',
+              body: `Test notification · ${new Date().toISOString()}`,
+              url: '/settings',
+              tag: `test:${targetUserId}:${new Date().toISOString()}`,
+            }),
+            { subject: vapidSubject, publicKey: vapidPublicKey, privateKey: vapidPrivateKey }
+          )
+          testSent++
+        } catch (error) {
+          const statusCode = (error as { statusCode?: number }).statusCode
+          if (statusCode === 404 || statusCode === 410) {
+            await supabase
+              .from('push_subscriptions')
+              .delete()
+              .eq('id', sub.id)
+          } else {
+            console.error(`Failed to send test push to ${sub.endpoint}:`, error)
+          }
+          testErrors++
+        }
+      }
+
+      return new Response(
+        JSON.stringify({ test_notifications_sent: testSent, errors: testErrors }),
+        { status: 200, headers: corsHeaders }
+      )
+    }
 
     const now = new Date()
 
@@ -287,12 +346,13 @@ serve(async (req: Request) => {
             : Promise.resolve([]),
         ])
 
-        const notifications: PushPayload[] = []
+        const notifications: NotifyItem[] = []
         const seenTags = new Set<string>()
-        const addNotification = (payload: PushPayload) => {
-          if (seenTags.has(payload.tag)) return
-          seenTags.add(payload.tag)
-          notifications.push(payload)
+        const addNotification = (item: NotifyItem): NotifyItem | null => {
+          if (seenTags.has(item.tag)) return null
+          seenTags.add(item.tag)
+          notifications.push(item)
+          return item
         }
 
         if (tvShows.length > 0) {
@@ -366,21 +426,20 @@ serve(async (req: Request) => {
               (show.status === 'caught_up' || show.status === 'completed') &&
               wantSeason
 
+            let addedItem: NotifyItem | null = null
+
             if (isPremiere) {
               const seasonRef = `S${seasonNumber}premiere:${firstDue.air_date}`
               if (show.last_notified_ref !== seasonRef) {
                 const providerStr = formatProviders(show.watch_providers)
-                addNotification({
+                addedItem = addNotification({
                   title: show.title,
                   body: `New season · S${seasonNumber}${firstDue.name ? ` — ${firstDue.name}` : ''}${providerStr}`,
                   url: `/tv/${show.tmdb_id}`,
                   tag: `season:${show.id}:${seasonRef}`,
                   icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
+                  write: { id: show.id, patch: { last_notified_ref: seasonRef } },
                 })
-                await supabase
-                  .from('watchlist')
-                  .update({ last_notified_ref: seasonRef })
-                  .eq('id', show.id)
               }
             } else if (wantEpisode) {
               if (dueEpisodes.length === 1) {
@@ -388,34 +447,28 @@ serve(async (req: Request) => {
                 const newRef = `S${seasonNumber}E${ep.episode_number}:${ep.air_date}`
                 if (show.last_notified_ref !== newRef) {
                   const providerStr = formatProviders(show.watch_providers)
-                  addNotification({
+                  addedItem = addNotification({
                     title: show.title,
                     body: `S${seasonNumber} · E${ep.episode_number}${ep.name ? ` — ${ep.name}` : ''}${providerStr}`,
                     url: `/tv/${show.tmdb_id}`,
                     tag: `episode:${show.id}:${newRef}`,
                     icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
+                    write: { id: show.id, patch: { last_notified_ref: newRef } },
                   })
-                  await supabase
-                    .from('watchlist')
-                    .update({ last_notified_ref: newRef })
-                    .eq('id', show.id)
                 }
               } else {
                 const epCount = dueEpisodes.length
                 const seasonRef = `S${seasonNumber}multi:${todayStr}`
                 if (show.last_notified_ref !== seasonRef) {
                   const providerStr = formatProviders(show.watch_providers)
-                  addNotification({
+                  addedItem = addNotification({
                     title: show.title,
                     body: `Season ${seasonNumber} (${epCount} episodes) now available${providerStr}`,
                     url: `/tv/${show.tmdb_id}`,
                     tag: `season:${show.id}:${seasonRef}`,
                     icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
+                    write: { id: show.id, patch: { last_notified_ref: seasonRef } },
                   })
-                  await supabase
-                    .from('watchlist')
-                    .update({ last_notified_ref: seasonRef })
-                    .eq('id', show.id)
                 }
               }
             }
@@ -425,10 +478,15 @@ serve(async (req: Request) => {
               const nextUnreleased = sorted.find((ep) =>
                 ep.air_date && ep.air_date > tomorrowStr
               )
-              await supabase
-                .from('watchlist')
-                .update({ next_air_at: nextUnreleased?.air_date ?? null, last_season_check: now.toISOString() })
-                .eq('id', show.id)
+              const schedulePatch = { next_air_at: nextUnreleased?.air_date ?? null, last_season_check: now.toISOString() }
+              if (addedItem) {
+                addedItem.write.patch = { ...addedItem.write.patch, ...schedulePatch }
+              } else {
+                await supabase
+                  .from('watchlist')
+                  .update(schedulePatch)
+                  .eq('id', show.id)
+              }
               if (nextUnreleased) itemsScheduled++
             }
           }
@@ -455,11 +513,8 @@ serve(async (req: Request) => {
                 url: `/movie/${movie.tmdb_id}`,
                 tag: `movie:${movie.id}:${newRef}`,
                 icon: movie.poster_path ? `https://image.tmdb.org/t/p/w92${movie.poster_path}` : undefined,
+                write: { id: movie.id, patch: { last_movie_notified_ref: newRef } },
               })
-              await supabase
-                .from('watchlist')
-                .update({ last_movie_notified_ref: newRef })
-                .eq('id', movie.id)
             }
 
             if (!movie.next_air_at && notifyDate > todayStr) {
@@ -489,19 +544,18 @@ serve(async (req: Request) => {
         usersProcessed++
 
         for (const notification of notifications) {
+          let delivered = false
           for (const sub of subscriptions as SubscriptionRow[]) {
             if (!sub.endpoint || !sub.keys?.p256dh || !sub.keys?.auth) continue
 
             try {
-              await webpush.sendNotification(
-                {
-                  endpoint: sub.endpoint,
-                  keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth },
-                },
-                JSON.stringify(notification),
-                { TTL: 60 * 60 * 24 * 3 }
+              await sendPushNotification(
+                { endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth },
+                JSON.stringify({ ...notification, write: undefined }),
+                { subject: vapidSubject, publicKey: vapidPublicKey, privateKey: vapidPrivateKey }
               )
               notificationsSent++
+              delivered = true
             } catch (error) {
               const statusCode = (error as { statusCode?: number }).statusCode
               if (statusCode === 404 || statusCode === 410) {
@@ -515,6 +569,13 @@ serve(async (req: Request) => {
                 errors++
               }
             }
+          }
+
+          if (delivered) {
+            await supabase
+              .from('watchlist')
+              .update(notification.write.patch)
+              .eq('id', notification.write.id)
           }
         }
 

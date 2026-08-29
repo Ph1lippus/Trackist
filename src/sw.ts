@@ -75,6 +75,14 @@ interface PushData {
   icon?: string
 }
 
+const report = (status: string, detail?: string, tag?: string): void => {
+  void fetch('https://iqlzdmjamsvxinqbrnix.supabase.co/functions/v1/push-log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status, detail, tag, at: new Date().toISOString() }),
+  }).catch(() => {})
+}
+
 self.addEventListener('push', (event) => {
   let data: PushData = { title: 'Trackist', body: '', url: '/' }
   try {
@@ -95,6 +103,8 @@ self.addEventListener('push', (event) => {
     }
   }
 
+  report('received', undefined, data.tag)
+
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
@@ -103,7 +113,10 @@ self.addEventListener('push', (event) => {
       badge: '/TRACK1ST-FULLNAMELGO.png',
       data: { url: data.url },
       renotify: !!data.tag,
-    })
+    }).then(
+      () => report('shown', undefined, data.tag),
+      (error) => report('show_error', String(error), data.tag)
+    )
   )
 })
 
