@@ -7,6 +7,7 @@ import { MobileProvider } from './contexts/MobileProvider'
 import { useLibraryStore } from './stores/useLibraryStore'
 import { registerSW } from 'virtual:pwa-register'
 import { initNativePush, isNativePlatform } from './services/nativePush'
+import { usePushNotifications } from './hooks/usePushNotifications'
 import {
     getInstalledVersion,
     getLatestVersion,
@@ -74,6 +75,8 @@ const AppContent: React.FC = () => {
     const [updateSW, setUpdateSW] = useState<((reloadPage?: boolean) => Promise<void>) | null>(null)
     const [nativeUpdateVersion, setNativeUpdateVersion] = useState<string | null>(null)
 
+    const push = usePushNotifications()
+
     // Determine if running as a PWA (standalone mode)
     const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
         // @ts-expect-error - iOS Safari specific property
@@ -131,6 +134,23 @@ const AppContent: React.FC = () => {
         window.addEventListener('track1st:navigate', onNavigate)
         return () => window.removeEventListener('track1st:navigate', onNavigate)
     }, [navigate])
+
+    // Native (Capacitor) push: ask for notification permission right when the
+    // app opens (instead of forcing the user to find it in Settings). Runs once
+    // per session, only when a signed-in user is present and the permission has
+    // not been decided yet.
+    const hasRequestedNativePush = useRef(false)
+    useEffect(() => {
+        if (!isNativePlatform()) return
+        if (hasRequestedNativePush.current) return
+        if (!user) return
+        if (push.loading) return
+        if (push.subscribed) return
+        if (push.permission !== 'prompt') return
+
+        hasRequestedNativePush.current = true
+        void push.enable()
+    }, [user, push.loading, push.subscribed, push.permission, push.enable])
 
     // Native (Capacitor) update check: compare installed version against the
     // latest android-latest release and surface the Update Available modal.

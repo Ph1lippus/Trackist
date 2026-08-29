@@ -1,7 +1,7 @@
 import { App as CapacitorApp } from '@capacitor/app'
 import { isNativePlatform } from './nativePush'
 
-export const ANDROID_APK_URL = 'https://github.com/Ph1lippus/Trackist/releases/download/android-latest/track1st.apk'
+export const ANDROID_APK_URL = 'https://track1st.vercel.app/track1st.apk'
 
 const LATEST_RELEASE_URL = 'https://api.github.com/repos/Ph1lippus/Trackist/releases/tags/android-latest'
 const DISMISS_KEY = 'track1st.native-update-dismissed'

@@ -1,8 +1,15 @@
 {
   "rewrites": [
+    { "source": "/track1st.apk", "destination": "https://github.com/Ph1lippus/Trackist/releases/download/android-latest/track1st.apk" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [
+    {
+      "source": "/track1st.apk",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, max-age=0" }
+      ]
+    },
     {
       "source": "/(.*)",
       "headers": [

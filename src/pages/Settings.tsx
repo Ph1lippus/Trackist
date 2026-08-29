@@ -20,7 +20,7 @@ import { getInstalledVersion, getLatestVersion, isNewerVersion } from '../servic
 type SettingsSection = 'account' | 'profile' | 'security' | 'notifications' | 'app' | 'data' | 'additions' | 'danger'
 type NotificationPrefField = 'notify_new_episode' | 'notify_new_season' | 'notify_release_date' | 'movie_notify_on_digital'
 
-const ANDROID_APK_URL = 'https://github.com/Ph1lippus/Trackist/releases/download/android-latest/track1st.apk'
+const ANDROID_APK_URL = 'https://track1st.vercel.app/track1st.apk'
 
 const escapeCSV = (value: unknown): string => {
     const str = value === null || value === undefined ? '' : String(value)
@@ -596,7 +596,7 @@ const Settings: React.FC = () => {
         { id: 'profile', label: 'Profile', icon: 'fa-id-card' },
         { id: 'security', label: 'Security', icon: 'fa-shield-halved' },
         { id: 'notifications', label: 'Notifications', icon: 'fa-bell' },
-        { id: 'app', label: 'App', icon: 'fa-mobile-screen' },
+        ...(isNative ? [] : [{ id: 'app' as const, label: 'App', icon: 'fa-mobile-screen' }]),
         { id: 'data', label: 'Data & Cache', icon: 'fa-database' },
         { id: 'additions', label: 'Additions', icon: 'fa-puzzle-piece' },
         { id: 'danger', label: 'Danger Zone', icon: 'fa-triangle-exclamation' }
