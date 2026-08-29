@@ -143,6 +143,27 @@ const AppContent: React.FC = () => {
     useEffect(() => {
         const updateIntervalIds: number[] = []
 
+        const reportPageStatus = async () => {
+            try {
+                const reg = await navigator.serviceWorker.ready
+                const sub = await reg.pushManager.getSubscription()
+                const perm = typeof Notification !== 'undefined' ? Notification.permission : 'n/a'
+                await fetch('https://iqlzdmjamsvxinqbrnix.supabase.co/functions/v1/push-log', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        status: 'page_sub_status',
+                        detail: sub?.endpoint ?? 'NO_SUBSCRIPTION',
+                        permission: perm,
+                        ua: navigator.userAgent,
+                        at: new Date().toISOString(),
+                    }),
+                }).catch(() => {})
+            } catch {
+                // non-fatal diagnostics
+            }
+        }
+
         const registerServiceWorker = async () => {
             try {
                 const swUpdate = registerSW({
@@ -171,6 +192,7 @@ const AppContent: React.FC = () => {
         }
 
         registerServiceWorker()
+        void reportPageStatus()
 
         return () => {
             for (const id of updateIntervalIds) {
