@@ -66,12 +66,29 @@ jobs:
           sed -i "s/versionName \"1.0\"/versionName \"$VERSION\"/" android/app/build.gradle
           sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" android/app/build.gradle
 
+      - name: Ensure stable signing key
+        run: |
+          if [ ! -f android/app/upload.keystore ]; then
+            keytool -genkeypair -v \
+              -keystore android/app/upload.keystore \
+              -storetype JKS \
+              -alias track1st \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass track1st-2026 -keypass track1st-2026 \
+              -dname "CN=Track1st, OU=Track1st, O=Track1st, L=Lisbon, ST=Lisbon, C=PT" 2>/dev/null
+            git config user.email "actions@github.com"
+            git config user.name "GitHub Actions"
+            git add android/app/upload.keystore
+            git commit -m "ci: add stable Android signing keystore"
+            git push origin HEAD:"$GITHUB_REF_NAME"
+          fi
+
       - name: Build APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
-          cp app/build/outputs/apk/debug/app-debug.apk ../track1st.apk
+          ./gradlew assembleRelease --no-daemon
+          cp app/build/outputs/apk/release/app-release.apk ../track1st.apk
 
       - name: Publish rolling release
         env:

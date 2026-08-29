@@ -16,10 +16,22 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        releaseConfig {
+            def keystoreFile = file('upload.keystore')
+            if (keystoreFile.exists()) {
+                storeFile keystoreFile
+                storePassword project.findProperty('TRACK1ST_KEYSTORE_PASSWORD') ?: System.getenv('TRACK1ST_KEYSTORE_PASSWORD') ?: 'track1st-2026'
+                keyAlias 'track1st'
+                keyPassword project.findProperty('TRACK1ST_KEYSTORE_PASSWORD') ?: System.getenv('TRACK1ST_KEYSTORE_PASSWORD') ?: 'track1st-2026'
+            }
+        }
+    }
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig signingConfigs.releaseConfig
         }
     }
 }
