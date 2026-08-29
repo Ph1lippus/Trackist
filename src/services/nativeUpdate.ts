@@ -1,4 +1,5 @@
 import { App as CapacitorApp } from '@capacitor/app'
+import { Browser } from '@capacitor/browser'
 import { isNativePlatform } from './nativePush'
 
 export const ANDROID_APK_URL = 'https://track1st.vercel.app/track1st.apk'
@@ -66,9 +67,9 @@ export const getLatestVersion = async (): Promise<string | null> => {
     }
 }
 
-export const openUpdateDownload = (): void => {
+export const openUpdateDownload = async (): Promise<void> => {
     if (isNativePlatform()) {
-        window.open(ANDROID_APK_URL, '_system', 'noopener,noreferrer')
+        await Browser.open({ url: ANDROID_APK_URL })
     } else {
         window.open(ANDROID_APK_URL, '_blank')
     }

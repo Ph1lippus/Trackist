@@ -343,7 +343,7 @@ const AppContent: React.FC = () => {
             if (nativeUpdateVersion) dismissUpdateVersion(nativeUpdateVersion)
             setShowUpdateModal(false)
             setNativeUpdateVersion(null)
-            openUpdateDownload()
+            await openUpdateDownload()
             return
         }
 
