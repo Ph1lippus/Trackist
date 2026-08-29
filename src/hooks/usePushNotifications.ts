@@ -45,6 +45,99 @@ const serviceWorkerReadyWithTimeout = (timeoutMs: number): Promise<ServiceWorker
         )
     })
 
+const TIMEZONE_TO_COUNTRY: Record<string, string> = {
+    'Europe/Lisbon': 'PT',
+    'Europe/London': 'GB',
+    'Europe/Madrid': 'ES',
+    'Europe/Paris': 'FR',
+    'Europe/Berlin': 'DE',
+    'Europe/Rome': 'IT',
+    'Europe/Amsterdam': 'NL',
+    'Europe/Brussels': 'BE',
+    'Europe/Vienna': 'AT',
+    'Europe/Zurich': 'CH',
+    'Europe/Stockholm': 'SE',
+    'Europe/Oslo': 'NO',
+    'Europe/Copenhagen': 'DK',
+    'Europe/Helsinki': 'FI',
+    'Europe/Warsaw': 'PL',
+    'Europe/Prague': 'CZ',
+    'Europe/Budapest': 'HU',
+    'Europe/Bucharest': 'RO',
+    'Europe/Sofia': 'BG',
+    'Europe/Athens': 'GR',
+    'Europe/Dublin': 'IE',
+    'Europe/Belgrade': 'RS',
+    'Europe/Zagreb': 'HR',
+    'Europe/Ljubljana': 'SI',
+    'Europe/Bratislava': 'SK',
+    'Europe/Vilnius': 'LT',
+    'Europe/Riga': 'LV',
+    'Europe/Tallinn': 'EE',
+    'Europe/Moscow': 'RU',
+    'Europe/Istanbul': 'TR',
+    'America/New_York': 'US',
+    'America/Chicago': 'US',
+    'America/Denver': 'US',
+    'America/Los_Angeles': 'US',
+    'America/Anchorage': 'US',
+    'America/Honolulu': 'US',
+    'America/Toronto': 'CA',
+    'America/Vancouver': 'CA',
+    'America/Mexico_City': 'MX',
+    'America/Sao_Paulo': 'BR',
+    'America/Argentina/Buenos_Aires': 'AR',
+    'America/Santiago': 'CL',
+    'America/Lima': 'PE',
+    'America/Bogota': 'CO',
+    'America/Caracas': 'VE',
+    'Asia/Tokyo': 'JP',
+    'Asia/Shanghai': 'CN',
+    'Asia/Hong_Kong': 'HK',
+    'Asia/Singapore': 'SG',
+    'Asia/Seoul': 'KR',
+    'Asia/Taipei': 'TW',
+    'Asia/Bangkok': 'TH',
+    'Asia/Kuala_Lumpur': 'MY',
+    'Asia/Jakarta': 'ID',
+    'Asia/Manila': 'PH',
+    'Asia/Ho_Chi_Minh': 'VN',
+    'Asia/Dubai': 'AE',
+    'Asia/Riyadh': 'SA',
+    'Asia/Jerusalem': 'IL',
+    'Asia/Tehran': 'IR',
+    'Asia/Kolkata': 'IN',
+    'Australia/Sydney': 'AU',
+    'Australia/Melbourne': 'AU',
+    'Australia/Brisbane': 'AU',
+    'Australia/Perth': 'AU',
+    'Australia/Adelaide': 'AU',
+    'Pacific/Auckland': 'NZ',
+    'Pacific/Fiji': 'FJ',
+    'Africa/Johannesburg': 'ZA',
+    'Africa/Lagos': 'NG',
+    'Africa/Cairo': 'EG',
+    'Africa/Nairobi': 'KE',
+}
+
+const detectTimezone = (): string => {
+    try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+    } catch {
+        return 'UTC'
+    }
+}
+
+const detectCountryFromTimezone = (timezone: string): string => {
+    return TIMEZONE_TO_COUNTRY[timezone] || 'US'
+}
+
+const saveTimezoneAndCountry = async (userId: string): Promise<void> => {
+    const timezone = detectTimezone()
+    const countryCode = detectCountryFromTimezone(timezone)
+    await supabase.from('profiles').update({ timezone, country_code: countryCode }).eq('id', userId)
+}
+
 export const usePushNotifications = () => {
     const [supported] = useState<boolean>(isPushSupported())
     const [inPwaContext] = useState<boolean>(isPwaContext())
@@ -150,7 +243,7 @@ export const usePushNotifications = () => {
                 throw new Error(`Failed to save the subscription: ${upsertError.message}`)
             }
 
-            await saveTimezone(user.id)
+            await saveTimezoneAndCountry(user.id)
 
             setSubscribed(true)
             return { ok: true }
@@ -206,17 +299,4 @@ export const usePushNotifications = () => {
         enable,
         disable,
     }
-}
-
-const detectTimezone = (): string => {
-    try {
-        return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
-    } catch {
-        return 'UTC'
-    }
-}
-
-const saveTimezone = async (userId: string): Promise<void> => {
-    const timezone = detectTimezone()
-    await supabase.from('profiles').update({ timezone }).eq('id', userId)
 }

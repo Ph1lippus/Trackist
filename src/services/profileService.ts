@@ -68,7 +68,7 @@ export const getProfileByUsername = async (username: string) => {
     return supabase.from('profiles').select('*').eq('display_name', username).single()
 }
 
-export const updateProfile = async (userId: string, updates: { display_name?: string; bio?: string; avatar_url?: string; show_stremio_button?: boolean; show_letterbox_button?: boolean; show_media_card_icons?: boolean; notify_new_episode?: boolean; notify_new_season?: boolean; notify_release_date?: boolean; timezone?: string }) => {
+export const updateProfile = async (userId: string, updates: { display_name?: string; bio?: string; avatar_url?: string; show_stremio_button?: boolean; show_letterbox_button?: boolean; show_media_card_icons?: boolean; notify_new_episode?: boolean; notify_new_season?: boolean; notify_release_date?: boolean; timezone?: string; country_code?: string; notify_hour?: string; movie_notify_on_digital?: boolean }) => {
     // Update auth metadata if display_name is being updated
     if (updates.display_name) {
         await supabase.auth.updateUser({

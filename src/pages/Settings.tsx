@@ -12,9 +12,11 @@ import { usePushNotifications } from '../hooks/usePushNotifications'
 import { validateDisplayName, validateEmail } from '../utils/validation'
 import { getUTCTodayString } from '../utils/dateUtils'
 import { useAuthStore } from '../stores/useAuthStore'
+import { TimezonePicker } from '../components/settings/TimezonePicker'
+import { CountryPicker } from '../components/settings/CountryPicker'
 
 type SettingsSection = 'account' | 'profile' | 'security' | 'notifications' | 'data' | 'additions' | 'danger'
-type NotificationPrefField = 'notify_new_episode' | 'notify_new_season' | 'notify_release_date'
+type NotificationPrefField = 'notify_new_episode' | 'notify_new_season' | 'notify_release_date' | 'movie_notify_on_digital'
 
 const escapeCSV = (value: unknown): string => {
     const str = value === null || value === undefined ? '' : String(value)
@@ -73,13 +75,21 @@ const Settings: React.FC = () => {
     const [notifPrefs, setNotifPrefs] = useState<Record<NotificationPrefField, boolean>>({
         notify_new_episode: true,
         notify_new_season: true,
-        notify_release_date: true
+        notify_release_date: true,
+        movie_notify_on_digital: true
     })
+    const [timezone, setTimezone] = useState<string>('UTC')
+    const [countryCode, setCountryCode] = useState<string>('PT')
+    const [notifyHour, setNotifyHour] = useState<string>('08:00')
     const [notifLoading, setNotifLoading] = useState<Record<NotificationPrefField, boolean>>({
         notify_new_episode: false,
         notify_new_season: false,
-        notify_release_date: false
+        notify_release_date: false,
+        movie_notify_on_digital: false
     })
+    const [timezoneLoading, setTimezoneLoading] = useState(false)
+    const [countryLoading, setCountryLoading] = useState(false)
+    const [hourLoading, setHourLoading] = useState(false)
     const [notifMessage, setNotifMessage] = useState<Partial<Record<NotificationPrefField, { text: string; isError: boolean }>>>({})
     const [pushMessage, setPushMessage] = useState('')
 
@@ -134,8 +144,12 @@ const Settings: React.FC = () => {
                     setNotifPrefs({
                         notify_new_episode: profileData.notify_new_episode !== false,
                         notify_new_season: profileData.notify_new_season !== false,
-                        notify_release_date: profileData.notify_release_date !== false
+                        notify_release_date: profileData.notify_release_date !== false,
+                        movie_notify_on_digital: profileData.movie_notify_on_digital !== false
                     })
+                    setTimezone(profileData.timezone || 'UTC')
+                    setCountryCode(profileData.country_code || 'PT')
+                    setNotifyHour(profileData.notify_hour || '08:00')
                 }
             }
         }
@@ -243,6 +257,84 @@ const Settings: React.FC = () => {
 
         setNotifPrefs(prev => ({ ...prev, [field]: !prev[field] }))
         setNotifMessage(prev => ({ ...prev, [field]: { text: 'Preference updated successfully', isError: false } }))
+    }
+
+    const handleTimezoneUpdate = async (newTimezone: string) => {
+        if (!currentUser) return
+        setTimezoneLoading(true)
+        const { error } = await updateProfile(currentUser.id, { timezone: newTimezone })
+        setTimezoneLoading(false)
+        if (error) {
+            setNotifMessage(prev => ({ ...prev, notify_new_episode: { text: error.message, isError: true } }))
+        } else {
+            setTimezone(newTimezone)
+        }
+    }
+
+    const handleCountryUpdate = async (newCountryCode: string) => {
+        if (!currentUser) return
+        setCountryLoading(true)
+        const { error } = await updateProfile(currentUser.id, { country_code: newCountryCode })
+        setCountryLoading(false)
+        if (error) {
+            setNotifMessage(prev => ({ ...prev, notify_new_episode: { text: error.message, isError: true } }))
+        } else {
+            setCountryCode(newCountryCode)
+        }
+    }
+
+    const handleNotifyHourUpdate = async (newHour: string) => {
+        if (!currentUser) return
+        setHourLoading(true)
+        const { error } = await updateProfile(currentUser.id, { notify_hour: newHour })
+        setHourLoading(false)
+        if (error) {
+            setNotifMessage(prev => ({ ...prev, notify_new_episode: { text: error.message, isError: true } }))
+        } else {
+            setNotifyHour(newHour)
+        }
+    }
+
+    const handleMovieNotifyDigitalUpdate = async () => {
+        if (!currentUser) return
+        setNotifLoading(prev => ({ ...prev, movie_notify_on_digital: true }))
+        const { error } = await updateProfile(currentUser.id, { movie_notify_on_digital: !notifPrefs.movie_notify_on_digital })
+        setNotifLoading(prev => ({ ...prev, movie_notify_on_digital: false }))
+        if (error) {
+            setNotifMessage(prev => ({ ...prev, movie_notify_on_digital: { text: error.message, isError: true } }))
+            return
+        }
+        setNotifPrefs(prev => ({ ...prev, movie_notify_on_digital: !prev.movie_notify_on_digital }))
+        setNotifMessage(prev => ({ ...prev, movie_notify_on_digital: { text: 'Preference updated successfully', isError: false } }))
+    }
+
+    const handleCheckNow = async () => {
+        if (!currentUser) return
+        setPushMessage('Checking for new episodes...')
+        try {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session?.access_token) throw new Error('No session')
+
+            const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-new-content`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userId: currentUser.id })
+            })
+
+            if (!res.ok) {
+                const data = await res.json()
+                throw new Error(data.error || 'Check failed')
+            }
+
+            const result = await res.json()
+            setPushMessage(`Check complete: ${result.notifications_sent} notifications sent, ${result.items_scheduled} items scheduled`)
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Check failed'
+            setPushMessage(message)
+        }
     }
 
     const handleExportData = async () => {
@@ -682,6 +774,51 @@ const Settings: React.FC = () => {
 
                                 <div className="settings-divider"></div>
 
+                                <div className="settings-data-card">
+                                    <div className="settings-data-card__info">
+                                        <span className="settings-data-card__label">Timezone</span>
+                                        <span className="settings-data-card__sub">Used to determine which episodes air today for you</span>
+                                    </div>
+                                    <TimezonePicker
+                                        value={timezone}
+                                        onChange={handleTimezoneUpdate}
+                                        autoDetectLabel={`Auto-detected: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`}
+                                        disabled={timezoneLoading}
+                                    />
+                                </div>
+
+                                <div className="settings-divider"></div>
+
+                                <div className="settings-data-card">
+                                    <div className="settings-data-card__info">
+                                        <span className="settings-data-card__label">Streaming Country</span>
+                                        <span className="settings-data-card__sub">Used to find available streaming providers and digital release dates</span>
+                                    </div>
+                                    <CountryPicker
+                                        value={countryCode}
+                                        onChange={handleCountryUpdate}
+                                        disabled={countryLoading}
+                                    />
+                                </div>
+
+                                <div className="settings-divider"></div>
+
+                                <div className="settings-data-card">
+                                    <div className="settings-data-card__info">
+                                        <span className="settings-data-card__label">Preferred Notification Hour</span>
+                                        <span className="settings-data-card__sub">Hour of day (your local time) when daily checks run</span>
+                                    </div>
+                                    <input
+                                        type="time"
+                                        className="settings-field__input"
+                                        value={notifyHour}
+                                        onChange={(e) => handleNotifyHourUpdate(e.target.value)}
+                                        disabled={hourLoading}
+                                    />
+                                </div>
+
+                                <div className="settings-divider"></div>
+
                                 {notificationPrefs.map(pref => {
                                     const message = notifMessage[pref.id]
                                     return (
@@ -710,11 +847,42 @@ const Settings: React.FC = () => {
 
                                 <div className="settings-divider"></div>
 
+                                <div className="settings-data-card">
+                                    <div className="settings-data-card__info">
+                                        <span className="settings-data-card__label">Digital-Only Movie Alerts</span>
+                                        <span className="settings-data-card__desc">Only notify when movies are available to stream/rent (not theatrical releases)</span>
+                                    </div>
+                                    <label className="settings-switch">
+                                        <input
+                                            type="checkbox"
+                                            checked={notifPrefs.movie_notify_on_digital}
+                                            onChange={handleMovieNotifyDigitalUpdate}
+                                            disabled={notifLoading.movie_notify_on_digital}
+                                        />
+                                        <span className="settings-switch__slider"></span>
+                                    </label>
+                                    {notifMessage.movie_notify_on_digital && (
+                                        <div className={`settings-alert ${notifMessage.movie_notify_on_digital!.isError ? 'settings-alert--error' : 'settings-alert--success'}`}>{notifMessage.movie_notify_on_digital!.text}</div>
+                                    )}
+                                </div>
+
+                                <div className="settings-divider"></div>
+
+                                <button
+                                    className="settings-btn settings-btn--secondary"
+                                    type="button"
+                                    onClick={handleCheckNow}
+                                >
+                                    <i className="fa-solid fa-refresh"></i> Check Now
+                                </button>
+
+                                <div className="settings-divider"></div>
+
                                 <div className="settings-info-box">
                                     <i className="fa-solid fa-circle-info"></i>
                                     <div>
                                         <h4>About Notifications</h4>
-                                        <p>What's new is checked automatically each day, so you'll be alerted when something on your watchlist airs or releases today. Alerts are delivered straight to this device by your browser — nothing is stored on our servers beyond your saved preferences and device subscription.</p>
+                                        <p>What's new is checked automatically every hour, so you'll be alerted shortly after episodes air or movies hit streaming services. Alerts are delivered straight to this device by your browser — nothing is stored on our servers beyond your saved preferences and device subscription.</p>
                                     </div>
                                 </div>
                             </div>
