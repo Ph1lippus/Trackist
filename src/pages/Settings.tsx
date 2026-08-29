@@ -347,6 +347,35 @@ const Settings: React.FC = () => {
         }
     }
 
+    const handleSendTestPush = async () => {
+        if (!currentUser) return
+        setPushMessage('Sending test notification...')
+        try {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session?.access_token) throw new Error('No session')
+
+            const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-new-content`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ userId: currentUser.id, test: true })
+            })
+
+            if (!res.ok) {
+                const data = await res.json()
+                throw new Error(data.error || 'Test push failed')
+            }
+
+            const result = await res.json()
+            setPushMessage(`Test sent: ${result.test_notifications_sent} device(s) notified`)
+        } catch (err) {
+            const message = err instanceof Error ? err.message : 'Test push failed'
+            setPushMessage(message)
+        }
+    }
+
     // Load the currently installed native app version (if running under Capacitor)
     useEffect(() => {
         if (!isNative) return
@@ -775,6 +804,16 @@ const Settings: React.FC = () => {
                                             disabled={push.loading}
                                         >
                                             {push.loading ? <><i className="fa-solid fa-spinner fa-spin"></i> Disabling...</> : <><i className="fa-solid fa-bell-slash"></i> Disable</>}
+                                        </button>
+                                    )}
+                                    {push.subscribed && (
+                                        <button
+                                            className="settings-btn settings-btn--secondary"
+                                            type="button"
+                                            onClick={handleSendTestPush}
+                                            disabled={push.loading}
+                                        >
+                                            {push.loading ? <><i className="fa-solid fa-spinner fa-spin"></i> Sending...</> : <><i className="fa-solid fa-paper-plane"></i> Send Test Notification</>}
                                         </button>
                                     )}
                                     {!push.supported && canInstall && (
