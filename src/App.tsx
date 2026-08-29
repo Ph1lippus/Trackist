@@ -6,6 +6,7 @@ import { SearchProvider } from './contexts/SearchContext'
 import { MobileProvider } from './contexts/MobileProvider'
 import { useLibraryStore } from './stores/useLibraryStore'
 import { registerSW } from 'virtual:pwa-register'
+import { initNativePush, isNativePlatform } from './services/nativePush'
 import { invalidateCalendarCache } from './services/calendarService'
 import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
@@ -105,6 +106,22 @@ const AppContent: React.FC = () => {
     // Session security (auto-refresh, inactivity timeout, device tracking)
     useSessionSecurity()
 
+    // Native (Capacitor) push: init listeners once and route notification taps
+    useEffect(() => {
+        if (!isNativePlatform()) return
+
+        initNativePush()
+
+        const onNavigate = (event: Event): void => {
+            const url = (event as CustomEvent<{ url: string }>).detail?.url
+            if (url) {
+                navigate(url.startsWith('/') ? url : `/${url}`)
+            }
+        }
+        window.addEventListener('trackist:navigate', onNavigate)
+        return () => window.removeEventListener('trackist:navigate', onNavigate)
+    }, [navigate])
+
     // Enforce 2FA: if the current session is only at "aal1" (password verified,
     // second factor NOT yet verified) but the user has a verified factor, send
     // them to the challenge screen before letting them into the app. Runs once
@@ -141,9 +158,12 @@ const AppContent: React.FC = () => {
     // Register unconditionally; a registered SW is what makes beforeinstallprompt
     // fire and lets the app be installed from the browser.
     useEffect(() => {
+        if (isNativePlatform()) return
+
         const updateIntervalIds: number[] = []
 
         const reportPageStatus = async () => {
+            if (isNativePlatform()) return
             try {
                 const reg = await navigator.serviceWorker.ready
                 const sub = await reg.pushManager.getSubscription()

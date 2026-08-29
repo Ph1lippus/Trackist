@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../services/supabaseClient'
+import {
+    isNativePlatform,
+    getNativePermission,
+    requestNativePermission,
+    getNativeToken,
+    unregisterNative,
+} from '../services/nativePush'
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_PUSH_VAPID_PUBLIC_KEY?.trim()
 
@@ -81,7 +88,6 @@ const TIMEZONE_TO_COUNTRY: Record<string, string> = {
     'America/Denver': 'US',
     'America/Los_Angeles': 'US',
     'America/Anchorage': 'US',
-    'America/Honolulu': 'US',
     'America/Toronto': 'CA',
     'America/Vancouver': 'CA',
     'America/Mexico_City': 'MX',
@@ -139,17 +145,43 @@ const saveTimezoneAndCountry = async (userId: string): Promise<void> => {
 }
 
 export const usePushNotifications = () => {
-    const [supported] = useState<boolean>(isPushSupported())
-    const [inPwaContext] = useState<boolean>(isPwaContext())
-    const [permission, setPermission] = useState<NotificationPermission | 'unsupported'>(() =>
-        supported ? Notification.permission : 'unsupported'
-    )
+    const native = isNativePlatform()
+    const [supported] = useState<boolean>(native || isPushSupported())
+    const [inPwaContext] = useState<boolean>(native || isPwaContext())
+    const [permission, setPermission] = useState<NotificationPermission | 'prompt' | 'unsupported'>(() => {
+        if (native) return 'prompt'
+        return supported ? Notification.permission : 'unsupported'
+    })
     const [serviceWorkerReady, setServiceWorkerReady] = useState(false)
     const [subscribed, setSubscribed] = useState(false)
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
+        if (native) {
+            let cancelled = false
+
+            void getNativePermission().then((perm) => {
+                if (!cancelled) setPermission(perm)
+            })
+
+            void supabase.auth.getUser().then(({ data: { user } }) => {
+                if (!user) return null
+                return supabase
+                    .from('push_subscriptions')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .eq('platform', 'native')
+                    .maybeSingle()
+            }).then((result) => {
+                if (!cancelled && result?.data) setSubscribed(true)
+            }).catch(() => {})
+
+            return () => {
+                cancelled = true
+            }
+        }
+
         if (!supported || !('serviceWorker' in navigator)) {
             return
         }
@@ -170,24 +202,63 @@ export const usePushNotifications = () => {
         return () => {
             cancelled = true
         }
-    }, [supported])
+    }, [native, supported])
 
     const enable = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
         setError(null)
         setLoading(true)
 
         try {
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) {
+                throw new Error('You must be signed in to enable notifications')
+            }
+
+            if (native) {
+                let perm = await getNativePermission()
+                setPermission(perm)
+                if (perm === 'denied') {
+                    throw new Error('Notifications are blocked for the app in your device settings')
+                }
+                if (perm !== 'granted') {
+                    perm = await requestNativePermission()
+                    setPermission(perm)
+                    if (perm !== 'granted') {
+                        throw new Error('Notification permission was not granted')
+                    }
+                }
+
+                const token = await getNativeToken()
+
+                const { error: upsertError } = await supabase
+                    .from('push_subscriptions')
+                    .upsert(
+                        {
+                            user_id: user.id,
+                            platform: 'native',
+                            token,
+                            user_agent: navigator.userAgent,
+                            last_seen: new Date().toISOString(),
+                        },
+                        { onConflict: 'token' }
+                    )
+
+                if (upsertError) {
+                    throw new Error(`Failed to save the subscription: ${upsertError.message}`)
+                }
+
+                await saveTimezoneAndCountry(user.id)
+
+                setSubscribed(true)
+                return { ok: true }
+            }
+
             if (!supported) {
                 throw new Error('Push notifications are not supported on this browser')
             }
 
             if (!VAPID_PUBLIC_KEY) {
                 throw new Error('Push notifications are not configured (missing VAPID key)')
-            }
-
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) {
-                throw new Error('You must be signed in to enable notifications')
             }
 
             setPermission(Notification.permission)
@@ -254,13 +325,29 @@ export const usePushNotifications = () => {
         } finally {
             setLoading(false)
         }
-    }, [supported])
+    }, [native, supported])
 
     const disable = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
         setError(null)
         setLoading(true)
 
         try {
+            if (native) {
+                const { data: { user } } = await supabase.auth.getUser()
+                if (!user) throw new Error('You must be signed in to disable notifications')
+
+                await unregisterNative().catch(() => {})
+
+                await supabase
+                    .from('push_subscriptions')
+                    .delete()
+                    .eq('user_id', user.id)
+                    .eq('platform', 'native')
+
+                setSubscribed(false)
+                return { ok: true }
+            }
+
             if (!supported || !('serviceWorker' in navigator)) {
                 setSubscribed(false)
                 return { ok: true }
@@ -286,7 +373,7 @@ export const usePushNotifications = () => {
         } finally {
             setLoading(false)
         }
-    }, [supported])
+    }, [native, supported])
 
     return {
         supported,

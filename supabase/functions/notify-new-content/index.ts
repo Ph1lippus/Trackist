@@ -1,6 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { sendPushNotification } from './web-push.ts'
+import { sendNativeNotification } from './native-fcm.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -45,6 +46,8 @@ interface SubscriptionRow {
   id: string
   endpoint: string
   keys: { p256dh?: string; auth?: string }
+  platform?: string
+  token?: string
 }
 
 interface PushPayload {
@@ -227,6 +230,28 @@ serve(async (req: Request) => {
       auth: { autoRefreshToken: false, persistSession: false },
     })
 
+    const sendToSubscription = async (
+      sub: SubscriptionRow,
+      payload: PushPayload
+    ): Promise<void> => {
+      if (sub.platform === 'native') {
+        if (!sub.token) return
+        await sendNativeNotification(sub.token, {
+          title: payload.title,
+          body: payload.body,
+          url: payload.url,
+          tag: payload.tag,
+        })
+        return
+      }
+      if (!sub.endpoint || !sub.keys?.p256dh || !sub.keys?.auth) return
+      await sendPushNotification(
+        { endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth },
+        JSON.stringify(payload),
+        { subject: vapidSubject, publicKey: vapidPublicKey, privateKey: vapidPrivateKey }
+      )
+    }
+
     if (testMode) {
       if (!targetUserId) {
         return new Response(JSON.stringify({ error: 'test mode requires a userId' }), {
@@ -239,22 +264,17 @@ serve(async (req: Request) => {
       let testErrors = 0
       const { data: testSubscriptions } = await supabase
         .from('push_subscriptions')
-        .select('id, endpoint, keys')
+        .select('id, endpoint, keys, platform, token')
         .eq('user_id', targetUserId)
 
       for (const sub of (testSubscriptions || []) as SubscriptionRow[]) {
-        if (!sub.endpoint || !sub.keys?.p256dh || !sub.keys?.auth) continue
         try {
-          await sendPushNotification(
-            { endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth },
-            JSON.stringify({
-              title: 'Trackist',
-              body: `Test notification · ${new Date().toISOString()}`,
-              url: '/settings',
-              tag: `test:${targetUserId}:${new Date().toISOString()}`,
-            }),
-            { subject: vapidSubject, publicKey: vapidPublicKey, privateKey: vapidPrivateKey }
-          )
+          await sendToSubscription(sub, {
+            title: 'Track1st',
+            body: `Test notification · ${new Date().toISOString()}`,
+            url: '/settings',
+            tag: `test:${targetUserId}:${new Date().toISOString()}`,
+          })
           testSent++
         } catch (error) {
           const statusCode = (error as { statusCode?: number }).statusCode
@@ -264,7 +284,7 @@ serve(async (req: Request) => {
               .delete()
               .eq('id', sub.id)
           } else {
-            console.error(`Failed to send test push to ${sub.endpoint}:`, error)
+            console.error(`Failed to send test push to ${sub.platform}/${sub.endpoint || sub.token}:`, error)
           }
           testErrors++
         }
@@ -536,7 +556,7 @@ serve(async (req: Request) => {
 
         const { data: subscriptions } = await supabase
           .from('push_subscriptions')
-          .select('id, endpoint, keys')
+          .select('id, endpoint, keys, platform, token')
           .eq('user_id', userId)
 
         if (!subscriptions || subscriptions.length === 0) continue
@@ -546,14 +566,8 @@ serve(async (req: Request) => {
         for (const notification of notifications) {
           let delivered = false
           for (const sub of subscriptions as SubscriptionRow[]) {
-            if (!sub.endpoint || !sub.keys?.p256dh || !sub.keys?.auth) continue
-
             try {
-              await sendPushNotification(
-                { endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth },
-                JSON.stringify({ ...notification, write: undefined }),
-                { subject: vapidSubject, publicKey: vapidPublicKey, privateKey: vapidPrivateKey }
-              )
+              await sendToSubscription(sub, { ...notification, write: undefined })
               notificationsSent++
               delivered = true
             } catch (error) {
@@ -565,7 +579,7 @@ serve(async (req: Request) => {
                   .eq('id', sub.id)
                 if (!deleteError) staleSubscriptionsRemoved++
               } else {
-                console.error(`Failed to send push to ${sub.endpoint}:`, error)
+                console.error(`Failed to send push to ${sub.platform}/${sub.endpoint || sub.token}:`, error)
                 errors++
               }
             }
