@@ -39,7 +39,7 @@ export interface CalendarMovieItem {
 
 export type CalendarItem = CalendarEpisodeItem | CalendarMovieItem
 
-const CACHE_PREFIX = 'trackist-calendar'
+const CACHE_PREFIX = 'track1st-calendar'
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000
 
 interface CalendarCache {

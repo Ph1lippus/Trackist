@@ -99,7 +99,7 @@ interface PushData {
 }
 
 self.addEventListener('push', (event) => {
-  let data: PushData = { title: 'Trackist', body: '', url: '/' }
+  let data: PushData = { title: 'Track1st', body: '', url: '/' }
   try {
     const parsed = event.data?.json()
     if (parsed && typeof parsed === 'object') {
@@ -114,7 +114,7 @@ self.addEventListener('push', (event) => {
   } catch {
     const fallbackText = event.data?.text()
     if (fallbackText) {
-      data = { title: 'Trackist', body: fallbackText, url: '/' }
+      data = { title: 'Track1st', body: fallbackText, url: '/' }
     }
   }
 

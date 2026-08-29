@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
 import { markShowAsFullyWatched } from '../services/watchlistService'
@@ -15,7 +15,7 @@ import { supabase } from '../services/supabaseClient'
 import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
 
 const TVShows: React.FC = () => {
-    usePageTitle('Trackist - TV Shows')
+    usePageTitle('Track1st - TV Shows')
     const navigate = useNavigate()
     const { committedQuery } = useSearch()
     const { showIcons } = useMediaCardIcons()

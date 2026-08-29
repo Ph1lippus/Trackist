@@ -53,7 +53,7 @@ const MFASetup: React.FC<MFASetupProps> = ({ onSuccess, onClose }) => {
                 setAlreadyEnabled(true)
                 return
             }
-            const data = await enroll('totp', 'Trackist Authenticator')
+            const data = await enroll('totp', 'Track1st Authenticator')
             if (data?.totp) {
                 setEnrollData({
                     qrCode: data.totp.qrCode,
@@ -153,13 +153,13 @@ const MFASetup: React.FC<MFASetupProps> = ({ onSuccess, onClose }) => {
     }
 
     const downloadBackupCodes = () => {
-        const header = 'Trackist - Backup Codes\n========================\nEach code can be used once.\n\n'
+        const header = 'Track1st - Backup Codes\n========================\nEach code can be used once.\n\n'
         const body = backupCodes.join('\n')
         const blob = new Blob([header + body + '\n'], { type: 'text/plain;charset=utf-8' })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = 'trackist-backup-codes.txt'
+        a.download = 'track1st-backup-codes.txt'
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)

@@ -15,7 +15,7 @@ interface Point {
 
 const EditProfile: React.FC = () => {
     const navigate = useNavigate()
-    usePageTitle('Trackist - Edit Profile')
+    usePageTitle('Track1st - Edit Profile')
     const [currentUser, setCurrentUser] = useState<User | null>(null)
     const [username, setUsername] = useState('')
     const [bio, setBio] = useState('')

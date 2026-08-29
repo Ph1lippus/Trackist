@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getBestBackdropPath } from '../services/tmdbService'
 import { formatStatus } from '../utils/statusUtils'
@@ -33,7 +33,7 @@ interface LocalEpisode {
 
 const TVShowDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>()
-    usePageTitle('Trackist - TV Show Detail')
+    usePageTitle('Track1st - TV Show Detail')
     const navigate = useNavigate()
     const { showStremioButton, loading: stremioLoading } = useShowStremioButton()
     const { isMobile } = useMobile()
@@ -1010,7 +1010,7 @@ const TVShowDetail: React.FC = () => {
                                          <img src={stremioIcon} alt="Stremio" className="detail-page__stremio-logo" />
                                      </button>
                                  )}
-                                <ShareButton url={window.location.href} text={`Check out ${title} on Trackist`} />
+                                <ShareButton url={window.location.href} text={`Check out ${title} on Track1st`} />
                             </div>
 
                             {/* Action buttons (desktop inline / mobile fixed sidebar) */}

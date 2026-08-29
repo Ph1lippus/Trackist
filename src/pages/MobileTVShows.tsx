@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useCallback, useState } from 'react'
+import React, { useEffect, useMemo, useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails, getTVEpisodeDetails, imageUrl } from '../services/tmdbService'
 import { markEpisodesWatched, checkAndUpdateCompleted } from '../services/watchlistService'
@@ -14,7 +14,7 @@ import { getCachedOrFetch } from '../services/cacheService'
 
 const MobileTVShows: React.FC = () => {
     const { isMobile } = useMobile()
-    usePageTitle('Trackist - TV Shows')
+    usePageTitle('Track1st - TV Shows')
     const navigate = useNavigate()
     const { committedQuery } = useSearch()
     const tvShows = useLibraryStore((state) => state.tvShows)

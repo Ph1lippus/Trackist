@@ -15,7 +15,7 @@ const formatHours = (minutes: number): string => {
 }
 
 const Statistics: React.FC = () => {
-    usePageTitle('Trackist - Statistics')
+    usePageTitle('Track1st - Statistics')
     const [episodeStats, setEpisodeStats] = useState<EpisodeStats>({ totalEpisodesWatched: 0, totalWatchTimeMinutes: 0 })
 
     useEffect(() => {

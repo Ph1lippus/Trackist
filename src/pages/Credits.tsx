@@ -138,13 +138,13 @@ const credits = [
 ]
 
 const Credits: React.FC = () => {
-    usePageTitle('Trackist - Credits')
+    usePageTitle('Track1st - Credits')
     return (
         <section className="credits-page">
             <div className="dashboard-section">
                 <div className="dashboard-section__head">
                     <h2>Credits</h2>
-                    <span>Tools and services that helped shape Trackist</span>
+                    <span>Tools and services that helped shape Track1st</span>
                 </div>
 
                 <div className="credits-grid">

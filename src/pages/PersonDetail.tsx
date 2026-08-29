@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import { getPersonDetails, getPersonMovies, getPersonTV, imageUrl } from '../services/tmdbService'
 import type { TMDBResult, WatchlistItem } from '../types'
@@ -28,7 +28,7 @@ interface FilmographyItem extends TMDBResult {
 
 const PersonDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>()
-    usePageTitle('Trackist - Person Detail')
+    usePageTitle('Track1st - Person Detail')
     const [details, setDetails] = useState<PersonDetails | null>(null)
     const [detailsLoading, setDetailsLoading] = useState(true)
     const [movies, setMovies] = useState<FilmographyItem[]>([])

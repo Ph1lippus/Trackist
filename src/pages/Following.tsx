@@ -8,7 +8,7 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import { cacheService, getCachedOrFetch } from '../services/cacheService'
 
 const FollowingPage = () => {
-    usePageTitle('Trackist - Following')
+    usePageTitle('Track1st - Following')
     const { username } = useParams<{ username: string }>()
     const [currentUser, setCurrentUser] = useState<any>(null)
     const [targetUser, setTargetUser] = useState<any>(null)

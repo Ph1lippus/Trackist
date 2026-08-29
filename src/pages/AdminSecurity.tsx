@@ -16,7 +16,7 @@ interface AuditLogEntry {
 }
 
 const AdminSecurity: React.FC = () => {
-    usePageTitle('Trackist - Security Audit Log')
+    usePageTitle('Track1st - Security Audit Log')
     const { user } = useAuthStore()
     const [logs, setLogs] = useState<AuditLogEntry[]>([])
     const [loading, setLoading] = useState(true)

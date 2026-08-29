@@ -21,7 +21,7 @@ interface SessionInfo {
 }
 
 const Sessions: React.FC = () => {
-    usePageTitle('Trackist - Session Management')
+    usePageTitle('Track1st - Session Management')
     const navigate = useNavigate()
     const { user, session } = useAuthStore()
     const [sessions, setSessions] = useState<SessionInfo[]>([])

@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState, useCallback } from 'react'
+import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { imageUrl } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
@@ -11,7 +11,7 @@ import ConfirmModal from '../components/modals/ConfirmModal'
 
 const MobileMovies: React.FC = () => {
     const { isMobile } = useMobile()
-    usePageTitle('Trackist - Movies')
+    usePageTitle('Track1st - Movies')
     const navigate = useNavigate()
     const { committedQuery } = useSearch()
     const movies = useLibraryStore((state) => state.movies)

@@ -62,7 +62,7 @@ export const initNativePush = (): void => {
     PushNotifications.addListener('pushNotificationActionPerformed', (action) => {
         const url = String(action.notification.data?.url ?? '/')
         report('native_action', url)
-        window.dispatchEvent(new CustomEvent('trackist:navigate', { detail: { url } }))
+        window.dispatchEvent(new CustomEvent('track1st:navigate', { detail: { url } }))
     })
 
     report('native_init')

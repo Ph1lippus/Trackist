@@ -8,7 +8,7 @@ import Captcha from '../components/auth/Captcha'
 import type { CaptchaHandle } from '../components/auth/Captcha'
 
 const ForgotPassword: React.FC = () => {
-    usePageTitle('Trackist - Forgot Password')
+    usePageTitle('Track1st - Forgot Password')
     const [email, setEmail] = useState('')
     const [error, setError] = useState('')
     const [message, setMessage] = useState('')

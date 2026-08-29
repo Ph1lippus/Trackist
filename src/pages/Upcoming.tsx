@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
@@ -91,7 +91,7 @@ interface UpcomingProps {
 
 const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
     const navigate = useNavigate()
-    usePageTitle('Trackist - Upcoming')
+    usePageTitle('Track1st - Upcoming')
     const [upcomingItems, setUpcomingItems] = useState<UpcomingItem[]>([])
     const [selectedDate, setSelectedDate] = useState<{dateKey: string, items: UpcomingItem[]} | null>(null)
     const [dayCellInnerWidth, setDayCellInnerWidth] = useState(0)

@@ -1,10 +1,10 @@
-﻿import React, { useEffect } from 'react'
+import React, { useEffect } from 'react'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useListsLogic } from '../hooks/useListsLogic'
 import { imageUrl } from '../services/tmdbService'
 
 const Lists: React.FC = () => {
-    usePageTitle('Trackist - Lists')
+    usePageTitle('Track1st - Lists')
     const {
         publicLists,
         filteredLists,

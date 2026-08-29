@@ -11,7 +11,7 @@ export const useMediaCardIconsStore = create<MediaCardIconsState>((set) => ({
     setShowIcons: (value) => {
         set({ showIcons: value })
         try {
-            localStorage.setItem('trackist-show-media-card-icons', value ? '1' : '0')
+            localStorage.setItem('track1st-show-media-card-icons', value ? '1' : '0')
         } catch {
             // Storage unavailable — fail silently
         }

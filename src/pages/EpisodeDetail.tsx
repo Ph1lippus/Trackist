@@ -25,7 +25,7 @@ interface EpisodeData {
 const EpisodeDetail: React.FC = () => {
     const { id, season, episode } = useParams<{ id: string; season: string; episode: string }>()
     const { isMobile } = useMobile()
-    usePageTitle('Trackist - Episode Detail')
+    usePageTitle('Track1st - Episode Detail')
     const [tvDetails, setTvDetails] = useState<TMDBResult | null>(null)
     const [episodeData, setEpisodeData] = useState<EpisodeData | null>(null)
     const [loading, setLoading] = useState(true)
@@ -237,7 +237,7 @@ const EpisodeDetail: React.FC = () => {
                             <div className={isMobile ? 'detail-page__actions-mobile' : 'detail-page__actions'}>
                                 <ShareButton
                                     url={window.location.href}
-                                    text={`${title} S${season}E${episode} - ${episodeTitle} on Trackist`}
+                                    text={`${title} S${season}E${episode} - ${episodeTitle} on Track1st`}
                                 />
                                 {isInWatchlist && (
                                     <button 

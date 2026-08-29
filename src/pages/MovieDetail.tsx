@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getMovieDetails, imageUrl, imageUrlOriginal, getBestBackdropPath } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
@@ -17,7 +17,7 @@ import letterboxdIcon from '../assets/letterboxd-decal-dots-pos-rgb-500px.png'
 import ShareButton from '../components/media/ShareButton'
 
 const MovieDetail: React.FC = () => {
-    usePageTitle('Trackist - Movie Detail')
+    usePageTitle('Track1st - Movie Detail')
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { showStremioButton, loading: stremioLoading } = useShowStremioButton()
@@ -396,7 +396,7 @@ const MovieDetail: React.FC = () => {
                                     <img src={letterboxdIcon} alt="Letterboxd" className="detail-page__letterbox-logo" />
                                 </button>
                             )}
-                            <ShareButton url={window.location.href} text={`Check out ${title} on Trackist`} />
+                            <ShareButton url={window.location.href} text={`Check out ${title} on Track1st`} />
                         </div>
 
                         {/* Mobile fixed action container */}
@@ -518,7 +518,7 @@ const MovieDetail: React.FC = () => {
                                     <img src={letterboxdIcon} alt="Letterboxd" className="detail-page__letterbox-logo" />
                                 </button>
                             )}
-                            <ShareButton url={window.location.href} text={`Check out ${title} on Trackist`} />
+                            <ShareButton url={window.location.href} text={`Check out ${title} on Track1st`} />
                         </div>
 
                         {!isMobile && showTrailer && trailerKey && (

@@ -8,7 +8,7 @@ import Captcha from '../components/auth/Captcha'
 import type { CaptchaHandle } from '../components/auth/Captcha'
 
 const Login: React.FC = () => {
-    usePageTitle('Trackist - Login')
+    usePageTitle('Track1st - Login')
     const navigate = useNavigate()
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')

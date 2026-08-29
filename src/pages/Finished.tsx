@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { useSelectionStore } from '../stores/useSelectionStore'
 import MediaCard from '../components/media/MediaCard'
@@ -10,7 +10,7 @@ import { removeAllWatchedEpisodes } from '../services/watchlistService'
 import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
 
 const Finished: React.FC = () => {
-    usePageTitle('Trackist - Finished')
+    usePageTitle('Track1st - Finished')
     const { committedQuery } = useSearch()
     const { showIcons } = useMediaCardIcons()
 

@@ -45,7 +45,7 @@ type TabType = 'watching' | 'movies' | 'finished' | 'lists'
 
 const ProfilePage: React.FC = () => {
     const { username } = useParams<{ username: string }>()
-    usePageTitle('Trackist - Profile')
+    usePageTitle('Track1st - Profile')
     const { isMobile } = useMobile()
     const [currentUser, setCurrentUser] = useState<User | null>(null)
     const [profile, setProfile] = useState<ProfileData | null>(null)

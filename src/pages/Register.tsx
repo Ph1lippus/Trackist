@@ -12,7 +12,7 @@ import type { CaptchaHandle } from '../components/auth/Captcha'
 import PasswordStrengthMeter from '../components/auth/PasswordStrengthMeter'
 
 const Register: React.FC = () => {
-    usePageTitle('Trackist - Register')
+    usePageTitle('Track1st - Register')
     const navigate = useNavigate()
     const [username, setUsername] = useState('')
     const [email, setEmail] = useState('')

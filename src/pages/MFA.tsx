@@ -7,7 +7,7 @@ import MFAChallenge from '../components/auth/MFAChallenge'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 const MFA: React.FC = () => {
-    usePageTitle('Trackist - Two-Factor Authentication')
+    usePageTitle('Track1st - Two-Factor Authentication')
     const navigate = useNavigate()
     const location = useLocation()
     const { user } = useAuthStore()

@@ -9,7 +9,7 @@ import ConfirmModal from '../components/modals/ConfirmModal'
 import { useMobile } from '../contexts/useMobile'
 
 const ListsDetail: React.FC = () => {
-    usePageTitle('Trackist - Lists')
+    usePageTitle('Track1st - Lists')
     const { id } = useParams<{ id: string }>()
     const { showIcons } = useMediaCardIcons()
 

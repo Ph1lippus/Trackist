@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
@@ -80,7 +80,7 @@ const mapCalendarItem = (item: CalendarItem): UpcomingItem => ({
 
 const UpcomingNew: React.FC = () => {
     const navigate = useNavigate()
-    usePageTitle('Trackist - Upcoming')
+    usePageTitle('Track1st - Upcoming')
     const [upcomingItems, setUpcomingItems] = useState<UpcomingItem[]>([])
     const [hasLoaded, setHasLoaded] = useState(false)
 

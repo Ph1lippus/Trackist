@@ -7,6 +7,14 @@ import { MobileProvider } from './contexts/MobileProvider'
 import { useLibraryStore } from './stores/useLibraryStore'
 import { registerSW } from 'virtual:pwa-register'
 import { initNativePush, isNativePlatform } from './services/nativePush'
+import {
+    getInstalledVersion,
+    getLatestVersion,
+    isNewerVersion,
+    openUpdateDownload,
+    getUpdateDismissed,
+    dismissUpdateVersion,
+} from './services/nativeUpdate'
 import { invalidateCalendarCache } from './services/calendarService'
 import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
@@ -64,6 +72,7 @@ const AppContent: React.FC = () => {
     const [showUpdateModal, setShowUpdateModal] = useState(false)
     const [updateLoading, setUpdateLoading] = useState(false)
     const [updateSW, setUpdateSW] = useState<((reloadPage?: boolean) => Promise<void>) | null>(null)
+    const [nativeUpdateVersion, setNativeUpdateVersion] = useState<string | null>(null)
 
     // Determine if running as a PWA (standalone mode)
     const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
@@ -110,6 +119,7 @@ const AppContent: React.FC = () => {
     useEffect(() => {
         if (!isNativePlatform()) return
 
+        document.documentElement.classList.add('native-app')
         initNativePush()
 
         const onNavigate = (event: Event): void => {
@@ -118,9 +128,35 @@ const AppContent: React.FC = () => {
                 navigate(url.startsWith('/') ? url : `/${url}`)
             }
         }
-        window.addEventListener('trackist:navigate', onNavigate)
-        return () => window.removeEventListener('trackist:navigate', onNavigate)
+        window.addEventListener('track1st:navigate', onNavigate)
+        return () => window.removeEventListener('track1st:navigate', onNavigate)
     }, [navigate])
+
+    // Native (Capacitor) update check: compare installed version against the
+    // latest android-latest release and surface the Update Available modal.
+    useEffect(() => {
+        if (!isNativePlatform()) return
+
+        let cancelled = false
+        const check = async (): Promise<void> => {
+            const [installed, latest] = await Promise.all([getInstalledVersion(), getLatestVersion()])
+            if (cancelled || !latest || !installed || !isNewerVersion(latest, installed)) return
+            if (getUpdateDismissed(latest)) return
+            setNativeUpdateVersion(latest)
+            setShowUpdateModal(true)
+        }
+        const onCheckUpdate = (): void => {
+            void check()
+        }
+
+        void check()
+        window.addEventListener('track1st:check-update', onCheckUpdate)
+
+        return () => {
+            cancelled = true
+            window.removeEventListener('track1st:check-update', onCheckUpdate)
+        }
+    }, [])
 
     // Enforce 2FA: if the current session is only at "aal1" (password verified,
     // second factor NOT yet verified) but the user has a verified factor, send
@@ -222,6 +258,14 @@ const AppContent: React.FC = () => {
     }, [])
 
     const handleUpdate = async () => {
+        if (isNativePlatform()) {
+            if (nativeUpdateVersion) dismissUpdateVersion(nativeUpdateVersion)
+            setShowUpdateModal(false)
+            setNativeUpdateVersion(null)
+            openUpdateDownload()
+            return
+        }
+
         if (!updateSW) return
 
         setUpdateLoading(true)
@@ -236,7 +280,9 @@ const AppContent: React.FC = () => {
     }
 
     const handleDismissUpdate = () => {
+        if (isNativePlatform() && nativeUpdateVersion) dismissUpdateVersion(nativeUpdateVersion)
         setShowUpdateModal(false)
+        setNativeUpdateVersion(null)
     }
 
     const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Friends', '/Statistics', '/Finished', '/Lists', '/Profile', '/Admin', '/MobileTVShows', '/MobileMovies', '/Followers', '/Following', '/Credits']
@@ -342,6 +388,8 @@ const AppContent: React.FC = () => {
                 onUpdate={handleUpdate}
                 onDismiss={handleDismissUpdate}
                 confirmLoading={updateLoading}
+                version={isNativePlatform() && nativeUpdateVersion ? nativeUpdateVersion : undefined}
+                confirmText={isNativePlatform() ? 'Download Update' : 'Update Now'}
             />
         </div>
     )

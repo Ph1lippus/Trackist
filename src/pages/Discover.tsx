@@ -34,7 +34,7 @@ const DiscoverCard = memo(({ item, onAdd, isInWatchlist, showIcons }: {
 
 const Discover: React.FC = () => {
     const location = useLocation()
-    usePageTitle('Trackist - Discover')
+    usePageTitle('Track1st - Discover')
     const isVisible = location.pathname === '/' || location.pathname === '/Discover'
 
     // Store selectors

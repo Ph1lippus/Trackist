@@ -16,7 +16,7 @@ const Footer: React.FC<FooterProps> = ({ loggedIn = false }) => {
         <footer className={`footer ${footerPaddingClass}`}>
             <div className="container footer-inner">
                 <div className="footer__top">
-                    <Link to="/" className="footer__brand">Trackist</Link>
+                    <Link to="/" className="footer__brand">Track1st</Link>
                     <button 
                         onClick={scrollToTop} 
                         className="footer__back-btn" 
@@ -36,7 +36,7 @@ const Footer: React.FC<FooterProps> = ({ loggedIn = false }) => {
                     </div>
                     <div className="footer__links-group">
                         <span className="footer__links-title">About</span>
-                        <a href="#">About Trackist</a>
+                        <a href="#">About Track1st</a>
                         <a href="#">Contact</a>
                     </div>
 <div className="footer__links-group">
@@ -62,7 +62,7 @@ const Footer: React.FC<FooterProps> = ({ loggedIn = false }) => {
 
                 <div className="footer__bottom">
                     <p className="footer__copyright">
-                        &copy; 2026 <strong>Trackist</strong>. Open source. 
+                        &copy; 2026 <strong>Track1st</strong>. Open source. 
                         Built with ❤ by <a href="https://github.com/Ph1lippus" target="_blank" rel="noopener noreferrer">Ph1lippus</a>
                     </p>
                 </div>

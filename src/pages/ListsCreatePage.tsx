@@ -22,7 +22,7 @@ const BrowseCard = memo(({ item, onAdd }: {
 ))
 
 const ListsCreatePage: React.FC = () => {
-    usePageTitle('Trackist - Create List')
+    usePageTitle('Track1st - Create List')
     const navigate = useNavigate()
     const { isMobile } = useMobile()
     

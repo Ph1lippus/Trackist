@@ -23,7 +23,7 @@ const BrowseCard = memo(({ item, onAdd }: {
 ))
 
 const ListsEditPage: React.FC = () => {
-    usePageTitle('Trackist - Lists')
+    usePageTitle('Track1st - Lists')
     const { id } = useParams<{ id: string }>()
     const hasInitializedRef = useRef(false)
 

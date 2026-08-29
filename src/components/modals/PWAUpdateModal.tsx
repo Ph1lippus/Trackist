@@ -54,7 +54,7 @@ const PWAUpdateModal: React.FC<PWAUpdateModalProps> = ({
     const title = 'Update Available'
     const message = version 
         ? `Version ${version} is available. Update now to get the latest features and fixes.`
-        : 'A new version of Trackist is available. Update now to get the latest features and fixes.'
+        : 'A new version of Track1st is available. Update now to get the latest features and fixes.'
 
     return (
         <div 

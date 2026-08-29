@@ -14,6 +14,8 @@ import { getUTCTodayString } from '../utils/dateUtils'
 import { useAuthStore } from '../stores/useAuthStore'
 import { TimezonePicker } from '../components/settings/TimezonePicker'
 import { CountryPicker } from '../components/settings/CountryPicker'
+import { isNativePlatform } from '../services/nativePush'
+import { getInstalledVersion, getLatestVersion, isNewerVersion } from '../services/nativeUpdate'
 
 type SettingsSection = 'account' | 'profile' | 'security' | 'notifications' | 'app' | 'data' | 'additions' | 'danger'
 type NotificationPrefField = 'notify_new_episode' | 'notify_new_season' | 'notify_release_date' | 'movie_notify_on_digital'
@@ -53,7 +55,7 @@ const notificationPrefs: { id: NotificationPrefField; label: string; desc: strin
 ]
 
 const Settings: React.FC = () => {
-    usePageTitle('Trackist - Settings')
+    usePageTitle('Track1st - Settings')
     const navigate = useNavigate()
     const [currentUser, setCurrentUser] = useState<User | null>(null)
     const [activeSection, setActiveSection] = useState<SettingsSection>('account')
@@ -112,6 +114,12 @@ const Settings: React.FC = () => {
     const [letterboxMessage, setLetterboxMessage] = useState('')
     const [iconsLoading, setIconsLoading] = useState(false)
     const [iconsMessage, setIconsMessage] = useState('')
+
+    // App states
+    const isNative = isNativePlatform()
+    const [installedAppVersion, setInstalledAppVersion] = useState<string | null>(null)
+    const [appVersionLoading, setAppVersionLoading] = useState(false)
+    const [appVersionMessage, setAppVersionMessage] = useState('')
 
     // Danger zone
     const [deleteConfirm, setDeleteConfirm] = useState('')
@@ -339,6 +347,30 @@ const Settings: React.FC = () => {
         }
     }
 
+    // Load the currently installed native app version (if running under Capacitor)
+    useEffect(() => {
+        if (!isNative) return
+        void getInstalledVersion().then(setInstalledAppVersion)
+    }, [isNative])
+
+    const handleCheckAppUpdates = async () => {
+        setAppVersionLoading(true)
+        setAppVersionMessage('')
+        try {
+            const [installed, latest] = await Promise.all([getInstalledVersion(), getLatestVersion()])
+            if (!latest || !installed) {
+                setAppVersionMessage(latest ? 'You are on the latest version.' : 'Could not reach the update server.')
+            } else if (isNewerVersion(latest, installed)) {
+                window.dispatchEvent(new Event('track1st:check-update'))
+                setAppVersionMessage(`An update to v${latest} is available.`)
+            } else {
+                setAppVersionMessage('You are on the latest version.')
+            }
+        } finally {
+            setAppVersionLoading(false)
+        }
+    }
+
     const handleExportData = async () => {
         if (!currentUser) return
 
@@ -373,7 +405,7 @@ const Settings: React.FC = () => {
                 following: follows || []
             }
 
-            downloadBlob(JSON.stringify(exportData, null, 2), `trackist-export-${getUTCTodayString()}.json`, 'application/json')
+            downloadBlob(JSON.stringify(exportData, null, 2), `track1st-export-${getUTCTodayString()}.json`, 'application/json')
 
             setDataMessage('Data exported successfully')
         } catch {
@@ -409,7 +441,7 @@ const Settings: React.FC = () => {
                 added_at: item.added_at
             }))
 
-            downloadBlob(rowsToCSV(rows), `trackist-watchlist-${getUTCTodayString()}.csv`, 'text/csv;charset=utf-8')
+            downloadBlob(rowsToCSV(rows), `track1st-watchlist-${getUTCTodayString()}.csv`, 'text/csv;charset=utf-8')
 
             setDataMessage('Watchlist exported as CSV successfully')
         } catch {
@@ -721,7 +753,7 @@ const Settings: React.FC = () => {
                                             {!push.supported
                                                 ? 'This browser does not support push notifications'
                                                 : !push.inPwaContext
-                                                    ? 'Install Trackist and open it from your home screen to receive notifications'
+                                                    ? 'Install Track1st and open it from your home screen to receive notifications'
                                                     : 'You can still receive alerts from the Upcoming pages without enabling this'}
                                         </span>
                                     </div>
@@ -895,8 +927,33 @@ const Settings: React.FC = () => {
                             <div className="settings-panel">
                                 <div className="settings-panel__header">
                                     <h3>App</h3>
-                                    <p>Install Trackist as a native Android app</p>
+                                    <p>Install Track1st as a native Android app</p>
                                 </div>
+
+                                {isNative && (
+                                    <>
+                                    <div className="settings-data-card">
+                                        <div className="settings-data-card__info">
+                                            <span className="settings-data-card__label">Installed Version</span>
+                                            <span className="settings-data-card__value">
+                                                {installedAppVersion ? `v${installedAppVersion}` : 'Loading version...'}
+                                            </span>
+                                            <span className="settings-data-card__sub">
+                                                Updates are checked automatically when you open the app.
+                                            </span>
+                                        </div>
+                                        <button
+                                            className="settings-btn settings-btn--secondary"
+                                            onClick={handleCheckAppUpdates}
+                                            disabled={appVersionLoading}
+                                        >
+                                            {appVersionLoading ? <><i className="fa-solid fa-spinner fa-spin"></i> Checking...</> : <><i className="fa-solid fa-refresh"></i> Check for Updates</>}
+                                        </button>
+                                    </div>
+                                    {appVersionMessage && <div className="settings-alert settings-alert--success">{appVersionMessage}</div>}
+                                    <div className="settings-divider"></div>
+                                    </>
+                                )}
 
                                 <div className="settings-data-card">
                                     <div className="settings-data-card__info">
@@ -926,7 +983,7 @@ const Settings: React.FC = () => {
                                     <div>
                                         <h4>About the App</h4>
                                         <p>Rebuilds happen automatically on every update, so the download link always points
-                                            to the latest version. You can also add Trackist to your home screen from your
+                                            to the latest version. You can also add Track1st to your home screen from your
                                             browser for a similar experience without an install.</p>
                                     </div>
                                 </div>
@@ -965,7 +1022,7 @@ const Settings: React.FC = () => {
                                  <div className="settings-data-card">
                                      <div className="settings-data-card__info">
                                          <span className="settings-data-card__label">Install App</span>
-                                         <span className="settings-data-card__value">Install Trackist on your device</span>
+                                         <span className="settings-data-card__value">Install Track1st on your device</span>
                                          <span className="settings-data-card__sub">Add to your home screen for a native app experience</span>
                                      </div>
                                      <button
@@ -982,7 +1039,7 @@ const Settings: React.FC = () => {
                                 <div className="settings-data-card">
                                     <div className="settings-data-card__info">
                                         <span className="settings-data-card__label">Export Your Data</span>
-                                        <span className="settings-data-card__value">Download all your Trackist data</span>
+                                        <span className="settings-data-card__value">Download all your Track1st data</span>
                                         <span className="settings-data-card__sub">JSON includes your watchlist, lists, and follows</span>
                                     </div>
                                     <div className="settings-data-card__actions">

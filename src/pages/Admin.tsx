@@ -46,7 +46,7 @@ interface UserStats {
 }
 
 const Admin: React.FC = () => {
-    usePageTitle('Trackist - Admin')
+    usePageTitle('Track1st - Admin')
     const globalUser = useAuthStore((state) => state.user)
     const globalAccessToken = useAuthStore((state) => state.accessToken)
     const globalAuthLoading = useAuthStore((state) => state.loading)
@@ -510,7 +510,7 @@ const Admin: React.FC = () => {
             const { data: { session } } = await supabase.auth.getSession()
             if (!session?.access_token) throw new Error('No active session')
 
-            const cacheKey = `trackist-calendar:${globalUser.id}`
+            const cacheKey = `track1st-calendar:${globalUser.id}`
             localStorage.removeItem(cacheKey)
 
             const res = await fetch(`${supabaseUrl}/functions/v1/get-upcoming-calendar`, {

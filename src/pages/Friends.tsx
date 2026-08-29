@@ -7,7 +7,7 @@ import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 const FriendsPage = () => {
-    usePageTitle('Trackist - Friends')
+    usePageTitle('Track1st - Friends')
     const [currentUser, setCurrentUser] = useState<any>(null)
     const [following, setFollowing] = useState<any[]>([])
     const [isFollowingLoaded, setIsFollowingLoaded] = useState(false)

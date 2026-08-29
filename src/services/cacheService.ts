@@ -13,7 +13,7 @@ type CacheMetadata = {
 
 class CacheService {
     private memoryCache: Map<string, CacheEntry<unknown>> = new Map()
-    private dbName = 'trackist-cache'
+    private dbName = 'track1st-cache'
     private dbVersion = 1
     private db: IDBDatabase | null = null
     private initPromise: Promise<void> | null = null
@@ -312,7 +312,7 @@ export async function clearAllCache(): Promise<void> {
         const keysToRemove: string[] = []
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i)
-            if (key && key.startsWith('trackist-calendar:')) {
+            if (key && key.startsWith('track1st-calendar:')) {
                 keysToRemove.push(key)
             }
         }

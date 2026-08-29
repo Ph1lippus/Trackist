@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { useSelectionStore } from '../stores/useSelectionStore'
@@ -12,7 +12,7 @@ import { useMobile } from '../contexts/useMobile'
 import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
 
 const Movies: React.FC = () => {
-    usePageTitle('Trackist - Movies')
+    usePageTitle('Track1st - Movies')
     const navigate = useNavigate()
     const { committedQuery } = useSearch()
     const { showIcons } = useMediaCardIcons()
