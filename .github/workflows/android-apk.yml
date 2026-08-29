@@ -66,32 +66,12 @@ jobs:
           sed -i "s/versionName \"1.0\"/versionName \"$VERSION\"/" android/app/build.gradle
           sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" android/app/build.gradle
 
-      - name: Restore signing keystore from secret
-        env:
-          KEYSTORE_B64: ${{ secrets.TRACK1ST_KEYSTORE_B64 }}
-          KEYSTORE_PASS: ${{ secrets.TRACK1ST_KEYSTORE_PASS }}
-        run: |
-          if [ -n "$KEYSTORE_B64" ] && [ -n "$KEYSTORE_PASS" ]; then
-            echo "$KEYSTORE_B64" | base64 -d > android/app/release-keystore.jks
-            echo "Keystore restored for release signing"
-          else
-            echo "No TRACK1ST_KEYSTORE_B64/TRACK1ST_KEYSTORE_PASS secrets set - building debug APK"
-            echo "Run 'Generate APK signing keystore' workflow and add the secrets to enable signed releases"
-          fi
-
       - name: Build APK
-        env:
-          KEYSTORE_PASS: ${{ secrets.TRACK1ST_KEYSTORE_PASS }}
         run: |
           cd android
           chmod +x gradlew
-          if [ -f app/release-keystore.jks ]; then
-            ./gradlew assembleRelease -PkeystoreFile=release-keystore.jks -PkeystorePassword="$KEYSTORE_PASS" -PkeystoreAlias=track1st --no-daemon
-            cp app/build/outputs/apk/release/app-release.apk ../track1st.apk
-          else
-            ./gradlew assembleDebug --no-daemon
-            cp app/build/outputs/apk/debug/app-debug.apk ../track1st.apk
-          fi
+          ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../track1st.apk
 
       - name: Publish rolling release
         env:
