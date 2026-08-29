@@ -12,6 +12,7 @@ const TMDB_API_KEY = Deno.env.get('TMDB_API_KEY')
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3'
 const GMAP_PAGE_SIZE = 1000
 const TMDB_CONCURRENCY = 6
+const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000
 
 interface MovieRow {
   id: string
@@ -152,6 +153,7 @@ serve(async (req: Request) => {
             .eq('user_id', userId)
             .eq('media_type', 'movie')
             .not('tmdb_id', 'is', null)
+            .or(`digital_release_date.is.null,last_provider_sync.is.null,last_provider_sync.lt.${new Date(Date.now() - STALE_AFTER_MS).toISOString()}`)
         )
 
         if (movies.length === 0) continue

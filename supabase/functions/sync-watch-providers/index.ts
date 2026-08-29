@@ -12,6 +12,7 @@ const TMDB_API_KEY = Deno.env.get('TMDB_API_KEY')
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3'
 const GMAP_PAGE_SIZE = 1000
 const TMDB_CONCURRENCY = 6
+const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000
 
 interface WatchlistItem {
   id: string
@@ -165,6 +166,7 @@ serve(async (req: Request) => {
             .eq('user_id', userId)
             .in('media_type', ['tv', 'movie'])
             .not('tmdb_id', 'is', null)
+            .or(`last_provider_sync.is.null,last_provider_sync.lt.${new Date(Date.now() - STALE_AFTER_MS).toISOString()}`)
         )
 
         if (items.length === 0) continue
@@ -191,18 +193,16 @@ serve(async (req: Request) => {
         )
 
         for (const { id, providers } of results) {
-          if (providers) {
-            const { error } = await supabase
-              .from('watchlist')
-              .update({ 
-                watch_providers: providers,
-                last_provider_sync: new Date().toISOString()
-              })
-              .eq('id', id)
+          const update: Record<string, unknown> = { last_provider_sync: new Date().toISOString() }
+          if (providers) update.watch_providers = providers
 
-            if (!error) totalUpdated++
-            else totalErrors++
-          }
+          const { error } = await supabase
+            .from('watchlist')
+            .update(update)
+            .eq('id', id)
+
+          if (!error) totalUpdated++
+          else totalErrors++
         }
 
         await new Promise(resolve => setTimeout(resolve, 100))
