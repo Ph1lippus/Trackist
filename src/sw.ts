@@ -7,6 +7,29 @@ import { clientsClaim } from 'workbox-core'
 /// <reference lib="webworker" />
 declare let self: ServiceWorkerGlobalScope
 
+const SW_VERSION = 'telemetry-v1'
+
+const report = (status: string, detail?: string, tag?: string): void => {
+  void fetch('https://iqlzdmjamsvxinqbrnix.supabase.co/functions/v1/push-log', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status, detail, tag, sw: SW_VERSION, at: new Date().toISOString() }),
+  }).catch(() => {})
+}
+
+self.addEventListener('install', () => {
+  report('sw_install', SW_VERSION)
+  void self.skipWaiting()
+})
+
+self.addEventListener('activate', () => {
+  report('sw_activate', SW_VERSION)
+})
+
+self.addEventListener('pushsubscriptionchange', (event) => {
+  report('sub_change', `old=${event.oldSubscription?.endpoint ?? 'none'} new=${event.newSubscription?.endpoint ?? 'none'}`)
+})
+
 precacheAndRoute(self.__WB_MANIFEST)
 cleanupOutdatedCaches()
 clientsClaim()
@@ -73,14 +96,6 @@ interface PushData {
   url: string
   tag?: string
   icon?: string
-}
-
-const report = (status: string, detail?: string, tag?: string): void => {
-  void fetch('https://iqlzdmjamsvxinqbrnix.supabase.co/functions/v1/push-log', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ status, detail, tag, at: new Date().toISOString() }),
-  }).catch(() => {})
 }
 
 self.addEventListener('push', (event) => {
