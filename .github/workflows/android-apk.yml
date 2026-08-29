@@ -63,6 +63,7 @@ jobs:
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon
+          cp app/build/outputs/apk/debug/app-debug.apk ../track1st.apk
 
       - name: Publish rolling release
         env:
@@ -70,7 +71,7 @@ jobs:
         run: |
           gh release delete android-latest --yes --cleanup-tag 2>/dev/null || true
           gh release create android-latest \
-            "android/app/build/outputs/apk/debug/app-debug.apk#track1st.apk" \
+            "track1st.apk" \
             --title "Trackist Android (latest)" \
             --notes "Auto-built from the latest main branch. Download and open the APK on your Android phone to install Trackist."
 
@@ -78,4 +79,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: track1st-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: track1st.apk
