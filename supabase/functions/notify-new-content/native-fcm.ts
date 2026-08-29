@@ -16,6 +16,7 @@ function bufToB64url(buf: Uint8Array): string {
 
 function pemToPkcs8(pem: string): Uint8Array {
   const base64 = pem
+    .replace(/\\n/g, '\n')
     .replace(/-----BEGIN (RSA |EC |)PRIVATE KEY-----/g, '')
     .replace(/-----END (RSA |EC |)PRIVATE KEY-----/g, '')
     .replace(/\s+/g, '')
