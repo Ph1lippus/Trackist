@@ -6,6 +6,7 @@ import { SearchProvider } from './contexts/SearchContext'
 import { MobileProvider } from './contexts/MobileProvider'
 import { useLibraryStore } from './stores/useLibraryStore'
 import { registerSW } from 'virtual:pwa-register'
+import { App as CapacitorApp } from '@capacitor/app'
 import { initNativePush, isNativePlatform, requestNativePermission } from './services/nativePush'
 import { usePushNotifications } from './hooks/usePushNotifications'
 import ConfirmModal from './components/modals/ConfirmModal'
@@ -179,27 +180,62 @@ const AppContent: React.FC = () => {
 
     // Native (Capacitor) update check: compare installed version against the
     // latest android-latest release and surface the Update Available modal.
+    // Runs on launch, on app resume and foreground, plus a periodic sweep, and
+    // retries on transient failures (e.g. the release landed mid-check or the
+    // network hiccuped) so an update is never silently missed.
     useEffect(() => {
         if (!isNativePlatform()) return
 
         let cancelled = false
-        const check = async (): Promise<void> => {
+        let retryTimer: number | undefined
+        let resumeUnsubscribe: (() => void) | undefined
+
+        // Returns true when the check concluded (update needed, current, or
+        // dismissed); returns false when the lookup itself failed.
+        const check = async (): Promise<boolean> => {
+            if (cancelled) return true
             const [installed, latest] = await Promise.all([getInstalledVersion(), getLatestVersion()])
-            if (cancelled || !latest || !installed || !isNewerVersion(latest, installed)) return
-            if (getUpdateDismissed(latest)) return
+            if (cancelled) return true
+            if (!latest || !installed) return false
+            if (!isNewerVersion(latest, installed)) return true
+            if (getUpdateDismissed(latest)) return true
             setNativeUpdateVersion(latest)
             setShowUpdateModal(true)
+            return true
+        }
+        const runCheck = (): void => {
+            void check().then((ok) => {
+                if (!ok && !retryTimer && !cancelled) {
+                    retryTimer = window.setTimeout(() => {
+                        retryTimer = undefined
+                        runCheck()
+                    }, 60 * 1000)
+                }
+            })
         }
         const onCheckUpdate = (): void => {
-            void check()
+            runCheck()
         }
 
-        void check()
+        void CapacitorApp.addListener('resume', runCheck).then((handle) => {
+            resumeUnsubscribe = () => void handle.remove()
+        })
+        const onVisibility = (): void => {
+            if (document.visibilityState === 'visible') runCheck()
+        }
+        document.addEventListener('visibilitychange', onVisibility)
+
+        runCheck()
+        const intervalId = window.setInterval(runCheck, 5 * 60 * 1000)
         window.addEventListener('track1st:check-update', onCheckUpdate)
 
         return () => {
             cancelled = true
+            if (retryTimer) window.clearTimeout(retryTimer)
+            window.clearInterval(intervalId)
             window.removeEventListener('track1st:check-update', onCheckUpdate)
+            document.removeEventListener('visibilitychange', onVisibility)
+            resumeUnsubscribe?.()
         }
     }, [])
 

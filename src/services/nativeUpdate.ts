@@ -6,6 +6,8 @@ export const ANDROID_APK_URL = 'https://track1st.vercel.app/track1st.apk'
 const LATEST_RELEASE_URL = 'https://api.github.com/repos/Ph1lippus/Trackist/releases/tags/android-latest'
 const DISMISS_KEY = 'track1st.native-update-dismissed'
 const DISMISS_PERIOD_MS = 7 * 24 * 60 * 60 * 1000
+const ETAG_KEY = 'track1st.native-update-etag'
+const VERSION_CACHE_KEY = 'track1st.native-update-version'
 
 interface DismissRecord {
     version: string
@@ -35,14 +37,30 @@ export const getInstalledVersion = async (): Promise<string | null> => {
 
 export const getLatestVersion = async (): Promise<string | null> => {
     try {
+        const etag = localStorage.getItem(ETAG_KEY) || ''
         const res = await fetch(LATEST_RELEASE_URL, {
-            headers: { Accept: 'application/vnd.github+json' },
+            headers: {
+                Accept: 'application/vnd.github+json',
+                ...(etag ? { 'If-None-Match': etag } : {}),
+            },
         })
+
+        if (res.status === 304) {
+            return localStorage.getItem(VERSION_CACHE_KEY)
+        }
         if (!res.ok) return null
+
         const data = await res.json()
         const notes = typeof data.body === 'string' ? data.body : ''
         const match = notes.match(/^VERSION=(\d+\.\d+(?:\.\d+)?)/m)
-        return match ? match[1] : null
+        const version = match ? match[1] : null
+
+        const newEtag = res.headers.get('etag')
+        if (newEtag) {
+            localStorage.setItem(ETAG_KEY, newEtag)
+            if (version) localStorage.setItem(VERSION_CACHE_KEY, version)
+        }
+        return version
     } catch {
         return null
     }
