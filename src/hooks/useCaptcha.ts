@@ -1,13 +1,17 @@
 import { useCallback, useState } from 'react'
 import { supabase } from '../services/supabaseClient'
+import { isNativePlatform } from '../services/nativePush'
 
 /**
  * Whether the hCaptcha flow should be enforced.
  * Automatically disabled in local development (hCaptcha rejects challenges from
  * localhost unless the hostname is allowlisted on the site key) and when no
  * site key is configured. Can also be force-disabled via VITE_HCAPTCHA_ENABLED=false.
+ * Also disabled inside the native Android app, where hCaptcha does not load
+ * in an embedded WebView (challenges never resolve).
  */
 export function isCaptchaEnabled(): boolean {
+    if (isNativePlatform()) return false
     if (import.meta.env.VITE_HCAPTCHA_ENABLED === 'false') return false
     if (!import.meta.env.VITE_HCAPTCHA_SITE_KEY) return false
     if (import.meta.env.DEV) return false
