@@ -46,16 +46,16 @@ jobs:
 
       - name: Setup .env for web build
         run: |
-          cat > .env <<'EOF'
-VITE_SUPABASE_URL=https://iqlzdmjamsvxinqbrnix.supabase.co
-VITE_SUPABASE_ANON_KEY=sb_publishable_FtPjRxIb-H4GkM6u6ZX3JA_ZoiMV579
-VITE_TMDB_API_KEY=937ec79683c0989bab356844c93f8d2e
-VITE_HCAPTCHA_ENABLED=true
-VITE_HCAPTCHA_SITE_KEY=00a4a032-68c6-4600-8bbe-ff3a7bbcb7cc
-VITE_HIBP_ENABLED=true
-VITE_MFA_ENABLED=true
-VITE_PUSH_VAPID_PUBLIC_KEY=BEssU3Bgw1_Vky5PeIPOjPRESLb1orCsxycdUsZTM7Ve0nxeNcpaZQnjRURkrgIAYLquu4Am0vSPEkBZfEfFrCM
-EOF
+          tee .env >/dev/null <<'EOF'
+          VITE_SUPABASE_URL=https://iqlzdmjamsvxinqbrnix.supabase.co
+          VITE_SUPABASE_ANON_KEY=sb_publishable_FtPjRxIb-H4GkM6u6ZX3JA_ZoiMV579
+          VITE_TMDB_API_KEY=937ec79683c0989bab356844c93f8d2e
+          VITE_HCAPTCHA_ENABLED=true
+          VITE_HCAPTCHA_SITE_KEY=00a4a032-68c6-4600-8bbe-ff3a7bbcb7cc
+          VITE_HIBP_ENABLED=true
+          VITE_MFA_ENABLED=true
+          VITE_PUSH_VAPID_PUBLIC_KEY=BEssU3Bgw1_Vky5PeIPOjPRESLb1orCsxycdUsZTM7Ve0nxeNcpaZQnjRURkrgIAYLquu4Am0vSPEkBZfEfFrCM
+          EOF
 
       - name: Install dependencies
         run: npm ci
