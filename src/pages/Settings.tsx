@@ -15,8 +15,10 @@ import { useAuthStore } from '../stores/useAuthStore'
 import { TimezonePicker } from '../components/settings/TimezonePicker'
 import { CountryPicker } from '../components/settings/CountryPicker'
 
-type SettingsSection = 'account' | 'profile' | 'security' | 'notifications' | 'data' | 'additions' | 'danger'
+type SettingsSection = 'account' | 'profile' | 'security' | 'notifications' | 'app' | 'data' | 'additions' | 'danger'
 type NotificationPrefField = 'notify_new_episode' | 'notify_new_season' | 'notify_release_date' | 'movie_notify_on_digital'
+
+const ANDROID_APK_URL = 'https://github.com/Ph1lippus/Trackist/releases/download/android-latest/track1st.apk'
 
 const escapeCSV = (value: unknown): string => {
     const str = value === null || value === undefined ? '' : String(value)
@@ -533,6 +535,7 @@ const Settings: React.FC = () => {
         { id: 'profile', label: 'Profile', icon: 'fa-id-card' },
         { id: 'security', label: 'Security', icon: 'fa-shield-halved' },
         { id: 'notifications', label: 'Notifications', icon: 'fa-bell' },
+        { id: 'app', label: 'App', icon: 'fa-mobile-screen' },
         { id: 'data', label: 'Data & Cache', icon: 'fa-database' },
         { id: 'additions', label: 'Additions', icon: 'fa-puzzle-piece' },
         { id: 'danger', label: 'Danger Zone', icon: 'fa-triangle-exclamation' }
@@ -883,6 +886,48 @@ const Settings: React.FC = () => {
                                     <div>
                                         <h4>About Notifications</h4>
                                         <p>What's new is checked automatically every hour, so you'll be alerted shortly after episodes air or movies hit streaming services. Alerts are delivered straight to this device by your browser — nothing is stored on our servers beyond your saved preferences and device subscription.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeSection === 'app' && (
+                            <div className="settings-panel">
+                                <div className="settings-panel__header">
+                                    <h3>App</h3>
+                                    <p>Install Trackist as a native Android app</p>
+                                </div>
+
+                                <div className="settings-data-card">
+                                    <div className="settings-data-card__info">
+                                        <span className="settings-data-card__label">Android App</span>
+                                        <span className="settings-data-card__value">Receive alerts the moment they air</span>
+                                        <span className="settings-data-card__sub">
+                                            The native app is built automatically from the latest code and delivers push
+                                            notifications reliably even when your browser is closed. Download the APK to you
+                                            phone, open it, and allow installation from unknown sources when prompted.
+                                        </span>
+                                    </div>
+                                    <a
+                                        className="settings-btn settings-btn--primary"
+                                        href={ANDROID_APK_URL}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        download="track1st.apk"
+                                    >
+                                        <i className="fa-solid fa-download"></i> Download Android App
+                                    </a>
+                                </div>
+
+                                <div className="settings-divider"></div>
+
+                                <div className="settings-info-box">
+                                    <i className="fa-solid fa-circle-info"></i>
+                                    <div>
+                                        <h4>About the App</h4>
+                                        <p>Rebuilds happen automatically on every update, so the download link always points
+                                            to the latest version. You can also add Trackist to your home screen from your
+                                            browser for a similar experience without an install.</p>
                                     </div>
                                 </div>
                             </div>

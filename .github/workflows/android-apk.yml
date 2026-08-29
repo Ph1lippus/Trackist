@@ -1,0 +1,88 @@
+name: Android APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.ts'
+      - 'capacitor.config.ts'
+      - 'android/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check google-services.json present
+        run: |
+          test -f android/app/google-services.json || { echo "::error::android/app/google-services.json is missing - download it from Firebase and commit it"; exit 1; }
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Accept Android SDK licenses
+        run: |
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ -x "$SDKMANAGER" ]; then yes | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true; fi
+
+      - name: Cache Node modules
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+
+      - name: Setup .env for web build
+        run: |
+          cat > .env <<'EOF'
+          VITE_SUPABASE_URL=https://iqlzdmjamsvxinqbrnix.supabase.co
+          VITE_SUPABASE_ANON_KEY=sb_publishable_FtPjRxIb-H4GkM6u6ZX3JA_ZoiMV579
+          VITE_TMDB_API_KEY=937ec79683c0989bab356844c93f8d2e
+          VITE_HCAPTCHA_ENABLED=true
+          VITE_HCAPTCHA_SITE_KEY=00a4a032-68c6-4600-8bbe-ff3a7bbcb7cc
+          VITE_HIBP_ENABLED=true
+          VITE_MFA_ENABLED=true
+          VITE_PUSH_VAPID_PUBLIC_KEY=BEssU3Bgw1_Vky5PeIPOjPRESLb1orCsxycdUsZTM7Ve0nxeNcpaZQnjRURkrgIAYLquu4Am0vSPEkBZfEfFrCM
+          EOF
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build web assets
+        run: npm run build
+
+      - name: Sync Capacitor
+        run: npx cap sync android
+
+      - name: Build APK
+        run: |
+          cd android
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Publish rolling release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete android-latest --yes --cleanup-tag 2>/dev/null || true
+          gh release create android-latest \
+            "android/app/build/outputs/apk/debug/app-debug.apk#track1st.apk" \
+            --title "Trackist Android (latest)" \
+            --notes "Auto-built from the latest main branch. Download and open the APK on your Android phone to install Trackist."
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: track1st-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
