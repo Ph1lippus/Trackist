@@ -5175,6 +5175,18 @@ i.fa-solid.fa-trash:hover {
     line-height: 1.5;
 }
 
+.confirm-modal-error {
+    display: inline-block;
+    margin-top: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.1);
+    border: 1px solid rgba(255, 107, 107, 0.25);
+    border-radius: 8px;
+    line-height: 1.4;
+}
+
 .confirm-modal-actions {
     display: flex;
     gap: 0.5rem;
@@ -8730,7 +8742,70 @@ i.fa-solid.fa-trash:hover {
     .profile-hero__meta {
         justify-content: center;
     }
+
+    .settings-page {
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
     }
+
+    .settings-content {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .settings-form {
+        align-items: stretch;
+    }
+    }
+
+/* ===== MODERN SETTINGS PAGE - MOBILE POLISH ===== */
+@media (max-width: 768px) {
+    .settings-page .dashboard-shell {
+        max-width: 100%;
+        gap: 1rem;
+    }
+
+    .settings-layout {
+        margin-top: 0.5rem;
+    }
+
+    .settings-sidebar {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.35rem;
+    }
+
+    .settings-nav-item {
+        padding: 0.6rem 0.15rem;
+        border-radius: 12px;
+    }
+
+    .settings-nav-item span {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .settings-panel,
+    .settings-panel--danger {
+        padding: 0.25rem 0;
+    }
+
+    .settings-data-card,
+    .settings-info-box {
+        padding: 0.6rem 0;
+    }
+
+    .settings-btn {
+        min-height: 46px;
+        font-size: 0.9rem;
+    }
+
+    .settings-toggle-row {
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+}
 
 /* Timezone Picker */
 .timezone-picker {
