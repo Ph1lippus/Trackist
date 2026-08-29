@@ -102,7 +102,7 @@ jobs:
             "track1st.apk" \
             --title "Track1st Android (latest)" \
             --notes "VERSION=${VERSION}
-Auto-built from the latest main branch. Download and open the APK on your Android phone to install Track1st."
+            Auto-built from the latest main branch. Download and open the APK on your Android phone to install Track1st."
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
