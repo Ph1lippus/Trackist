@@ -19,11 +19,11 @@ jobs:
         run: |
           test -f android/app/google-services.json || { echo "::error::android/app/google-services.json is missing - download it from Firebase and commit it"; exit 1; }
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      - name: Set up JDK 21
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 21
 
       - name: Accept Android SDK licenses
         run: |
