@@ -231,6 +231,17 @@ export const usePushNotifications = () => {
                 const token = await getNativeToken()
 
                 const nativeEndpoint = token
+
+                const { error: cleanupError } = await supabase
+                    .from('push_subscriptions')
+                    .delete()
+                    .eq('user_id', user.id)
+                    .eq('platform', 'native')
+
+                if (cleanupError) {
+                    throw new Error(`Failed to clean stale native subscriptions: ${cleanupError.message}`)
+                }
+
                 const { error: upsertError } = await supabase
                     .from('push_subscriptions')
                     .upsert(
