@@ -132,6 +132,32 @@ const AppContent: React.FC = () => {
         return () => window.removeEventListener('track1st:navigate', onNavigate)
     }, [navigate])
 
+    // Native (Capacitor) deep links: open shared https://track1st.vercel.app
+    // links straight into the app and route to the matching screen.
+    useEffect(() => {
+        if (!isNativePlatform()) return
+
+        const handleUrl = (urlData: { url?: string }): void => {
+            if (!urlData?.url) return
+            try {
+                const target = new URL(urlData.url)
+                navigate(target.pathname + target.search)
+            } catch {
+                // Ignore malformed urls
+            }
+        }
+
+        let unsubscribe: (() => void) | undefined
+        void CapacitorApp.getLaunchUrl().then((res) => {
+            if (res?.url) handleUrl(res)
+        })
+        void CapacitorApp.addListener('appUrlOpen', handleUrl).then((handle) => {
+            unsubscribe = () => void handle.remove()
+        })
+
+        return () => unsubscribe?.()
+    }, [navigate])
+
     // Native push must be enabled manually from Settings; the app should not
     // force a permission prompt on first launch.
 

@@ -47,7 +47,6 @@ const MobileBottomNavbar: React.FC = () => {
                         ) : (
                             <i className={`fas ${item.icon}`}></i>
                         )}
-                        <span className="mobile-bottom-navbar-label">{item.label}</span>
                     </NavLink>
                 ))}
             </div>

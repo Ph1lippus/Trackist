@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/.well-known/:path*", "destination": "/.well-known/:path*" },
     { "source": "/track1st.apk", "destination": "https://github.com/Ph1lippus/Trackist/releases/download/android-latest/track1st.apk" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],

@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.track1st.app",
+      "sha256_cert_fingerprints": [
+        "B1:AB:75:BE:3B:F4:28:80:14:7B:6E:E3:CE:79:04:DC:B7:AE:85:F1:3B:B2:2D:9B:A3:0F:FF:42:ED:5E:D4:CA"
+      ]
+    }
+  }
+]

@@ -5,13 +5,12 @@ import { isNativePlatform } from '../../services/nativePush'
 const PUBLIC_APP_URL = 'https://track1st.vercel.app'
 
 const getShareUrl = (url: string): string => {
-    if (!isNativePlatform()) return url
-
     try {
         const parsedUrl = new URL(url)
         if (parsedUrl.hostname === 'localhost' || parsedUrl.hostname === '127.0.0.1' || parsedUrl.hostname === '[::1]') {
             parsedUrl.protocol = 'https:'
             parsedUrl.host = new URL(PUBLIC_APP_URL).host
+            parsedUrl.port = ''
             return parsedUrl.toString()
         }
     } catch {

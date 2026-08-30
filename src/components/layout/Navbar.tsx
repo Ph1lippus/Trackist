@@ -328,8 +328,8 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const searchPlaceholder = (() => {
         switch (context) {
             case 'discover': return 'Search movies, TV, people, lists…';
-            case 'movies': return 'Search movies…';
-            case 'tvshows': return 'Search TV shows…';
+            case 'movies': return 'Search your movies…';
+            case 'tvshows': return 'Search your TV shows…';
             case 'finished': return 'Search finished movies & TV…';
             case 'friends': return 'Search users…';
             case 'lists': return 'Search lists…';
