@@ -128,6 +128,7 @@ self.addEventListener('push', (event) => {
       badge: '/TRACK1ST-FULLNAMELGO.png',
       data: { url: data.url },
       renotify: !!data.tag,
+      requireInteraction: true,
     }).then(
       () => report('shown', undefined, data.tag),
       (error) => report('show_error', String(error), data.tag)

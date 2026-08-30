@@ -159,6 +159,68 @@ function tomorrowInTimezone(timezone: string, now: Date = new Date()): string {
   return todayInTimezone(timezone, tomorrow)
 }
 
+function getLocalDateParts(timezone: string, now: Date = new Date()): Record<string, number> {
+  try {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    }).formatToParts(now)
+    const get = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? '00')
+    return {
+      year: get('year'),
+      month: get('month'),
+      day: get('day'),
+      hour: get('hour'),
+      minute: get('minute'),
+    }
+  } catch {
+    return {
+      year: now.getUTCFullYear(),
+      month: now.getUTCMonth() + 1,
+      day: now.getUTCDate(),
+      hour: now.getUTCHours(),
+      minute: now.getUTCMinutes(),
+    }
+  }
+}
+
+function parseNotifyHour(rawHour?: string | null): number {
+  if (!rawHour || typeof rawHour !== 'string') return 8
+  const match = rawHour.trim().match(/^(\d{1,2}):(\d{2})$/)
+  if (!match) return 8
+  const hour = Number(match[1])
+  return Number.isFinite(hour) && hour >= 0 && hour <= 23 ? hour : 8
+}
+
+function getNextDateString(dateString: string): string {
+  const [year, month, day] = dateString.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  date.setUTCDate(date.getUTCDate() + 1)
+  return getUTCDateString(date)
+}
+
+function isDueForUserDate(dateString: string, timezone: string, now: Date, notifyHour: string | null | undefined): boolean {
+  const localToday = todayInTimezone(timezone, now)
+  const localTomorrow = tomorrowInTimezone(timezone, now)
+  const currentTime = getLocalDateParts(timezone, now)
+  const hour = parseNotifyHour(notifyHour)
+
+  if (dateString === localToday) {
+    return currentTime.hour > hour || currentTime.hour === hour
+  }
+
+  if (dateString === localTomorrow) {
+    return true
+  }
+
+  return false
+}
+
 function formatProviders(providers: Record<string, unknown> | null | undefined): string {
   if (!providers || typeof providers !== 'object') return ''
   const result = providers as WatchProviderResponse
@@ -317,7 +379,7 @@ serve(async (req: Request) => {
 
     const { data: profileRows } = await supabase
       .from('profiles')
-      .select('id, timezone, country_code, notify_new_episode, notify_new_season, notify_release_date, movie_notify_on_digital')
+      .select('id, timezone, country_code, notify_hour, notify_new_episode, notify_new_season, notify_release_date, movie_notify_on_digital')
       .in('id', userIds)
 
     const profileMap = new Map<string, Record<string, unknown>>(
@@ -341,6 +403,7 @@ serve(async (req: Request) => {
 
         if (!wantEpisode && !wantSeason && !wantRelease) continue
 
+        const notifyHourSetting = typeof profile.notify_hour === 'string' ? profile.notify_hour : '08:00'
         const todayStr = todayInTimezone(timezone, now)
         const tomorrowStr = tomorrowInTimezone(timezone, now)
 
@@ -421,7 +484,7 @@ serve(async (req: Request) => {
             })
 
             const dueEpisodes = sorted.filter((ep) =>
-              ep.air_date && (ep.air_date === todayStr || ep.air_date === tomorrowStr)
+              ep.air_date && isDueForUserDate(ep.air_date, timezone, now, notifyHourSetting)
             )
 
             if (dueEpisodes.length === 0) {
@@ -442,6 +505,7 @@ serve(async (req: Request) => {
             }
 
             const firstDue = dueEpisodes[0]
+            const firstDueBucket = firstDue.air_date === todayStr ? 'today' : 'tomorrow'
             const isPremiere = firstDue.episode_number === 1 &&
               (show.status === 'caught_up' || show.status === 'completed') &&
               wantSeason
@@ -452,9 +516,10 @@ serve(async (req: Request) => {
               const seasonRef = `S${seasonNumber}premiere:${firstDue.air_date}`
               if (show.last_notified_ref !== seasonRef) {
                 const providerStr = formatProviders(show.watch_providers)
+                const bucketLabel = firstDueBucket === 'today' ? 'Premieres today' : 'Coming tomorrow'
                 addedItem = addNotification({
                   title: show.title,
-                  body: `New season · S${seasonNumber}${firstDue.name ? ` — ${firstDue.name}` : ''}${providerStr}`,
+                  body: `${bucketLabel}${providerStr} • ${firstDue.name ? firstDue.name : `Season ${seasonNumber} premiere`}`,
                   url: `/tv/${show.tmdb_id}`,
                   tag: `season:${show.id}:${seasonRef}`,
                   icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
@@ -467,9 +532,10 @@ serve(async (req: Request) => {
                 const newRef = `S${seasonNumber}E${ep.episode_number}:${ep.air_date}`
                 if (show.last_notified_ref !== newRef) {
                   const providerStr = formatProviders(show.watch_providers)
+                  const bucketLabel = firstDueBucket === 'today' ? 'Airing today' : 'Coming tomorrow'
                   addedItem = addNotification({
                     title: show.title,
-                    body: `S${seasonNumber} · E${ep.episode_number}${ep.name ? ` — ${ep.name}` : ''}${providerStr}`,
+                    body: `${bucketLabel}${providerStr} • ${ep.name ? ep.name : `Episode ${ep.episode_number}`}`,
                     url: `/tv/${show.tmdb_id}`,
                     tag: `episode:${show.id}:${newRef}`,
                     icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
@@ -481,9 +547,10 @@ serve(async (req: Request) => {
                 const seasonRef = `S${seasonNumber}multi:${todayStr}`
                 if (show.last_notified_ref !== seasonRef) {
                   const providerStr = formatProviders(show.watch_providers)
+                  const bucketLabel = dueEpisodes.some((episode) => episode.air_date === todayStr) ? 'Airing today' : 'Coming tomorrow'
                   addedItem = addNotification({
                     title: show.title,
-                    body: `Season ${seasonNumber} (${epCount} episodes) now available${providerStr}`,
+                    body: `${bucketLabel}${providerStr} • ${epCount} episodes arriving`,
                     url: `/tv/${show.tmdb_id}`,
                     tag: `season:${show.id}:${seasonRef}`,
                     icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
@@ -523,13 +590,14 @@ serve(async (req: Request) => {
             if (!notifyDate) continue
 
             const newRef = notifyDate
-            const due = notifyDate === todayStr
+            const due = isDueForUserDate(notifyDate, timezone, now, notifyHourSetting)
 
             if (due && movie.last_movie_notified_ref !== newRef) {
               const providerStr = formatProviders(movie.watch_providers)
+              const bucketLabel = notifyDate === todayStr ? 'Released today' : 'Coming tomorrow'
               addNotification({
                 title: movie.title,
-                body: `Now available digitally${providerStr}`,
+                body: `${bucketLabel}${providerStr}`,
                 url: `/movie/${movie.tmdb_id}`,
                 tag: `movie:${movie.id}:${newRef}`,
                 icon: movie.poster_path ? `https://image.tmdb.org/t/p/w92${movie.poster_path}` : undefined,
