@@ -5,7 +5,7 @@ import { isNativePlatform } from './nativePush'
 import { installAppUpdate, type InstallAppUpdateInfo } from '../plugins/installAppUpdate'
 
 export const ANDROID_APK_URL = 'https://github.com/Ph1lippus/Trackist/releases/download/android-latest/track1st.apk'
-export const VERSION_MANIFEST_URL = 'https://github.com/Ph1lippus/Trackist/releases/download/android-latest/version.json'
+const RELEASE_API_URL = 'https://api.github.com/repos/Ph1lippus/Trackist/releases/tags/android-latest'
 
 const DISMISS_KEY = 'track1st.native-update-dismissed'
 const DISMISS_PERIOD_MS = 7 * 24 * 60 * 60 * 1000
@@ -67,7 +67,7 @@ export const getLatestVersion = async (): Promise<string | null> => {
 
 export const getLatestVersionManifest = async (): Promise<NativeVersionManifest | null> => {
     try {
-        const res = await fetch(`${VERSION_MANIFEST_URL}?t=${Date.now()}`, {
+        const res = await fetch(`${RELEASE_API_URL}?t=${Date.now()}`, {
             cache: 'no-store',
             headers: {
                 Accept: 'application/json',
@@ -76,12 +76,15 @@ export const getLatestVersionManifest = async (): Promise<NativeVersionManifest 
 
         if (!res.ok) return null
 
-        const data = (await res.json()) as Partial<NativeVersionManifest>
-        const versionCode = Number(data.versionCode ?? 0)
-        const versionName = String(data.versionName ?? '0.0.0')
-        const apkUrl = String(data.apkUrl ?? ANDROID_APK_URL)
+        const data = (await res.json()) as {
+            body?: string
+            assets?: { name?: string; browser_download_url?: string }[]
+        }
+        const versionName = data.body?.match(/VERSION=([^\s]+)/)?.[1] ?? ''
+        const versionCode = Number(data.body?.match(/VERSION_CODE=(\d+)/)?.[1] ?? (1200 + Number(versionName.split('.').pop())))
+        const apkUrl = data.assets?.find((asset) => asset.name === 'track1st.apk')?.browser_download_url ?? ANDROID_APK_URL
 
-        if (!Number.isFinite(versionCode) || !versionName) return null
+        if (!Number.isFinite(versionCode) || versionCode <= 0 || !versionName) return null
 
         localStorage.setItem(VERSION_CACHE_KEY, versionName)
         localStorage.setItem(VERSION_CODE_CACHE_KEY, String(versionCode))

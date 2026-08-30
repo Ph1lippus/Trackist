@@ -121,6 +121,7 @@ jobs:
             "version.json" \
             --title "Track1st Android (latest)" \
             --notes "VERSION=${VERSION}
+            VERSION_CODE=$((1200 + GITHUB_RUN_NUMBER))
             Auto-built from the latest main branch. Download and open the APK on your Android phone to install Track1st."
 
       - name: Upload build artifact
