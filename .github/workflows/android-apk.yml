@@ -107,10 +107,10 @@ jobs:
         run: |
           python - <<'PY'
           import json, os
-            version_code = 1200 + int(os.environ['GITHUB_RUN_NUMBER'])
+          version_code = 1200 + int(os.environ['GITHUB_RUN_NUMBER'])
           with open('version.json', 'w', encoding='utf-8') as f:
               json.dump({
-                'versionCode': version_code,
+                  'versionCode': version_code,
                   'versionName': os.environ['VERSION'],
                   'apkUrl': 'https://github.com/Ph1lippus/Trackist/releases/download/android-latest/track1st.apk',
               }, f, separators=(',', ':'))
