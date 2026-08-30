@@ -72,7 +72,8 @@ jobs:
           app_gradle = Path('android/app/build.gradle')
           text = app_gradle.read_text()
           text = re.sub(r'versionName\s+"[^"]*"', f'versionName "{version}"', text)
-          text = re.sub(r'versionCode\s+\d+', f'versionCode {os.environ["GITHUB_RUN_NUMBER"]}', text)
+          version_code = 1200 + int(os.environ['GITHUB_RUN_NUMBER'])
+          text = re.sub(r'versionCode\s+\d+', f'versionCode {version_code}', text)
           app_gradle.write_text(text)
           PY
 
