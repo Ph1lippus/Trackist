@@ -56,6 +56,7 @@ interface PushPayload {
   url: string
   tag: string
   icon?: string
+  image?: string
 }
 
 interface PendingWrite {
@@ -523,6 +524,7 @@ serve(async (req: Request) => {
                   url: `/tv/${show.tmdb_id}`,
                   tag: `season:${show.id}:${seasonRef}`,
                   icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
+                  image: show.poster_path ? `https://image.tmdb.org/t/p/w500${show.poster_path}` : undefined,
                   write: { id: show.id, patch: { last_notified_ref: seasonRef } },
                 })
               }
@@ -539,6 +541,7 @@ serve(async (req: Request) => {
                     url: `/tv/${show.tmdb_id}`,
                     tag: `episode:${show.id}:${newRef}`,
                     icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
+                    image: show.poster_path ? `https://image.tmdb.org/t/p/w500${show.poster_path}` : undefined,
                     write: { id: show.id, patch: { last_notified_ref: newRef } },
                   })
                 }
@@ -554,6 +557,7 @@ serve(async (req: Request) => {
                     url: `/tv/${show.tmdb_id}`,
                     tag: `season:${show.id}:${seasonRef}`,
                     icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
+                    image: show.poster_path ? `https://image.tmdb.org/t/p/w500${show.poster_path}` : undefined,
                     write: { id: show.id, patch: { last_notified_ref: seasonRef } },
                   })
                 }
@@ -601,6 +605,7 @@ serve(async (req: Request) => {
                 url: `/movie/${movie.tmdb_id}`,
                 tag: `movie:${movie.id}:${newRef}`,
                 icon: movie.poster_path ? `https://image.tmdb.org/t/p/w92${movie.poster_path}` : undefined,
+                image: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined,
                 write: { id: movie.id, patch: { last_movie_notified_ref: newRef } },
               })
             }

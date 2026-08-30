@@ -114,6 +114,7 @@ export async function sendNativeNotification(
     notification: {
       title: notification.title,
       body: notification.body,
+      image: notification.icon || undefined,
     },
     data: {
       url: notification.url,
@@ -124,6 +125,7 @@ export async function sendNativeNotification(
       notification: {
         tag: notification.tag,
         channel_id: 'push_notifications',
+        image: notification.icon || undefined,
       },
     },
   }

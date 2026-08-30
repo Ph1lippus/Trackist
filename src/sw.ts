@@ -96,6 +96,7 @@ interface PushData {
   url: string
   tag?: string
   icon?: string
+  image?: string
 }
 
 self.addEventListener('push', (event) => {
@@ -109,6 +110,7 @@ self.addEventListener('push', (event) => {
         url: typeof parsed.url === 'string' ? parsed.url : '/',
         tag: typeof parsed.tag === 'string' ? parsed.tag : undefined,
         icon: typeof parsed.icon === 'string' ? parsed.icon : undefined,
+        image: typeof parsed.image === 'string' ? parsed.image : undefined,
       }
     }
   } catch {
@@ -124,8 +126,9 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(data.title, {
       body: data.body,
       tag: data.tag,
-      icon: data.icon || '/TRACK1ST-FULLNAMELGO.png',
+      icon: data.icon || data.image || '/TRACK1ST-FULLNAMELGO.png',
       badge: '/TRACK1ST-FULLNAMELGO.png',
+      image: data.image || data.icon || '/TRACK1ST-FULLNAMELGO.png',
       data: { url: data.url },
       renotify: !!data.tag,
       requireInteraction: true,
