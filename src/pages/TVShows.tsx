@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
 import { markShowAsFullyWatched } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
@@ -10,13 +9,12 @@ import type { WatchlistItem, TMDBResult } from '../types'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
-import { useMobile } from '../contexts/useMobile'
 import { supabase } from '../services/supabaseClient'
 import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
+import ViewToggleButton from '../components/layout/ViewToggleButton'
 
 const TVShows: React.FC = () => {
     usePageTitle('Track1st - TV Shows')
-    const navigate = useNavigate()
     const { committedQuery } = useSearch()
     const { showIcons } = useMediaCardIcons()
 
@@ -32,12 +30,6 @@ const TVShows: React.FC = () => {
         tvShowsSelectedIds: selectedIds, 
         toggleTVShowSelection: toggleSelection 
     } = useSelectionStore()
-
-    const { isMobile } = useMobile()
-
-    const handleSwitchToMobile = () => {
-        navigate('/MobileTVShows')
-    }
 
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -257,22 +249,14 @@ const TVShows: React.FC = () => {
     }
     return (
         <div className="discover-page">
-            {isMobile && (
-                <button
-                    className="mobile-view-toggle-fixed"
-                    onClick={handleSwitchToMobile}
-                    title="Switch to Mobile View"
-                >
-                    <i className="fa-solid fa-table-cells-large"></i>
-                </button>
-            )}
             <div className="discover-container" style={{ width: '85%' }}>
-                {/* Container A (Top): Currently Watching */}
-                {currentlyWatching.length > 0 && (
-                    <div className="watchlist-section">
-                        <div className="watchlist-section__header">
-                            <h3 className="watchlist-section__title">Currently Watching</h3>
-                        </div>
+                {/* Container A (Top): Currently Watching - header always shown so the view toggle stays visible */}
+                <div className="watchlist-section">
+                    <div className="watchlist-section__header">
+                        <h3 className="watchlist-section__title">Currently Watching</h3>
+                        <ViewToggleButton />
+                    </div>
+                    {currentlyWatching.length > 0 && (
                         <div className="discover-grid">
                             {currentlyWatching.map((item) => {
                                 const episodesLeft = item.total_episodes !== undefined
@@ -298,8 +282,8 @@ const TVShows: React.FC = () => {
                                 )
                             })}
                         </div>
-                    </div>
-                )}
+                    )}
+                </div>
 
                 {/* Container C: Paused */}
                 {paused.length > 0 && (

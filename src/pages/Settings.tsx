@@ -1026,6 +1026,15 @@ const Settings: React.FC = () => {
                                             browser for a similar experience without an install.</p>
                                     </div>
                                 </div>
+
+                                <div className="settings-divider"></div>
+
+                                <div className="settings-data-card settings-data-card--clickable" onClick={() => navigate('/Credits')}>
+                                    <div className="settings-data-card__info">
+                                        <span className="settings-data-card__label">Credits</span>
+                                        <span className="settings-data-card__value">See the libraries and services that power Track1st</span>
+                                    </div>
+                                </div>
                             </div>
                         )}
 

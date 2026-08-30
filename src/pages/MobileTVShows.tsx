@@ -8,8 +8,10 @@ import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useMobile } from '../contexts/useMobile'
 import { useSearch } from '../hooks/useSearch'
+import { useMissingPosters } from '../hooks/useMissingPosters'
 import { supabase } from '../services/supabaseClient'
 import ConfirmModal from '../components/modals/ConfirmModal'
+import ViewToggleButton from '../components/layout/ViewToggleButton'
 import { getCachedOrFetch } from '../services/cacheService'
 
 const MobileTVShows: React.FC = () => {
@@ -19,6 +21,7 @@ const MobileTVShows: React.FC = () => {
     const { committedQuery } = useSearch()
     const tvShows = useLibraryStore((state) => state.tvShows)
     const isInitialized = useLibraryStore((state) => state.isInitialized)
+    const missingPosters = useMissingPosters(tvShows)
     const [addingEpisode, setAddingEpisode] = useState<string | null>(null)
     const [completedEpisode, setCompletedEpisode] = useState<string | null>(null)
     const [episodeTitles, setEpisodeTitles] = useState<Record<string, string>>({})
@@ -27,10 +30,6 @@ const MobileTVShows: React.FC = () => {
         action: 'resume' | null
         item: WatchlistItem | null
     } | null>(null)
-
-    const handleSwitchToNormal = () => {
-        navigate('/Tvshows')
-    }
 
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -391,6 +390,7 @@ const MobileTVShows: React.FC = () => {
             ? `${show.id}:${show.next_season_number || (show.status === 'planning' ? 1 : show.current_season)}:${show.next_episode_number || (show.status === 'planning' ? 1 : show.current_episode)}`
             : null
         const episodeTitle = episodeTitleKey ? episodeTitles[episodeTitleKey] : undefined
+        const posterPath = show.poster_path || (show.tmdb_id ? (missingPosters[show.tmdb_id] || null) : null)
 
         return (
             <div
@@ -399,8 +399,8 @@ const MobileTVShows: React.FC = () => {
                 onClick={() => { if (show.tmdb_id) navigate(`/tv/${show.tmdb_id}`) }}
             >
                 <div className="mobile-tvshow-card-poster">
-                    {show.poster_path ? (
-                        <img src={imageUrl(show.poster_path, isMobile ? 'w342' : 'w342') || ''} alt={show.title} loading="lazy" />
+                    {posterPath ? (
+                        <img src={imageUrl(posterPath, isMobile ? 'w342' : 'w342') || ''} alt={show.title} loading="lazy" />
                     ) : (
                         <div className="mobile-tvshow-card-no-poster">
                             <span>{show.title}</span>
@@ -440,17 +440,10 @@ const MobileTVShows: React.FC = () => {
                 )}
             </div>
         )
-    }, [addingEpisode, completedEpisode, episodeTitles, handleAddEpisode, getEpisodesLeft, getEpisodeInfo, isMobile, navigate])
+    }, [addingEpisode, completedEpisode, episodeTitles, handleAddEpisode, getEpisodesLeft, getEpisodeInfo, isMobile, navigate, missingPosters])
 
     return (
         <section className="dashboard-page mobile-tvshows-page">
-            <button
-                className="mobile-view-toggle-fixed"
-                onClick={handleSwitchToNormal}
-                title="Switch to Normal View"
-            >
-                <i className="fa-solid fa-list"></i>
-            </button>
 <div className="dashboard-shell mobile-tvshows-shell">
                 {!isInitialized ? (
                     <div className="discover-loading" aria-live="polite">
@@ -467,7 +460,10 @@ const MobileTVShows: React.FC = () => {
                     <div className="mobile-tvshows-list">
                         {watching.length > 0 && (
                             <div className="mobile-tvshows-section">
-                                <h2 className="mobile-tvshows-section-title">Watching</h2>
+                                <div className="mobile-tvshows-section-header">
+                                    <h2 className="mobile-tvshows-section-title">Watching</h2>
+                                    <ViewToggleButton />
+                                </div>
                                 <div className="mobile-tvshows-cards">
                                     {watching.map(show => renderShowCard(show))}
                                 </div>

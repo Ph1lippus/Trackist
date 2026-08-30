@@ -166,7 +166,7 @@ export const getMovieDetails = async (id: number): Promise<{
     status?: string
     tagline?: string
     production_companies?: { id: number; name: string; logo_path?: string | null; origin_country?: string }[]
-    images?: { logos?: { file_path: string; language?: string }[]; backdrops?: any[] }
+    images?: { logos?: { file_path: string; language?: string }[]; backdrops?: any[]; posters?: any[] }
     external_ids?: { imdb_id?: string }
     videos?: {
         results: {
@@ -179,7 +179,7 @@ export const getMovieDetails = async (id: number): Promise<{
         }[]
     }
 }> => {
-    const res = await tmdbProxy(`/movie/${id}?append_to_response=images,external_ids,credits,videos`)
+    const res = await tmdbProxy(`/movie/${id}?append_to_response=images,external_ids,credits,videos,release_dates`)
     if (!res.ok) {
         throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
     }
@@ -202,7 +202,7 @@ export const getTVShowDetails = async (id: number): Promise<{
     status?: string
     episode_run_time?: number[]
     production_companies?: { id: number; name: string; logo_path?: string | null; origin_country?: string }[]
-    images?: { logos?: { file_path: string; language?: string }[]; backdrops?: any[] }
+    images?: { logos?: { file_path: string; language?: string }[]; backdrops?: any[]; posters?: any[] }
     external_ids?: { imdb_id?: string }
     videos?: {
         results: {
@@ -224,7 +224,7 @@ export const getTVShowDetails = async (id: number): Promise<{
         }[]
     }
 }> => {
-    const res = await tmdbProxy(`/tv/${id}?append_to_response=images,external_ids,credits,videos`)
+    const res = await tmdbProxy(`/tv/${id}?append_to_response=images,external_ids,credits,videos,content_ratings`)
     if (!res.ok) {
         throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
     }
@@ -369,11 +369,15 @@ export const getExternalIds = async (id: number, mediaType: 'movie' | 'tv'): Pro
 }
 
 
+const isNoLanguageCode = (value?: string | null): boolean => {
+    return value == null || value === '' || value === 'xx' || value === 'und'
+}
+
 export const getBestBackdropPath = (backdrops: any[] | undefined | null): string | null => {
     if (!backdrops || backdrops.length === 0) return null
     
     const candidates = backdrops
-        .filter(b => b.iso_639_1 == null || b.iso_639_1 === '')
+        .filter(b => isNoLanguageCode(b.iso_639_1))
         .sort((a, b) => {
             const aVote = a.vote_average ?? 0
             const bVote = b.vote_average ?? 0
@@ -386,6 +390,31 @@ export const getBestBackdropPath = (backdrops: any[] | undefined | null): string
             return (b.width ?? 0) - (a.width ?? 0)
         })
     
+    return candidates[0]?.file_path ?? null
+}
+
+/**
+ * Best poster for hero backgrounds: highest-rated poster with no language
+ * (iso_639_1 null/empty/xx/und), mirroring getBestBackdropPath. Returns null so callers
+ * fall through to the backdrop logic when only language posters exist.
+ */
+export const getBestPoster = (posters: any[] | undefined | null): string | null => {
+    if (!posters || posters.length === 0) return null
+
+    const candidates = posters
+        .filter(p => isNoLanguageCode(p.iso_639_1))
+        .sort((a, b) => {
+            const aVote = a.vote_average ?? 0
+            const bVote = b.vote_average ?? 0
+            if (bVote !== aVote) return bVote - aVote
+
+            const aCount = a.vote_count ?? 0
+            const bCount = b.vote_count ?? 0
+            if (bCount !== aCount) return bCount - aCount
+
+            return (b.height ?? 0) - (a.height ?? 0)
+        })
+
     return candidates[0]?.file_path ?? null
 }
 
@@ -423,12 +452,13 @@ export const getPopularPeople = async (page: number = 1): Promise<{ results: TMD
 
 
 
-export const discoverMovies = async (options: { page?: number; sort_by?: string; with_genres?: string; primary_release_year?: number; vote_count_gte?: number } = {}): Promise<{ results: TMDBResult[] }> => {
+export const discoverMovies = async (options: { page?: number; sort_by?: string; with_genres?: string; primary_release_date_gte?: string; primary_release_date_lte?: string; vote_count_gte?: number } = {}): Promise<{ results: TMDBResult[] }> => {
     const params = new URLSearchParams()
     if (options.page) params.set('page', String(options.page))
     if (options.sort_by) params.set('sort_by', options.sort_by)
     if (options.with_genres) params.set('with_genres', options.with_genres)
-    if (options.primary_release_year) params.set('primary_release_year', String(options.primary_release_year))
+    if (options.primary_release_date_gte) params.set('primary_release_date.gte', options.primary_release_date_gte)
+    if (options.primary_release_date_lte) params.set('primary_release_date.lte', options.primary_release_date_lte)
     if (options.vote_count_gte) params.set('vote_count.gte', String(options.vote_count_gte))
     const res = await tmdbProxy(`/discover/movie?${params.toString()}`)
     if (!res.ok) {
@@ -437,12 +467,13 @@ export const discoverMovies = async (options: { page?: number; sort_by?: string;
     return res.json()
 }
 
-export const discoverTV = async (options: { page?: number; sort_by?: string; with_genres?: string; first_air_date_year?: number; vote_count_gte?: number } = {}): Promise<{ results: TMDBResult[] }> => {
+export const discoverTV = async (options: { page?: number; sort_by?: string; with_genres?: string; first_air_date_gte?: string; first_air_date_lte?: string; vote_count_gte?: number } = {}): Promise<{ results: TMDBResult[] }> => {
     const params = new URLSearchParams()
     if (options.page) params.set('page', String(options.page))
     if (options.sort_by) params.set('sort_by', options.sort_by)
     if (options.with_genres) params.set('with_genres', options.with_genres)
-    if (options.first_air_date_year) params.set('first_air_date_year', String(options.first_air_date_year))
+    if (options.first_air_date_gte) params.set('first_air_date.gte', options.first_air_date_gte)
+    if (options.first_air_date_lte) params.set('first_air_date.lte', options.first_air_date_lte)
     if (options.vote_count_gte) params.set('vote_count.gte', String(options.vote_count_gte))
     const res = await tmdbProxy(`/discover/tv?${params.toString()}`)
     if (!res.ok) {

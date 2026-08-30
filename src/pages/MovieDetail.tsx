@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getMovieDetails, imageUrl, imageUrlOriginal, getBestBackdropPath } from '../services/tmdbService'
+import { getMovieDetails, imageUrl, imageUrlOriginal, getBestBackdropPath, getBestPoster } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { invalidateUserCache, getCachedOrFetch } from '../services/cacheService'
 import ConfirmModal from '../components/modals/ConfirmModal'
@@ -67,7 +67,7 @@ const MovieDetail: React.FC = () => {
             }
             try {
                 const data = await getCachedOrFetch(
-                    'movie-details',
+                    'movie-details-v2',
                     Number(id),
                     () => getMovieDetails(Number(id)),
                     { ttl: 24 * 60 * 60 * 1000, staleWhileRevalidate: true }
@@ -139,7 +139,7 @@ const MovieDetail: React.FC = () => {
                 return imageUrlOriginal(englishLogo.file_path)
             }
             const noLanguageLogo = logos.find(
-                (logo) => logo.iso_639_1 === null || logo.iso_639_1 === ''
+                (logo) => logo.iso_639_1 == null || logo.iso_639_1 === '' || logo.iso_639_1 === 'xx' || logo.iso_639_1 === 'und'
             )
             if (noLanguageLogo) {
                 return imageUrlOriginal(noLanguageLogo.file_path)
@@ -207,7 +207,10 @@ const MovieDetail: React.FC = () => {
         return <div className="detail-page-error">Movie not found</div>
     }
 
-    const backdropUrl = imageUrlOriginal(getBestBackdropPath(details?.images?.backdrops) ?? details?.backdrop_path ?? null)    
+    const heroPoster = isMobile ? getBestPoster(details?.images?.posters) : null
+    const backdropUrl = heroPoster
+        ? imageUrlOriginal(heroPoster)
+        : imageUrlOriginal(getBestBackdropPath(details?.images?.backdrops) ?? details?.backdrop_path ?? null)    
     const logoUrl = getLogoUrl()
     const title = details?.title || ''
     const year = details?.release_date?.slice(0, 4) || ''

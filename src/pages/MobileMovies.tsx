@@ -6,8 +6,10 @@ import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useMobile } from '../contexts/useMobile'
 import { useSearch } from '../hooks/useSearch'
+import { useMissingPosters } from '../hooks/useMissingPosters'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import ConfirmModal from '../components/modals/ConfirmModal'
+import ViewToggleButton from '../components/layout/ViewToggleButton'
 
 const MobileMovies: React.FC = () => {
     const { isMobile } = useMobile()
@@ -15,16 +17,13 @@ const MobileMovies: React.FC = () => {
     const navigate = useNavigate()
     const { committedQuery } = useSearch()
     const movies = useLibraryStore((state) => state.movies)
+    const missingPosters = useMissingPosters(movies)
     const [updatingId, setUpdatingId] = useState<string | null>(null)
     const [confirmModal, setConfirmModal] = useState<{
         isOpen: boolean
         action: 'watch' | 'unwatch'
         item: WatchlistItem
     } | null>(null)
-
-    const handleSwitchToNormal = () => {
-        navigate('/Movies')
-    }
 
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -95,6 +94,7 @@ const MobileMovies: React.FC = () => {
     const renderMovieCard = useCallback((movie: WatchlistItem) => {
         const isUpdating = updatingId === movie.id
         const isCompleted = movie.status === 'completed' || movie.status === 'caught_up'
+        const posterPath = movie.poster_path || (movie.tmdb_id ? (missingPosters[movie.tmdb_id] || null) : null)
 
         return (
             <div
@@ -103,8 +103,8 @@ const MobileMovies: React.FC = () => {
                 onClick={() => { if (movie.tmdb_id) navigate(`/movie/${movie.tmdb_id}`) }}
             >
                 <div className="mobile-tvshow-card-poster">
-                    {movie.poster_path ? (
-                        <img src={imageUrl(movie.poster_path, isMobile ? 'w342' : 'w342') || ''} alt={movie.title} loading="lazy" />
+                    {posterPath ? (
+                        <img src={imageUrl(posterPath, isMobile ? 'w342' : 'w342') || ''} alt={movie.title} loading="lazy" />
                     ) : (
                         <div className="mobile-tvshow-card-no-poster">
                             <span>{movie.title}</span>
@@ -131,17 +131,10 @@ const MobileMovies: React.FC = () => {
                 </button>
             </div>
         )
-    }, [updatingId, confirmModal, handleToggleWatched, handleConfirmAction, isMobile, navigate])
+    }, [updatingId, confirmModal, handleToggleWatched, handleConfirmAction, isMobile, navigate, missingPosters])
 
     return (
         <section className="dashboard-page mobile-tvshows-page">
-            <button
-                className="mobile-view-toggle-fixed"
-                onClick={handleSwitchToNormal}
-                title="Switch to Normal View"
-            >
-                <i className="fa-solid fa-list"></i>
-            </button>
 <div className="dashboard-shell mobile-tvshows-shell">
                 {toWatch.length === 0 && watched.length === 0 ? (
                     <div className="mobile-tvshows-empty">
@@ -153,7 +146,10 @@ const MobileMovies: React.FC = () => {
                     <div className="mobile-tvshows-list">
                         {toWatch.length > 0 && (
                             <div className="mobile-tvshows-section">
-                                <h2 className="mobile-tvshows-section-title">To Watch</h2>
+                                <div className="mobile-tvshows-section-header">
+                                    <h2 className="mobile-tvshows-section-title">To Watch</h2>
+                                    <ViewToggleButton />
+                                </div>
                                 <div className="mobile-tvshows-cards">
                                     {toWatch.map(movie => renderMovieCard(movie))}
                                 </div>

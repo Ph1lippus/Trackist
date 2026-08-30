@@ -22,8 +22,6 @@ type SortBy =
     | 'vote_average.asc'
     | 'release_date.desc'
     | 'release_date.asc'
-    | 'original_title.asc'
-    | 'original_title.desc'
 
 type MediaType = 'all' | 'movie' | 'tv' | 'person'
 
@@ -32,8 +30,9 @@ interface DiscoverState {
     results: TMDBResult[]
     mediaType: MediaType
     sortBy: SortBy
-    selectedGenre: number | null
-    selectedYear: number | null
+    selectedGenres: number[]
+    yearFrom: number | null
+    yearTo: number | null
     query: string
     page: number
     hasMore: boolean
@@ -53,8 +52,8 @@ interface DiscoverState {
     setQuery: (query: string) => void
     setMediaType: (mediaType: MediaType) => void
     setSortBy: (sortBy: SortBy) => void
-    setSelectedGenre: (genre: number | null) => void
-    setSelectedYear: (year: number | null) => void
+    setSelectedGenres: (genres: number[]) => void
+    setYearRange: (from: number | null, to: number | null) => void
     setWatchlistIds: (ids: Set<number>) => void
     setShowAdded: (show: boolean) => void
     setSessionAddedIds: (ids: Set<number>) => void
@@ -80,8 +79,9 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     results: [],
     mediaType: 'movie',
     sortBy: 'popularity.desc',
-    selectedGenre: null,
-    selectedYear: null,
+    selectedGenres: [],
+    yearFrom: null,
+    yearTo: null,
     query: '',
     page: 1,
     hasMore: true,
@@ -111,9 +111,9 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
 
     setSortBy: (sortBy) => set({ sortBy, sessionAddedIds: new Set() }),
 
-    setSelectedGenre: (selectedGenre) => set({ selectedGenre, sessionAddedIds: new Set() }),
+    setSelectedGenres: (selectedGenres) => set({ selectedGenres, sessionAddedIds: new Set() }),
 
-    setSelectedYear: (selectedYear) => set({ selectedYear, sessionAddedIds: new Set() }),
+    setYearRange: (yearFrom, yearTo) => set({ yearFrom, yearTo, sessionAddedIds: new Set() }),
 
     setWatchlistIds: (watchlistIds) => set({ watchlistIds }),
 
@@ -192,8 +192,9 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     resetFilters: () => set({
         mediaType: 'all',
         sortBy: 'popularity.desc',
-        selectedGenre: null,
-        selectedYear: null,
+        selectedGenres: [],
+        yearFrom: null,
+        yearTo: null,
         query: '',
         page: 1,
         results: [],
@@ -209,8 +210,9 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         results: [],
         mediaType: 'all',
         sortBy: 'popularity.desc',
-        selectedGenre: null,
-        selectedYear: null,
+        selectedGenres: [],
+        yearFrom: null,
+        yearTo: null,
         query: '',
         page: 1,
         hasMore: true,
@@ -302,8 +304,9 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
             mediaType,
             sortBy,
             query,
-            selectedGenre,
-            selectedYear
+            selectedGenres,
+            yearFrom,
+            yearTo
         } = get()
 
         // Stale request from a previous tab/filter - abandon it.
@@ -444,8 +447,8 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 newResults = (data.results || []).map(r => ({ ...r, media_type: 'person' as const }))
                 totalPages = (data as { total_pages?: number }).total_pages || 1
             } else if (mediaType === 'all') {
-                const movieCacheKey = `${query}-${pageNum}-${sortBy}-${selectedYear}-${selectedGenre}-min-100`
-                const tvCacheKey = `${query}-${pageNum}-${mapSortParamForTV(sortBy)}-${selectedYear}-${selectedGenre}-min-200`
+                const movieCacheKey = `${query}-${pageNum}-${sortBy}-${yearFrom}-${yearTo}-${selectedGenres.join(',')}-min-100`
+                const tvCacheKey = `${query}-${pageNum}-${mapSortParamForTV(sortBy)}-${yearFrom}-${yearTo}-${selectedGenres.join(',')}-min-200`
 
                 const [moviesData, tvData] = await Promise.all([
                     getCachedOrFetch(
@@ -454,8 +457,9 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                         () => discoverMovies({
                             page: pageNum,
                             sort_by: sortBy,
-                            primary_release_year: selectedYear ?? undefined,
-                            with_genres: selectedGenre ? String(selectedGenre) : undefined,
+                            primary_release_date_gte: yearFrom ? `${yearFrom}-01-01` : undefined,
+                            primary_release_date_lte: yearTo ? `${yearTo}-12-31` : undefined,
+                            with_genres: selectedGenres.length ? selectedGenres.join(',') : undefined,
                             vote_count_gte: 100,
                         }),
                         { ttl: 6 * 60 * 60 * 1000, staleWhileRevalidate: true }
@@ -466,8 +470,9 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                         () => discoverTV({
                             page: pageNum,
                             sort_by: mapSortParamForTV(sortBy),
-                            first_air_date_year: selectedYear ?? undefined,
-                            with_genres: selectedGenre ? String(selectedGenre) : undefined,
+                            first_air_date_gte: yearFrom ? `${yearFrom}-01-01` : undefined,
+                            first_air_date_lte: yearTo ? `${yearTo}-12-31` : undefined,
+                            with_genres: selectedGenres.length ? selectedGenres.join(',') : undefined,
                             vote_count_gte: 200,
                         }),
                         { ttl: 6 * 60 * 60 * 1000, staleWhileRevalidate: true }
@@ -485,7 +490,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
 
                 let combined: TMDBResult[] = [...movies, ...tv]
 
-                const shouldFilterGenres = !query.trim() && !selectedGenre
+                const shouldFilterGenres = !query.trim() && selectedGenres.length === 0
                 if (shouldFilterGenres) {
                     combined = combined.filter(item => {
                         if (hasExcludedGenre(item)) return false
@@ -501,15 +506,16 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 const tvTotal = (tvData as { total_pages?: number }).total_pages || 1
                 totalPages = Math.max(moviesTotal, tvTotal)
             } else if (mediaType === 'movie') {
-                const movieCacheKey = `${query}-${pageNum}-${sortBy}-${selectedYear}-${selectedGenre}-min-100`
+                const movieCacheKey = `${query}-${pageNum}-${sortBy}-${yearFrom}-${yearTo}-${selectedGenres.join(',')}-min-100`
                 const data = await getCachedOrFetch(
                     'discover-movie',
                     movieCacheKey,
                     () => discoverMovies({
                         page: pageNum,
                         sort_by: sortBy,
-                        primary_release_year: selectedYear ?? undefined,
-                        with_genres: selectedGenre ? String(selectedGenre) : undefined,
+                        primary_release_date_gte: yearFrom ? `${yearFrom}-01-01` : undefined,
+                        primary_release_date_lte: yearTo ? `${yearTo}-12-31` : undefined,
+                        with_genres: selectedGenres.length ? selectedGenres.join(',') : undefined,
                         vote_count_gte: 100,
                     }),
                     { ttl: 6 * 60 * 60 * 1000, staleWhileRevalidate: true }
@@ -519,7 +525,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     media_type: 'movie' as const,
                 }))
 
-                const shouldFilterGenres = !query.trim() && !selectedGenre
+                const shouldFilterGenres = !query.trim() && selectedGenres.length === 0
                 if (shouldFilterGenres) {
                     newResults = movieResults.filter(item => {
                         if (hasExcludedGenre(item)) return false
@@ -532,15 +538,16 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
 
                 totalPages = (data as { total_pages?: number }).total_pages || 1
             } else if (mediaType === 'tv') {
-                const tvCacheKey = `${query}-${pageNum}-${mapSortParamForTV(sortBy)}-${selectedYear}-${selectedGenre}-min-200`
+                const tvCacheKey = `${query}-${pageNum}-${mapSortParamForTV(sortBy)}-${yearFrom}-${yearTo}-${selectedGenres.join(',')}-min-200`
                 const data = await getCachedOrFetch(
                     'discover-tv',
                     tvCacheKey,
                     () => discoverTV({
                         page: pageNum,
                         sort_by: mapSortParamForTV(sortBy),
-                        first_air_date_year: selectedYear ?? undefined,
-                        with_genres: selectedGenre ? String(selectedGenre) : undefined,
+                        first_air_date_gte: yearFrom ? `${yearFrom}-01-01` : undefined,
+                        first_air_date_lte: yearTo ? `${yearTo}-12-31` : undefined,
+                        with_genres: selectedGenres.length ? selectedGenres.join(',') : undefined,
                         vote_count_gte: 200,
                     }),
                     { ttl: 6 * 60 * 60 * 1000, staleWhileRevalidate: true }
@@ -550,7 +557,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     media_type: 'tv' as const,
                 }))
 
-                const shouldFilterGenres = !query.trim() && !selectedGenre
+                const shouldFilterGenres = !query.trim() && selectedGenres.length === 0
                 if (shouldFilterGenres) {
                     newResults = tvResults.filter(item => {
                         if (hasExcludedGenre(item)) return false
@@ -572,7 +579,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 // may have started between the check above and the state update.
                 if (generation !== fetchGeneration) return state
 
-                const shouldFilterGenres = !query.trim() && !selectedGenre && mediaType !== 'person'
+                const shouldFilterGenres = !query.trim() && selectedGenres.length === 0 && mediaType !== 'person'
                 let finalResults = newResults
                 if (shouldFilterGenres) {
                     finalResults = newResults.filter(item => {
@@ -634,8 +641,9 @@ export const useDiscoverFilters = () => {
     const selector = useShallow((state: DiscoverState) => ({
         mediaType: state.mediaType,
         sortBy: state.sortBy,
-        selectedGenre: state.selectedGenre,
-        selectedYear: state.selectedYear,
+        selectedGenres: state.selectedGenres,
+        yearFrom: state.yearFrom,
+        yearTo: state.yearTo,
         query: state.query,
         showAdded: state.showAdded,
     }))
@@ -657,8 +665,8 @@ export const useDiscoverActions = () => {
         setQuery: state.setQuery,
         setMediaType: state.setMediaType,
         setSortBy: state.setSortBy,
-        setSelectedGenre: state.setSelectedGenre,
-        setSelectedYear: state.setSelectedYear,
+        setSelectedGenres: state.setSelectedGenres,
+        setYearRange: state.setYearRange,
         setShowAdded: state.setShowAdded,
         setSessionAddedIds: state.setSessionAddedIds,
         resetFilters: state.resetFilters,

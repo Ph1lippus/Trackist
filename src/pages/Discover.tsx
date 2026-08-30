@@ -78,7 +78,7 @@ const Discover: React.FC = () => {
         // Load initial pages (3 pages = 60 items) to ensure sufficient content after watchlist filtering
         // This ensures both Movies and TV shows have enough content since filtering removes many items
         actions.loadInitialPages(3)
-    }, [filters.mediaType, filters.sortBy, filters.selectedGenre, filters.selectedYear, actions])
+    }, [filters.mediaType, filters.sortBy, filters.selectedGenres, filters.yearFrom, filters.yearTo, actions])
     
     // Sync global search with discover store
     useEffect(() => {
@@ -87,12 +87,6 @@ const Discover: React.FC = () => {
             actions.fetchData(1)
         }
     }, [committedQuery, filters.query, actions])
-    
-    const handleClearFilters = useCallback(() => {
-    actions.resetFilters();
-    actions.setSessionAddedIds(new Set());
-    window.scrollTo({ top: 0, behavior: "smooth" });
-}, [actions]);  
     
     const handleAddToWatchlist = useCallback(
     (item: TMDBResult) => {
@@ -159,85 +153,6 @@ const Discover: React.FC = () => {
     return (
         <div className="discover-page">
             <div className="discover-container" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-                <div className="discover-controls">
-                    <div className="discover-tabs">
-                        <button
-                            className={`discover-tab ${filters.mediaType === 'movie' ? 'active' : ''}`}
-                            onClick={() => actions.setMediaType('movie')}
-                        >
-                            Movies
-                        </button>
-                        <button
-                            className={`discover-tab ${filters.mediaType === 'tv' ? 'active' : ''}`}
-                            onClick={() => actions.setMediaType('tv')}
-                        >
-                            TV Shows
-                        </button>
-                        <button
-                            className={`discover-tab ${filters.mediaType === 'person' ? 'active' : ''}`}
-                            onClick={() => actions.setMediaType('person')}
-                        >
-                            People
-                        </button>
-                    </div>
-                    {filters.mediaType !== 'person' && (
-                        <div className="discover-sorts">
-                            <select
-                                className="discover-filter-select"
-                                value={filters.sortBy}
-                                onChange={(e) => actions.setSortBy(e.target.value as typeof filters.sortBy)}
-                            >
-                                <option value="popularity.desc">Popularity (High to Low)</option>
-                                <option value="popularity.asc">Popularity (Low to High)</option>
-                                <option value="vote_average.desc">Rating (High to Low)</option>
-                                <option value="vote_average.asc">Rating (Low to High)</option>
-                                <option value="release_date.desc">Release Date (Newest)</option>
-                                <option value="release_date.asc">Release Date (Oldest)</option>
-                                <option value="original_title.asc">Title (A-Z)</option>
-                                <option value="original_title.desc">Title (Z-A)</option>
-                            </select>
-                            <select
-                                className="discover-filter-select"
-                                value={filters.selectedGenre ?? ''}
-                                onChange={(e) => actions.setSelectedGenre(e.target.value ? Number(e.target.value) : null)}
-                            >
-                                <option value="">All Genres</option>
-                                {store.genres.map((genre: { id: number; name: string }) => (
-                                    <option key={genre.id} value={genre.id}>
-                                        {genre.name}
-                                    </option>
-                                ))}
-                            </select>
-                            <select
-                                className="discover-filter-select"
-                                value={filters.selectedYear ?? ''}
-                                onChange={(e) => actions.setSelectedYear(e.target.value ? Number(e.target.value) : null)}
-                            >
-                                <option value="">All Years</option>
-                                {Array.from({ length: 100 }, (_, i) => new Date().getFullYear() - i).map((year) => (
-                                    <option key={year} value={year}>
-                                        {year}
-                                    </option>
-                                ))}
-                            </select>
-                            <button
-                                className={`discover-filter-select discover-filter-select--btn ${showAdded ? 'active' : ''}`}
-                                style={{ cursor: 'pointer' }}
-                                onClick={() => actions.setShowAdded(!showAdded)}
-                            >
-                                {showAdded ? 'Hide Added' : 'Show Added'}
-                            </button>
-                            <button
-                                className="discover-filter-select discover-filter-select--btn"
-                                style={{ cursor: 'pointer' }}
-                                onClick={handleClearFilters}
-                            >
-                                Clear Filters
-                            </button>
-                        </div>
-                    )}
-                </div>
-
                 {loading.isLoading ? (
                     <div className="discover-loading" aria-live="polite">
                         <div className="discover-spinner" />
@@ -250,7 +165,7 @@ const Discover: React.FC = () => {
                 ) : (
                         <div style={{ flex: 1, minHeight: 0, width: '100%' }}>
                             <VirtuosoGrid
-                                key={`${filters.mediaType}-${filters.sortBy}-${filters.selectedGenre ?? 'all'}-${filters.selectedYear ?? 'all'}-${filters.query}`}
+                                key={`${filters.mediaType}-${filters.sortBy}-${filters.selectedGenres.join(',')}-${filters.yearFrom ?? 'all'}-${filters.yearTo ?? 'all'}-${filters.query}`}
                                 increaseViewportBy={{
                                         top: isMobile ? 200 : 400,
                                         bottom: isMobile ? 400 : 800,

@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { useSelectionStore } from '../stores/useSelectionStore'
 import MediaCard from '../components/media/MediaCard'
@@ -8,12 +7,11 @@ import type { WatchlistItem, TMDBResult } from '../types'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
-import { useMobile } from '../contexts/useMobile'
 import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
+import ViewToggleButton from '../components/layout/ViewToggleButton'
 
 const Movies: React.FC = () => {
     usePageTitle('Track1st - Movies')
-    const navigate = useNavigate()
     const { committedQuery } = useSearch()
     const { showIcons } = useMediaCardIcons()
 
@@ -33,12 +31,6 @@ const Movies: React.FC = () => {
         moviesSelectedIds: selectedIds, 
         toggleMovieSelection: toggleSelection 
     } = useSelectionStore()
-
-    const { isMobile } = useMobile()
-
-    const handleSwitchToMobile = () => {
-        navigate('/MobileMovies')
-    }
 
     useEffect(() => {
         window.scrollTo(0, 0)
@@ -123,19 +115,11 @@ const Movies: React.FC = () => {
 
     return (
         <div className="discover-page">
-            {isMobile && (
-                <button
-                    className="mobile-view-toggle-fixed"
-                    onClick={handleSwitchToMobile}
-                    title="Switch to Mobile View"
-                >
-                    <i className="fa-solid fa-table-cells-large"></i>
-                </button>
-            )}
             <div className="discover-container" style={{ width: '85%' }}>
                 <div className="watchlist-section">
                     <div className="watchlist-section__header">
                         <h3 className="watchlist-section__title">To Watch</h3>
+                        <ViewToggleButton />
                     </div>
                     {watchlistItems.length > 0 ? (
                         <div className="discover-grid">

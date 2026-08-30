@@ -9,7 +9,26 @@ import { useSelectionStore } from '../../stores/useSelectionStore';
 import { useLibraryStore } from '../../stores/useLibraryStore';
 import { launchCosmicConfetti } from '../../utils/cosmicConfetti';
 import { markShowAsFullyWatched, removeAllWatchedEpisodes } from '../../services/watchlistService';
+import { useMobile } from '../../contexts/useMobile';
+import { createPortal } from 'react-dom';
+import useDiscoverStore, { useDiscoverFilters } from '../../stores/discoverStore';
 import type { WatchlistItem } from '../../types';
+
+const NAVBAR_MEDIA_OPTIONS = [
+    { value: 'all', label: 'All' },
+    { value: 'movie', label: 'Movies' },
+    { value: 'tv', label: 'TV Shows' },
+    { value: 'person', label: 'People' },
+] as const;
+
+const NAVBAR_SORT_OPTIONS = [
+    { value: 'popularity.desc', label: 'Popularity ↓' },
+    { value: 'popularity.asc', label: 'Popularity ↑' },
+    { value: 'vote_average.desc', label: 'Rating ↓' },
+    { value: 'vote_average.asc', label: 'Rating ↑' },
+    { value: 'release_date.desc', label: 'Newest' },
+    { value: 'release_date.asc', label: 'Oldest' },
+] as const;
 
 interface NavbarProps {
     currentMonth?: Date;
@@ -30,6 +49,30 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
     const searchBoxRef = useRef<HTMLDivElement>(null);
+
+    // Discover search bar: media-type pill + filter menu (Discover page only)
+    const [filtersOpen, setFiltersOpen] = useState(false);
+    const [filtersClosing, setFiltersClosing] = useState(false);
+    const filtersRef = useRef<HTMLDivElement>(null);
+    const filtersButtonRef = useRef<HTMLButtonElement>(null);
+    const discoverFilters = useDiscoverFilters();
+    const discoverGenres = useDiscoverStore((state) => state.genres);
+    const isDiscoverPage = location.pathname === '/' || location.pathname === '/Discover';
+    const thisYear = new Date().getFullYear();
+    const hasActiveDiscoverFilters =
+        discoverFilters.sortBy !== 'popularity.desc' ||
+        discoverFilters.selectedGenres.length > 0 ||
+        discoverFilters.yearFrom !== null ||
+        discoverFilters.yearTo !== null ||
+        discoverFilters.showAdded !== true;
+
+    // Staged filter values (committed via Apply All Filters)
+    const [stagedMedia, setStagedMedia] = useState<'all' | 'movie' | 'tv' | 'person'>(discoverFilters.mediaType);
+    const [stagedSort, setStagedSort] = useState(discoverFilters.sortBy);
+    const [stagedGenres, setStagedGenres] = useState<number[]>(discoverFilters.selectedGenres);
+    const [stagedYearFrom, setStagedYearFrom] = useState(discoverFilters.yearFrom != null ? String(discoverFilters.yearFrom) : '');
+    const [stagedYearTo, setStagedYearTo] = useState(discoverFilters.yearTo != null ? String(discoverFilters.yearTo) : '');
+    const [stagedShowAdded, setStagedShowAdded] = useState(discoverFilters.showAdded);
 
     // Selection state
     const {
@@ -169,6 +212,87 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, [closeMenu]);
 
+    // Discover filter menu open/close
+    const closeFilters = useCallback(() => {
+        setFiltersClosing(true);
+        setTimeout(() => {
+            setFiltersOpen(false);
+            setFiltersClosing(false);
+        }, 150);
+    }, []);
+
+    const toggleFilters = useCallback(() => {
+        if (filtersOpen) {
+            closeFilters();
+        } else {
+            setFiltersOpen(true);
+        }
+    }, [filtersOpen, closeFilters]);
+
+    // Sync staged values from the applied store state each time the menu opens
+    useEffect(() => {
+        if (!filtersOpen) return;
+        const s = useDiscoverStore.getState();
+        setStagedMedia(s.mediaType);
+        setStagedSort(s.sortBy);
+        setStagedGenres(s.selectedGenres);
+        setStagedYearFrom(s.yearFrom != null ? String(s.yearFrom) : '');
+        setStagedYearTo(s.yearTo != null ? String(s.yearTo) : '');
+        setStagedShowAdded(s.showAdded);
+    }, [filtersOpen]);
+
+    const handleApplyFilters = useCallback(() => {
+        const s = useDiscoverStore.getState();
+        const from = stagedYearFrom.trim();
+        const to = stagedYearTo.trim();
+        s.setMediaType(stagedMedia);
+        s.setSortBy(stagedSort);
+        s.setSelectedGenres(stagedGenres);
+        s.setYearRange(
+            from === '' || !Number.isFinite(Number(from)) ? null : Number(from),
+            to === '' || !Number.isFinite(Number(to)) ? null : Number(to)
+        );
+        s.setShowAdded(stagedShowAdded);
+        closeFilters();
+    }, [stagedMedia, stagedSort, stagedGenres, stagedYearFrom, stagedYearTo, stagedShowAdded, closeFilters]);
+
+    const handleCancelAllFilters = useCallback(() => {
+        const s = useDiscoverStore.getState();
+        s.resetFilters();
+        s.setSessionAddedIds(new Set());
+        setStagedMedia('all');
+        setStagedSort('popularity.desc');
+        setStagedGenres([]);
+        setStagedYearFrom('');
+        setStagedYearTo('');
+        setStagedShowAdded(true);
+        closeFilters();
+    }, [closeFilters]);
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (
+                filtersRef.current &&
+                !filtersRef.current.contains(e.target as Node) &&
+                filtersButtonRef.current &&
+                !filtersButtonRef.current.contains(e.target as Node)
+            ) {
+                closeFilters();
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [closeFilters]);
+
+    useEffect(() => {
+        if (!filtersOpen) return;
+        const onKey = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') closeFilters();
+        };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [filtersOpen, closeFilters]);
+
     const toggleMenu = useCallback(() => {
         if (menuOpen) {
             closeMenu();
@@ -202,6 +326,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const isMoviesPage = location.pathname === '/Movies';
     const isTVShowsPage = location.pathname === '/Tvshows';
     const isFinishedPage = location.pathname === '/Finished';
+
     const isSelectionActive = isMoviesPage ? moviesSelectionMode : (isTVShowsPage ? tvShowsSelectionMode : (isFinishedPage ? finishedSelectionMode : false));
     const selectedCount = isMoviesPage ? moviesSelectedIds.size : (isTVShowsPage ? tvShowsSelectedIds.size : (isFinishedPage ? finishedSelectedIds.size : 0));
 
@@ -337,9 +462,134 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         }
     })();
 
+    const { isMobile } = useMobile();
+
+    const filterMenuContent = (
+        <div
+            ref={filtersRef}
+            className={`discover-filter-menu ${filtersOpen ? (filtersClosing ? 'is-closing' : 'is-open') : ''}`}
+            data-origin="top-right"
+        >
+            <div className="discover-filter-menu__inner">
+                <div className="discover-filter-menu__header">
+                    <span className="discover-filter-menu__header-title">Filters</span>
+                    <button
+                        type="button"
+                        className="discover-filter-menu__header-close"
+                        onClick={closeFilters}
+                        aria-label="Close filters"
+                        title="Close filters"
+                    >
+                        <i className="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div className="discover-filter-menu__cols">
+                    <div className="discover-filter-menu__col">
+                        <div className="discover-filter-menu__group">
+                            <span className="discover-filter-menu__label">Sort By</span>
+                            <div className="discover-filter-menu__tiles discover-filter-menu__tiles--sort">
+                                {NAVBAR_SORT_OPTIONS.map((o) => (
+                                    <button
+                                        key={o.value}
+                                        type="button"
+                                        className={`discover-filter-menu__btn${stagedSort === o.value ? ' is-selected' : ''}`}
+                                        onClick={() => setStagedSort(o.value)}
+                                    >
+                                        <span>{o.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="discover-filter-menu__col">
+                        <div className="discover-filter-menu__group">
+                            <span className="discover-filter-menu__label">Year</span>
+                            <div className="discover-filter-menu__year-row">
+                                <input
+                                    type="number"
+                                    className="navbar-filter-field navbar-filter-field--year"
+                                    placeholder="From"
+                                    min={1888}
+                                    max={thisYear}
+                                    value={stagedYearFrom}
+                                    onChange={(e) => setStagedYearFrom(e.target.value)}
+                                />
+                                <span className="discover-filter-menu__year-sep">–</span>
+                                <input
+                                    type="number"
+                                    className="navbar-filter-field navbar-filter-field--year"
+                                    placeholder="To"
+                                    min={1888}
+                                    max={thisYear}
+                                    value={stagedYearTo}
+                                    onChange={(e) => setStagedYearTo(e.target.value)}
+                                />
+                            </div>
+                            <span className="discover-filter-menu__hint">Single year or a range — empty box = no limit</span>
+                        </div>
+                        <div className="discover-filter-menu__group">
+                            <span className="discover-filter-menu__label">Watchlist</span>
+                            <button type="button" className="discover-filter-menu__row" onClick={() => setStagedShowAdded((v) => !v)}>
+                                <span>Show Added</span>
+                                <span className={`discover-filter-menu__toggle${stagedShowAdded ? ' on' : ''}`} aria-hidden="true">
+                                    <span className="discover-filter-menu__toggle-knob" />
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div className="discover-filter-menu__group">
+                    <span className="discover-filter-menu__label">Genres</span>
+                    <div className="discover-filter-menu__tiles discover-filter-menu__tiles--genres">
+                        {discoverGenres.map((g) => (
+                            <button
+                                key={g.id}
+                                type="button"
+                                className={`discover-filter-menu__btn${stagedGenres.includes(g.id) ? ' is-selected' : ''}`}
+                                onClick={() =>
+                                    setStagedGenres((prev) =>
+                                        prev.includes(g.id) ? prev.filter((id) => id !== g.id) : [...prev, g.id]
+                                    )
+                                }
+                            >
+                                <span>{g.name}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <div className="discover-filter-menu__group discover-filter-menu__group--media">
+                    <span className="discover-filter-menu__label">Media</span>
+                    <div className="discover-media-pill discover-media-pill--full" role="tablist" aria-label="Media type">
+                        {NAVBAR_MEDIA_OPTIONS.map((m) => (
+                            <button
+                                key={m.value}
+                                role="tab"
+                                aria-selected={stagedMedia === m.value}
+                                className={`discover-media-pill__seg${stagedMedia === m.value ? ' active' : ''}`}
+                                onClick={() => setStagedMedia(m.value)}
+                            >
+                                {m.label}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+                <div className="discover-filter-menu__footer">
+                    <button type="button" className="discover-filter-menu__cancel" onClick={handleCancelAllFilters}>
+                        <i className="fa-solid fa-rotate-left"></i>
+                        Cancel All
+                    </button>
+                    <button type="button" className="discover-filter-menu__apply" onClick={handleApplyFilters}>
+                        <i className="fa-solid fa-check"></i>
+                        Apply All Filters
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+
     return (
         <nav className="navbar-brand-row" aria-label="Main navigation">
-            <div className="container navbar-inner">
+            <div className={`container navbar-inner${showBackButton ? '' : ' no-back-btn'}`}>
                 <div className="navbar-left">
                     {showBackButton && (
                         <i
@@ -395,45 +645,78 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                 
                 {showSearchBar && (
                     <div className="navbar-search" ref={searchBoxRef}>
-                        <form onSubmit={handleSearchSubmit}>
-                            <div className="navbar-search-box">
-                                <svg className="navbar-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                    <circle cx="11" cy="11" r="8" />
-                                    <path d="M21 21l-4.35-4.35" />
-                                </svg>
-                                <input
-                                    type="text"
-                                    className="navbar-search-input"
-                                    placeholder={searchPlaceholder}
-                                    value={inputValue}
-                                    onChange={(e) => setInputValue(e.target.value)}
-                                    autoComplete="off"
-                                    spellCheck="false"
+                        <div className="navbar-search-row">
+                            {isDiscoverPage && (
+                                <div className="discover-media-pill" role="tablist" aria-label="Media type">
+                                    {NAVBAR_MEDIA_OPTIONS.map((m) => (
+                                        <button
+                                            key={m.value}
+                                            role="tab"
+                                            aria-selected={discoverFilters.mediaType === m.value}
+                                            className={`discover-media-pill__seg${discoverFilters.mediaType === m.value ? ' active' : ''}`}
+                                            onClick={() => useDiscoverStore.getState().setMediaType(m.value)}
+                                        >
+                                            {m.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                            <form className="navbar-search-form" onSubmit={handleSearchSubmit}>
+                                <div className="navbar-search-box">
+                                    <svg className="navbar-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <circle cx="11" cy="11" r="8" />
+                                        <path d="M21 21l-4.35-4.35" />
+                                    </svg>
+                                    <input
+                                        type="text"
+                                        className="navbar-search-input"
+                                        placeholder={searchPlaceholder}
+                                        value={inputValue}
+                                        onChange={(e) => setInputValue(e.target.value)}
+                                        autoComplete="off"
+                                        spellCheck="false"
+                                    />
+                                    {isLoading && (
+                                        <div className="navbar-search-spinner" aria-label="Searching">
+                                            <div className="discover-spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }} />
+                                        </div>
+                                    )}
+                                    {inputValue && !isLoading && (
+                                        <button type="button" className="navbar-search-clear" onClick={handleSearchClear} aria-label="Clear search">
+                                            <i className="fa-solid fa-xmark"></i>
+                                        </button>
+                                    )}
+                                </div>
+                                <SearchDropdown
+                                    isOpen={isDropdownOpen}
+                                    isLoading={isLoading}
+                                    results={results}
+                                    groupedResults={groupedResults}
+                                    context={context}
+                                    query={query}
+                                    belowMinChars={belowMinChars}
+                                    error={error}
+                                    onClose={closeDropdown}
+                                    onCommit={commitQuery}
                                 />
-                                {isLoading && (
-                                    <div className="navbar-search-spinner" aria-label="Searching">
-                                        <div className="discover-spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }} />
-                                    </div>
-                                )}
-                                {inputValue && !isLoading && (
-                                    <button type="button" className="navbar-search-clear" onClick={handleSearchClear} aria-label="Clear search">
-                                        <i className="fa-solid fa-xmark"></i>
+                            </form>
+                            {isDiscoverPage && (
+                                <div className="navbar-search-filter">
+                                    <button
+                                        ref={filtersButtonRef}
+                                        className={`navbar-filter-btn${filtersOpen ? ' is-active' : ''}`}
+                                        onClick={toggleFilters}
+                                        aria-label="Discover filters"
+                                        aria-expanded={filtersOpen}
+                                        title="Filters"
+                                    >
+                                        <i className="fa-solid fa-sliders"></i>
+                                        {hasActiveDiscoverFilters && <span className="navbar-filter-btn__dot" />}
                                     </button>
-                                )}
-                            </div>
-                        </form>
-                        <SearchDropdown
-                            isOpen={isDropdownOpen}
-                            isLoading={isLoading}
-                            results={results}
-                            groupedResults={groupedResults}
-                            context={context}
-                            query={query}
-                            belowMinChars={belowMinChars}
-                            error={error}
-                            onClose={closeDropdown}
-                            onCommit={commitQuery}
-                        />
+                                    {isMobile ? createPortal(filterMenuContent, document.body) : filterMenuContent}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
                 
@@ -485,12 +768,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                      navigate('/Settings');
                                  }}>
                                      Settings
-                                 </button>
-                                 <button className="t-dropdown-item" onClick={() => {
-                                     closeMenu();
-                                     navigate('/Credits');
-                                 }}>
-                                     Credits
                                  </button>
                                   <button className="t-dropdown-item" onClick={handleLogout}>
                                       Logout

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getBestBackdropPath } from '../services/tmdbService'
+import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getBestBackdropPath, getBestPoster } from '../services/tmdbService'
 import { formatStatus } from '../utils/statusUtils'
 import { markEpisodeWatched, unmarkEpisodeWatched, markEpisodesWatched, unmarkEpisodesWatched, recomputeDenormalizedFields, getWatchedEpisodes, checkAndUpdateCompleted, markShowAsFullyWatched, removeAllWatchedEpisodes } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
@@ -164,7 +164,7 @@ const TVShowDetail: React.FC = () => {
             }
             try {
                 const data = await getCachedOrFetch(
-                    'tv-details',
+                    'tv-details-v2',
                     Number(id),
                     () => getTVDetails(Number(id)),
                     { ttl: 24 * 60 * 60 * 1000, staleWhileRevalidate: true }
@@ -442,7 +442,7 @@ const TVShowDetail: React.FC = () => {
                 return imageUrlOriginal(englishLogo.file_path)
             }
             const noLanguageLogo = logos.find(
-                (logo) => logo.iso_639_1 === null || logo.iso_639_1 === ''
+                (logo) => logo.iso_639_1 == null || logo.iso_639_1 === '' || logo.iso_639_1 === 'xx' || logo.iso_639_1 === 'und'
             )
             if (noLanguageLogo) {
                 return imageUrlOriginal(noLanguageLogo.file_path)
@@ -819,7 +819,12 @@ const TVShowDetail: React.FC = () => {
         return <div className="detail-page-error">TV Show not found</div>
     }
 
-    const backdropUrl = isMobile ? imageUrl(getBestBackdropPath(details?.images?.backdrops) ?? details?.backdrop_path ?? null, "w1280") : imageUrlOriginal(getBestBackdropPath(details?.images?.backdrops) ?? details?.backdrop_path ?? null)
+    const heroPoster = isMobile ? getBestPoster(details?.images?.posters) : null
+    const backdropUrl = heroPoster
+        ? imageUrlOriginal(heroPoster)
+        : isMobile
+            ? imageUrl(getBestBackdropPath(details?.images?.backdrops) ?? details?.backdrop_path ?? null, "w1280")
+            : imageUrlOriginal(getBestBackdropPath(details?.images?.backdrops) ?? details?.backdrop_path ?? null)
     const logoUrl = getLogoUrl()
     const title = details?.name || ''
     const firstYear = details?.first_air_date?.slice(0, 4) || ''
