@@ -1,6 +1,5 @@
 import { App as CapacitorApp } from '@capacitor/app'
 import { Filesystem, Directory } from '@capacitor/filesystem'
-import { Browser } from '@capacitor/browser'
 import { isNativePlatform } from './nativePush'
 import { installAppUpdate, type InstallAppUpdateInfo } from '../plugins/installAppUpdate'
 
@@ -115,12 +114,9 @@ export const openUpdateDownload = async (): Promise<void> => {
                 fileName: 'track1st.apk',
             }
             await installAppUpdate(installInfo)
-            return
-        } catch {
-            // Fallback to browser flow if the native installer cannot be triggered.
+        } catch (error) {
+            console.error('Failed to download or install the Android update:', error)
         }
-
-        await Browser.open({ url: apkUrl })
     } else {
         window.open(ANDROID_APK_URL, '_blank')
     }

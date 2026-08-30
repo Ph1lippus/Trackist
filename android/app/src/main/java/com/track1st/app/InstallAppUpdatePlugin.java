@@ -33,7 +33,9 @@ public class InstallAppUpdatePlugin extends Plugin {
             return;
         }
 
-        File apkFile = new File(path);
+        File apkFile = path.startsWith("file://")
+            ? new File(Uri.parse(path).getPath())
+            : new File(path);
         if (!apkFile.exists()) {
             call.reject("Downloaded APK file does not exist: " + path);
             return;
