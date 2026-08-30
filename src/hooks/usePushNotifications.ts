@@ -230,17 +230,20 @@ export const usePushNotifications = () => {
 
                 const token = await getNativeToken()
 
+                const nativeEndpoint = token
                 const { error: upsertError } = await supabase
                     .from('push_subscriptions')
                     .upsert(
                         {
                             user_id: user.id,
                             platform: 'native',
+                            endpoint: nativeEndpoint,
                             token,
+                            keys: {},
                             user_agent: navigator.userAgent,
                             last_seen: new Date().toISOString(),
                         },
-                        { onConflict: 'token' }
+                        { onConflict: 'endpoint' }
                     )
 
                 if (upsertError) {
