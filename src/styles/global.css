@@ -403,8 +403,15 @@ html {
     background-attachment: fixed;
 }
 
+html,
+body {
+    overscroll-behavior: none;
+}
+
 .pwa-mobile,
-.pwa-mobile body {
+.pwa-mobile body,
+html.native-app,
+html.native-app body {
     overscroll-behavior-y: none;
 }
 
@@ -1931,6 +1938,20 @@ html.native-app *::-webkit-scrollbar {
 .upcoming-side-panel-content::-webkit-scrollbar-thumb:hover,
 .upcoming-new-scroll-container::-webkit-scrollbar-thumb:hover {
     background: rgba(133, 138, 227, 0.65);
+}
+
+/* When the edges of an inner scrollable area are reached, don't bounce or
+   drag the page behind it along for the ride. */
+.modal-content,
+.discover-grid,
+.watchlist-grid,
+.detail-page__content,
+.profile-tabs,
+.settings-sidebar,
+.upcoming-side-panel-content,
+.upcoming-new-scroll-container,
+.upcoming-main {
+    overscroll-behavior: contain;
 }
 
 /* Watchlist Grid Cols */
