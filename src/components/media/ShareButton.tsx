@@ -1,4 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { Share } from '@capacitor/share'
+import { isNativePlatform } from '../../services/nativePush'
 
 interface ShareButtonProps {
     url: string
@@ -17,14 +19,27 @@ const ShareButton: React.FC<ShareButtonProps> = ({ url, title, text }) => {
     }, [])
 
     const handleShare = async () => {
-        if (navigator.share) {
+        const shareData = { title, text, url }
+
+        if (isNativePlatform()) {
             try {
-                await navigator.share({ title, text, url })
+                await Share.share(shareData)
                 return
             } catch (err) {
                 if (err instanceof DOMException && err.name === 'AbortError') return
             }
         }
+
+        if (navigator.share) {
+            try {
+                await navigator.share(shareData)
+                return
+            } catch (err) {
+                if (err instanceof DOMException && err.name === 'AbortError') return
+            }
+        }
+
+        if (!navigator.clipboard?.writeText) return
 
         try {
             await navigator.clipboard.writeText(url)

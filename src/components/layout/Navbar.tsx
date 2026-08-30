@@ -199,8 +199,8 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     }
 
     // Selection helpers
-    const isMoviesPage = location.pathname === '/Movies' || location.pathname === '/MobileMovies';
-    const isTVShowsPage = location.pathname === '/Tvshows' || location.pathname === '/MobileTVShows';
+    const isMoviesPage = location.pathname === '/Movies';
+    const isTVShowsPage = location.pathname === '/Tvshows';
     const isFinishedPage = location.pathname === '/Finished';
     const isSelectionActive = isMoviesPage ? moviesSelectionMode : (isTVShowsPage ? tvShowsSelectionMode : (isFinishedPage ? finishedSelectionMode : false));
     const selectedCount = isMoviesPage ? moviesSelectedIds.size : (isTVShowsPage ? tvShowsSelectedIds.size : (isFinishedPage ? finishedSelectedIds.size : 0));
