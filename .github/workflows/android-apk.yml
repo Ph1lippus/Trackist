@@ -59,8 +59,10 @@ jobs:
         run: npx cap sync android
 
       - name: Stamp version
+        env:
+          VERSION: 1.2.${{ github.run_number }}
         run: |
-          VERSION="1.2.${{ github.run_number }}"
+          export VERSION="1.2.${{ github.run_number }}"
           echo "VERSION=$VERSION"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           python - <<'PY'
