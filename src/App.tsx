@@ -7,9 +7,7 @@ import { MobileProvider } from './contexts/MobileProvider'
 import { useLibraryStore } from './stores/useLibraryStore'
 import { registerSW } from 'virtual:pwa-register'
 import { App as CapacitorApp } from '@capacitor/app'
-import { initNativePush, isNativePlatform, requestNativePermission } from './services/nativePush'
-import { usePushNotifications } from './hooks/usePushNotifications'
-import ConfirmModal from './components/modals/ConfirmModal'
+import { initNativePush, isNativePlatform } from './services/nativePush'
 import {
     getInstalledVersion,
     getLatestVersion,
@@ -76,11 +74,6 @@ const AppContent: React.FC = () => {
     const [updateLoading, setUpdateLoading] = useState(false)
     const [updateSW, setUpdateSW] = useState<((reloadPage?: boolean) => Promise<void>) | null>(null)
     const [nativeUpdateVersion, setNativeUpdateVersion] = useState<string | null>(null)
-    const [showPushConfirm, setShowPushConfirm] = useState(false)
-    const [pushConfirming, setPushConfirming] = useState(false)
-    const [pushEnableError, setPushEnableError] = useState('')
-
-    const push = usePushNotifications()
 
     // Determine if running as a PWA (standalone mode)
     const isPWA = window.matchMedia('(display-mode: standalone)').matches ||
@@ -140,43 +133,8 @@ const AppContent: React.FC = () => {
         return () => window.removeEventListener('track1st:navigate', onNavigate)
     }, [navigate])
 
-    // Native (Capacitor) push: ask for the OS-level notification permission
-    // right when the app opens. If the user grants it, an in-app confirm modal
-    // asks them to actually turn on notifications before anything is saved to
-    // the database (so a DB failure never silently swallows their choice).
-    const hasRequestedNativePush = useRef(false)
-    useEffect(() => {
-        if (!isNativePlatform()) return
-        if (hasRequestedNativePush.current) return
-        if (!user) return
-        if (push.loading) return
-        if (push.subscribed) return
-        if (push.permission !== 'prompt' && push.permission !== 'granted') return
-
-        hasRequestedNativePush.current = true
-        setPushEnableError('')
-        void (async () => {
-            let perm = push.permission
-            if (perm === 'prompt') {
-                perm = await requestNativePermission()
-            }
-            if (perm === 'granted') {
-                setShowPushConfirm(true)
-            }
-        })()
-    }, [user, push.loading, push.subscribed, push.permission])
-
-    const handleConfirmPushEnable = async () => {
-        setPushConfirming(true)
-        setPushEnableError('')
-        const result = await push.enable()
-        if (result.ok) {
-            setShowPushConfirm(false)
-        } else {
-            setPushEnableError(result.error ?? 'Failed to enable notifications')
-        }
-        setPushConfirming(false)
-    }
+    // Native push must be enabled manually from Settings; the app should not
+    // force a permission prompt on first launch.
 
     // Native (Capacitor) update check: compare installed version against the
     // latest android-latest release and surface the Update Available modal.
@@ -471,26 +429,6 @@ const AppContent: React.FC = () => {
                 confirmLoading={updateLoading}
                 version={isNativePlatform() && nativeUpdateVersion ? nativeUpdateVersion : undefined}
                 confirmText={isNativePlatform() ? 'Download Update' : 'Update Now'}
-            />
-            <ConfirmModal
-                isOpen={showPushConfirm}
-                title="Turn on notifications?"
-                message={
-                    <>
-                        Enable push notifications to get notified the moment new episodes and
-                        movies you're tracking are available.
-                        {pushEnableError && (
-                            <span className="confirm-modal-error">{pushEnableError}</span>
-                        )}
-                    </>
-                }
-                onConfirm={() => void handleConfirmPushEnable()}
-                onCancel={() => setShowPushConfirm(false)}
-                confirmText={pushConfirming ? 'Turning on...' : pushEnableError ? 'Try Again' : 'Turn On'}
-                cancelText="Not now"
-                confirmColor="primary"
-                confirmLoading={pushConfirming}
-                disabled={pushConfirming}
             />
         </div>
     )
