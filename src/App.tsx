@@ -9,9 +9,9 @@ import { registerSW } from 'virtual:pwa-register'
 import { App as CapacitorApp } from '@capacitor/app'
 import { initNativePush, isNativePlatform } from './services/nativePush'
 import {
-    getInstalledVersion,
+    getInstalledVersionCode,
     getLatestVersion,
-    isNewerVersion,
+    getLatestVersionManifest,
     openUpdateDownload,
     getUpdateDismissed,
     dismissUpdateVersion,
@@ -152,12 +152,17 @@ const AppContent: React.FC = () => {
         // dismissed); returns false when the lookup itself failed.
         const check = async (): Promise<boolean> => {
             if (cancelled) return true
-            const [installed, latest] = await Promise.all([getInstalledVersion(), getLatestVersion()])
+
+            const [installed, latestManifest, latest] = await Promise.all([
+                getInstalledVersionCode(),
+                getLatestVersionManifest(),
+                getLatestVersion(),
+            ])
             if (cancelled) return true
-            if (!latest || !installed) return false
-            if (!isNewerVersion(latest, installed)) return true
-            if (getUpdateDismissed(latest)) return true
-            setNativeUpdateVersion(latest)
+            if (!latestManifest || !latest) return false
+            if (!(latestManifest.versionCode > installed)) return true
+            if (getUpdateDismissed(latestManifest.versionName)) return true
+            setNativeUpdateVersion(latestManifest.versionName)
             setShowUpdateModal(true)
             return true
         }

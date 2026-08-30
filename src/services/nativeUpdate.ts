@@ -1,10 +1,12 @@
 import { App as CapacitorApp } from '@capacitor/app'
+import { Filesystem, Directory } from '@capacitor/filesystem'
 import { Browser } from '@capacitor/browser'
 import { isNativePlatform } from './nativePush'
+import { installAppUpdate, type InstallAppUpdateInfo } from '../plugins/installAppUpdate'
 
 export const ANDROID_APK_URL = 'https://github.com/Ph1lippus/Trackist/releases/download/android-latest/track1st.apk'
+export const VERSION_MANIFEST_URL = 'https://github.com/Ph1lippus/Trackist/releases/download/android-latest/version.json'
 
-const LATEST_RELEASE_URL = 'https://api.github.com/repos/Ph1lippus/Trackist/releases/tags/android-latest'
 const DISMISS_KEY = 'track1st.native-update-dismissed'
 const DISMISS_PERIOD_MS = 7 * 24 * 60 * 60 * 1000
 const ETAG_KEY = 'track1st.native-update-etag'
@@ -13,6 +15,12 @@ const VERSION_CACHE_KEY = 'track1st.native-update-version'
 interface DismissRecord {
     version: string
     at: number
+}
+
+export interface NativeVersionManifest {
+    versionCode: number
+    versionName: string
+    apkUrl: string
 }
 
 export const isNewerVersion = (latest: string, current: string): boolean => {
@@ -27,10 +35,20 @@ export const isNewerVersion = (latest: string, current: string): boolean => {
     return false
 }
 
+export const getInstalledVersionCode = async (): Promise<number> => {
+    try {
+        const info = await CapacitorApp.getInfo()
+        const build = Number(info.build ?? '0')
+        return Number.isFinite(build) ? build : 0
+    } catch {
+        return 0
+    }
+}
+
 export const getInstalledVersion = async (): Promise<string | null> => {
     try {
         const info = await CapacitorApp.getInfo()
-        return info.version ?? null
+        return info.version ?? info.build ?? null
     } catch {
         return null
     }
@@ -38,30 +56,47 @@ export const getInstalledVersion = async (): Promise<string | null> => {
 
 export const getLatestVersion = async (): Promise<string | null> => {
     try {
+        const manifest = await getLatestVersionManifest()
+        if (!manifest) return null
+        localStorage.setItem(VERSION_CACHE_KEY, manifest.versionName)
+        return manifest.versionName
+    } catch {
+        return localStorage.getItem(VERSION_CACHE_KEY)
+    }
+}
+
+export const getLatestVersionManifest = async (): Promise<NativeVersionManifest | null> => {
+    try {
         const etag = localStorage.getItem(ETAG_KEY) || ''
-        const res = await fetch(LATEST_RELEASE_URL, {
+        const res = await fetch(VERSION_MANIFEST_URL, {
             headers: {
-                Accept: 'application/vnd.github+json',
+                Accept: 'application/json',
                 ...(etag ? { 'If-None-Match': etag } : {}),
             },
         })
 
         if (res.status === 304) {
-            return localStorage.getItem(VERSION_CACHE_KEY)
+            const cached = localStorage.getItem(VERSION_CACHE_KEY)
+            return cached ? { versionCode: 0, versionName: cached, apkUrl: ANDROID_APK_URL } : null
         }
         if (!res.ok) return null
 
-        const data = await res.json()
-        const notes = typeof data.body === 'string' ? data.body : ''
-        const match = notes.match(/^VERSION=(\d+\.\d+(?:\.\d+)?)/m)
-        const version = match ? match[1] : null
+        const data = (await res.json()) as Partial<NativeVersionManifest>
+        const versionCode = Number(data.versionCode ?? 0)
+        const versionName = String(data.versionName ?? '0.0.0')
+        const apkUrl = String(data.apkUrl ?? ANDROID_APK_URL)
+
+        if (!Number.isFinite(versionCode) || !versionName) return null
 
         const newEtag = res.headers.get('etag')
-        if (newEtag) {
-            localStorage.setItem(ETAG_KEY, newEtag)
-            if (version) localStorage.setItem(VERSION_CACHE_KEY, version)
+        if (newEtag) localStorage.setItem(ETAG_KEY, newEtag)
+        localStorage.setItem(VERSION_CACHE_KEY, versionName)
+
+        return {
+            versionCode,
+            versionName,
+            apkUrl,
         }
-        return version
     } catch {
         return null
     }
@@ -69,7 +104,26 @@ export const getLatestVersion = async (): Promise<string | null> => {
 
 export const openUpdateDownload = async (): Promise<void> => {
     if (isNativePlatform()) {
-        await Browser.open({ url: ANDROID_APK_URL })
+        const manifest = await getLatestVersionManifest()
+        const apkUrl = manifest?.apkUrl ?? ANDROID_APK_URL
+
+        try {
+            const download = await Filesystem.downloadFile({
+                url: apkUrl,
+                path: 'updates/track1st.apk',
+                directory: Directory.Cache,
+            })
+            const installInfo: InstallAppUpdateInfo = {
+                path: download.path ?? 'updates/track1st.apk',
+                fileName: 'track1st.apk',
+            }
+            await installAppUpdate(installInfo)
+            return
+        } catch {
+            // Fallback to browser flow if the native installer cannot be triggered.
+        }
+
+        await Browser.open({ url: apkUrl })
     } else {
         window.open(ANDROID_APK_URL, '_blank')
     }

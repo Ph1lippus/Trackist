@@ -104,9 +104,19 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          python - <<'PY'
+          import json, os
+          with open('version.json', 'w', encoding='utf-8') as f:
+              json.dump({
+                  'versionCode': int(os.environ['GITHUB_RUN_NUMBER']),
+                  'versionName': os.environ['VERSION'],
+                  'apkUrl': 'https://github.com/Ph1lippus/Trackist/releases/download/android-latest/track1st.apk',
+              }, f, separators=(',', ':'))
+          PY
           gh release delete android-latest --yes --cleanup-tag 2>/dev/null || true
           gh release create android-latest \
             "track1st.apk" \
+            "version.json" \
             --title "Track1st Android (latest)" \
             --notes "VERSION=${VERSION}
             Auto-built from the latest main branch. Download and open the APK on your Android phone to install Track1st."
@@ -115,4 +125,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: track1st-apk
-          path: track1st.apk
+          path: |
+            track1st.apk
+            version.json
