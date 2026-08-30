@@ -822,9 +822,7 @@ const TVShowDetail: React.FC = () => {
     const heroPoster = isMobile ? getBestPoster(details?.images?.posters) : null
     const backdropUrl = heroPoster
         ? imageUrlOriginal(heroPoster)
-        : isMobile
-            ? imageUrl(getBestBackdropPath(details?.images?.backdrops) ?? details?.backdrop_path ?? null, "w1280")
-            : imageUrlOriginal(getBestBackdropPath(details?.images?.backdrops) ?? details?.backdrop_path ?? null)
+        : imageUrlOriginal(getBestBackdropPath(details?.images?.backdrops) ?? details?.backdrop_path ?? null)
     const logoUrl = getLogoUrl()
     const title = details?.name || ''
     const firstYear = details?.first_air_date?.slice(0, 4) || ''
