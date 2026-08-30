@@ -98,12 +98,25 @@ export const getLatestVersionManifest = async (): Promise<NativeVersionManifest 
     }
 }
 
-export const openUpdateDownload = async (): Promise<boolean> => {
+export type UpdateStartResult = 'started' | 'permission-needed' | 'failed'
+
+export const openUpdateDownload = async (): Promise<UpdateStartResult> => {
     if (isNativePlatform()) {
         const manifest = await getLatestVersionManifest()
-        if (!manifest) return false
+        if (!manifest) return 'failed'
 
         try {
+            // The APK is written to <cache>/updates/. The Android filesystem
+            // plugin won't create that folder for us, so do it first or the
+            // download silently fails.
+            await Filesystem.mkdir({
+                path: 'updates',
+                directory: Directory.Cache,
+                recursive: true,
+            }).catch(() => {
+                // Already exists, ignore.
+            })
+
             const download = await Filesystem.downloadFile({
                 url: manifest.apkUrl,
                 path: 'updates/track1st.apk',
@@ -113,14 +126,15 @@ export const openUpdateDownload = async (): Promise<boolean> => {
                 path: download.path ?? 'updates/track1st.apk',
                 fileName: 'track1st.apk',
             }
-            return await installAppUpdate(installInfo)
+            const started = await installAppUpdate(installInfo)
+            return started ? 'started' : 'permission-needed'
         } catch (error) {
             console.error('Failed to download or install the Android update:', error)
-            return false
+            return 'failed'
         }
     } else {
         window.open(ANDROID_APK_URL, '_blank')
-        return true
+        return 'started'
     }
 }
 

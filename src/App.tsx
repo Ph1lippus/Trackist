@@ -330,14 +330,16 @@ const AppContent: React.FC = () => {
         if (isNativePlatform()) {
             setUpdateLoading(true)
             setUpdateError(null)
-            const started = await openUpdateDownload()
+            const result = await openUpdateDownload()
             setUpdateLoading(false)
-            if (started) {
+            if (result === 'started') {
                 if (nativeUpdateVersion) dismissUpdateVersion(nativeUpdateVersion)
                 setShowUpdateModal(false)
                 setNativeUpdateVersion(null)
+            } else if (result === 'permission-needed') {
+                setUpdateError('The update could not be started. In Android settings, allow Track1st to \u201cInstall unknown apps\u201d, then try again.')
             } else {
-                setUpdateError('The update could not be started. Allow app installs in Android settings, then try again.')
+                setUpdateError('The update could not be downloaded or started. Check your connection and try again.')
             }
             return
         }

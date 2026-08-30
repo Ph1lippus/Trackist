@@ -1,6 +1,7 @@
 package com.track1st.app;
 
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
@@ -58,12 +59,19 @@ public class InstallAppUpdatePlugin extends Plugin {
                 apkFile
         );
 
-        Intent installIntent = new Intent(Intent.ACTION_INSTALL_PACKAGE);
+        // ACTION_VIEW with the APK's content URI is what system installers
+        // advertise for this. ACTION_INSTALL_PACKAGE was removed on Android 11+,
+        // so it would throw and the update would never start.
+        Intent installIntent = new Intent(Intent.ACTION_VIEW);
         installIntent.setDataAndType(contentUri, "application/vnd.android.package-archive");
         installIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         installIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
-        activity.startActivity(installIntent);
-        call.resolve(new JSObject().put("value", true));
+        try {
+            activity.startActivity(installIntent);
+            call.resolve(new JSObject().put("value", true));
+        } catch (ActivityNotFoundException e) {
+            call.reject("No package installer activity was found to start the update.");
+        }
     }
 }
