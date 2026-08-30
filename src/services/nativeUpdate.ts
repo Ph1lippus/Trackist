@@ -9,7 +9,6 @@ export const VERSION_MANIFEST_URL = 'https://github.com/Ph1lippus/Trackist/relea
 
 const DISMISS_KEY = 'track1st.native-update-dismissed'
 const DISMISS_PERIOD_MS = 7 * 24 * 60 * 60 * 1000
-const ETAG_KEY = 'track1st.native-update-etag'
 const VERSION_CACHE_KEY = 'track1st.native-update-version'
 const VERSION_CODE_CACHE_KEY = 'track1st.native-update-version-code'
 
@@ -68,21 +67,13 @@ export const getLatestVersion = async (): Promise<string | null> => {
 
 export const getLatestVersionManifest = async (): Promise<NativeVersionManifest | null> => {
     try {
-        const etag = localStorage.getItem(ETAG_KEY) || ''
-        const res = await fetch(VERSION_MANIFEST_URL, {
+        const res = await fetch(`${VERSION_MANIFEST_URL}?t=${Date.now()}`, {
+            cache: 'no-store',
             headers: {
                 Accept: 'application/json',
-                ...(etag ? { 'If-None-Match': etag } : {}),
             },
         })
 
-        if (res.status === 304) {
-            const cached = localStorage.getItem(VERSION_CACHE_KEY)
-            const cachedCode = Number(localStorage.getItem(VERSION_CODE_CACHE_KEY) ?? 0)
-            return cached && cachedCode > 0
-                ? { versionCode: cachedCode, versionName: cached, apkUrl: ANDROID_APK_URL }
-                : null
-        }
         if (!res.ok) return null
 
         const data = (await res.json()) as Partial<NativeVersionManifest>
@@ -92,8 +83,6 @@ export const getLatestVersionManifest = async (): Promise<NativeVersionManifest 
 
         if (!Number.isFinite(versionCode) || !versionName) return null
 
-        const newEtag = res.headers.get('etag')
-        if (newEtag) localStorage.setItem(ETAG_KEY, newEtag)
         localStorage.setItem(VERSION_CACHE_KEY, versionName)
         localStorage.setItem(VERSION_CODE_CACHE_KEY, String(versionCode))
 

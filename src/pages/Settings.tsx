@@ -15,7 +15,7 @@ import { useAuthStore } from '../stores/useAuthStore'
 import { TimezonePicker } from '../components/settings/TimezonePicker'
 import { CountryPicker } from '../components/settings/CountryPicker'
 import { isNativePlatform } from '../services/nativePush'
-import { getInstalledVersion, getLatestVersion, isNewerVersion } from '../services/nativeUpdate'
+import { getInstalledVersion, getLatestVersionManifest, isNewerVersion } from '../services/nativeUpdate'
 
 type SettingsSection = 'account' | 'profile' | 'security' | 'notifications' | 'app' | 'data' | 'additions' | 'danger'
 type NotificationPrefField = 'notify_new_episode' | 'notify_new_season' | 'notify_release_date' | 'movie_notify_on_digital'
@@ -386,12 +386,12 @@ const Settings: React.FC = () => {
         setAppVersionLoading(true)
         setAppVersionMessage('')
         try {
-            const [installed, latest] = await Promise.all([getInstalledVersion(), getLatestVersion()])
-            if (!latest || !installed) {
-                setAppVersionMessage(latest ? 'You are on the latest version.' : 'Could not reach the update server.')
-            } else if (isNewerVersion(latest, installed)) {
+            const [installed, manifest] = await Promise.all([getInstalledVersion(), getLatestVersionManifest()])
+            if (!manifest || !installed) {
+                setAppVersionMessage('Could not reach the update server.')
+            } else if (isNewerVersion(manifest.versionName, installed)) {
                 window.dispatchEvent(new Event('track1st:check-update'))
-                setAppVersionMessage(`An update to v${latest} is available.`)
+                setAppVersionMessage(`An update to v${manifest.versionName} is available.`)
             } else {
                 setAppVersionMessage('You are on the latest version.')
             }

@@ -10,7 +10,6 @@ import { App as CapacitorApp } from '@capacitor/app'
 import { initNativePush, isNativePlatform } from './services/nativePush'
 import {
     getInstalledVersionCode,
-    getLatestVersion,
     getLatestVersionManifest,
     openUpdateDownload,
     getUpdateDismissed,
@@ -153,13 +152,12 @@ const AppContent: React.FC = () => {
         const check = async (): Promise<boolean> => {
             if (cancelled) return true
 
-            const [installed, latestManifest, latest] = await Promise.all([
+            const [installed, latestManifest] = await Promise.all([
                 getInstalledVersionCode(),
                 getLatestVersionManifest(),
-                getLatestVersion(),
             ])
             if (cancelled) return true
-            if (!latestManifest || !latest) return false
+            if (!latestManifest) return false
             if (!(latestManifest.versionCode > installed)) return true
             if (getUpdateDismissed(latestManifest.versionName)) return true
             setNativeUpdateVersion(latestManifest.versionName)
