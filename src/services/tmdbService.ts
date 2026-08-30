@@ -179,7 +179,7 @@ export const getMovieDetails = async (id: number): Promise<{
         }[]
     }
 }> => {
-    const res = await tmdbProxy(`/movie/${id}?append_to_response=images,external_ids,credits,videos,release_dates`)
+    const res = await tmdbProxy(`/movie/${id}?append_to_response=images,external_ids,credits,videos,release_dates&include_image_language=en,null`)
     if (!res.ok) {
         throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
     }
@@ -224,7 +224,7 @@ export const getTVShowDetails = async (id: number): Promise<{
         }[]
     }
 }> => {
-    const res = await tmdbProxy(`/tv/${id}?append_to_response=images,external_ids,credits,videos,content_ratings`)
+    const res = await tmdbProxy(`/tv/${id}?append_to_response=images,external_ids,credits,videos,content_ratings&include_image_language=en,null`)
     if (!res.ok) {
         throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
     }
@@ -370,7 +370,10 @@ export const getExternalIds = async (id: number, mediaType: 'movie' | 'tv'): Pro
 
 
 const isNoLanguageCode = (value?: string | null): boolean => {
-    return value == null || value === '' || value === 'xx' || value === 'und'
+    if (value == null) return true
+    if (value.trim() === '') return true
+    const normalized = value.trim().toLowerCase().replace(/[-_].*$/, '')
+    return normalized === 'xx' || normalized === 'und'
 }
 
 export const getBestBackdropPath = (backdrops: any[] | undefined | null): string | null => {
