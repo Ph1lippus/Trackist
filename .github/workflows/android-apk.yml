@@ -63,8 +63,16 @@ jobs:
           VERSION="1.2.${{ github.run_number }}"
           echo "VERSION=$VERSION"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          sed -i "s/versionName \"[^"]*\"/versionName \"$VERSION\"/" android/app/build.gradle
-          sed -i "s/versionCode [0-9]\+/versionCode ${{ github.run_number }}/" android/app/build.gradle
+          python - <<'PY'
+          import os, re
+          from pathlib import Path
+          version = os.environ['VERSION']
+          app_gradle = Path('android/app/build.gradle')
+          text = app_gradle.read_text()
+          text = re.sub(r'versionName\s+"[^"]*"', f'versionName "{version}"', text)
+          text = re.sub(r'versionCode\s+\d+', f'versionCode {os.environ["GITHUB_RUN_NUMBER"]}', text)
+          app_gradle.write_text(text)
+          PY
 
       - name: Ensure stable signing key
         run: |
