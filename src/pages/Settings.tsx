@@ -596,7 +596,7 @@ const Settings: React.FC = () => {
         { id: 'profile', label: 'Profile', icon: 'fa-id-card' },
         { id: 'security', label: 'Security', icon: 'fa-shield-halved' },
         { id: 'notifications', label: 'Notifications', icon: 'fa-bell' },
-        ...(isNative ? [] : [{ id: 'app' as const, label: 'App', icon: 'fa-mobile-screen' }]),
+        { id: 'app', label: 'App', icon: 'fa-mobile-screen' },
         { id: 'data', label: 'Data & Cache', icon: 'fa-database' },
         { id: 'additions', label: 'Additions', icon: 'fa-puzzle-piece' },
         { id: 'danger', label: 'Danger Zone', icon: 'fa-triangle-exclamation' }
@@ -966,7 +966,7 @@ const Settings: React.FC = () => {
                             <div className="settings-panel">
                                 <div className="settings-panel__header">
                                     <h3>App</h3>
-                                    <p>Install Track1st as a native Android app</p>
+                                    <p>{isNative ? 'Manage your Track1st app and updates' : 'Install Track1st as a native Android app'}</p>
                                 </div>
 
                                 {isNative && (
