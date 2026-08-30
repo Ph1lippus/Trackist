@@ -15,7 +15,7 @@ export default defineConfig({
         name: 'Track1st',
         short_name: 'Track1st',
         description: 'Track your movies, TV shows, and anime — all in one place.',
-        theme_color: '#050505',
+        theme_color: '#12121c',
         background_color: '#050505',
         display: 'standalone',
         orientation: 'portrait-primary',

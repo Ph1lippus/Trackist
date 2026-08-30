@@ -467,12 +467,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                          Admin Center
                                      </button>
                                  )}
-                                 <button className="t-dropdown-item" onClick={() => {
-                                     closeMenu();
-                                     navigate('/Profile');
-                                 }}>
-                                     Profile
-                                 </button>
                                  {showRandomPick && (
                                      <button className="t-dropdown-item" onClick={handleRandomPick}>
                                          {isMoviesPage ? 'Random Movie' : 'Random TV Show'}

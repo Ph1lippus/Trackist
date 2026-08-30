@@ -10417,7 +10417,6 @@ i.fa-solid.fa-trash:hover {
     padding: 0.35rem 0;
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
-    border-radius: 25px 25px 0px 0px;
 }
 
 .mobile-bottom-navbar-inner {
@@ -10432,9 +10431,11 @@ i.fa-solid.fa-trash:hover {
 
 .mobile-bottom-navbar-link {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 0.7rem 1rem;
+    gap: 0.25rem;
+    padding: 0.5rem 0.25rem;
     color: var(--color-platinum);
     text-decoration: none;
     font-size: 0.6rem;
@@ -10447,9 +10448,13 @@ i.fa-solid.fa-trash:hover {
 }
 
 .mobile-bottom-navbar-link i {
-    font-size: 1.15rem;
-    transition: all 0.2s ease;
+    font-size: 1.4rem;
     line-height: 1;
+    height: 1.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
 }
 
 .mobile-bottom-navbar-label {
@@ -10457,17 +10462,27 @@ i.fa-solid.fa-trash:hover {
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 100%;
+    font-size: 0.6875rem;
     line-height: 1.2;
 }
 
 .mobile-bottom-navbar-link.active {
     color: var(--color-primary);
-    background: rgba(133, 138, 227, 0.12);
-    border-radius: 14px;
 }
 
-.mobile-bottom-navbar-link.active i {
-    transform: scale(1.1);
+.mobile-bottom-navbar-avatar {
+    width: 1.4rem;
+    height: 1.4rem;
+    box-sizing: border-box;
+    border-radius: 50%;
+    object-fit: cover;
+    display: block;
+    border: 2px solid rgba(255, 255, 255, 0.45);
+    transition: border-color 0.2s ease;
+}
+
+.mobile-bottom-navbar-link.active .mobile-bottom-navbar-avatar {
+    border-color: var(--color-primary);
 }
 
 
