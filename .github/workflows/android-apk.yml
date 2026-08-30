@@ -60,11 +60,11 @@ jobs:
 
       - name: Stamp version
         run: |
-          VERSION="1.0.${{ github.run_number }}"
+          VERSION="1.2.${{ github.run_number }}"
           echo "VERSION=$VERSION"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          sed -i "s/versionName \"1.0\"/versionName \"$VERSION\"/" android/app/build.gradle
-          sed -i "s/versionCode 1/versionCode ${{ github.run_number }}/" android/app/build.gradle
+          sed -i "s/versionName \"[^"]*\"/versionName \"$VERSION\"/" android/app/build.gradle
+          sed -i "s/versionCode [0-9]\+/versionCode ${{ github.run_number }}/" android/app/build.gradle
 
       - name: Ensure stable signing key
         run: |
