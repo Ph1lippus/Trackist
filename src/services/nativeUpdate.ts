@@ -98,14 +98,14 @@ export const getLatestVersionManifest = async (): Promise<NativeVersionManifest 
     }
 }
 
-export const openUpdateDownload = async (): Promise<void> => {
+export const openUpdateDownload = async (): Promise<boolean> => {
     if (isNativePlatform()) {
         const manifest = await getLatestVersionManifest()
-        const apkUrl = manifest?.apkUrl ?? ANDROID_APK_URL
+        if (!manifest) return false
 
         try {
             const download = await Filesystem.downloadFile({
-                url: apkUrl,
+                url: manifest.apkUrl,
                 path: 'updates/track1st.apk',
                 directory: Directory.Cache,
             })
@@ -113,12 +113,14 @@ export const openUpdateDownload = async (): Promise<void> => {
                 path: download.path ?? 'updates/track1st.apk',
                 fileName: 'track1st.apk',
             }
-            await installAppUpdate(installInfo)
+            return await installAppUpdate(installInfo)
         } catch (error) {
             console.error('Failed to download or install the Android update:', error)
+            return false
         }
     } else {
         window.open(ANDROID_APK_URL, '_blank')
+        return true
     }
 }
 

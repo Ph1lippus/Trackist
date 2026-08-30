@@ -6,6 +6,7 @@ interface PWAUpdateModalProps {
     onDismiss: () => void
     version?: string
     confirmLoading?: boolean
+    error?: string
     confirmText?: string
     cancelText?: string
 }
@@ -16,6 +17,7 @@ const PWAUpdateModal: React.FC<PWAUpdateModalProps> = ({
     onDismiss,
     version,
     confirmLoading = false,
+    error,
     confirmText = 'Update Now',
     cancelText = 'Later'
 }) => {
@@ -69,6 +71,7 @@ const PWAUpdateModal: React.FC<PWAUpdateModalProps> = ({
             >
                 <h3 className="confirm-modal-title">{title}</h3>
                 <p className="confirm-modal-message">{message}</p>
+                {error && <p className="confirm-modal-message" style={{ color: '#ff8f8f' }}>{error}</p>}
                 <div className="confirm-modal-actions">
                     <button
                         onClick={onDismiss}

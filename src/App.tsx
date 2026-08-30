@@ -71,6 +71,7 @@ const AppContent: React.FC = () => {
     const hasUpdatedLastActive = useRef(false)
     const [showUpdateModal, setShowUpdateModal] = useState(false)
     const [updateLoading, setUpdateLoading] = useState(false)
+    const [updateError, setUpdateError] = useState<string | null>(null)
     const [updateSW, setUpdateSW] = useState<((reloadPage?: boolean) => Promise<void>) | null>(null)
     const [nativeUpdateVersion, setNativeUpdateVersion] = useState<string | null>(null)
 
@@ -327,10 +328,17 @@ const AppContent: React.FC = () => {
 
     const handleUpdate = async () => {
         if (isNativePlatform()) {
-            if (nativeUpdateVersion) dismissUpdateVersion(nativeUpdateVersion)
-            setShowUpdateModal(false)
-            setNativeUpdateVersion(null)
-            await openUpdateDownload()
+            setUpdateLoading(true)
+            setUpdateError(null)
+            const started = await openUpdateDownload()
+            setUpdateLoading(false)
+            if (started) {
+                if (nativeUpdateVersion) dismissUpdateVersion(nativeUpdateVersion)
+                setShowUpdateModal(false)
+                setNativeUpdateVersion(null)
+            } else {
+                setUpdateError('The update could not be started. Allow app installs in Android settings, then try again.')
+            }
             return
         }
 
@@ -456,6 +464,7 @@ const AppContent: React.FC = () => {
                 onUpdate={handleUpdate}
                 onDismiss={handleDismissUpdate}
                 confirmLoading={updateLoading}
+                error={updateError ?? undefined}
                 version={isNativePlatform() && nativeUpdateVersion ? nativeUpdateVersion : undefined}
                 confirmText={isNativePlatform() ? 'Download Update' : 'Update Now'}
             />

@@ -17,6 +17,7 @@ const InstallAppUpdate = registerPlugin<InstallAppUpdatePlugin>('InstallAppUpdat
   }),
 })
 
-export const installAppUpdate = async (options: InstallAppUpdateInfo): Promise<void> => {
-  await InstallAppUpdate.install(options)
+export const installAppUpdate = async (options: InstallAppUpdateInfo): Promise<boolean> => {
+  const result = await InstallAppUpdate.install(options)
+  return result.value
 }
