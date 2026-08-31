@@ -183,7 +183,7 @@
         padding-top: 0 !important;
     }
     .detail-page__logo{
-        max-width: 300px!important;
+        max-width: 280px!important;
         margin: 0 auto;
     }
     .discover-tabs{
@@ -8156,9 +8156,6 @@ i.fa-solid.fa-trash:hover {
     padding-bottom: 1.5rem;
 }
 
-.profile-hero {
-    
-}
 
 .profile-hero__banner {
     height: 120px;
@@ -8326,9 +8323,6 @@ i.fa-solid.fa-trash:hover {
     flex-wrap: wrap;
 }
 
-.profile-stat {
-    
-}
 
 .upcoming-new-date-main {
     margin-left: 10px;
@@ -10726,7 +10720,7 @@ i.fa-solid.fa-trash:hover {
     height: 36px;
     padding: 0;
     border: none;
-    border-radius: 50%;
+    border-radius: 25px 0px 0px 25px;
     background: rgba(255, 255, 255, 0.07);
     color: rgba(255, 255, 255, 0.75);
     font-size: 0.9rem;
