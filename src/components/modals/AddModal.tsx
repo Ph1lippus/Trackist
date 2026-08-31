@@ -64,10 +64,10 @@ const AddModal: React.FC<AddModalProps> = ({ item, onClose, onAdd, onAddWatchlis
         loadEpisodes()
     }, [item.id, isTV])
 
-    const filteredEpisodes = episodes.filter(ep => ep.season_number === selectedSeason)
+const filteredEpisodes = episodes.filter(ep => ep.season_number === selectedSeason && !!ep.air_date)
 
     const isEpisodeReleased = (episode: Episode): boolean => {
-        if (!episode.air_date) return true
+        if (!episode.air_date) return false
         return new Date(episode.air_date) <= new Date()
     }
 

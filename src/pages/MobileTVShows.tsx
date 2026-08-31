@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useCallback, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getTVDetails, getTVSeasonDetails, getTVEpisodeDetails, imageUrl } from '../services/tmdbService'
+import { getTVEpisodeDetails, imageUrl } from '../services/tmdbService'
 import { markEpisodesWatched, checkAndUpdateCompleted } from '../services/watchlistService'
 
 import { useLibraryStore } from '../stores/useLibraryStore'
@@ -9,7 +9,6 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import { useMobile } from '../contexts/useMobile'
 import { useSearch } from '../hooks/useSearch'
 import { useMissingPosters } from '../hooks/useMissingPosters'
-import { supabase } from '../services/supabaseClient'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import ViewToggleButton from '../components/layout/ViewToggleButton'
 import { getCachedOrFetch } from '../services/cacheService'
@@ -109,85 +108,6 @@ const MobileTVShows: React.FC = () => {
         }
     }, [watching, toWatch, paused])
 
-    // Check for new episodes on completed/caught_up shows so they move back to "watching"
-    useEffect(() => {
-        const checkForNewEpisodes = async () => {
-            const currentStore = useLibraryStore.getState()
-            const currentTvShows = currentStore.tvShows
-
-            if (!isInitialized || currentTvShows.length === 0) return
-
-            const completedShows = currentTvShows.filter(
-                item => (item.status === 'completed' || item.status === 'caught_up' || (
-                    item.status === 'watching' &&
-                    item.total_episodes !== undefined &&
-                    item.total_episodes > 0 &&
-                    (item.watched_episodes_count ?? 0) >= item.total_episodes
-                )) &&
-                (item.watched_episodes_count ?? 0) > 0 &&
-                item.total_episodes !== undefined
-            )
-
-            if (completedShows.length === 0) return
-
-            const checks = completedShows.map(async (show) => {
-                if (!show.tmdb_id) return
-                try {
-                    const details = await getTVDetails(show.tmdb_id)
-                    const currentTotalEpisodes = details.number_of_episodes || 0
-                    const storedTotalEpisodes = show.total_episodes || 0
-
-                    if (currentTotalEpisodes > storedTotalEpisodes) {
-                        const latestSeasonNumber = details.number_of_seasons || 1
-                        const seasonData = await getTVSeasonDetails(show.tmdb_id, latestSeasonNumber)
-                        const newEpisodes = seasonData.episodes?.filter((ep: { episode_number: number; air_date?: string }) => ep.episode_number > storedTotalEpisodes) || []
-
-                        const hasReleasedEpisodes = newEpisodes.some((ep: { episode_number: number; air_date?: string }) => {
-                            if (!ep.air_date) return true
-                            return new Date(ep.air_date) <= new Date()
-                        })
-
-                        if (hasReleasedEpisodes) {
-                            await supabase
-                                .from("watchlist")
-                                .update({
-                                    status: "watching",
-                                    total_episodes: currentTotalEpisodes,
-                                    total_seasons: details.number_of_seasons || show.total_seasons
-                                })
-                                .eq("id", show.id)
-
-                            await useLibraryStore.getState().refreshItem(show.id)
-                        }
-                    }
-                } catch (err) {
-                    console.error(`Failed to check for new episodes for ${show.title}:`, err)
-                }
-            })
-
-            await Promise.allSettled(checks)
-            }
-
-        const initialCheckTimeout = setTimeout(checkForNewEpisodes, 2000)
-
-        const interval = setInterval(() => { checkForNewEpisodes() }, 15 * 60 * 1000)
-
-        let visibilityTimeout: ReturnType<typeof setTimeout>
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === "visible") {
-                clearTimeout(visibilityTimeout)
-                visibilityTimeout = setTimeout(checkForNewEpisodes, 2000)
-            }
-        }
-        document.addEventListener('visibilitychange', handleVisibilityChange)
-
-        return () => {
-            clearTimeout(initialCheckTimeout)
-            clearInterval(interval)
-            document.removeEventListener('visibilitychange', handleVisibilityChange)
-        }
-    }, [isInitialized])
-
     const getEpisodesLeft = (show: WatchlistItem): number | undefined => {
         if (show.total_episodes === undefined) return undefined
         const watched = show.watched_episodes_count ?? 0
@@ -253,7 +173,7 @@ const MobileTVShows: React.FC = () => {
                 // season data we already fetched, so the service layer can skip
                 // the TMDB-heavy next-episode lookup (keeps "add episode" fast).
                 const released = (seasonData.episodes || []).filter(
-                    (e: { air_date?: string }) => !e.air_date || new Date(e.air_date) <= new Date()
+                    (e: { air_date?: string }) => e.air_date && new Date(e.air_date) <= new Date()
                 )
                 const nextSame = released.find(
                     (e: { episode_number: number }) => e.episode_number === ep.episode_number + 1
@@ -329,7 +249,7 @@ const MobileTVShows: React.FC = () => {
                         runtime: ep.runtime
                     }
                     const released = (seasonData.episodes || []).filter(
-                        (e: { air_date?: string }) => !e.air_date || new Date(e.air_date) <= new Date()
+                        (e: { air_date?: string }) => e.air_date && new Date(e.air_date) <= new Date()
                     )
                     const nextSame = released.find(
                         (e: { episode_number: number }) => e.episode_number === ep.episode_number + 1

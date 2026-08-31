@@ -85,7 +85,7 @@ const TVShowDetail: React.FC = () => {
     const episodeListRef = useRef<HTMLDivElement>(null)
 
     const isEpisodeReleased = (episode: LocalEpisode): boolean => {
-        if (!episode.air_date) return true
+        if (!episode.air_date) return false
         return new Date(episode.air_date) <= new Date()
     }
 
@@ -206,6 +206,7 @@ const TVShowDetail: React.FC = () => {
         try {
             const seasonData = await getTVSeasonDetails(Number(id), seasonNumber)
             const sEpisodes = seasonData.episodes || []
+            const today = new Date()
             const seasonEpisodes: LocalEpisode[] = []
             
             for (const ep of sEpisodes) {
@@ -223,6 +224,25 @@ const TVShowDetail: React.FC = () => {
                     runtime: ep.runtime,
                     watched: watchedKeysCache.current.has(key)
                 })
+            }
+            
+            // Check if this season has any released episodes
+            const hasReleased = seasonEpisodes.some(ep => ep.air_date && new Date(ep.air_date) <= today)
+            if (!hasReleased && seasonEpisodes.length > 0) {
+                // Remove this season from the list since it has no viewable episodes
+                setSeasons(prev => {
+                    const updated = prev.filter(s => s !== seasonNumber)
+                    // Auto-select another season if the removed one was selected
+                    if (updated.length > 0 && selectedSeason === seasonNumber) {
+                        const idx = prev.indexOf(seasonNumber)
+                        const fallback = updated[Math.min(idx, updated.length - 1)]
+                        setSelectedSeason(fallback)
+                        // Load the fallback season
+                        loadSeason(fallback)
+                    }
+                    return updated
+                })
+                return
             }
             
             seasonCache.current.set(seasonNumber, seasonEpisodes)
@@ -264,10 +284,13 @@ const TVShowDetail: React.FC = () => {
             if (!details || !id || !isLibraryInitialized) return
             
             try {
-                // Filter out seasons with 0 episodes (empty seasons)
+                // Filter out seasons with 0 episodes, no air_date, or future air_date
+                const today = new Date()
                 const seasonList = (details.seasons || [])
-                    .filter((s: { season_number: number; episode_count?: number }) => 
-                        s.season_number > 0 && (s.episode_count === undefined || s.episode_count > 0)
+                    .filter((s: { season_number: number; episode_count?: number; air_date?: string }) => 
+                        s.season_number > 0 &&
+                        (s.episode_count === undefined || s.episode_count > 0) &&
+                        !!s.air_date && new Date(s.air_date) <= today
                     )
                     .map((s: { season_number: number }) => s.season_number)
                 setSeasons(seasonList)
@@ -809,7 +832,7 @@ const TVShowDetail: React.FC = () => {
         }
     }
 
-    const filteredEpisodes = episodes.filter(ep => ep.season_number === selectedSeason)
+    const filteredEpisodes = episodes.filter(ep => ep.season_number === selectedSeason && !!ep.air_date)
 
     if (loading) {
         return <div className="detail-page-loading" aria-live="polite">Loading TV show...</div>

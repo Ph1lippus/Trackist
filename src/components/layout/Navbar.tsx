@@ -593,25 +593,16 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
             <div className={`container navbar-inner${showBackButton ? '' : ' no-back-btn'}`}>
                 <div className="navbar-left">
                     {showBackButton && (
-                        <ChevronLeft
+                        <button
                             className="navbar-back-btn"
-                            size={18}
-                            strokeWidth={2.5}
                             onClick={() => {
                                 sessionStorage.setItem('scrollPosition', window.scrollY.toString());
                                 navigate(-1);
                             }}
-                            role="button"
-                            tabIndex={0}
                             aria-label="Go back"
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                    e.preventDefault();
-                                    sessionStorage.setItem('scrollPosition', window.scrollY.toString());
-                                    navigate(-1);
-                                }
-                            }}
-                        />
+                        >
+                            <ChevronLeft size={16} strokeWidth={2.5} />
+                        </button>
                     )}
                 </div>
                 

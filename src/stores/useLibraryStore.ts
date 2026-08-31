@@ -584,10 +584,20 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         if ((item.media_type === 'tv' || item.media_type === 'anime') && item.tmdb_id) {
             try {
                 const { getTVDetails } = await import('../services/tmdbService')
+                const { countReleasedEpisodesAcrossSeasons } = await import('../services/watchlistService')
                 const details = await getTVDetails(item.tmdb_id)
+                // Use the released-episode count so the "episodes left" badge is
+                // accurate (unreleased & no-date episodes are excluded). Falls back
+                // to TMDB's total if the precise count can't be computed.
+                let released = 0
+                try {
+                    released = await countReleasedEpisodesAcrossSeasons(item.tmdb_id)
+                } catch {
+                    released = 0
+                }
                 enhancedItem = {
                     ...item,
-                    total_episodes: details.number_of_episodes || 0,
+                    total_episodes: released > 0 ? released : (details.number_of_episodes || 0),
                     total_seasons: details.number_of_seasons || 1,
                 }
             } catch (error) {
@@ -710,10 +720,17 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             if ((data.media_type === 'tv' || data.media_type === 'anime') && data.tmdb_id && (!data.total_episodes || !data.total_seasons)) {
                 try {
                     const { getTVDetails } = await import('../services/tmdbService')
+                    const { countReleasedEpisodesAcrossSeasons } = await import('../services/watchlistService')
                     const details = await getTVDetails(data.tmdb_id)
+                    let released = 0
+                    try {
+                        released = await countReleasedEpisodesAcrossSeasons(data.tmdb_id)
+                    } catch {
+                        released = 0
+                    }
                     enhancedData = {
                         ...data,
-                        total_episodes: details.number_of_episodes || 0,
+                        total_episodes: released > 0 ? released : (details.number_of_episodes || 0),
                         total_seasons: details.number_of_seasons || 1,
                     }
                     needsDbUpdate = true

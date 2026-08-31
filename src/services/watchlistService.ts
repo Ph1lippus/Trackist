@@ -136,7 +136,7 @@ export const getNextEpisodeToWatch = async (watchlistId: string, skipCache: bool
                 if (watchedSet.has(`${cachedNextSeason}-${ep.episode_number}`)) continue
 
                 // Skip if not released yet
-                if (ep.air_date && new Date(ep.air_date) > new Date()) continue
+                if (!ep.air_date || new Date(ep.air_date) > new Date()) continue
 
                 return {
                     season_number: cachedNextSeason,
@@ -168,7 +168,7 @@ export const getNextEpisodeToWatch = async (watchlistId: string, skipCache: bool
                 if (watchedSet.has(`${seasonNum}-${ep.episode_number}`)) continue
 
                 // Skip if not released yet
-                if (ep.air_date && new Date(ep.air_date) > new Date()) continue
+                if (!ep.air_date || new Date(ep.air_date) > new Date()) continue
 
                 return {
                     season_number: seasonNum,
@@ -240,6 +240,53 @@ type WatchedEpisodeData = {
     vote_average?: number
     air_date?: string
     runtime?: number
+}
+
+/**
+ * Count the number of RELEASED episodes across all seasons of a show.
+ *
+ * An episode is considered "released" only if it has an air_date that is today
+ * or in the past. Episodes missing an air_date, or with a future air_date, are
+ * NOT counted (the user cannot watch them yet).
+ *
+ * Optimization: seasons whose metadata air_date is in the future are skipped
+ * entirely (0 released episodes) without fetching that season's episode list,
+ * which avoids unnecessary TMDB calls for not-yet-started seasons.
+ */
+export const countReleasedEpisodesAcrossSeasons = async (tmdbId: number): Promise<number> => {
+    const details = await getTVDetails(tmdbId)
+    const today = new Date()
+
+    const seasonNumbers = (details.seasons || [])
+        .filter((s: { season_number: number; episode_count?: number; air_date?: string }) => {
+            if (s.season_number <= 0) return false
+            if (s.episode_count === 0) return false
+            // Skip seasons that haven't started airing yet (season air_date is in the future)
+            if (s.air_date) {
+                const seasonStart = new Date(s.air_date)
+                if (seasonStart > today) return false
+            }
+            return true
+        })
+        .map((s: { season_number: number }) => s.season_number)
+
+    let releasedCount = 0
+    for (const seasonNum of seasonNumbers) {
+        try {
+            const seasonData = await getTVSeasonDetails(tmdbId, seasonNum)
+            const releasedInSeason = seasonData.episodes?.filter((ep: { air_date?: string }) => {
+                if (!ep.air_date) return false
+                return new Date(ep.air_date) <= today
+            }).length || 0
+            releasedCount += releasedInSeason
+        } catch {
+            // If we fail to fetch a season, fall back to its episode_count estimate.
+            const seasonMeta = details.seasons?.find((s: { season_number: number }) => s.season_number === seasonNum)
+            releasedCount += (seasonMeta as { episode_count?: number })?.episode_count || 0
+        }
+    }
+
+    return releasedCount
 }
 
 /**
@@ -643,6 +690,30 @@ export const markShowAsFullyWatched = async (watchlistId: string, tmdbId: number
         const showEnded = details.status === 'Ended' || details.status === 'Canceled'
         const newStatus = showEnded ? 'completed' : 'caught_up'
 
+        // Count released episodes across all seasons
+        let totalReleasedEpisodes = 0
+        const seasonNumbers = (details.seasons || [])
+            .filter((s: { season_number: number }) => s.season_number > 0)
+            .map((s: { season_number: number }) => s.season_number)
+
+        for (const seasonNum of seasonNumbers) {
+            try {
+                const seasonData = await getTVSeasonDetails(tmdbId, seasonNum)
+                const releasedInSeason = seasonData.episodes?.filter((ep: { air_date?: string }) => {
+                    if (!ep.air_date) return false
+                    return new Date(ep.air_date) <= new Date()
+                }).length || 0
+                totalReleasedEpisodes += releasedInSeason
+            } catch {
+                // If we can't fetch a season, fall back to episode_count estimate
+                const seasonMeta = details.seasons?.find((s: { season_number: number; episode_count?: number }) => s.season_number === seasonNum)
+                totalReleasedEpisodes += (seasonMeta as { episode_count?: number })?.episode_count || 0
+            }
+        }
+
+        // Use released count (fallback to TMDB total if zero)
+        const episodeCount = totalReleasedEpisodes > 0 ? totalReleasedEpisodes : (details.number_of_episodes || 0)
+
         // 1. Set status immediately - instant response
         const { error } = await supabase
             .from('watchlist')
@@ -651,9 +722,9 @@ export const markShowAsFullyWatched = async (watchlistId: string, tmdbId: number
                 completed_at: showEnded ? new Date().toISOString() : null,
                 current_episode: details.number_of_episodes || 0,
                 current_season: details.number_of_seasons || 1,
-                total_episodes: details.number_of_episodes || 0,
+                total_episodes: episodeCount,
                 total_seasons: details.number_of_seasons || 1,
-                watched_episodes_count: details.number_of_episodes || 0,
+                watched_episodes_count: episodeCount,
                 next_season_number: null,
                 next_episode_number: null,
                 updated_at: new Date().toISOString()
@@ -715,7 +786,7 @@ export const checkAndUpdateCaughtUp = async (watchlistId: string, tmdbId: number
 
         // Check if there are any unreleased episodes (air_date > today)
         const unreleasedEpisodes = seasonData.episodes?.filter((ep: { air_date?: string }) => {
-            if (!ep.air_date) return false // If no air date, assume released
+            if (!ep.air_date) return true // No release date, treat as not released
             return new Date(ep.air_date) > new Date()
         }) || []
 
@@ -789,7 +860,7 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
         for (const seasonNum of seasonNumbers) {
             const seasonData = await getTVSeasonDetails(tmdbId, seasonNum)
             const unreleasedInSeason = seasonData.episodes?.filter((ep: { air_date?: string }) => {
-                if (!ep.air_date) return false
+                if (!ep.air_date) return true
                 return new Date(ep.air_date) > new Date()
             }).length || 0
             
@@ -823,6 +894,7 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
                         status: newStatus,
                         current_season: currentSeason,
                         current_episode: currentEpisode,
+                        total_episodes: totalReleasedEpisodes,
                         completed_at: showEnded ? new Date().toISOString() : null,
                         updated_at: new Date().toISOString()
                     })
@@ -840,6 +912,7 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
                         status: 'planning',
                         current_episode: 0,
                         current_season: 1,
+                        total_episodes: totalReleasedEpisodes,
                         updated_at: new Date().toISOString()
                     })
                     .eq('id', watchlistId)
@@ -857,6 +930,7 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
                     status: 'watching',
                     current_season: currentSeason,
                     current_episode: currentEpisode,
+                    total_episodes: totalReleasedEpisodes,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', watchlistId)
@@ -964,7 +1038,7 @@ export const recalculateProgress = async (showId: string): Promise<{ fixed: bool
         for (const seasonNum of seasonNumbers) {
             const seasonData = await getTVSeasonDetails(show.tmdb_id, seasonNum)
             const unreleasedInSeason = seasonData.episodes?.filter((ep: { air_date?: string }) => {
-                if (!ep.air_date) return false
+                if (!ep.air_date) return true
                 return new Date(ep.air_date) > new Date()
             }).length || 0
             
@@ -1129,11 +1203,27 @@ export const checkForNewSeasons = async (userId: string): Promise<{ updated: num
                 const storedLastSeason = show.last_season_number || 1
 
                 if (currentTotalSeasons > storedLastSeason) {
+                    // Count released episodes across all seasons
+                    let totalReleasedEpisodes = 0
+                    const seasonNums = (details.seasons || [])
+                        .filter((s: { season_number: number }) => s.season_number > 0)
+                        .map((s: { season_number: number }) => s.season_number)
+                    for (const sn of seasonNums) {
+                        try {
+                            const sd = await getTVSeasonDetails(show.tmdb_id, sn)
+                            totalReleasedEpisodes += sd.episodes?.filter((ep: { air_date?: string }) => {
+                                if (!ep.air_date) return false
+                                return new Date(ep.air_date) <= new Date()
+                            }).length || 0
+                        } catch { /* skip */ }
+                    }
+
                     const { error: updateError } = await supabase
                         .from('watchlist')
                         .update({
                             last_season_number: currentTotalSeasons,
                             total_seasons: currentTotalSeasons,
+                            total_episodes: totalReleasedEpisodes > 0 ? totalReleasedEpisodes : undefined,
                             updated_at: new Date().toISOString()
                         })
                         .eq('id', show.id)

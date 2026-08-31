@@ -55,6 +55,7 @@ import MFA from './pages/MFA'
 import Sessions from './pages/Sessions'
 import AdminSecurity from './pages/AdminSecurity'
 import { useSessionSecurity } from './hooks/useSessionSecurity'
+import { useDailyTVSync } from './hooks/useDailyTVSync'
 import mfaService from './services/mfaService'
 // Legacy redirect component for /Lists/:id -> /ListsDetail/:id
 const LegacyListRedirect: React.FC = () => {
@@ -115,6 +116,10 @@ const AppContent: React.FC = () => {
 
     // Session security (auto-refresh, inactivity timeout, device tracking)
     useSessionSecurity()
+
+    // Once-per-UTC-day background sweep: keeps the "episodes left" badge accurate
+    // and flips caught_up shows back to watching when a new episode has aired.
+    useDailyTVSync(user?.id ?? null)
 
     // Native (Capacitor) push: init listeners once and route notification taps
     useEffect(() => {

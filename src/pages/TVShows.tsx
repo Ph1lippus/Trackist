@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState } from 'react'
-import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
 import { markShowAsFullyWatched } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { useSelectionStore } from '../stores/useSelectionStore'
@@ -59,84 +58,6 @@ const TVShows: React.FC = () => {
         window.addEventListener('watchlist-refresh', handleRefresh)
         return () => window.removeEventListener('watchlist-refresh', handleRefresh)
     }, [])
-
-    // Reset trigger: check if completed shows now have new episodes/seasons
-    useEffect(() => {
-        const checkForNewEpisodes = async () => {
-            const currentStore = useLibraryStore.getState()
-            const currentTvShows = currentStore.tvShows
-            
-            if (!isInitialized || currentTvShows.length === 0) return
-            
-            const completedShows = currentTvShows.filter(
-                item => (item.status === 'completed' || item.status === 'caught_up' || (
-                    item.status === 'watching' &&
-                    item.total_episodes !== undefined &&
-                    item.total_episodes > 0 &&
-                    (item.watched_episodes_count ?? 0) >= item.total_episodes
-                )) &&
-                (item.watched_episodes_count ?? 0) > 0 &&
-                item.total_episodes !== undefined
-            )
-
-            if (completedShows.length === 0) return
-
-            const checks = completedShows.map(async (show) => {
-                if (!show.tmdb_id) return
-                try {
-                    const details = await getTVDetails(show.tmdb_id)
-                    const currentTotalEpisodes = details.number_of_episodes || 0
-                    const storedTotalEpisodes = show.total_episodes || 0
-
-                    if (currentTotalEpisodes > storedTotalEpisodes) {
-                        const latestSeasonNumber = details.number_of_seasons || 1
-                        const seasonData = await getTVSeasonDetails(show.tmdb_id, latestSeasonNumber)
-                        const newEpisodes = seasonData.episodes?.filter((ep: { episode_number: number; air_date?: string }) => ep.episode_number > storedTotalEpisodes) || []
-
-                        const hasReleasedEpisodes = newEpisodes.some((ep: { episode_number: number; air_date?: string }) => {
-                            if (!ep.air_date) return true
-                            return new Date(ep.air_date) <= new Date()
-                        })
-
-                        if (hasReleasedEpisodes) {
-                            await supabase
-                                .from("watchlist")
-                                .update({
-                                    status: "watching",
-                                    total_episodes: currentTotalEpisodes,
-                                    total_seasons: details.number_of_seasons || show.total_seasons
-                                })
-                                .eq("id", show.id)
-
-                            await useLibraryStore.getState().refreshItem(show.id)
-                        }
-                    }
-                } catch (err) {
-                    console.error(`Failed to check for new episodes for ${show.title}:`, err)
-                }
-            })
-
-            await Promise.allSettled(checks)
-            }
-
-        checkForNewEpisodes()
-
-        const interval = setInterval(() => { checkForNewEpisodes() }, 15 * 60 * 1000)
-
-        let visibilityTimeout: ReturnType<typeof setTimeout>
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === "visible") {
-                clearTimeout(visibilityTimeout)
-                visibilityTimeout = setTimeout(checkForNewEpisodes, 2000)
-            }
-        }
-        document.addEventListener('visibilitychange', handleVisibilityChange)
-
-        return () => {
-            clearInterval(interval)
-            document.removeEventListener('visibilitychange', handleVisibilityChange)
-        }
-    }, [isInitialized])
 
     // Filter items based on global search (strict TV-type lock)
     const filteredItems = useMemo(() => {

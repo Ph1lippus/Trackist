@@ -2866,9 +2866,7 @@ html.native-app *::-webkit-scrollbar {
     padding: 0.6rem 1rem;
     gap: 1.6rem;
     flex-wrap: wrap;
-    border-radius: 25px;
     width: fit-content;
-    backdrop-filter: blur(12px);
 }
 
 /* Mobile fixed action container */
@@ -3163,7 +3161,7 @@ html.native-app *::-webkit-scrollbar {
     gap: 0.75rem;
     flex: 1;
     overflow-y: auto;
-    padding-bottom: 20vh;
+    padding-bottom: 12vh;
 }
 .detail-page__episode-card {
     display: flex;
