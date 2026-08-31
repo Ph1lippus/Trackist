@@ -11155,7 +11155,10 @@ i.fa-solid.fa-trash:hover {
     right: 0 !important;
     background: rgba(18, 18, 28, 1);
     z-index: 9999 !important;
-    padding: 0.35rem 0;
+    padding: 0.35rem
+        env(safe-area-inset-right, 0px)
+        calc(env(safe-area-inset-bottom, 0px))
+        env(safe-area-inset-left, 0px);
     transform: translateZ(0);
     -webkit-transform: translateZ(0);
 }
