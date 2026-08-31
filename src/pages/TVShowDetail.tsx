@@ -16,6 +16,7 @@ import { useMobile } from '../contexts/useMobile'
 import { useAuthStore } from '../stores/useAuthStore'
 import stremioIcon from '../assets/stremio-logo-icon-only-fullcolor.svg'
 import ShareButton from '../components/media/ShareButton'
+import { useDetailSidebar } from '../hooks/useDetailSidebar'
 
 interface LocalEpisode {
     id: string
@@ -37,6 +38,7 @@ const TVShowDetail: React.FC = () => {
     const navigate = useNavigate()
     const { showStremioButton, loading: stremioLoading } = useShowStremioButton()
     const { isMobile } = useMobile()
+    const { isOpen: isSidebarOpen } = useDetailSidebar()
     const [details, setDetails] = useState<TMDBResult | null>(null)
     const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
@@ -941,7 +943,7 @@ const TVShowDetail: React.FC = () => {
                                 </div>
                             )}
                             
-                            <div className={isMobile ? `detail-page__actions-mobile` : `detail-page__actions`}>
+                            <div className={isMobile ? `detail-page__actions-mobile${isSidebarOpen ? ' detail-page__actions-mobile--open' : ''}` : `detail-page__actions`}>
                                 {!isInWatchlist ? (
                                     <>
                                         <button 

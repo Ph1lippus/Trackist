@@ -15,6 +15,7 @@ import { useAuthStore } from '../stores/useAuthStore'
 import stremioIcon from '../assets/stremio-logo-icon-only-fullcolor.svg'
 import letterboxdIcon from '../assets/letterboxd-decal-dots-pos-rgb-500px.png'
 import ShareButton from '../components/media/ShareButton'
+import { useDetailSidebar } from '../hooks/useDetailSidebar'
 
 const MovieDetail: React.FC = () => {
     usePageTitle('Track1st - Movie Detail')
@@ -23,6 +24,7 @@ const MovieDetail: React.FC = () => {
     const { showStremioButton, loading: stremioLoading } = useShowStremioButton()
     const { showLetterboxButton, loading: letterboxLoading } = useShowLetterboxButton()
     const { isMobile } = useMobile()
+    const { isOpen: isSidebarOpen } = useDetailSidebar()
     const [details, setDetails] = useState<TMDBResult | null>(null)
     const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
@@ -403,7 +405,7 @@ const MovieDetail: React.FC = () => {
                         </div>
 
                         {/* Mobile fixed action container */}
-                        <div className="detail-page__actions-mobile">
+                        <div className={`detail-page__actions-mobile${isSidebarOpen ? ' detail-page__actions-mobile--open' : ''}`}>
                             {!isInWatchlist ? (
                                 <>
                                     <button 

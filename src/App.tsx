@@ -20,6 +20,7 @@ import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 import SecondaryNavbar from './components/layout/SecondaryNavbar'
 import MobileBottomNavbar from './components/layout/MobileBottomNavbar'
+import DetailSidebarToggle from './components/layout/DetailSidebarToggle'
 import PWAUpdateModal from './components/modals/PWAUpdateModal'
 import Home from './pages/Home'
 import Login from './pages/Login'
@@ -465,6 +466,7 @@ const AppContent: React.FC = () => {
             </main>
             <SecondaryNavbar />
             <MobileBottomNavbar />
+            <DetailSidebarToggle />
             {!hideFooter && !isDetailPage && <Footer loggedIn={Boolean(user)} />}
             <PWAUpdateModal
                 isOpen={showUpdateModal}

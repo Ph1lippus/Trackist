@@ -8,6 +8,7 @@ import { getCachedOrFetch } from '../services/cacheService'
 import { usePWAInstall } from '../hooks/usePWAInstall'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
+import { useDetailSidebar } from '../hooks/useDetailSidebar'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 import { validateDisplayName, validateEmail } from '../utils/validation'
 import { getUTCTodayString } from '../utils/dateUtils'
@@ -114,6 +115,10 @@ const Settings: React.FC = () => {
     const [letterboxMessage, setLetterboxMessage] = useState('')
     const [iconsLoading, setIconsLoading] = useState(false)
     const [iconsMessage, setIconsMessage] = useState('')
+    const [alwaysOpenSidebar, setAlwaysOpenSidebar] = useState(false)
+    const [sidebarLoading, setSidebarLoading] = useState(false)
+    const [sidebarMessage, setSidebarMessage] = useState('')
+    const { setAlwaysOpen: setAlwaysOpenSidebarStore } = useDetailSidebar()
 
     // App states
     const isNative = isNativePlatform()
@@ -151,6 +156,8 @@ const Settings: React.FC = () => {
                     setShowStremioButton(profileData.show_stremio_button === true)
                     setShowLetterboxButton(profileData.show_letterbox_button === true)
                     setShowMediaCardIcons(profileData.show_media_card_icons === true)
+                    setAlwaysOpenSidebar(profileData.always_open_detail_sidebar === true)
+                    setAlwaysOpenSidebarStore(profileData.always_open_detail_sidebar === true)
                     setNotifPrefs({
                         notify_new_episode: profileData.notify_new_episode !== false,
                         notify_new_season: profileData.notify_new_season !== false,
@@ -579,6 +586,30 @@ const Settings: React.FC = () => {
         }
 
         setIconsMessage('Preference updated successfully')
+    }
+
+    const handleAlwaysOpenSidebarUpdate = async () => {
+        if (!currentUser) return
+        setSidebarLoading(true)
+        setSidebarMessage('')
+
+        const newValue = !alwaysOpenSidebar
+        setAlwaysOpenSidebar(newValue)
+
+        const { error } = await updateProfile(currentUser.id, {
+            always_open_detail_sidebar: newValue
+        })
+
+        setSidebarLoading(false)
+
+        if (error) {
+            setAlwaysOpenSidebar(!newValue)
+            setSidebarMessage(error.message)
+            return
+        }
+
+        setAlwaysOpenSidebarStore(newValue)
+        setSidebarMessage('Preference updated successfully')
     }
 
     const handleEnablePush = async () => {
@@ -1176,6 +1207,26 @@ const Settings: React.FC = () => {
                                 </div>
 
                                 {iconsMessage && <div className="settings-alert settings-alert--success">{iconsMessage}</div>}
+
+                                <div className="settings-divider"></div>
+
+                                <div className="settings-toggle-row">
+                                    <div className="settings-toggle-row__info">
+                                        <span className="settings-toggle-row__label">Detail Sidebar</span>
+                                        <span className="settings-toggle-row__desc">Keep the action-button sidebar open on mobile movie, TV show and episode detail pages</span>
+                                    </div>
+                                    <label className="settings-switch">
+                                        <input
+                                            type="checkbox"
+                                            checked={alwaysOpenSidebar}
+                                            onChange={handleAlwaysOpenSidebarUpdate}
+                                            disabled={sidebarLoading}
+                                        />
+                                        <span className="settings-switch__slider"></span>
+                                    </label>
+                                </div>
+
+                                {sidebarMessage && <div className="settings-alert settings-alert--success">{sidebarMessage}</div>}
 
                                 <div className="settings-divider"></div>
 

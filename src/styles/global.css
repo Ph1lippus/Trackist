@@ -176,9 +176,6 @@
     .upcoming-new-scroll-top {
         display: flex !important;
     }
-    .detail-page__actions-mobile {
-        display: flex !important;
-    }
     .detail-page__left {
         padding-top: 0 !important;
     }
@@ -907,8 +904,7 @@ html::before {
     top: calc(100% + 0.5rem);
     right: 0;
     width: min(720px, calc(100vw - 2rem));
-    background: rgba(15, 15, 20, 0.98);
-    backdrop-filter: blur(20px);
+    background: rgba(18, 18, 28, 1);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 25px;
     padding: 1rem;
@@ -2578,9 +2574,9 @@ html.native-app *::-webkit-scrollbar {
     object-fit: contain;
 }
 .detail-page__title {
-    font-family: var(--font-title);
-    font-size: 3rem;
-    font-weight: 400;
+    font-family: Georgia, serif;
+    font-weight: 500;
+    font-size: 5rem;
     color: var(--color-platinum);
     margin: 0;
     line-height: 1.2;
@@ -2882,6 +2878,10 @@ html.native-app *::-webkit-scrollbar {
     background: rgba(18, 18, 28, 1);
     border-radius: 12px 0px 0px 12px;
     z-index: 100;
+}
+
+.detail-page__actions-mobile--open {
+    display: flex !important;
 }
 
 .detail-page__actions-mobile .detail-page__icon-btn {
@@ -4953,10 +4953,8 @@ html.native-app *::-webkit-scrollbar {
 
     .discover-filter-menu__footer {
         position: sticky;
-        bottom: 0;
         margin-top: 0.5rem;
         padding: 0.75rem 0 0;
-        background: rgba(15, 15, 20, 0.98);
     }
 
     /* When no back button is shown on mobile, let the search bar widen without
@@ -9894,9 +9892,7 @@ i.fa-solid.fa-trash:hover {
     gap: 0.5rem;
     height: 40px;
     padding: 0 0.5rem;
-    background: rgba(255, 255, 255, 0.07);
     border: none;
-    border-radius: 25px;
     transition: all 0.2s ease;
     justify-self: center;
     max-width: 500px;
@@ -10644,6 +10640,36 @@ i.fa-solid.fa-trash:hover {
     .upcoming-new-scroll-top {
         display: flex !important;
     }
+}
+
+/* ===== Detail Sidebar Toggle (mobile) ===== */
+.detail-sidebar-toggle {
+    position: fixed;
+    bottom: calc(var(--bottom-nav-height) + 1rem);
+    right: 0rem;
+    width: 44px;
+    height: 44px;
+    border-radius: 22px 0px 0px 22px;
+    border: none;
+    background: rgba(18, 18, 28, 1);
+    color: var(--color-platinum);
+    cursor: pointer;
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s ease, background 0.2s ease;
+}
+
+.detail-sidebar-toggle:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: -2px;
+}
+
+.detail-sidebar-toggle:hover,
+.detail-sidebar-toggle--open {
+    color: var(--color-primary);
+    background: rgba(30, 30, 48, 1);
 }
 
 /* ===== MOBILE TV SHOWS PAGE ===== */
