@@ -38,17 +38,19 @@ const ForgotPassword: React.FC = () => {
         setLoading(true)
 
         const trimmedEmail = email.trim().toLowerCase()
-        
+
+        // Record attempt BEFORE calling API to prevent hitting Supabase rate limits
+        recordAttempt()
+
         // Small random delay for constant-time response (50-150ms)
         await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100))
-        
+
         const { error } = await requestPasswordReset(trimmedEmail)
 
         setLoading(false)
         pendingSubmitRef.current = false
 
         if (error) {
-            recordAttempt()
             setCaptchaToken(null)
             console.error('Password reset error:', error)
             setError(error.message || 'Unable to process request. Please try again later.')

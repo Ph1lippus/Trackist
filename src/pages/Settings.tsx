@@ -11,6 +11,7 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
 import { usePushNotifications } from '../hooks/usePushNotifications'
+import { useAuthRateLimit } from '../hooks/useAuthRateLimit'
 import { validateDisplayName, validateEmail } from '../utils/validation'
 import { getUTCTodayString } from '../utils/dateUtils'
 import { useAuthStore } from '../stores/useAuthStore'
@@ -942,6 +943,8 @@ const Settings: React.FC = () => {
     const { section } = useParams<{ section?: string }>()
     const { isMobile } = useMobile()
     const [currentUser, setCurrentUser] = useState<User | null>(null)
+    const { allowed: resetAllowed, recordAttempt: recordResetAttempt, retryAfterFormatted: resetRetryAfter } = useAuthRateLimit('passwordReset')
+    const resetRateLimited = !resetAllowed
 
     // Account states
     const [email, setEmail] = useState('')
@@ -1087,9 +1090,17 @@ const Settings: React.FC = () => {
             return
         }
 
+        if (resetRateLimited) {
+            setAccountError(`Too many reset attempts. Please try again in ${resetRetryAfter}.`)
+            return
+        }
+
         setAccountError('')
         setAccountMessage('')
         setResetLoading(true)
+
+        // Record attempt BEFORE calling API to prevent hitting Supabase rate limits
+        recordResetAttempt()
 
         const { error } = await requestPasswordReset(email.trim().toLowerCase())
 

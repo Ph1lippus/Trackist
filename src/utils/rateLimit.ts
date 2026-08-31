@@ -13,7 +13,7 @@ export interface RateLimitState {
 const DEFAULT_CONFIGS: Record<string, RateLimitConfig> = {
     login: { maxAttempts: 5, windowMs: 15 * 60 * 1000, keyPrefix: 'auth:ratelimit:login' },
     register: { maxAttempts: 3, windowMs: 60 * 60 * 1000, keyPrefix: 'auth:ratelimit:register' },
-    passwordReset: { maxAttempts: 3, windowMs: 60 * 60 * 1000, keyPrefix: 'auth:ratelimit:passwordReset' },
+    passwordReset: { maxAttempts: 2, windowMs: 60 * 60 * 1000, keyPrefix: 'auth:ratelimit:passwordReset' },
     mfa: { maxAttempts: 5, windowMs: 15 * 60 * 1000, keyPrefix: 'auth:ratelimit:mfa' }
 }
 
