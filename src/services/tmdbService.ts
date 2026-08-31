@@ -382,15 +382,19 @@ export const getBestBackdropPath = (backdrops: any[] | undefined | null): string
     const candidates = backdrops
         .filter(b => isNoLanguageCode(b.iso_639_1))
         .sort((a, b) => {
+            const aWidth = a.width ?? 0
+            const bWidth = b.width ?? 0
+            if (bWidth !== aWidth) return bWidth - aWidth
+
             const aVote = a.vote_average ?? 0
             const bVote = b.vote_average ?? 0
             if (bVote !== aVote) return bVote - aVote
-            
+
             const aCount = a.vote_count ?? 0
             const bCount = b.vote_count ?? 0
             if (bCount !== aCount) return bCount - aCount
-            
-            return (b.width ?? 0) - (a.width ?? 0)
+
+            return bWidth - aWidth
         })
     
     return candidates[0]?.file_path ?? null
@@ -407,6 +411,10 @@ export const getBestPoster = (posters: any[] | undefined | null): string | null 
     const candidates = posters
         .filter(p => isNoLanguageCode(p.iso_639_1))
         .sort((a, b) => {
+            const aHeight = a.height ?? 0
+            const bHeight = b.height ?? 0
+            if (bHeight !== aHeight) return bHeight - aHeight
+
             const aVote = a.vote_average ?? 0
             const bVote = b.vote_average ?? 0
             if (bVote !== aVote) return bVote - aVote
@@ -415,7 +423,7 @@ export const getBestPoster = (posters: any[] | undefined | null): string | null 
             const bCount = b.vote_count ?? 0
             if (bCount !== aCount) return bCount - aCount
 
-            return (b.height ?? 0) - (a.height ?? 0)
+            return bHeight - aHeight
         })
 
     return candidates[0]?.file_path ?? null

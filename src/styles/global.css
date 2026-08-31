@@ -2630,7 +2630,7 @@ html.native-app *::-webkit-scrollbar {
     font-size: 0.8rem;
     font-weight: 500;
     white-space: normal;
-    min-width: min(320px, 76vw);
+    min-width: max-content;
     max-width: min(440px, 88vw);
     text-align: left;
     opacity: 0;
