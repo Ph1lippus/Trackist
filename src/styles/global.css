@@ -4932,7 +4932,7 @@ html.native-app *::-webkit-scrollbar {
         max-height: none;
         overflow-y: auto;
         overscroll-behavior: contain;
-        padding: 0 1rem calc(var(--bottom-nav-height) + 2.5rem + env(safe-area-inset-bottom, 0px));
+        padding: env(safe-area-inset-top, 0px) 1rem calc(var(--bottom-nav-height) + 2.5rem + env(safe-area-inset-bottom, 0px));
         z-index: 10000;
     }
 
