@@ -83,6 +83,18 @@ const TVShowDetail: React.FC = () => {
     const episodeToScrollRef = useRef<string | null>(null)
     const episodeRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
     const episodeListRef = useRef<HTMLDivElement>(null)
+    const seasonDropdownRef = useRef<HTMLDivElement>(null)
+    const [seasonDropdownOpen, setSeasonDropdownOpen] = useState(false)
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (seasonDropdownRef.current && !seasonDropdownRef.current.contains(e.target as Node)) {
+                setSeasonDropdownOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
 
     const isEpisodeReleased = (episode: LocalEpisode): boolean => {
         if (!episode.air_date) return false
@@ -1113,15 +1125,31 @@ const TVShowDetail: React.FC = () => {
                                     >
                                         <i className="fa-solid fa-chevron-left"></i>
                                     </button>
-                                    <select 
-                                        className="detail-page__season-select"
-                                        value={selectedSeason}
-                                        onChange={(e) => handleSeasonChange(Number(e.target.value))}
-                                    >
-                                        {seasons.map(s => (
-                                            <option key={s} value={s}>Season {s}</option>
-                                        ))}
-                                    </select>
+                                    <div className="detail-page__season-dropdown" ref={seasonDropdownRef}>
+                                        <button
+                                            className="detail-page__season-dropdown-trigger"
+                                            onClick={() => setSeasonDropdownOpen(!seasonDropdownOpen)}
+                                        >
+                                            <span>Season {selectedSeason}</span>
+                                            <i className={`fa-solid fa-chevron-down ${seasonDropdownOpen ? 'rotated' : ''}`}></i>
+                                        </button>
+                                        {seasonDropdownOpen && (
+                                            <div className="detail-page__season-dropdown-menu">
+                                                {seasons.map(s => (
+                                                    <button
+                                                        key={s}
+                                                        className={`detail-page__season-dropdown-option ${s === selectedSeason ? 'selected' : ''}`}
+                                                        onClick={() => {
+                                                            handleSeasonChange(s)
+                                                            setSeasonDropdownOpen(false)
+                                                        }}
+                                                    >
+                                                        Season {s}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
                                     <button 
                                         className="detail-page__season-nav"
                                         onClick={() => {

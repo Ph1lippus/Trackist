@@ -302,7 +302,7 @@
     .selection-action-bar,
     .selection-action-btn,
     .confirm-modal-content,
-    .detail-page__season-select,
+    .detail-page__season-dropdown-trigger,
     .search-dropdown,
     .media-card__add-icon,
     .media-card__icon-btn,
@@ -3110,8 +3110,14 @@ html.native-app *::-webkit-scrollbar {
     opacity: 0.3;
     cursor: not-allowed;
 }
-.detail-page__season-select {
-    padding: 0 2.5rem 0 1.2rem;
+.detail-page__season-dropdown {
+    position: relative;
+}
+.detail-page__season-dropdown-trigger {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 1.2rem;
     background: rgba(255, 255, 255, 0.07);
     border: none;
     border-radius: 25px;
@@ -3119,41 +3125,66 @@ html.native-app *::-webkit-scrollbar {
     font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
-    outline: none;
-    transition: all 0.2s ease;
     height: 36px;
     min-width: 130px;
-    text-align: center;
-    text-align-last: center;
-    -moz-text-align-last: center;
-    appearance: none;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23e7e8ec' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.9rem center;
-    background-size: 12px;
-    padding-right: 2.5rem;
+    justify-content: center;
+    transition: background-color 0.2s ease;
 }
-
-.detail-page__season-select:focus {
-    background-color: rgba(255, 255, 255, 0.12);
-    box-shadow: 0 0 0 2px rgba(133, 138, 227, 0.35);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23858AE3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 0.9rem center;
-    background-size: 12px;
+.detail-page__season-dropdown-trigger:hover {
+    background: rgba(255, 255, 255, 0.12);
 }
-
-.detail-page__season-select option {
+.detail-page__season-dropdown-trigger .fa-chevron-down {
+    font-size: 0.65rem;
+    color: rgba(255, 255, 255, 0.5);
+    transition: transform 0.2s ease;
+}
+.detail-page__season-dropdown-trigger .fa-chevron-down.rotated {
+    transform: rotate(180deg);
+}
+.detail-page__season-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    left: 50%;
+    transform: translateX(-50%);
+    min-width: 100%;
     background: rgba(20, 20, 28, 0.98);
-    color: var(--color-platinum);
-    padding: 1rem;
-    text-align: center;
-    text-align-last: center;
-    font-size: 0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    overflow: hidden;
+    max-height: 300px;
+    overflow-y: auto;
+    animation: seasonDropdownIn 0.15s ease;
+}
+@keyframes seasonDropdownIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+.detail-page__season-dropdown-option {
+    display: block;
+    width: 100%;
+    padding: 0.6rem 1.2rem;
+    background: transparent;
     border: none;
-    margin: 0 auto;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-align: center;
+    cursor: pointer;
+    transition: background-color 0.1s ease, color 0.1s ease;
+    white-space: nowrap;
+}
+.detail-page__season-dropdown-option:hover {
+    background: rgba(133, 138, 227, 0.12);
+    color: rgba(255, 255, 255, 0.95);
+}
+.detail-page__season-dropdown-option.selected {
+    color: var(--color-primary);
+    background: rgba(133, 138, 227, 0.1);
+}
+.detail-page__season-dropdown-option.selected:hover {
+    background: rgba(133, 138, 227, 0.18);
 }
 .detail-page__episode-list {
     display: flex;
