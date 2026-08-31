@@ -17,10 +17,12 @@ import type { WatchlistItem, TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
 import { cacheService, getCachedOrFetch } from '../services/cacheService'
+import { imageUrl } from '../services/tmdbService'
 import { VirtuosoGrid } from 'react-virtuoso'
 import { useMobile } from '../contexts/useMobile'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
+import ShareButton from '../components/media/ShareButton'
 
 interface ProfileData {
     id: string
@@ -39,6 +41,7 @@ interface UserList {
     item_count: number
     watched_count: number
     completed_at: string | null
+    poster?: string | null
 }
 
 type TabType = 'watching' | 'movies' | 'finished' | 'lists'
@@ -51,6 +54,7 @@ const ProfilePage: React.FC = () => {
     const [profile, setProfile] = useState<ProfileData | null>(null)
     const [followersCount, setFollowersCount] = useState(0)
     const [followingCount, setFollowingCount] = useState(0)
+    const [listsCount, setListsCount] = useState(0)
     const [isFollowingUser, setIsFollowingUser] = useState(false)
     const [followLoading, setFollowLoading] = useState(false)
     const [showUnfollowModal, setShowUnfollowModal] = useState(false)
@@ -160,15 +164,7 @@ const ProfilePage: React.FC = () => {
                         ownLibraryItems || getCachedOrFetch(
                             'profile-watchlist',
                             targetUserId,
-                            async () => {
-                                const { data, error } = await supabase
-                                    .from('watchlist')
-                                    .select('*')
-                                    .eq('user_id', targetUserId)
-                                    .order('added_at', { ascending: false })
-                                if (error) throw error
-                                return (data || []) as WatchlistItem[]
-                            },
+                            async () => fetchProfileWatchlistItems(targetUserId),
                             { ttl: 2 * 60 * 1000, staleWhileRevalidate: true }
                         ),
                         getCachedOrFetch(
@@ -190,20 +186,25 @@ const ProfilePage: React.FC = () => {
 
                                 const { data: listItems, error: listItemsError } = await supabase
                                     .from('list_items')
-                                    .select('list_id, watched_at')
+                                    .select('list_id, watched_at, poster_path')
                                     .in('list_id', rawLists.map(list => list.id))
                                 if (listItemsError) throw listItemsError
 
                                 const counts: Record<string, { item_count: number; watched_count: number }> = {}
+                                const posterMap: Record<string, string | null> = {}
                                 for (const item of listItems || []) {
                                     counts[item.list_id] ??= { item_count: 0, watched_count: 0 }
                                     counts[item.list_id].item_count++
                                     if (item.watched_at) counts[item.list_id].watched_count++
+                                    if (!posterMap[item.list_id] && item.poster_path) {
+                                        posterMap[item.list_id] = item.poster_path
+                                    }
                                 }
                                 return rawLists.map(list => ({
                                     ...list,
                                     item_count: counts[list.id]?.item_count || 0,
-                                    watched_count: counts[list.id]?.watched_count || 0
+                                    watched_count: counts[list.id]?.watched_count || 0,
+                                    poster: posterMap[list.id] || null
                                 }))
                             },
                             { ttl: 2 * 60 * 1000, staleWhileRevalidate: true }
@@ -212,6 +213,7 @@ const ProfilePage: React.FC = () => {
                     if (!active) return
                     setFollowersCount(followersCountData || 0)
                     setFollowingCount(followingCountData || 0)
+                    setListsCount(listsWithCounts.length || 0)
                     setWatchlistItems(items)
                     setUserLists(listsWithCounts)
                     setIsProfileContentLoaded(true)
@@ -256,6 +258,34 @@ const ProfilePage: React.FC = () => {
     }
 
     const isOwnProfile = currentUser?.id === profile?.id
+    const profileIdentifier = profile?.display_name || username || ''
+    const profileShareUrl = profileIdentifier
+        ? new URL(`/Profile/${encodeURIComponent(profileIdentifier)}`, window.location.origin).toString()
+        : new URL('/Profile', window.location.origin).toString()
+
+    const fetchProfileWatchlistItems = async (userId: string): Promise<WatchlistItem[]> => {
+        const allItems: WatchlistItem[] = []
+        const pageSize = 1000
+        let page = 0
+
+        while (true) {
+            const { data, error } = await supabase
+                .from('watchlist')
+                .select('*')
+                .eq('user_id', userId)
+                .order('added_at', { ascending: false })
+                .range(page * pageSize, (page + 1) * pageSize - 1)
+
+            if (error) throw error
+            if (!data || data.length === 0) break
+
+            allItems.push(...(data as WatchlistItem[]))
+            if (data.length < pageSize) break
+            page += 1
+        }
+
+        return allItems
+    }
 
     const handleAddToWatchlist = async (tmdbItem: TMDBResult) => {
         if (!currentUser) return
@@ -307,23 +337,6 @@ const ProfilePage: React.FC = () => {
         item.status === 'completed' || item.status === 'caught_up'
     ), [watchlistItems])
 
-    useEffect(() => {
-        if (!isProfileContentLoaded) return
-
-        const hasItemsByTab: Record<TabType, boolean> = {
-            watching: watchingTVShows.length > 0,
-            movies: moviesToWatch.length > 0,
-            finished: finishedItems.length > 0,
-            lists: userLists.length > 0,
-        }
-
-        if (hasItemsByTab[activeTab]) return
-
-        const firstAvailableTab = (Object.keys(hasItemsByTab) as TabType[])
-            .find(tab => hasItemsByTab[tab])
-        if (firstAvailableTab) setActiveTab(firstAvailableTab)
-    }, [isProfileContentLoaded, activeTab, watchingTVShows.length, moviesToWatch.length, finishedItems.length, userLists.length])
-
     if (!isProfileDataLoaded) {
         return <section className="dashboard-page profile-page" />
     }
@@ -349,101 +362,108 @@ const ProfilePage: React.FC = () => {
                 {/* Profile Hero */}
                 <div className="profile-hero">
                     <div className="profile-hero__content">
-                        <div className="profile-hero__avatar-wrap">
-                            {profile.avatar_url ? (
-                                <img
-                                    src={profile.avatar_url}
-                                    alt={profile.display_name || 'User'}
-                                    className="profile-hero__avatar"
-                                    onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
-                                />
-                            ) : (
-                                <div className="profile-hero__avatar profile-hero__avatar--placeholder">
-                                    {(profile.display_name || 'U')[0].toUpperCase()}
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="profile-hero__info">
-                            <div className="profile-hero__identity">
-                                <h1 className="profile-hero__name">
-                                    {profile.display_name || 'Anonymous'}
-                                </h1>
-                                <p className="profile-hero__username">
-                                    @{(profile.display_name || 'user').toLowerCase().replace(/\s+/g, '_')}
-                                </p>
-                            </div>
-
-                            <div className="profile-hero__stats">
-                                <Link to={`/Followers/${profile.display_name}`} className="profile-stat profile-stat--link">
-                                    <span className="profile-stat__value">{followersCount}</span>
-                                    <span className="profile-stat__label"> Followers</span>
-                                </Link>
-                                <Link to={`/Following/${profile.display_name}`} className="profile-stat profile-stat--link">
-                                    <span className="profile-stat__value">{followingCount}</span>
-                                    <span className="profile-stat__label"> Following</span>
-                                </Link>
-                            </div>
-
-                            <div className="profile-hero__actions">
-                                {!isOwnProfile && currentUser && (
-                                    <button
-                                        className={`profile-btn ${isFollowingUser ? 'profile-btn--following' : 'profile-btn--primary'}`}
-                                        onClick={handleFollow}
-                                        disabled={followLoading}
-                                    >
-                                        {followLoading ? (
-                                            <><i className="fa-solid fa-spinner fa-spin"></i> Loading...</>
-                                        ) : isFollowingUser ? (
-                                            <> Following</>
-                                        ) : (
-                                            <> Follow</>
-                                        )}
-                                    </button>
+                        <div className="profile-hero__top-row">
+                            <div className="profile-hero__avatar-wrap">
+                                {profile.avatar_url ? (
+                                    <img
+                                        src={profile.avatar_url}
+                                        alt={profile.display_name || 'User'}
+                                        className="profile-hero__avatar"
+                                        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
+                                    />
+                                ) : (
+                                    <div className="profile-hero__avatar profile-hero__avatar--placeholder">
+                                        {(profile.display_name || 'U')[0].toUpperCase()}
+                                    </div>
                                 )}
                             </div>
 
-                            {profile.bio && (
-                                <p className="profile-hero__bio">{profile.bio}</p>
-                            )}
+                            <div className="profile-hero__info">
+                                <div className="profile-hero__identity">
+                                    <h1 className="profile-hero__name">
+                                        {profile.display_name || 'Anonymous'}
+                                    </h1>
+                                </div>
+
+                                <div className="profile-hero__stats">
+                                    <Link to={`/Followers/${profile.display_name}`} className="profile-stat profile-stat--link">
+                                        <span className="profile-stat__value">{followersCount}</span>
+                                        <span className="profile-stat__label">followers</span>
+                                    </Link>
+                                    <Link to={`/Following/${profile.display_name}`} className="profile-stat profile-stat--link">
+                                        <span className="profile-stat__value">{followingCount}</span>
+                                        <span className="profile-stat__label">following</span>
+                                    </Link>
+                                    <div className="profile-stat" aria-label={`${listsCount} lists`}>
+                                        <span className="profile-stat__value">{listsCount}</span>
+                                        <span className="profile-stat__label">lists</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {profile.bio && (
+                            <p className="profile-hero__bio">{profile.bio}</p>
+                        )}
+
+                        <div className="profile-hero__actions">
+                            {!isOwnProfile && currentUser ? (
+                                <button
+                                    className="profile-btn"
+                                    onClick={handleFollow}
+                                    disabled={followLoading}
+                                >
+                                    {followLoading ? (
+                                        <>Loading...</>
+                                    ) : isFollowingUser ? (
+                                        <>Following</>
+                                    ) : (
+                                        <>Follow</>
+                                    )}
+                                </button>
+                            ) : isOwnProfile ? (
+                                <Link to="/EditProfile" className="profile-btn">
+                                    Edit Profile
+                                </Link>
+                            ) : null}
+                            <ShareButton
+                                url={profileShareUrl}
+                                title={`${profile.display_name || 'User'} on Track1st`}
+                                text={`Meet ${profile.display_name || 'this Track1st user'} and see what they are watching.`}
+                                className="profile-btn"
+                                label="Share Profile"
+                                showIcon={false}
+                            />
                         </div>
                     </div>
                 </div>
 
                 {/* Tabs */}
                 <div className="profile-tabs">
-                    {watchingTVShows.length > 0 && (
-                        <button
-                            className={`profile-tab ${activeTab === 'watching' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('watching')}
-                        >
-                            <span className="profile-tab__text">Watching</span>
-                        </button>
-                    )}
-                    {moviesToWatch.length > 0 && (
-                        <button
-                            className={`profile-tab ${activeTab === 'movies' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('movies')}
-                        >
-                            <span className="profile-tab__text">Movies</span>
-                        </button>
-                    )}
-                    {finishedItems.length > 0 && (
-                        <button
-                            className={`profile-tab ${activeTab === 'finished' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('finished')}
-                        >
-                            <span className="profile-tab__text">Finished</span>
-                        </button>
-                    )}
-                    {userLists.length > 0 && (
-                        <button
-                            className={`profile-tab ${activeTab === 'lists' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('lists')}
-                        >
-                            <span className="profile-tab__text">Lists</span>
-                        </button>
-                    )}
+                    <button
+                        className={`profile-tab ${activeTab === 'watching' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('watching')}
+                    >
+                        <span className="profile-tab__text">Watching</span>
+                    </button>
+                    <button
+                        className={`profile-tab ${activeTab === 'movies' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('movies')}
+                    >
+                        <span className="profile-tab__text">Movies</span>
+                    </button>
+                    <button
+                        className={`profile-tab ${activeTab === 'finished' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('finished')}
+                    >
+                        <span className="profile-tab__text">Finished</span>
+                    </button>
+                    <button
+                        className={`profile-tab ${activeTab === 'lists' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('lists')}
+                    >
+                        <span className="profile-tab__text">Lists</span>
+                    </button>
                 </div>
 
                 {/* Tab Content */}
@@ -599,16 +619,23 @@ const ProfilePage: React.FC = () => {
                                         <Link
                                             key={list.id}
                                             to={`/ListsDetail/${list.id}`}
-                                            className="profile-list-card"
+                                            className="lists-page__card"
                                         >
-                                            <div className="profile-list-card__header">
-                                                <h3 className="profile-list-card__title">{list.title}</h3>
+                                            <div className="media-card__poster list">
+                                                {list.poster ? (
+                                                    <img src={imageUrl(list.poster, 'w342') ?? undefined} alt={list.title} />
+                                                ) : (
+                                                    <div className="lists-page__card-placeholder">
+                                                        <i className="fa-regular fa-images" />
+                                                    </div>
+                                                )}
                                             </div>
-                                            {list.description && (
-                                                <p className="profile-list-card__desc">{list.description}</p>
-                                            )}
-                                            <div className="profile-list-card__stats">
-                                                <span> {list.item_count} items</span>
+                                            <div className="lists-page__card-content">
+                                                <h3>{list.title}</h3>
+                                                {list.description && <p>{list.description}</p>}
+                                                <div className="lists-page__card-meta">
+                                                    <span>{list.item_count} items</span>
+                                                </div>
                                             </div>
                                         </Link>
                                     ))}

@@ -151,7 +151,7 @@ const MovieDetail: React.FC = () => {
             }
         }
         return null
-    } 
+    }
 
     const handleAddToWatchlist = async () => {
         const user = useAuthStore.getState().user
@@ -401,7 +401,11 @@ const MovieDetail: React.FC = () => {
                                     <img src={letterboxdIcon} alt="Letterboxd" className="detail-page__letterbox-logo" />
                                 </button>
                             )}
-                            <ShareButton url={window.location.href} text={`Check out ${title} on Track1st`} />
+                            <ShareButton
+                                url={window.location.href}
+                                title={`${title} on Track1st`}
+                                text={`I found ${title} on Track1st. Add it to your watchlist and see if it belongs in your next movie night.`}
+                            />
                         </div>
 
                         {/* Mobile fixed action container */}
@@ -523,7 +527,12 @@ const MovieDetail: React.FC = () => {
                                     <img src={letterboxdIcon} alt="Letterboxd" className="detail-page__letterbox-logo" />
                                 </button>
                             )}
-                            <ShareButton url={window.location.href} text={`Check out ${title} on Track1st`} />
+                            <ShareButton
+                                url={window.location.href}
+                                title={`${title} on Track1st`}
+                                text={`I found ${title} on Track1st. Add it to your watchlist and see if it belongs in your next movie night.`}
+                                imageUrl={details?.poster_path ? imageUrl(details.poster_path, 'w500') : null}
+                            />
                         </div>
 
                         {!isMobile && showTrailer && trailerKey && (

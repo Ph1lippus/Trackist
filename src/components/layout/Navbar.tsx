@@ -47,6 +47,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const [isAdmin, setIsAdmin] = useState(false);
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [batchLoading, setBatchLoading] = useState(false);
+    const [mobileProfileTitle, setMobileProfileTitle] = useState<string>('Profile');
     const menuRef = useRef<HTMLDivElement>(null);
     const buttonRef = useRef<HTMLButtonElement>(null);
     const searchBoxRef = useRef<HTMLDivElement>(null);
@@ -465,6 +466,45 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
 
     const { isMobile } = useMobile();
 
+    useEffect(() => {
+        if (!location.pathname.startsWith('/Profile')) {
+            setMobileProfileTitle('Profile');
+            return;
+        }
+
+        const resolveProfileTitle = async () => {
+            try {
+                if (location.pathname === '/Profile') {
+                    const { data: { user } } = await supabase.auth.getUser();
+                    if (!user) {
+                        setMobileProfileTitle('Profile');
+                        return;
+                    }
+
+                    const { data } = await supabase
+                        .from('profiles')
+                        .select('display_name')
+                        .eq('id', user.id)
+                        .maybeSingle();
+
+                    setMobileProfileTitle(data?.display_name || 'Profile');
+                    return;
+                }
+
+                const match = location.pathname.match(/^\/Profile\/(.+)$/);
+                if (match) {
+                    setMobileProfileTitle(decodeURIComponent(match[1]));
+                } else {
+                    setMobileProfileTitle('Profile');
+                }
+            } catch {
+                setMobileProfileTitle('Profile');
+            }
+        };
+
+        void resolveProfileTitle();
+    }, [location.pathname]);
+
     const filterMenuContent = (
         <div
             ref={filtersRef}
@@ -634,6 +674,12 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                         >
                             <ChevronRight size={16} strokeWidth={2.5} />
                         </button>
+                    </div>
+                )}
+
+                {isMobile && location.pathname.startsWith('/Profile') && (
+                    <div className="navbar-mobile-profile-title" aria-live="polite">
+                        {mobileProfileTitle}
                     </div>
                 )}
                 

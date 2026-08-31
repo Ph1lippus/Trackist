@@ -239,7 +239,8 @@ const EpisodeDetail: React.FC = () => {
                             <div className={isMobile ? `detail-page__actions-mobile${isSidebarOpen ? ' detail-page__actions-mobile--open' : ''}` : 'detail-page__actions'}>
                                 <ShareButton
                                     url={window.location.href}
-                                    text={`${title} S${season}E${episode} - ${episodeTitle} on Track1st`}
+                                    title={`${title} S${season}E${episode} on Track1st`}
+                                    text={`I am watching ${title}, season ${season}, episode ${episode}: ${episodeTitle}. Join me on Track1st.`}
                                 />
                                 {isInWatchlist && (
                                     <button 

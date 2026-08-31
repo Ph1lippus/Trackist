@@ -24,9 +24,12 @@ interface ShareButtonProps {
     url: string
     title?: string
     text?: string
+    className?: string
+    label?: string
+    showIcon?: boolean
 }
 
-const ShareButton: React.FC<ShareButtonProps> = ({ url, title, text }) => {
+const ShareButton: React.FC<ShareButtonProps> = ({ url, title, text, className = 'detail-page__icon-btn', label, showIcon = true }) => {
     const [copied, setCopied] = useState(false)
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -37,7 +40,8 @@ const ShareButton: React.FC<ShareButtonProps> = ({ url, title, text }) => {
     }, [])
 
     const handleShare = async () => {
-        const shareData = { title, text, url: getShareUrl(url) }
+        const shareUrl = getShareUrl(url)
+        const shareData = { title, text, url: shareUrl }
 
         if (isNativePlatform()) {
             try {
@@ -71,11 +75,13 @@ const ShareButton: React.FC<ShareButtonProps> = ({ url, title, text }) => {
 
     return (
         <button
-            className="detail-page__icon-btn"
+            type="button"
+            className={className}
             onClick={handleShare}
             title={copied ? 'Link copied!' : 'Share'}
         >
-            <i className={copied ? 'fa-solid fa-check' : 'fa-solid fa-share-nodes'}></i>
+            {showIcon && <i className={copied ? 'fa-solid fa-check' : 'fa-solid fa-share-nodes'}></i>}
+            {label && <span>{copied ? 'Link copied' : label}</span>}
         </button>
     )
 }

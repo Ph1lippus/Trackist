@@ -64,8 +64,20 @@ export const getProfile = async (userId: string) => {
     return supabase.from('profiles').select('*').eq('id', userId).single()
 }
 
+export const profileSlug = (displayName: string): string => displayName
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
 export const getProfileByUsername = async (username: string) => {
-    return supabase.from('profiles').select('*').eq('display_name', username).single()
+    const exactResult = await supabase.from('profiles').select('*').eq('display_name', username).maybeSingle()
+    if (exactResult.data || exactResult.error) return exactResult
+
+    const profilesResult = await supabase.from('profiles').select('*')
+    const profile = (profilesResult.data || []).find((candidate) => profileSlug(candidate.display_name || '') === username.toLowerCase())
+    return { data: profile || null, error: profilesResult.error }
 }
 
 export const updateProfile = async (userId: string, updates: { display_name?: string; bio?: string; avatar_url?: string; show_stremio_button?: boolean; show_letterbox_button?: boolean; show_media_card_icons?: boolean; always_open_detail_sidebar?: boolean; notify_new_episode?: boolean; notify_new_season?: boolean; notify_release_date?: boolean; timezone?: string; country_code?: string; notify_hour?: string; movie_notify_on_digital?: boolean }) => {

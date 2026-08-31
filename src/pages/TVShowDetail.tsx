@@ -1050,7 +1050,11 @@ const TVShowDetail: React.FC = () => {
                                          <img src={stremioIcon} alt="Stremio" className="detail-page__stremio-logo" />
                                      </button>
                                  )}
-                                <ShareButton url={window.location.href} text={`Check out ${title} on Track1st`} />
+                                <ShareButton
+                                    url={window.location.href}
+                                    title={`${title} on Track1st`}
+                                    text={`I found ${title} on Track1st. This one might deserve a place on your next binge list.`}
+                                />
                             </div>
 
                             {/* Action buttons (desktop inline / mobile fixed sidebar) */}
