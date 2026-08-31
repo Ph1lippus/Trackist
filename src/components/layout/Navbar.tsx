@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { Check, ChevronLeft, ChevronRight, Loader2, RotateCcw, SlidersHorizontal, X } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../services/supabaseClient';
 import { useSearch } from '../../hooks/useSearch';
@@ -480,7 +481,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                         aria-label="Close filters"
                         title="Close filters"
                     >
-                        <i className="fa-solid fa-xmark"></i>
+                        <X size={16} strokeWidth={2.5} />
                     </button>
                 </div>
                 <div className="discover-filter-menu__cols">
@@ -575,11 +576,11 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                 </div>
                 <div className="discover-filter-menu__footer">
                     <button type="button" className="discover-filter-menu__cancel" onClick={handleCancelAllFilters}>
-                        <i className="fa-solid fa-rotate-left"></i>
+                        <RotateCcw size={14} strokeWidth={2.5} />
                         Cancel All
                     </button>
                     <button type="button" className="discover-filter-menu__apply" onClick={handleApplyFilters}>
-                        <i className="fa-solid fa-check"></i>
+                        <Check size={14} strokeWidth={2.5} />
                         Apply All Filters
                     </button>
                 </div>
@@ -592,8 +593,10 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
             <div className={`container navbar-inner${showBackButton ? '' : ' no-back-btn'}`}>
                 <div className="navbar-left">
                     {showBackButton && (
-                        <i
-                            className="fa-solid fa-chevron-left navbar-back-btn"
+                        <ChevronLeft
+                            className="navbar-back-btn"
+                            size={18}
+                            strokeWidth={2.5}
                             onClick={() => {
                                 sessionStorage.setItem('scrollPosition', window.scrollY.toString());
                                 navigate(-1);
@@ -622,7 +625,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                 disabled={!canGoBack()}
                                 style={{ opacity: canGoBack() ? 1 : 0.3, cursor: canGoBack() ? 'pointer' : 'not-allowed' }}
                             >
-                                <i className="fas fa-chevron-left"></i>
+                                <ChevronLeft size={16} strokeWidth={2.5} />
                             </button>
                             <button 
                                 className="calendar-today-btn"
@@ -638,7 +641,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                             onClick={() => navigateMonth(1)}
                             title="Next month"
                         >
-                            <i className="fas fa-chevron-right"></i>
+                            <ChevronRight size={16} strokeWidth={2.5} />
                         </button>
                     </div>
                 )}
@@ -683,7 +686,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                     )}
                                     {inputValue && !isLoading && (
                                         <button type="button" className="navbar-search-clear" onClick={handleSearchClear} aria-label="Clear search">
-                                            <i className="fa-solid fa-xmark"></i>
+                                            <X size={14} strokeWidth={2.5} />
                                         </button>
                                     )}
                                 </div>
@@ -710,7 +713,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                         aria-expanded={filtersOpen}
                                         title="Filters"
                                     >
-                                        <i className="fa-solid fa-sliders"></i>
+                                        <SlidersHorizontal size={16} strokeWidth={2.5} />
                                         {hasActiveDiscoverFilters && <span className="navbar-filter-btn__dot" />}
                                     </button>
                                     {isMobile ? createPortal(filterMenuContent, document.body) : filterMenuContent}
@@ -815,10 +818,10 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                             disabled={selectedCount === 0 || batchLoading}
                         >
                             {batchLoading ? (
-                                <i className="fa-solid fa-spinner fa-spin"></i>
+                                <Loader2 className="lucide-spin" size={16} strokeWidth={2.5} />
                             ) : (
                                 <>
-                                    <i className="fa-solid fa-rotate-left"></i>
+                                    <RotateCcw size={16} strokeWidth={2.5} />
                                     {isFinishedPage ? 'Mark as Unwatched' : 'Mark as Watched'}
                                 </>
                             )}

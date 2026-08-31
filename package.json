@@ -26,6 +26,7 @@
     "@zxcvbn-ts/core": "^4.2.0",
     "bootstrap": "^5.3.8",
     "canvas-confetti": "^1.9.4",
+    "lucide-react": "^1.37.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

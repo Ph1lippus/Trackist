@@ -1,5 +1,6 @@
 import React from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { LayoutGrid, List } from 'lucide-react'
 import { isNativePlatform } from '../../services/nativePush'
 import { useMobile } from '../../contexts/useMobile'
 
@@ -28,7 +29,7 @@ const ViewToggleButton: React.FC = () => {
             title={isDesktopPage ? 'Switch to Mobile View' : 'Switch to Normal View'}
             aria-label={isDesktopPage ? 'Switch to Mobile View' : 'Switch to Normal View'}
         >
-            <i className={isDesktopPage ? 'fa-solid fa-mobile-screen' : 'fa-solid fa-desktop'} aria-hidden="true" />
+            {isDesktopPage ? <List size={16} strokeWidth={2.5} aria-hidden="true" /> : <LayoutGrid size={16} strokeWidth={2.5} aria-hidden="true" />}
         </button>
     )
 }

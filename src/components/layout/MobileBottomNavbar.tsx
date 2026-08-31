@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink  } from 'react-router-dom';
+import { CalendarDays, CircleUser, Compass, Film, Tv } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 
 const getOptimizedAvatarUrl = (url: string, size = 96): string => {
@@ -14,11 +15,11 @@ const MobileBottomNavbar: React.FC = () => {
     const { user, profile } = useAuth(true);
 
     const navItems = [
-        { to: '/MobileTVShows', icon: 'fa-tv', label: 'TV Shows'},
-        { to: '/Movies', icon: 'fa-film', label: 'Movies'},
-        { to: '/Discover', icon: 'fa-compass', label: 'Discover'},
-        { to: '/UpcomingNew', icon: 'fa-calendar-check', label: 'Upcoming'},
-        { to: '/Profile', icon: 'fa-circle-user', label: 'Profile'},
+        { to: '/MobileTVShows', icon: Tv, label: 'TV Shows'},
+        { to: '/Movies', icon: Film, label: 'Movies'},
+        { to: '/Discover', icon: Compass, label: 'Discover'},
+        { to: '/UpcomingNew', icon: CalendarDays, label: 'Upcoming'},
+        { to: '/Profile', icon: CircleUser, label: 'Profile'},
     ];
 
     // Don't render if no user
@@ -45,7 +46,7 @@ const MobileBottomNavbar: React.FC = () => {
                                 draggable={false}
                             />
                         ) : (
-                            <i className={`fas ${item.icon}`}></i>
+                            <item.icon size={20} strokeWidth={2.5} />
                         )}
                     </NavLink>
                 ))}

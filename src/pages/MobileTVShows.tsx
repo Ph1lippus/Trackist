@@ -461,7 +461,7 @@ const MobileTVShows: React.FC = () => {
                         {watching.length > 0 && (
                             <div className="mobile-tvshows-section">
                                 <div className="mobile-tvshows-section-header">
-                                    <h2 className="mobile-tvshows-section-title">Watching</h2>
+                                    <h2 className="mobile-tvshows-section-title">Currently Watching</h2>
                                     <ViewToggleButton />
                                 </div>
                                 <div className="mobile-tvshows-cards">
@@ -481,7 +481,7 @@ const MobileTVShows: React.FC = () => {
 
                         {toWatch.length > 0 && (
                             <div className="mobile-tvshows-section">
-                                <h2 className="mobile-tvshows-section-title">To Watch</h2>
+                                <h2 className="mobile-tvshows-section-title">Watchlist (Not Started)</h2>
                                 <div className="mobile-tvshows-cards">
                                     {toWatch.map(show => renderShowCard(show))}
                                 </div>
