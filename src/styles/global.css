@@ -2671,7 +2671,7 @@ html.native-app *::-webkit-scrollbar {
     gap: 0.5rem;
 }
 .detail-page__genre {
-    backdrop-filter: blur(20px);
+    backdrop-filter: blur(6px);
     padding: 0.6rem 1rem;
     border-radius: 20px;
     font-size: 0.9rem;
@@ -3163,6 +3163,7 @@ html.native-app *::-webkit-scrollbar {
     gap: 0.75rem;
     flex: 1;
     overflow-y: auto;
+    padding-bottom: 20vh;
 }
 .detail-page__episode-card {
     display: flex;
