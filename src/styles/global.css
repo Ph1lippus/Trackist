@@ -3147,9 +3147,9 @@ html.native-app *::-webkit-scrollbar {
     left: 50%;
     transform: translateX(-50%);
     min-width: 100%;
-    background: rgba(20, 20, 28, 0.98);
+    background: rgba(18, 18, 28, 1);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    border-radius: 25px;
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
     z-index: 100;
     overflow: hidden;
@@ -4883,6 +4883,10 @@ html.native-app *::-webkit-scrollbar {
     .navbar-brand-row .navbar-brand {
         font-size: 1.35rem;
         letter-spacing: 3px;
+    }
+
+    .navbar-brand-row {
+        padding-top: env(safe-area-inset-top, 0px);
     }
 
     .navbar-brand-row .container, .navbar-brand-row .navbar-inner {
