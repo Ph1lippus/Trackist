@@ -9,6 +9,7 @@ interface SyncShow {
     id: string
     tmdb_id: number
     status: string
+    last_season_check?: string | null
 }
 
 const SYNC_BATCH_SIZE = 5
