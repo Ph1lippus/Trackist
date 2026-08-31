@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
+import { ChevronDown } from 'lucide-react'
 
 const COUNTRIES = [
     { code: 'US', name: 'United States' },
@@ -248,7 +249,7 @@ export const CountryPicker: React.FC<CountryPickerProps> = ({ value, onChange, d
                 <span className="country-picker__value">
                     {selected ? `${selected.name} (${selected.code})` : value.toUpperCase()}
                 </span>
-                <i className={`fa-solid fa-chevron-down ${isOpen ? 'rotated' : ''}`}></i>
+                <ChevronDown size={16} strokeWidth={2.2} className={`country-picker__chevron${isOpen ? ' rotated' : ''}`} />
             </button>
 
             {isOpen && !disabled && (

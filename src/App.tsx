@@ -370,7 +370,9 @@ const AppContent: React.FC = () => {
     }
 
     const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Friends', '/Statistics', '/Finished', '/Lists', '/Profile', '/Admin', '/MobileTVShows', '/MobileMovies', '/Followers', '/Following', '/Credits']
-    const settingsPages = ['/Settings', '/MFA', '/Sessions', '/AdminSecurity', '/EditProfile']
+    const settingsPages = ['/Settings', '/MFA', '/Sessions', '/AdminSecurity', '/EditProfile',
+        '/Settings/account', '/Settings/profile', '/Settings/security', '/Settings/notifications',
+        '/Settings/app', '/Settings/data', '/Settings/additions', '/Settings/danger']
     const isSubpage = (path: string) => (
         path.startsWith('/ListsDetail/') ||
         path.startsWith('/ListsEditPage/') ||
@@ -434,6 +436,7 @@ const AppContent: React.FC = () => {
                     <Route path="/Following/:username" element={user ? <Following /> : <Navigate to="/login" replace />} />
                     <Route path="/Statistics" element={user ? <Statistics /> : <Navigate to="/login" replace />} />
                     <Route path="/Settings" element={user ? <Settings /> : <Navigate to="/login" replace />} />
+                    <Route path="/Settings/:section" element={user ? <Settings /> : <Navigate to="/login" replace />} />
                     <Route path="/Admin" element={<Admin />} />
                     <Route path="/AdminSecurity" element={user ? <AdminSecurity /> : <Navigate to="/login" replace />} />
                     <Route path="/MFA" element={user ? <MFA /> : <Navigate to="/login" replace />} />

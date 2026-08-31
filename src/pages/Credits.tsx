@@ -140,32 +140,37 @@ const credits = [
 const Credits: React.FC = () => {
     usePageTitle('Track1st - Credits')
     return (
-        <section className="credits-page">
-            <div className="dashboard-section">
-                <div className="dashboard-section__head">
-                    <h2>Credits</h2>
-                    <span>Tools and services that helped shape Track1st</span>
-                </div>
+        <main className="main">
+            <div className="container settings-page">
+                <div className="settings-panel settings-panel--subpage">
+                    <div className="settings-panel__header">
+                        <div className="settings-panel__title-row">
+                            <span className="settings-panel__title-icon"><img src={tmdbLogo} alt="" style={{ width: '18px', height: '18px' }} /></span>
+                            <h3>Credits</h3>
+                        </div>
+                        <p>Tools and services that helped shape Track1st.</p>
+                    </div>
 
-                <div className="credits-grid">
-                    {credits.map((item) => (
-                        <article className="credit-card" key={item.title}>
-                            <img className="credit-card__logo" src={item.logo} alt={`${item.title} logo`} />
-                            <h3 className="credit-card__title">{item.title}</h3>
-                            <p className="credit-card__text">{item.text}</p>
-                            <a className="credit-card__link" href={item.link} target="_blank" rel="noreferrer">
-                                Visit {item.title}
-                            </a>
-                        </article>
-                    ))}
-                </div>
+                    <div className="credits-grid">
+                        {credits.map((item) => (
+                            <article className="credit-card" key={item.title}>
+                                <img className="credit-card__logo" src={item.logo} alt={`${item.title} logo`} />
+                                <h3 className="credit-card__title">{item.title}</h3>
+                                <p className="credit-card__text">{item.text}</p>
+                                <a className="credit-card__link" href={item.link} target="_blank" rel="noreferrer">
+                                    Visit {item.title}
+                                </a>
+                            </article>
+                        ))}
+                    </div>
 
-                <div className="tmdb-attribution">
-                    <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
-                    <p>hCaptcha is a registered trademark of Intuition Machines, Inc.</p>
+                    <div className="tmdb-attribution">
+                        <p>This product uses the TMDB API but is not endorsed or certified by TMDB.</p>
+                        <p>hCaptcha is a registered trademark of Intuition Machines, Inc.</p>
+                    </div>
                 </div>
             </div>
-        </section>
+        </main>
     )
 }
 

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { MonitorSmartphone, TabletSmartphone, Laptop, MapPin, Clock3, ShieldCheck, CheckCircle2, CircleAlert } from 'lucide-react'
 import { supabase } from '../services/supabaseClient'
 import { useAuthStore } from '../stores/useAuthStore'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -184,38 +185,55 @@ const Sessions: React.FC = () => {
 
     return (
         <main className="main">
-            <div className="auth-layout">
-                <div className="auth-form-wrapper">
-                    <div className="auth-card sessions-page">
-                        <div className="sessions-header">
-                            <h2 className="auth-title">Session Management</h2>
-                            <p className="sessions-description">
-                                Review and manage your active sessions. Revoke any sessions you don't recognize.
-                            </p>
+            <div className="container settings-page">
+                <div className="settings-panel settings-panel--subpage sessions-page">
+                    <div className="settings-panel__header">
+                        <div className="settings-panel__title-row">
+                            <span className="settings-panel__title-icon"><ShieldCheck size={18} strokeWidth={2.2} /></span>
+                            <h3>Session Management</h3>
                         </div>
+                        <p className="sessions-description">
+                            Review and manage every active session tied to your account.
+                        </p>
+                    </div>
 
-                        {error && <div className="auth-alert auth-alert--error">{error}</div>}
-                        {success && <div className="auth-alert auth-alert--success">{success}</div>}
+                    {error && (
+                        <span className="settings-inline-feedback settings-inline-feedback--error">
+                            <CircleAlert size={13} strokeWidth={2.2} />
+                            {error}
+                        </span>
+                    )}
+                    {success && (
+                        <span className="settings-inline-feedback">
+                            <CheckCircle2 size={13} strokeWidth={2.2} />
+                            {success}
+                        </span>
+                    )}
 
-                        {loading ? (
-                            <div className="sessions-loading">
-                                <div className="spinner"></div>
-                                <p>Loading sessions...</p>
-                            </div>
-                        ) : sessions.length === 0 ? (
-                            <div className="sessions-empty">
-                                <i className="fa-solid fa-shield-check"></i>
-                                <p>No active sessions found</p>
-                            </div>
-                        ) : (
-                            <div className="sessions-list">
-                                {sessions.map(s => (
+                    {loading ? (
+                        <div className="sessions-loading">
+                            <div className="spinner"></div>
+                            <p>Loading sessions...</p>
+                        </div>
+                    ) : sessions.length === 0 ? (
+                        <div className="sessions-empty">
+                            <ShieldCheck size={28} strokeWidth={2.2} />
+                            <p>No active sessions found</p>
+                        </div>
+                    ) : (
+                        <div className="sessions-list">
+                            {sessions.map(s => {
+                                const deviceIcon = s.device_info?.device_type === 'Mobile'
+                                    ? <MonitorSmartphone size={18} strokeWidth={2.2} />
+                                    : s.device_info?.device_type === 'Tablet'
+                                        ? <TabletSmartphone size={18} strokeWidth={2.2} />
+                                        : <Laptop size={18} strokeWidth={2.2} />
+
+                                return (
                                     <div key={s.id} className={`session-card ${s.is_current ? 'current' : ''} ${s.revoked_at ? 'revoked' : ''}`}>
                                         <div className="session-main">
                                             <div className="session-device">
-                                                <div className="session-device-icon">
-                                                    <i className={`fa-solid ${s.device_info?.device_type === 'Mobile' ? 'fa-mobile-screen' : s.device_info?.device_type === 'Tablet' ? 'fa-tablet' : 'fa-desktop'}`}></i>
-                                                </div>
+                                                <div className="session-device-icon">{deviceIcon}</div>
                                                 <div className="session-device-info">
                                                     <div className="session-device-name">
                                                         {s.device_info?.browser} on {s.device_info?.os}
@@ -223,11 +241,11 @@ const Sessions: React.FC = () => {
                                                     </div>
                                                     <div className="session-meta">
                                                         <span className="session-location">
-                                                            <i className="fa-solid fa-location-dot"></i>
+                                                            <MapPin size={12} strokeWidth={2} />
                                                             {formatLocation(s.location)}
                                                         </span>
                                                         <span className="session-time">
-                                                            <i className="fa-solid fa-clock"></i>
+                                                            <Clock3 size={12} strokeWidth={2} />
                                                             {s.revoked_at ? `Revoked ${formatDate(s.revoked_at)}` : `Last active ${formatDate(s.last_active)}`}
                                                         </span>
                                                     </div>
@@ -237,7 +255,7 @@ const Sessions: React.FC = () => {
                                         <div className="session-actions">
                                             {!s.is_current && !s.revoked_at && (
                                                 <button
-                                                    className="session-revoke-btn"
+                                                    className="settings-btn settings-btn--secondary"
                                                     onClick={() => handleRevoke(s.session_id)}
                                                     disabled={revoking === s.session_id}
                                                 >
@@ -252,34 +270,31 @@ const Sessions: React.FC = () => {
                                             )}
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        )}
-
-                        {sessions.some(s => !s.is_current && !s.revoked_at) && (
-                            <div className="sessions-bulk-actions">
-                                <button
-                                    className="auth-submit-btn auth-submit-btn--secondary"
-                                    onClick={handleRevokeAllOthers}
-                                    disabled={revoking === 'all'}
-                                >
-                                    {revoking === 'all' ? 'Revoking all...' : 'Revoke All Other Sessions'}
-                                </button>
-                                <p className="sessions-bulk-note">
-                                    This will sign you out of all other devices. You'll stay signed in on this device.
-                                </p>
-                            </div>
-                        )}
-
-                        <div className="sessions-security-tips">
-                            <h4>Security Tips</h4>
-                            <ul>
-                                <li>Regularly review your active sessions</li>
-                                <li>Revoke sessions from devices you no longer use</li>
-                                <li>If you see an unfamiliar session, revoke it immediately and change your password</li>
-                                <li>Enable two-factor authentication for added security</li>
-                            </ul>
+                                )
+                            })}
                         </div>
+                    )}
+
+                    {sessions.some(s => !s.is_current && !s.revoked_at) && (
+                        <div className="sessions-bulk-actions">
+                            <button
+                                className="settings-btn settings-btn--danger"
+                                onClick={handleRevokeAllOthers}
+                                disabled={revoking === 'all'}
+                            >
+                                {revoking === 'all' ? 'Revoking...' : 'Revoke All Other Sessions'}
+                            </button>
+                            <span className="sessions-bulk-note">This signs you out of every other device except this one.</span>
+                        </div>
+                    )}
+
+                    <div className="sessions-security-tips">
+                        <h4>Security tips</h4>
+                        <ul>
+                            <li>Review old sessions regularly and revoke anything you do not recognize.</li>
+                            <li>Use 2FA for extra protection on your account.</li>
+                            <li>Sign out of shared or public devices after use.</li>
+                        </ul>
                     </div>
                 </div>
             </div>

@@ -116,7 +116,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                           location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/);
     const isListDetailPage = location.pathname.match(/^\/ListsDetail\/[a-f0-9-]+$/);
     const isListEditPage = location.pathname.match(/^\/ListsEditPage\/(new|[a-f0-9-]+)$/);
-    const isSettingsSubPage = ['/MFA', '/Sessions', '/Settings', '/EditProfile', '/AdminSecurity'].includes(location.pathname);
+    const isSettingsSubPage = ['/MFA', '/Sessions', '/Settings', '/EditProfile', '/Credits', '/AdminSecurity'].includes(location.pathname) || location.pathname.startsWith('/Settings/');
     const showBackButton = Boolean(isDetailPage || isListDetailPage || isListEditPage || isSettingsSubPage);
     
     const showSearchBar = !['/login', '/register'].includes(location.pathname) && 

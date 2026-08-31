@@ -136,13 +136,14 @@ const EditProfile: React.FC = () => {
     if (!currentUser) {
         return (
             <main className="main">
-                <div className="container">
-                    <div className="row justify-content-center">
-                        <div className="col-md-6 col-lg-5">
-                            <div className="auth-card">
-                                <h2 className="auth-title">Edit Profile</h2>
-                                <p className="auth-text">Please <Link to="/login" className="auth-link">login</Link> to edit your profile.</p>
+                <div className="container settings-page">
+                    <div className="settings-panel settings-panel--subpage">
+                        <div className="settings-panel__header">
+                            <div className="settings-panel__title-row">
+                                <span className="settings-panel__title-icon"><Link to="/login" className="settings-link-card__label" style={{ color: 'var(--color-primary)' }}> </Link></span>
+                                <h3>Edit Profile</h3>
                             </div>
+                            <p>Please <Link to="/login" className="settings-link-card__label" style={{ color: 'var(--color-primary)' }}>log in</Link> to edit your profile.</p>
                         </div>
                     </div>
                 </div>
@@ -154,9 +155,9 @@ const EditProfile: React.FC = () => {
         <>
             {showCropper && originalImage && (
                 <div className="modal-overlay" style={{ zIndex: 1000 }}>
-                    <div className="edit-profile-modal" style={{ maxWidth: '500px', padding: '1rem' }}>
-                        <h3 style={{ marginBottom: '1rem' }}>Crop your avatar</h3>
-                        <div style={{ position: 'relative', width: '100%', height: '300px', backgroundColor: '#333' }}>
+                    <div className="edit-profile-modal">
+                        <h3>Crop your avatar</h3>
+                        <div className="edit-profile-modal__cropper-wrapper">
                             <Cropper
                                 image={originalImage}
                                 crop={crop}
@@ -171,10 +172,10 @@ const EditProfile: React.FC = () => {
                                 onCropComplete={onCropComplete}
                             />
                         </div>
-                        <div className="edit-profile-actions" style={{ marginTop: '1rem' }}>
-                            <button 
+                        <div className="edit-profile-actions">
+                            <button
                                 type="button"
-                                className="edit-profile-btn edit-profile-btn--primary"
+                                className="settings-btn settings-btn--primary"
                                 onClick={handleCropSave}
                             >
                                 Save Crop
@@ -183,86 +184,81 @@ const EditProfile: React.FC = () => {
                     </div>
                 </div>
             )}
-            
+
             <main className="main">
-                <div className="container">
-                    <div className="row justify-content-center">
-                        <div className="col-md-6 col-lg-5">
-                            <div className="auth-card">
-                                <h2 className="auth-title">Edit Profile</h2>
-                                <form onSubmit={handleSubmit} noValidate>
-<div className="mb-3" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                                            <div 
-                                                onClick={handleAvatarClick}
-                                                style={{ 
-                                                    width: '100%',
-                                                    aspectRatio: '1',
-                                                    borderRadius: '50%',
-                                                    background: avatarUrl ? `url(${avatarUrl}) center/cover no-repeat` : 'var(--color-primary)',
-                                                    color: 'var(--color-black)',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    cursor: 'pointer',
-                                                    marginBottom: '0.5rem',
-                                                    border: '2px solid var(--color-platinum)',
-                                                    position: 'relative',
-                                                    overflow: 'hidden',
-                                                    maxWidth: '200px',
-                                                    transition: 'all 0.2s ease'
-                                                }}
-                                                className="avatar-hover-wrapper"
-                                            >
-                                                {!avatarUrl && (
-                                                    <span style={{ fontSize: '0.9rem', color: 'rgba(0,0,0,0.6)' }}>
-                                                        Click to select image
-                                                    </span>
-                                                )}
-                                                {avatarUrl && (
-                                                    <div className="avatar-hover-overlay">
-                                                        <span style={{ fontSize: '0.85rem', color: 'var(--color-platinum)', background: 'rgba(133,138,227,0.1)', padding: '0.35rem 0.75rem', borderRadius: '20px', fontWeight: '600' }}>Change</span>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        <input
-                                            ref={fileInputRef}
-                                            type="file"
-                                            className="d-none"
-                                            id="avatar"
-                                            accept="image/*"
-                                            onChange={handleAvatarChange}
-                                        />
-                                    </div>
-                                    <div className="mb-3">
-                                        <label htmlFor="username" className="form-label">Username</label>
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            id="username"
-                                            placeholder="Your username"
-                                            value={username}
-                                            onChange={(e) => setUsername(e.target.value)}
-                                            required
-                                        />
-                                    </div>
-                                    <div className="mb-3">
-                                        <label htmlFor="bio" className="form-label">Bio</label>
-                                        <textarea
-                                            className="form-control"
-                                            id="bio"
-                                            placeholder="Tell us about yourself..."
-                                            value={bio}
-                                            onChange={(e) => setBio(e.target.value)}
-                                            rows={3}
-                                        />
-                                    </div>
-                                    {error && <div className="alert alert-danger">{error}</div>}
-                                    <button type="submit" className="btn btn-primary w-100" disabled={loading}>
-                                        {loading ? 'Saving...' : 'Save Changes'}
-                                    </button>
-                                </form>
+                <div className="container settings-page">
+                    <div className="settings-panel settings-panel--subpage">
+                        <div className="settings-panel__header">
+                            <div className="settings-panel__title-row">
+                                <span className="settings-panel__title-icon">
+                                    {avatarUrl ? (
+                                        <img src={avatarUrl} alt="Current avatar" className="settings-panel__avatar-thumb" />
+                                    ) : (
+                                        <span className="settings-panel__avatar-placeholder">P</span>
+                                    )}
+                                </span>
+                                <h3>Edit Profile</h3>
                             </div>
+                            <p>Update your display name, bio, and profile picture.</p>
                         </div>
+
+                        <form className="settings-form" onSubmit={handleSubmit} noValidate>
+                            <div className="settings-avatar-picker">
+                                <button
+                                    type="button"
+                                    className="settings-avatar-picker__preview avatar-hover-wrapper"
+                                    onClick={handleAvatarClick}
+                                    aria-label="Choose a profile picture"
+                                    style={{ backgroundImage: avatarUrl ? `url(${avatarUrl})` : 'none' }}
+                                >
+                                    {!avatarUrl && <span>Choose image</span>}
+                                    <span className="avatar-hover-overlay"><span className="avatar-hover-overlay__label">Change</span></span>
+                                </button>
+                                <div className="settings-avatar-picker__meta">
+                                    <span className="settings-avatar-picker__label">Profile photo</span>
+                                    <span className="settings-avatar-picker__hint">Square crop recommended</span>
+                                </div>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    className="d-none"
+                                    id="avatar"
+                                    accept="image/*"
+                                    onChange={handleAvatarChange}
+                                />
+                            </div>
+
+                            <div className="settings-field">
+                                <label htmlFor="username" className="settings-field__label">Username</label>
+                                <input
+                                    type="text"
+                                    className="settings-field__input"
+                                    id="username"
+                                    placeholder="Your username"
+                                    value={username}
+                                    onChange={(e) => setUsername(e.target.value)}
+                                    required
+                                />
+                            </div>
+
+                            <div className="settings-field">
+                                <label htmlFor="bio" className="settings-field__label">Bio</label>
+                                <textarea
+                                    className="settings-field__input settings-field__textarea"
+                                    id="bio"
+                                    placeholder="Tell us about yourself..."
+                                    value={bio}
+                                    onChange={(e) => setBio(e.target.value)}
+                                    rows={3}
+                                />
+                            </div>
+
+                            {error && <span className="settings-inline-feedback settings-inline-feedback--error"><span className="settings-inline-feedback__icon">!</span>{error}</span>}
+
+                            <button type="submit" className="settings-btn settings-btn--primary" disabled={loading}>
+                                {loading ? 'Saving...' : 'Save Changes'}
+                            </button>
+                        </form>
                     </div>
                 </div>
             </main>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react'
+import { ChevronDown, LocateFixed } from 'lucide-react'
 
 const COMMON_TIMEZONES = [
     { value: 'Europe/Lisbon', label: 'Europe/Lisbon (UTC+0/+1)' },
@@ -411,12 +412,12 @@ export const TimezonePicker: React.FC<TimezonePickerProps> = ({ value, onChange,
                 disabled={disabled}
             >
                 <span className="timezone-picker__value">{selected?.label || value}</span>
-                <i className={`fa-solid fa-chevron-down ${isOpen ? 'rotated' : ''}`}></i>
+                <ChevronDown size={16} strokeWidth={2.2} className={`timezone-picker__chevron${isOpen ? ' rotated' : ''}`} />
             </button>
 
             {autoDetectLabel && (
                 <div className="timezone-picker__auto-detect">
-                    <i className="fa-solid fa-location-crosshairs"></i>
+                    <LocateFixed size={13} strokeWidth={2.2} />
                     <span>{autoDetectLabel}</span>
                 </div>
             )}
