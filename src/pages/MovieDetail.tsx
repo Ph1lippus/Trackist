@@ -531,7 +531,6 @@ const MovieDetail: React.FC = () => {
                                 url={window.location.href}
                                 title={`${title} on Track1st`}
                                 text={`I found ${title} on Track1st. Add it to your watchlist and see if it belongs in your next movie night.`}
-                                imageUrl={details?.poster_path ? imageUrl(details.poster_path, 'w500') : null}
                             />
                         </div>
 
