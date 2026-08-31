@@ -33,6 +33,7 @@ import UpcomingNew from './pages/UpcomingNew'
 import Settings from './pages/Settings'
 import Credits from './pages/Credits'
 import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import Profile from './pages/Profile'
 import Friends from './pages/Friends'
 import Followers from './pages/Followers'
@@ -445,6 +446,7 @@ const AppContent: React.FC = () => {
                     <Route path="/login" element={user ? <Navigate to={defaultRoute} replace /> : <Login />} />
                     <Route path="/register" element={user ? <Navigate to={defaultRoute} replace /> : <Register />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/EditProfile" element={user ? <EditProfile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile/:username" element={user ? <Profile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile" element={user ? <Profile /> : <Navigate to="/login" replace />} />

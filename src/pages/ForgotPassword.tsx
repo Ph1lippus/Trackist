@@ -50,7 +50,8 @@ const ForgotPassword: React.FC = () => {
         if (error) {
             recordAttempt()
             setCaptchaToken(null)
-            setError('Unable to process request. Please try again later.')
+            console.error('Password reset error:', error)
+            setError(error.message || 'Unable to process request. Please try again later.')
             return
         }
 

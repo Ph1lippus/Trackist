@@ -17,12 +17,20 @@ export const requestPasswordReset = async (email: string) => {
     
     const currentOrigin = window.location.origin
     const redirectTo = allowedOrigins.includes(currentOrigin) 
-        ? `${currentOrigin}/login` 
-        : 'https://track1st.vercel.app/login'
+        ? `${currentOrigin}/reset-password` 
+        : 'https://track1st.vercel.app/reset-password'
 
-    return supabase.auth.resetPasswordForEmail(email, {
+    console.log('Password reset request:', { email, currentOrigin, redirectTo })
+
+    const result = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo
     })
+
+    if (result.error) {
+        console.error('Supabase password reset error:', result.error)
+    }
+
+    return result
 }
 
 export const updateUserEmail = async (email: string) => {
