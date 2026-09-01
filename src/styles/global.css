@@ -157,7 +157,7 @@
         max-width: 100%!important;
     }
     .detail-page__overview-section {
-        margin-top: 16rem;
+        margin-top: 14rem;
         text-align: center;
     }
     .media-card__icon-btn, .detail-page__genres, .detail-page__actions, .detail-page__age-rating {
@@ -553,12 +553,18 @@ html::before {
 }
 
 
+@media (max-width: 768px) {
+    .page-main {
+        padding-top: 0px !important;  
+    }
+}
 
 .page-main {
     align-items: center;
     justify-content: center;
     width: 100%;
     padding: 0 0 0 0;
+    padding-top: var(--navbar-height);
 }
 .page-main--no-footer {
     padding-bottom: 6rem;
@@ -634,7 +640,7 @@ html::before {
 /* Navbar is always fixed at top for consistent UX across all pages */
 .navbar-brand-row {
     position: fixed;
-    top: 0;
+    top: -2px;
     left: 0;
     right: 0;
     z-index: 100;
@@ -11768,7 +11774,7 @@ i.fa-solid.fa-trash:hover {
 }
 
 .discover-page {
-    padding-top: calc(var(--navbar-height) + 0.75rem) !important;
+    padding-top: calc(var(--navbar-height) + 0.8rem) !important;
     padding-bottom: calc(var(--bottom-nav-height) + 1rem) !important;
 }
 
