@@ -378,7 +378,7 @@ const isNoLanguageCode = (value?: string | null): boolean => {
 
 export const getBestBackdropPath = (backdrops: any[] | undefined | null): string | null => {
     if (!backdrops || backdrops.length === 0) return null
-    
+
     const candidates = backdrops
         .filter(b => isNoLanguageCode(b.iso_639_1))
         .sort((a, b) => {
@@ -394,9 +394,9 @@ export const getBestBackdropPath = (backdrops: any[] | undefined | null): string
             const bCount = b.vote_count ?? 0
             if (bCount !== aCount) return bCount - aCount
 
-            return bWidth - aWidth
+            return 0
         })
-    
+
     return candidates[0]?.file_path ?? null
 }
 
@@ -423,7 +423,7 @@ export const getBestPoster = (posters: any[] | undefined | null): string | null 
             const bCount = b.vote_count ?? 0
             if (bCount !== aCount) return bCount - aCount
 
-            return bHeight - aHeight
+            return 0
         })
 
     return candidates[0]?.file_path ?? null
