@@ -613,10 +613,11 @@ html::before {
     z-index: 100;
 }
 
-/* Keep the primary navbar pinned at the top for stable app chrome while the
-   modal close logic restores the underlying page scroll position. */
+/* Keep the primary navbar in normal document flow so route transitions do not
+   create a vertical jump when a detail modal closes. The modal still renders
+   beneath it and the scroll restoration logic keeps the page stable. */
 .navbar-brand-row {
-    position:relative ;
+    position: sticky;
     top: 0;
     left: 0;
     right: 0;
