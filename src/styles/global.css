@@ -463,7 +463,7 @@ html {
     background-attachment: fixed;
 }
 @media (max-width: 768px) {
-    html:has(.container.navbar-inner.no-back-btn) {
+    html {
         background: #2c2b55;
     }
     .container.navbar-inner.no-back-btn {
