@@ -555,7 +555,7 @@ html::before {
 
 @media (max-width: 768px) {
     .page-main {
-        padding-top: 0px !important;  
+        padding-top: 0 !important;
     }
 }
 
@@ -1531,10 +1531,10 @@ select.navbar-filter-field option {
 .discover-page {
     width: 100%;
     min-height: 100%;
-    padding: 1.5rem 1rem 7rem;
+    padding: 0 1rem 7rem;
     display: flex;
     flex-direction: column;
-    align-self: stretch; 
+    align-self: stretch;
 }
 .discover-container {
     width: 85%;
@@ -11774,18 +11774,25 @@ i.fa-solid.fa-trash:hover {
 }
 
 .discover-page {
-    padding-top: calc(var(--navbar-height) + 0.8rem) !important;
+    padding-top: 0 !important;
     padding-bottom: calc(var(--bottom-nav-height) + 1rem) !important;
 }
 
 /* Adjust page padding for mobile bottom navbar */
 @media (max-width: 768px) {
+    .discover-page,
+    .dashboard-shell,
+    .mobile-tvshows-page,
+    .mobile-movies-page {
+        padding-top: 0.5rem !important;
+    }
+
     .discover-page {
-        padding-top: 0 !important;
         padding-bottom: 0 !important;
-    }   
+    }
+
     .page-main {
-        padding-top: calc(var(--navbar-height) + 0.75rem) !important;
+        padding-top: 0 !important;
         padding-bottom: calc(var(--bottom-nav-height) + 0.5rem) !important;
     }
 
