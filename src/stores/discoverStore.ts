@@ -69,7 +69,6 @@ interface DiscoverState {
 
 // Generation counter to invalidate stale fetch requests when tabs/filters change rapidly
 let fetchGeneration = 0
-const inFlightPages = new Set<string>()
 
 const useDiscoverStore = create<DiscoverState>((set, get) => ({
     // Initial state
@@ -291,10 +290,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         // Stale request from a previous tab/filter - abandon it.
         // Do not touch loading flags because the newer request owns them.
         if (generation !== fetchGeneration) return
-
-        const requestKey = `${generation}:${pageNum}`
-        if (inFlightPages.has(requestKey)) return
-        inFlightPages.add(requestKey)
 
         if (pageNum === 1) {
             // Reset sessionAddedIds when fetching page 1 (fresh query or filter change)
@@ -599,8 +594,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 console.error('Failed to load:', err)
                 set({ isLoading: false, isLoadingMore: false })
             }
-        } finally {
-            inFlightPages.delete(requestKey)
         }
     },
 }))
