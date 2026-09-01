@@ -139,10 +139,6 @@ const EditProfile: React.FC = () => {
                 <div className="container settings-page">
                     <div className="settings-panel settings-panel--subpage">
                         <div className="settings-panel__header">
-                            <div className="settings-panel__title-row">
-                                <span className="settings-panel__title-icon"><Link to="/login" className="settings-link-card__label" style={{ color: 'var(--color-primary)' }}> </Link></span>
-                                <h3>Edit Profile</h3>
-                            </div>
                             <p>Please <Link to="/login" className="settings-link-card__label" style={{ color: 'var(--color-primary)' }}>log in</Link> to edit your profile.</p>
                         </div>
                     </div>

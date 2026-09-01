@@ -171,66 +171,37 @@ const AppContent: React.FC = () => {
 
     // Native (Capacitor) update check: compare installed version against the
     // latest android-latest release and surface the Update Available modal.
-    // Runs on launch, on app resume and foreground, plus a periodic sweep, and
-    // retries on transient failures (e.g. the release landed mid-check or the
-    // network hiccuped) so an update is never silently missed.
+    // Checks once when the app is opened and again when the user manually taps
+    // "Check for updates" in Settings. No background polling or auto-retry.
     useEffect(() => {
         if (!isNativePlatform()) return
 
         let cancelled = false
-        let retryTimer: number | undefined
-        let resumeUnsubscribe: (() => void) | undefined
 
-        // Returns true when the check concluded (update needed, current, or
-        // dismissed); returns false when the lookup itself failed.
-        const check = async (): Promise<boolean> => {
-            if (cancelled) return true
+        const check = async (): Promise<void> => {
+            if (cancelled) return
 
             const [installed, latestManifest] = await Promise.all([
                 getInstalledVersionCode(),
                 getLatestVersionManifest(),
             ])
-            if (cancelled) return true
-            if (!latestManifest) return false
-            if (!(latestManifest.versionCode > installed)) return true
-            if (getUpdateDismissed(latestManifest.versionName)) return true
+            if (cancelled) return
+            if (!latestManifest) return
+            if (!(latestManifest.versionCode > installed)) return
+            if (getUpdateDismissed(latestManifest.versionName)) return
             setNativeUpdateVersion(latestManifest.versionName)
             setShowUpdateModal(true)
-            return true
-        }
-        const runCheck = (): void => {
-            void check().then((ok) => {
-                if (!ok && !retryTimer && !cancelled) {
-                    retryTimer = window.setTimeout(() => {
-                        retryTimer = undefined
-                        runCheck()
-                    }, 60 * 1000)
-                }
-            })
         }
         const onCheckUpdate = (): void => {
-            runCheck()
+            void check()
         }
 
-        void CapacitorApp.addListener('resume', runCheck).then((handle) => {
-            resumeUnsubscribe = () => void handle.remove()
-        })
-        const onVisibility = (): void => {
-            if (document.visibilityState === 'visible') runCheck()
-        }
-        document.addEventListener('visibilitychange', onVisibility)
-
-        runCheck()
-        const intervalId = window.setInterval(runCheck, 5 * 60 * 1000)
+        void check()
         window.addEventListener('track1st:check-update', onCheckUpdate)
 
         return () => {
             cancelled = true
-            if (retryTimer) window.clearTimeout(retryTimer)
-            window.clearInterval(intervalId)
             window.removeEventListener('track1st:check-update', onCheckUpdate)
-            document.removeEventListener('visibilitychange', onVisibility)
-            resumeUnsubscribe?.()
         }
     }, [])
 

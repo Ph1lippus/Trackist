@@ -1582,13 +1582,6 @@ const Settings: React.FC = () => {
     return (
         <section className="dashboard-page settings-page">
             <div className="dashboard-shell">
-                <div className="discover-section">
-                    <div className="discover-section__head">
-                        <h2>{isMobile && section ? sectionLabel[activeSection] : 'Settings'}</h2>
-                        {(!isMobile || !section) && <span>Manage your account and preferences</span>}
-                    </div>
-                </div>
-
                 {isMobile ? (
                     // Instagram-style mobile menu / sub-page
                     <div className="settings-mobile">

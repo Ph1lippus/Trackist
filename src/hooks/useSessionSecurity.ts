@@ -4,9 +4,6 @@ import { useAuthStore } from '../stores/useAuthStore'
 
 export function useSessionSecurity() {
     const { session, user } = useAuthStore()
-    const refreshIntervalRef = useRef<number | null>(null)
-    const inactivityTimerRef = useRef<number | null>(null)
-    const lastActivityRef = useRef<number>(Date.now())
     const deviceFingerprintRef = useRef<string>('')
     const registeredSessionRef = useRef<string | null>(null)
 
@@ -44,8 +41,8 @@ export function useSessionSecurity() {
         if (!session?.access_token || !user) return
 
         // Dedupe: only register once per distinct access token. The effect
-        // re-runs on every session object change (auth store updates, the 5-min
-        // auto-refresh), which previously fired many concurrent register calls
+        // re-runs on every session object change (auth store updates, token
+        // refresh), which previously fired many concurrent register calls
         // and each crossed the server's check-then-insert -> duplicate rows.
         if (registeredSessionRef.current === session.access_token) return
         registeredSessionRef.current = session.access_token
@@ -64,107 +61,15 @@ export function useSessionSecurity() {
         }
     }, [session, user, generateFingerprint])
 
-    // Auto-refresh session 5 minutes before expiry
-    const startAutoRefresh = useCallback(() => {
-        if (refreshIntervalRef.current) return
-
-        refreshIntervalRef.current = window.setInterval(async () => {
-            if (!session) return
-
-            try {
-                const { data, error } = await supabase.auth.refreshSession()
-                if (error) {
-                    console.warn('Session refresh failed:', error)
-                } else if (data.session) {
-                    console.log('Session refreshed successfully')
-                }
-            } catch (err) {
-                console.warn('Session refresh error:', err)
-            }
-        }, 5 * 60 * 1000) // Check every 5 minutes
-    }, [session])
-
-    // Inactivity timeout (30 minutes)
-    const resetInactivityTimer = useCallback(() => {
-        lastActivityRef.current = Date.now()
-
-        if (inactivityTimerRef.current) {
-            window.clearTimeout(inactivityTimerRef.current)
-        }
-
-        inactivityTimerRef.current = window.setTimeout(async () => {
-            try {
-                await supabase.auth.signOut()
-                window.location.href = '/login'
-            } catch (err) {
-                console.warn('Inactivity signout failed:', err)
-            }
-        }, 30 * 60 * 1000) // 30 minutes
-    }, [])
-
-    // Track activity
-    const handleActivity = useCallback(() => {
-        resetInactivityTimer()
-    }, [resetInactivityTimer])
-
+    // Register the session when it becomes available. Session renewal (and its
+    // durability) is handled by the Supabase client's built-in autoRefreshToken.
     useEffect(() => {
-        if (!user || !session) {
-            // Cleanup when not authenticated
-            if (refreshIntervalRef.current) {
-                window.clearInterval(refreshIntervalRef.current)
-                refreshIntervalRef.current = null
-            }
-            if (inactivityTimerRef.current) {
-                window.clearTimeout(inactivityTimerRef.current)
-                inactivityTimerRef.current = null
-            }
-            return
-        }
-
-        // Register session
+        if (!user || !session) return
         registerSession()
-
-        // Start auto-refresh
-        startAutoRefresh()
-
-        // Start inactivity timer
-        resetInactivityTimer()
-
-        // Add activity listeners
-        const events = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart']
-        events.forEach(event => {
-            document.addEventListener(event, handleActivity, { passive: true })
-        })
-
-        // Handle visibility change
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                resetInactivityTimer()
-            }
-        }
-        document.addEventListener('visibilitychange', handleVisibilityChange)
-
-        // Cleanup
-        return () => {
-            events.forEach(event => {
-                document.removeEventListener(event, handleActivity)
-            })
-            document.removeEventListener('visibilitychange', handleVisibilityChange)
-            
-            if (refreshIntervalRef.current) {
-                window.clearInterval(refreshIntervalRef.current)
-                refreshIntervalRef.current = null
-            }
-            if (inactivityTimerRef.current) {
-                window.clearTimeout(inactivityTimerRef.current)
-                inactivityTimerRef.current = null
-            }
-        }
-    }, [user, session, registerSession, startAutoRefresh, resetInactivityTimer, handleActivity])
+    }, [user, session, registerSession])
 
     // Return cleanup function for manual use
     return {
-        registerSession,
-        resetInactivityTimer
+        registerSession
     }
 }

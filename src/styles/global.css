@@ -23,6 +23,7 @@
         grid-template-columns: 100px minmax(0, 1fr) !important;
         align-items: center !important;
         min-height: unset !important;
+        padding-left:1rem;
     }
     .media-card__poster {
         border: none !important;
@@ -35,7 +36,7 @@
         height: 100px!important;
     }
     .profile-hero__content {
-        padding: 0rem 1rem !important;
+        padding: 0rem 0rem !important;
     }
     .profile-hero__stats {
         justify-content: center !important;
@@ -8379,6 +8380,7 @@ i.fa-solid.fa-trash:hover {
     display: flex;
     align-items: center;
     min-height: 180px;
+    
 }
 
 .profile-hero__info {
@@ -8454,6 +8456,7 @@ i.fa-solid.fa-trash:hover {
     flex-wrap: wrap;
     margin-top: 0.25rem;
     width: 100%;
+    padding: 0rem 1rem;
 }
 
 .profile-btn {
@@ -8519,6 +8522,7 @@ i.fa-solid.fa-trash:hover {
     line-height: 1.6;
     margin: 0;
     max-width: 600px;
+    padding: 0rem 1rem;
 }
 
 .profile-hero__meta {
@@ -8678,6 +8682,7 @@ i.fa-solid.fa-trash:hover {
 /* Profile Tab Content */
 .profile-tab-content {
     min-height: 300px;
+    padding-top: 0.5rem;
 }
 
 /* Profile Filters */
@@ -9743,6 +9748,7 @@ i.fa-solid.fa-trash:hover {
 
     .settings-form {
         align-items: stretch;
+        padding: 0rem 1rem;
     }
 
     .settings-field__input--inline {

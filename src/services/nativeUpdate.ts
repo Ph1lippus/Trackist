@@ -4,7 +4,10 @@ import { isNativePlatform } from './nativePush'
 import { installAppUpdate, type InstallAppUpdateInfo } from '../plugins/installAppUpdate'
 
 export const ANDROID_APK_URL = 'https://github.com/Ph1lippus/Trackist/releases/download/android-latest/track1st.apk'
-const RELEASE_API_URL = 'https://api.github.com/repos/Ph1lippus/Trackist/releases/tags/android-latest'
+// Static version manifest served from Supabase Storage (mirrored from the
+// android-latest release by the CI workflow). Fetching a static file avoids
+// GitHub's unauthenticated API rate limit entirely.
+const VERSION_MANIFEST_URL = 'https://iqlzdmjamsvxinqbrnix.supabase.co/storage/v1/object/public/app-manifests/version.json'
 
 const DISMISS_KEY = 'track1st.native-update-dismissed'
 const DISMISS_PERIOD_MS = 7 * 24 * 60 * 60 * 1000
@@ -66,7 +69,7 @@ export const getLatestVersion = async (): Promise<string | null> => {
 
 export const getLatestVersionManifest = async (): Promise<NativeVersionManifest | null> => {
     try {
-        const res = await fetch(`${RELEASE_API_URL}?t=${Date.now()}`, {
+        const res = await fetch(`${VERSION_MANIFEST_URL}?t=${Date.now()}`, {
             cache: 'no-store',
             headers: {
                 Accept: 'application/json',
@@ -76,12 +79,13 @@ export const getLatestVersionManifest = async (): Promise<NativeVersionManifest 
         if (!res.ok) return null
 
         const data = (await res.json()) as {
-            body?: string
-            assets?: { name?: string; browser_download_url?: string }[]
+            versionName?: string
+            versionCode?: number
+            apkUrl?: string
         }
-        const versionName = data.body?.match(/VERSION=([^\s]+)/)?.[1] ?? ''
-        const versionCode = Number(data.body?.match(/VERSION_CODE=(\d+)/)?.[1] ?? (1200 + Number(versionName.split('.').pop())))
-        const apkUrl = data.assets?.find((asset) => asset.name === 'track1st.apk')?.browser_download_url ?? ANDROID_APK_URL
+        const versionName = data.versionName ?? ''
+        const versionCode = data.versionCode ?? 0
+        const apkUrl = data.apkUrl ?? ANDROID_APK_URL
 
         if (!Number.isFinite(versionCode) || versionCode <= 0 || !versionName) return null
 
