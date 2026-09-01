@@ -12,9 +12,12 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { createEpisodeDeepLink, openInStremio, createTVDeepLink  } from '../utils/stremioUtils'
 import { useShowStremioButton } from '../hooks/useShowStremioButton'
+import { useShowTmdbButton } from '../hooks/useShowTmdbButton'
 import { useMobile } from '../contexts/useMobile'
 import { useAuthStore } from '../stores/useAuthStore'
+import { Check } from 'lucide-react'
 import stremioIcon from '../assets/stremio-logo-icon-only-fullcolor.svg'
+import tmdbLogo from '../assets/TMDBLOGO.svg'
 import ShareButton from '../components/media/ShareButton'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
 import useDetailModalStore from '../stores/detailModalStore'
@@ -37,12 +40,18 @@ interface TVShowDetailProps {
     itemId?: number
 }
 
+const normalizeEpisodeScore = (value?: number | null): number | undefined => {
+    if (typeof value !== 'number' || Number.isNaN(value) || value <= 0) return undefined
+    return value
+}
+
 const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
     const { id: paramId } = useParams<{ id: string }>()
     const id = propId?.toString() ?? paramId
     const navigate = useNavigate()
     const isInModal = useDetailModalStore((s) => s.isOpen)
     const { showStremioButton, loading: stremioLoading } = useShowStremioButton()
+    const { showTmdbButton, loading: tmdbLoading } = useShowTmdbButton()
     const { isMobile } = useMobile()
     const { isOpen: isSidebarOpen } = useDetailSidebar()
     const [details, setDetails] = useState<TMDBResult | null>(null)
@@ -82,13 +91,22 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
     const [modalLoading, setModalLoading] = useState(false)
     const [episodeModalLoading, setEpisodeModalLoading] = useState<'all' | 'one' | null>(null)
 
+    const openExternal = (url: string) => {
+        const a = document.createElement('a')
+        a.href = url
+        a.target = '_blank'
+        a.rel = 'noopener noreferrer'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+    }
+
     const watchlistItem = useLibraryStore((state) => state.allItems.find((item) => item.tmdb_id === Number(id)))
     const isLibraryInitialized = useLibraryStore((state) => state.isInitialized)
     const isInWatchlist = !!watchlistItem
     const watchlistId = watchlistItem?.id ?? null
     const watchlistStatus = watchlistItem?.status ?? null
     const hasUserSelectedSeason = useRef(false)
-    const hasAutoPositioned = useRef(false)
     const episodeToScrollRef = useRef<string | null>(null)
     const episodeRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
     const episodeListRef = useRef<HTMLDivElement>(null)
@@ -151,15 +169,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
         return null
     }
 
-    useEffect(() => {
-        if (!isInModal) window.scrollTo(0, 0)
-        hasUserSelectedSeason.current = false
-        hasAutoPositioned.current = false
-        episodeToScrollRef.current = null
-        seasonCache.current.clear()
-        watchedKeysCache.current.clear()
-        setEpisodes([])
-    }, [id, isInModal])
+    
 
     useEffect(() => {
         if (episodeToScrollRef.current && episodeRefs.current[episodeToScrollRef.current] && !isMobile) {
@@ -240,7 +250,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                     title: ep.name,
                     still_path: ep.still_path ?? undefined,
                     overview: ep.overview,
-                    vote_average: ep.vote_average,
+                    vote_average: normalizeEpisodeScore(ep.vote_average),
                     air_date: ep.air_date,
                     runtime: ep.runtime,
                     watched: watchedKeysCache.current.has(key)
@@ -287,7 +297,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                 title: ep.name,
                 still_path: ep.still_path ?? undefined,
                 overview: ep.overview,
-                vote_average: ep.vote_average,
+                vote_average: normalizeEpisodeScore(ep.vote_average),
                 air_date: ep.air_date,
                 runtime: ep.runtime,
                 watched: watchedKeysCache.current.has(`${seasonNumber}-${ep.episode_number}`),
@@ -616,7 +626,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                         title: ep.name,
                         still_path: ep.still_path ?? undefined,
                         overview: ep.overview,
-                        vote_average: ep.vote_average,
+                        vote_average: normalizeEpisodeScore(ep.vote_average),
                         air_date: ep.air_date,
                         runtime: ep.runtime,
                         watched: false
@@ -725,7 +735,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                         title: episode.title,
                         still_path: episode.still_path,
                         overview: episode.overview,
-                        vote_average: episode.vote_average,
+                        vote_average: normalizeEpisodeScore(episode.vote_average),
                         air_date: episode.air_date,
                         runtime: episode.runtime
                     }, nextEp)
@@ -876,7 +886,9 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
         ? (lastYear && lastYear !== firstYear ? `${firstYear}-${lastYear}` : firstYear)
         : `${firstYear}-`)
     : ''
-    const rating = details?.vote_average?.toFixed(1)
+    const tvVoteAverage = details?.vote_average
+    const hasRating = typeof tvVoteAverage === 'number' && tvVoteAverage > 0
+    const rating = hasRating ? tvVoteAverage.toFixed(1) : null
     const ageRating = getAgeRating()
     const overview = details?.overview || 'No description available.'
     const genres = details?.genres || []
@@ -916,7 +928,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                             
                             {year && <span className="detail-page__year">{year}</span>}
                             {displaySeasonCount > 0 && <span className="detail-page__seasons">{displaySeasonCount} Seasons</span>}
-                            {rating !== undefined && rating !== null && (
+                            {rating && (
                                 <span className="detail-page__rating" aria-label={`Rating: ${rating} out of 10`}>
                                     <span aria-hidden="true">★</span> {rating}
                                 </span>
@@ -1057,6 +1069,18 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                          <img src={stremioIcon} alt="Stremio" className="detail-page__stremio-logo" />
                                      </button>
                                  )}
+                                {showTmdbButton && !tmdbLoading && (
+                                    <button
+                                        className="detail-page__icon-btn detail-page__icon-btn--tmdb"
+                                        onClick={() => {
+                                            if (!details) return
+                                            openExternal(`https://www.themoviedb.org/tv/${details.id}`)
+                                        }}
+                                        title="Open on TMDB"
+                                    >
+                                        <img src={tmdbLogo} alt="TMDB" className="detail-page__tmdb-logo" />
+                                    </button>
+                                )}
                                 <ShareButton
                                     url={window.location.href}
                                     title={`${title} on Track1st`}
@@ -1128,116 +1152,255 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                         )}
                     </div>
 
-                    <div className="detail-page__right">
-                        <div className="detail-page__episodes-section">
-                            {seasons.length > 1 && (
-                                <div className="detail-page__episodes-header">
-                                    <button 
-                                        className="detail-page__season-nav"
-                                        onClick={() => {
-                                            const currentIndex = seasons.indexOf(selectedSeason)
-                                            if (currentIndex > 0) {
-                                                handleSeasonChange(seasons[currentIndex - 1])
-                                            }
-                                        }}
-                                        disabled={seasons.indexOf(selectedSeason) === 0}
-                                    >
-                                        <i className="fa-solid fa-chevron-left"></i>
-                                    </button>
-                                    <div className="detail-page__season-dropdown" ref={seasonDropdownRef}>
-                                        <button
-                                            className="detail-page__season-dropdown-trigger"
-                                            onClick={() => setSeasonDropdownOpen(!seasonDropdownOpen)}
-                                        >
-                                            <span>Season {selectedSeason}</span>
-                                            <i className={`fa-solid fa-chevron-down ${seasonDropdownOpen ? 'rotated' : ''}`}></i>
-                                        </button>
-                                        {seasonDropdownOpen && (
-                                            <div className="detail-page__season-dropdown-menu">
-                                                {seasons.map(s => (
-                                                    <button
-                                                        key={s}
-                                                        className={`detail-page__season-dropdown-option ${s === selectedSeason ? 'selected' : ''}`}
-                                                        onClick={() => {
-                                                            handleSeasonChange(s)
-                                                            setSeasonDropdownOpen(false)
-                                                        }}
-                                                    >
-                                                        Season {s}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
-                                    <button 
-                                        className="detail-page__season-nav"
-                                        onClick={() => {
-                                            const currentIndex = seasons.indexOf(selectedSeason)
-                                            if (currentIndex < seasons.length - 1) {
-                                                handleSeasonChange(seasons[currentIndex + 1])
-                                            }
-                                        }}
-                                        disabled={seasons.indexOf(selectedSeason) === seasons.length - 1}
-                                    >
-                                        <i className="fa-solid fa-chevron-right"></i>
-                                    </button>
-                                </div>
-                            )}
-                            
-                            <div className="detail-page__episode-list" ref={episodeListRef}>
-                                {filteredEpisodes.map((ep) => (
-                                    <div 
-                                        key={ep.id} 
-                                        ref={(el) => { episodeRefs.current[ep.id] = el }}
-                                        className={`detail-page__episode-card ${ep.watched ? 'watched' : ''} ${!isEpisodeReleased(ep) ? 'unreleased' : ''} ${!ep.still_path ? 'no-poster' : ''}`}
-                                        style={{ cursor: isEpisodeReleased(ep) ? 'pointer' : 'default' }}
-                                    >
-                                        {ep.still_path && (
-                                            <div className="detail-page__episode-still">
-                                                <img src={imageUrl(ep.still_path, 'w300') || ''} alt={ep.title || `Episode ${ep.episode_number}`} loading="lazy" />
-                                            </div>
-                                        )}
-                                        <div className="detail-page__episode-info" onClick={() => {
-                                            if (isEpisodeReleased(ep)) {
-                                                if (!ep.watched && hasUnwatchedEpisodesBefore(ep)) {
-                                                    setAddEpisodeModal({ isOpen: true, episode: ep })
-                                                } else if (!ep.watched) {
-                                                    // Mark as watched
-                                                    markEpisodeAsWatched(ep, false)
-                                                } else {
-                                                    // Toggle to unwatched
-                                                    markEpisodeAsWatched(ep, false)
+                    {/* Mobile: Episodes section inside left column, scrollable */}
+                    {isMobile && (
+                        <div className="detail-page__episodes-container">
+                            <div className="detail-page__episodes-section">
+                                {seasons.length > 1 && (
+                                    <div className="detail-page__episodes-header">
+                                        <button 
+                                            className="detail-page__season-nav"
+                                            onClick={() => {
+                                                const currentIndex = seasons.indexOf(selectedSeason)
+                                                if (currentIndex > 0) {
+                                                    handleSeasonChange(seasons[currentIndex - 1])
                                                 }
-                                            }
-                                        }}>
-                                            <div className="detail-page__episode-details">
-                                                <strong>{!isMobile && <>{ep.episode_number}{ep.title ? '. ' : ''}</>}{ep.title}</strong>
+                                            }}
+                                            disabled={seasons.indexOf(selectedSeason) === 0}
+                                        >
+                                            <i className="fa-solid fa-chevron-left"></i>
+                                        </button>
+                                        <div className="detail-page__season-dropdown" ref={seasonDropdownRef}>
+                                            <button
+                                                className="detail-page__season-dropdown-trigger"
+                                                onClick={() => setSeasonDropdownOpen(!seasonDropdownOpen)}
+                                            >
+                                                <span>Season {selectedSeason}</span>
+                                                <i className={`fa-solid fa-chevron-down ${seasonDropdownOpen ? 'rotated' : ''}`}></i>
+                                            </button>
+                                            {seasonDropdownOpen && (
+                                                <div className="detail-page__season-dropdown-menu">
+                                                    {seasons.map(s => (
+                                                        <button
+                                                            key={s}
+                                                            className={`detail-page__season-dropdown-option ${s === selectedSeason ? 'selected' : ''}`}
+                                                            onClick={() => {
+                                                                handleSeasonChange(s)
+                                                                setSeasonDropdownOpen(false)
+                                                            }}
+                                                        >
+                                                            Season {s}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <button 
+                                            className="detail-page__season-nav"
+                                            onClick={() => {
+                                                const currentIndex = seasons.indexOf(selectedSeason)
+                                                if (currentIndex < seasons.length - 1) {
+                                                    handleSeasonChange(seasons[currentIndex + 1])
+                                                }
+                                            }}
+                                            disabled={seasons.indexOf(selectedSeason) === seasons.length - 1}
+                                        >
+                                            <i className="fa-solid fa-chevron-right"></i>
+                                        </button>
+                                    </div>
+                                )}
+                                
+                                <div className="detail-page__episode-list" ref={episodeListRef}>
+                                    {filteredEpisodes.map((ep) => (
+                                        <div 
+                                            key={ep.id} 
+                                            ref={(el) => { episodeRefs.current[ep.id] = el }}
+                                            className={`detail-page__episode-card ${ep.watched ? 'watched' : ''} ${!isEpisodeReleased(ep) ? 'unreleased' : ''} ${!ep.still_path ? 'no-poster' : ''}`}
+                                            style={{ cursor: isEpisodeReleased(ep) ? 'pointer' : 'default' }}
+                                            onClick={() => {
+                                                if (isEpisodeReleased(ep)) {
+                                                    if (!ep.watched && hasUnwatchedEpisodesBefore(ep)) {
+                                                        setAddEpisodeModal({ isOpen: true, episode: ep })
+                                                    } else if (!ep.watched) {
+                                                        // Mark as watched
+                                                        markEpisodeAsWatched(ep, false)
+                                                    } else {
+                                                        // Toggle to unwatched
+                                                        markEpisodeAsWatched(ep, false)
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            {ep.still_path && (
+                                                <div className="detail-page__episode-still">
+                                                    <img src={imageUrl(ep.still_path, 'w300') || ''} alt={ep.title || `Episode ${ep.episode_number}`} loading="lazy" />
+                                                </div>
+                                            )}
+                                            <div className="detail-page__episode-info">
+                                                <div className="detail-page__episode-details">
+                                                    <strong>
+                                                        {!isMobile && <>{ep.episode_number}{ep.title ? '. ' : ''}</>}
+                                                        <span className={ep.watched ? 'detail-page__episode-title watched' : 'detail-page__episode-title'}>
+                                                            {ep.title}
+                                                        </span>
+                                                        {ep.watched && (
+                                                            <span className="detail-page__episode-inline-check" aria-label="Watched episode">
+                                                                <Check size={12} strokeWidth={2.5} />
+                                                            </span>
+                                                        )}
+                                                    </strong>
                                                     <div className="detail-page__episode-meta">
                                                         {ep.air_date && <span>{ep.air_date}</span>}
                                                         {ep.runtime && <span>{ep.runtime} min</span>}
-                                                        {!isMobile && isEpisodeReleased(ep) && ep.vote_average && ep.vote_average > 0 && <span>★ {ep.vote_average.toFixed(1)}</span>}
+                                                        {!isMobile && isEpisodeReleased(ep) && typeof ep.vote_average === 'number' && ep.vote_average > 0 && <span>★ {ep.vote_average.toFixed(1)}</span>}
                                                     </div>
+                                                </div>
                                             </div>
+                                            <button 
+                                                className="detail-page__episode-ellipsis-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    if (isInModal && id) {
+                                                        useDetailModalStore.getState().open('episode', Number(id), ep.season_number, ep.episode_number)
+                                                    } else {
+                                                        navigate(`/tv/${id}/season/${ep.season_number}/episode/${ep.episode_number}`)
+                                                    }
+                                                }}
+                                                title="View episode details"
+                                            >
+                                                <i className="fa-solid fa-ellipsis"></i>
+                                            </button>
                                         </div>
-                                        <button 
-                                            className="detail-page__episode-ellipsis-btn"
-                                            onClick={(e) => {
-                                                e.stopPropagation()
-                                                if (isInModal && id) {
-                                                    useDetailModalStore.getState().open('episode', Number(id), ep.season_number, ep.episode_number)
-                                                } else {
-                                                    navigate(`/tv/${id}/season/${ep.season_number}/episode/${ep.episode_number}`)
-                                                }
-                                            }}
-                                            title="View episode details"
-                                        >
-                                            <i className="fa-solid fa-ellipsis"></i>
-                                        </button>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
+
+                    {/* Desktop: Episodes section in right column */}
+                    {!isMobile && (
+                        <div className="detail-page__right">
+                            <div className="detail-page__episodes-section">
+                                {seasons.length > 1 && (
+                                    <div className="detail-page__episodes-header">
+                                        <button 
+                                            className="detail-page__season-nav"
+                                            onClick={() => {
+                                                const currentIndex = seasons.indexOf(selectedSeason)
+                                                if (currentIndex > 0) {
+                                                    handleSeasonChange(seasons[currentIndex - 1])
+                                                }
+                                            }}
+                                            disabled={seasons.indexOf(selectedSeason) === 0}
+                                        >
+                                            <i className="fa-solid fa-chevron-left"></i>
+                                        </button>
+                                        <div className="detail-page__season-dropdown" ref={seasonDropdownRef}>
+                                            <button
+                                                className="detail-page__season-dropdown-trigger"
+                                                onClick={() => setSeasonDropdownOpen(!seasonDropdownOpen)}
+                                            >
+                                                <span>Season {selectedSeason}</span>
+                                                <i className={`fa-solid fa-chevron-down ${seasonDropdownOpen ? 'rotated' : ''}`}></i>
+                                            </button>
+                                            {seasonDropdownOpen && (
+                                                <div className="detail-page__season-dropdown-menu">
+                                                    {seasons.map(s => (
+                                                        <button
+                                                            key={s}
+                                                            className={`detail-page__season-dropdown-option ${s === selectedSeason ? 'selected' : ''}`}
+                                                            onClick={() => {
+                                                                handleSeasonChange(s)
+                                                                setSeasonDropdownOpen(false)
+                                                            }}
+                                                        >
+                                                            Season {s}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <button 
+                                            className="detail-page__season-nav"
+                                            onClick={() => {
+                                                const currentIndex = seasons.indexOf(selectedSeason)
+                                                if (currentIndex < seasons.length - 1) {
+                                                    handleSeasonChange(seasons[currentIndex + 1])
+                                                }
+                                            }}
+                                            disabled={seasons.indexOf(selectedSeason) === seasons.length - 1}
+                                        >
+                                            <i className="fa-solid fa-chevron-right"></i>
+                                        </button>
+                                    </div>
+                                )}
+                                
+                                <div className="detail-page__episode-list" ref={episodeListRef}>
+                                    {filteredEpisodes.map((ep) => (
+                                        <div 
+                                            key={ep.id} 
+                                            ref={(el) => { episodeRefs.current[ep.id] = el }}
+                                            className={`detail-page__episode-card ${ep.watched ? 'watched' : ''} ${!isEpisodeReleased(ep) ? 'unreleased' : ''} ${!ep.still_path ? 'no-poster' : ''}`}
+                                            style={{ cursor: isEpisodeReleased(ep) ? 'pointer' : 'default' }}
+                                            onClick={() => {
+                                                if (isEpisodeReleased(ep)) {
+                                                    if (!ep.watched && hasUnwatchedEpisodesBefore(ep)) {
+                                                        setAddEpisodeModal({ isOpen: true, episode: ep })
+                                                    } else if (!ep.watched) {
+                                                        // Mark as watched
+                                                        markEpisodeAsWatched(ep, false)
+                                                    } else {
+                                                        // Toggle to unwatched
+                                                        markEpisodeAsWatched(ep, false)
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            {ep.still_path && (
+                                                <div className="detail-page__episode-still">
+                                                    <img src={imageUrl(ep.still_path, 'w300') || ''} alt={ep.title || `Episode ${ep.episode_number}`} loading="lazy" />
+                                                </div>
+                                            )}
+                                            <div className="detail-page__episode-info">
+                                                <div className="detail-page__episode-details">
+                                                    <strong>
+                                                        {!isMobile && <>{ep.episode_number}{ep.title ? '. ' : ''}</>}
+                                                        <span className={ep.watched ? 'detail-page__episode-title watched' : 'detail-page__episode-title'}>
+                                                            {ep.title}
+                                                        </span>
+                                                        {ep.watched && (
+                                                            <span className="detail-page__episode-inline-check" aria-label="Watched episode">
+                                                                <Check size={12} strokeWidth={2.5} />
+                                                            </span>
+                                                        )}
+                                                    </strong>
+                                                    <div className="detail-page__episode-meta">
+                                                        {ep.air_date && <span>{ep.air_date}</span>}
+                                                        {ep.runtime && <span>{ep.runtime} min</span>}
+                                                        {!isMobile && isEpisodeReleased(ep) && typeof ep.vote_average === 'number' && ep.vote_average > 0 && <span>★ {ep.vote_average.toFixed(1)}</span>}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                className="detail-page__episode-ellipsis-btn"
+                                                onClick={(e) => {
+                                                    e.stopPropagation()
+                                                    if (isInModal && id) {
+                                                        useDetailModalStore.getState().open('episode', Number(id), ep.season_number, ep.episode_number)
+                                                    } else {
+                                                        navigate(`/tv/${id}/season/${ep.season_number}/episode/${ep.episode_number}`)
+                                                    }
+                                                }}
+                                                title="View episode details"
+                                            >
+                                                <i className="fa-solid fa-ellipsis"></i>
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 

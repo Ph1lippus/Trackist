@@ -233,21 +233,25 @@ interface SettingsProps {
         loadingStates: {
             stremio: boolean
             letterbox: boolean
+            tmdb: boolean
             icons: boolean
             sidebar: boolean
         }
         messages: {
             stremio: string
             letterbox: string
+            tmdb: string
             icons: string
             sidebar: string
         }
         showStremioButton: boolean
         showLetterboxButton: boolean
+        showTmdbButton: boolean
         showMediaCardIcons: boolean
         alwaysOpenSidebar: boolean
         handleAdditionsUpdate: () => void
         handleLetterboxUpdate: () => void
+        handleTmdbUpdate: () => void
         handleMediaCardIconsUpdate: () => void
         handleAlwaysOpenSidebarUpdate: () => void
     }
@@ -785,7 +789,7 @@ const AdditionsToggleRow: React.FC<AdditionsToggleRowProps> = ({ label, desc, ch
 )
 
 const AdditionsSection: React.FC<Pick<SettingsProps, 'additionsProps'>> = ({ additionsProps }) => {
-    const { loadingStates, messages, showStremioButton, showLetterboxButton, showMediaCardIcons, alwaysOpenSidebar, handleAdditionsUpdate, handleLetterboxUpdate, handleMediaCardIconsUpdate, handleAlwaysOpenSidebarUpdate } = additionsProps
+    const { loadingStates, messages, showStremioButton, showLetterboxButton, showTmdbButton, showMediaCardIcons, alwaysOpenSidebar, handleAdditionsUpdate, handleLetterboxUpdate, handleTmdbUpdate, handleMediaCardIconsUpdate, handleAlwaysOpenSidebarUpdate } = additionsProps
 
     return (
         <div className="settings-panel">
@@ -809,6 +813,17 @@ const AdditionsSection: React.FC<Pick<SettingsProps, 'additionsProps'>> = ({ add
                 onChange={handleLetterboxUpdate}
                 disabled={loadingStates.letterbox}
                 message={messages.letterbox}
+            />
+
+            <div className="settings-divider"></div>
+
+            <AdditionsToggleRow
+                label="TMDB Button"
+                desc="Show a TMDB icon on movie and TV show detail pages"
+                checked={showTmdbButton}
+                onChange={handleTmdbUpdate}
+                disabled={loadingStates.tmdb}
+                message={messages.tmdb}
             />
 
             <div className="settings-divider"></div>
@@ -993,11 +1008,14 @@ const Settings: React.FC = () => {
     // Additions states
     const [showStremioButton, setShowStremioButton] = useState(false)
     const [showLetterboxButton, setShowLetterboxButton] = useState(false)
+    const [showTmdbButton, setShowTmdbButton] = useState(false)
     const { showIcons: showMediaCardIcons, setShowIcons: setShowMediaCardIcons } = useMediaCardIcons()
     const [additionsLoading, setAdditionsLoading] = useState(false)
     const [additionsMessage, setAdditionsMessage] = useState('')
     const [letterboxLoading, setLetterboxLoading] = useState(false)
     const [letterboxMessage, setLetterboxMessage] = useState('')
+    const [tmdbLoading, setTmdbLoading] = useState(false)
+    const [tmdbMessage, setTmdbMessage] = useState('')
     const [iconsLoading, setIconsLoading] = useState(false)
     const [iconsMessage, setIconsMessage] = useState('')
     const [alwaysOpenSidebar, setAlwaysOpenSidebar] = useState(false)
@@ -1040,6 +1058,7 @@ const Settings: React.FC = () => {
                     setBio(profileData.bio || '')
                     setShowStremioButton(profileData.show_stremio_button === true)
                     setShowLetterboxButton(profileData.show_letterbox_button === true)
+                    setShowTmdbButton(profileData.show_tmdb_button === true)
                     setShowMediaCardIcons(profileData.show_media_card_icons === true)
                     setAlwaysOpenSidebar(profileData.always_open_detail_sidebar === true)
                     setAlwaysOpenSidebarStore(profileData.always_open_detail_sidebar === true)
@@ -1458,6 +1477,26 @@ const Settings: React.FC = () => {
         setLetterboxMessage('Preference updated successfully')
     }
 
+    const handleTmdbUpdate = async () => {
+        if (!currentUser) return
+        setTmdbLoading(true)
+        setTmdbMessage('')
+
+        const { error } = await updateProfile(currentUser.id, {
+            show_tmdb_button: !showTmdbButton
+        })
+
+        setTmdbLoading(false)
+
+        if (error) {
+            setTmdbMessage(error.message)
+            return
+        }
+
+        setShowTmdbButton(prev => !prev)
+        setTmdbMessage('Preference updated successfully')
+    }
+
     const handleMediaCardIconsUpdate = async () => {
         if (!currentUser) return
         setIconsLoading(true)
@@ -1542,10 +1581,10 @@ const Settings: React.FC = () => {
     }
 
     const additionsProps = {
-        loadingStates: { stremio: additionsLoading, letterbox: letterboxLoading, icons: iconsLoading, sidebar: sidebarLoading },
-        messages: { stremio: additionsMessage, letterbox: letterboxMessage, icons: iconsMessage, sidebar: sidebarMessage },
-        showStremioButton, showLetterboxButton, showMediaCardIcons, alwaysOpenSidebar,
-        handleAdditionsUpdate, handleLetterboxUpdate, handleMediaCardIconsUpdate, handleAlwaysOpenSidebarUpdate
+        loadingStates: { stremio: additionsLoading, letterbox: letterboxLoading, tmdb: tmdbLoading, icons: iconsLoading, sidebar: sidebarLoading },
+        messages: { stremio: additionsMessage, letterbox: letterboxMessage, tmdb: tmdbMessage, icons: iconsMessage, sidebar: sidebarMessage },
+        showStremioButton, showLetterboxButton, showTmdbButton, showMediaCardIcons, alwaysOpenSidebar,
+        handleAdditionsUpdate, handleLetterboxUpdate, handleTmdbUpdate, handleMediaCardIconsUpdate, handleAlwaysOpenSidebarUpdate
     }
 
     const dangerProps = {

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { useSelectionStore } from '../stores/useSelectionStore'
 import MediaCard from '../components/media/MediaCard'
@@ -32,9 +32,7 @@ const Movies: React.FC = () => {
         toggleMovieSelection: toggleSelection 
     } = useSelectionStore()
 
-    useEffect(() => {
-        window.scrollTo(0, 0)
-    }, [])
+    
 
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' })

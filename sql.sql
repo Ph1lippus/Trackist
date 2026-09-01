@@ -104,6 +104,7 @@ CREATE TABLE public.profiles (
   role text NOT NULL DEFAULT 'user'::text,
   show_stremio_button boolean NOT NULL DEFAULT false,
   show_letterbox_button boolean NOT NULL DEFAULT false,
+  show_tmdb_button boolean NOT NULL DEFAULT false,
   show_media_card_icons boolean NOT NULL DEFAULT false,
   notify_new_episode boolean NOT NULL DEFAULT true,
   notify_new_season boolean NOT NULL DEFAULT true,

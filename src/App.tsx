@@ -23,6 +23,7 @@ import MobileBottomNavbar from './components/layout/MobileBottomNavbar'
 import DetailSidebarToggle from './components/layout/DetailSidebarToggle'
 import PWAUpdateModal from './components/modals/PWAUpdateModal'
 import DetailOverlay from './components/layout/DetailOverlay'
+import ScrollToTop from './components/layout/ScrollToTop'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -452,6 +453,7 @@ const AppContent: React.FC = () => {
                     <Route path="/Finished" element={user ? <Finished /> : <Navigate to="/login" replace />} />
                     <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />
                 </Routes>
+                <ScrollToTop />
             </main>
             <SecondaryNavbar />
             <MobileBottomNavbar />

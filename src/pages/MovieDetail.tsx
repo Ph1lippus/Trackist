@@ -64,9 +64,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
         document.body.removeChild(a)
     }
 
-    useEffect(() => {
-        if (!isInModal) window.scrollTo(0, 0)
-    }, [id, isInModal])
+    
 
     useEffect(() => {
         const fetchDetails = async () => {
@@ -224,7 +222,9 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
     const logoUrl = getLogoUrl()
     const title = details?.title || ''
     const year = details?.release_date?.slice(0, 4) || ''
-    const rating = details?.vote_average?.toFixed(1)
+    const movieVoteAverage = details?.vote_average
+    const hasRating = typeof movieVoteAverage === 'number' && movieVoteAverage > 0
+    const rating = hasRating ? movieVoteAverage.toFixed(1) : null
     const runtime = formatRuntime(details?.runtime)
     const ageRating = getAgeRating()
     const overview = details?.overview || 'No description available.'
@@ -261,7 +261,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                             
                             {year && <span className="detail-page__year">{year}</span>}
                             {runtime && <span className="detail-page__runtime">{runtime}</span>}
-                            {rating !== undefined && rating !== null && (
+                            {rating && (
                                 <span className="detail-page__rating" aria-label={`Rating: ${rating} out of 10`}>
                                     <span aria-hidden="true">★</span> {rating}
                                 </span>

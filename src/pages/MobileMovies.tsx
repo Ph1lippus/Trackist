@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useCallback } from 'react'
+import React, { useMemo, useState, useCallback } from 'react'
 import { imageUrl } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import type { WatchlistItem } from '../types'
@@ -28,9 +28,7 @@ const MobileMovies: React.FC = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
-    useEffect(() => {
-        window.scrollTo(0, 0)
-    }, [])
+    
 
     const handleToggleWatched = async (movie: WatchlistItem) => {
         if (!movie.id) return

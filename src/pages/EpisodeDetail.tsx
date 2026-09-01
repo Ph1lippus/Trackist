@@ -11,7 +11,6 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import { useMobile } from '../contexts/useMobile'
 import ShareButton from '../components/media/ShareButton'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
-import useDetailModalStore from '../stores/detailModalStore'
 
 interface EpisodeData {
     id: number
@@ -30,6 +29,11 @@ interface EpisodeDetailProps {
     episodeNumber?: number
 }
 
+const normalizeEpisodeScore = (value?: number | null): number | undefined => {
+    if (typeof value !== 'number' || Number.isNaN(value) || value <= 0) return undefined
+    return value
+}
+
 const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, episodeNumber }) => {
     const { id: paramId, season: paramSeason, episode: paramEpisode } = useParams<{ id: string; season: string; episode: string }>()
     const id = itemId?.toString() ?? paramId
@@ -37,7 +41,6 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
     const episode = episodeNumber?.toString() ?? paramEpisode
     const { isMobile } = useMobile()
     const { isOpen: isSidebarOpen } = useDetailSidebar()
-    const isInModal = useDetailModalStore((s) => s.isOpen)
     const [tvDetails, setTvDetails] = useState<TMDBResult | null>(null)
     const [episodeData, setEpisodeData] = useState<EpisodeData | null>(null)
     const episodeSlug = season && episode ? `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}` : ''
@@ -49,9 +52,7 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
     const [watched, setWatched] = useState(false)
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean } | null>(null)
 
-    useEffect(() => {
-        if (!isInModal) window.scrollTo(0, 0)
-    }, [id, season, episode, isInModal])
+    
 
     useEffect(() => {
         const fetchData = async () => {
@@ -147,7 +148,7 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
                 title: episodeData.name,
                 still_path: episodeData.still_path || undefined,
                 overview: episodeData.overview,
-                vote_average: episodeData.vote_average,
+                vote_average: normalizeEpisodeScore(episodeData.vote_average),
                 air_date: episodeData.air_date,
                 runtime: episodeData.runtime
             })
@@ -233,7 +234,7 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
                                 )}
                                 {episodeData.air_date && <span className="detail-page__year">{episodeData.air_date}</span>}
                                 {episodeData.runtime && <span className="detail-page__runtime">{episodeData.runtime} min</span>}
-                                {episodeData.vote_average && <span className="detail-page__rating">★ {episodeData.vote_average.toFixed(1)}</span>}
+                                {typeof episodeData.vote_average === 'number' && episodeData.vote_average > 0 && <span className="detail-page__rating">★ {episodeData.vote_average.toFixed(1)}</span>}
                             </div>
                             {genres.length > 0 && (
                                 <div className="detail-page__genres">

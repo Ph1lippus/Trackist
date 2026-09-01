@@ -230,6 +230,11 @@ export const saveAllEpisodesForShow = async (tmdbId: number, watchlistId: string
     }
 }
 
+const normalizeEpisodeScore = (value?: number | null): number | undefined => {
+    if (typeof value !== 'number' || Number.isNaN(value) || value <= 0) return undefined
+    return value
+}
+
 type WatchedEpisodeData = {
     season_number: number
     episode_number: number
@@ -368,7 +373,7 @@ export const markEpisodesWatched = async (
         title: episode.title,
         still_path: episode.still_path,
         overview: episode.overview,
-        vote_average: episode.vote_average,
+        vote_average: normalizeEpisodeScore(episode.vote_average),
         air_date: episode.air_date,
         runtime: episode.runtime
     }))
@@ -464,7 +469,7 @@ export const markEpisodeWatched = async (
             title: episodeData.title,
             still_path: episodeData.still_path,
             overview: episodeData.overview,
-            vote_average: episodeData.vote_average,
+            vote_average: normalizeEpisodeScore(episodeData.vote_average),
             air_date: episodeData.air_date,
             runtime: episodeData.runtime
         }, {

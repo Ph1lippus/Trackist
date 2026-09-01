@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { useSelectionStore } from '../stores/useSelectionStore'
 import MediaCard from '../components/media/MediaCard'
@@ -35,9 +35,7 @@ const Finished: React.FC = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
-    useEffect(() => {
-        window.scrollTo(0, 0)
-    }, [])
+    
 
     const filteredItems = useMemo(() => {
         if (!committedQuery) return finished

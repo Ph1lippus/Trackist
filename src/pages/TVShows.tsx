@@ -34,9 +34,7 @@ const TVShows: React.FC = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' })
     }
 
-    useEffect(() => {
-        window.scrollTo(0, 0)
-    }, [])
+    
 
 
 

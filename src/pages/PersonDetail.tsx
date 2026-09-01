@@ -38,6 +38,7 @@ const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId }) => {
     const [detailsLoading, setDetailsLoading] = useState(true)
     const [movies, setMovies] = useState<FilmographyItem[]>([])
     const [tvShows, setTVShows] = useState<FilmographyItem[]>([])
+    const [activeTab, setActiveTab] = useState<'movies' | 'tv'>('movies')
     const watchlistIds = useLibraryStore((state) => state.watchlistIds)
     const currentUser = useAuthStore((state) => state.user)
     const [removeConfirmItem, setRemoveConfirmItem] = useState<TMDBResult | null>(null)
@@ -122,8 +123,8 @@ const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId }) => {
                 const sortedMovies = ((moviesData as { cast?: TMDBResult[] }).cast || [])
                     .map((m: TMDBResult) => ({ ...m, media_type: 'movie' as const }))
                     .sort((a, b) => {
-                        const hasPosterA = !!a.poster_path ? 1 : 0
-                        const hasPosterB = !!b.poster_path ? 1 : 0
+                        const hasPosterA = a.poster_path ? 1 : 0
+                        const hasPosterB = b.poster_path ? 1 : 0
                         if (hasPosterA !== hasPosterB) return hasPosterB - hasPosterA
                         const dateA = (a as FilmographyItem).release_date || ''
                         const dateB = (b as FilmographyItem).release_date || ''
@@ -132,8 +133,8 @@ const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId }) => {
                 const sortedTV = ((tvData as { cast?: TMDBResult[] }).cast || [])
                     .map((t: TMDBResult) => ({ ...t, media_type: 'tv' as const }))
                     .sort((a, b) => {
-                        const hasPosterA = !!a.poster_path ? 1 : 0
-                        const hasPosterB = !!b.poster_path ? 1 : 0
+                        const hasPosterA = a.poster_path ? 1 : 0
+                        const hasPosterB = b.poster_path ? 1 : 0
                         if (hasPosterA !== hasPosterB) return hasPosterB - hasPosterA
                         const dateA = (a as FilmographyItem).first_air_date || ''
                         const dateB = (b as FilmographyItem).first_air_date || ''
@@ -185,75 +186,100 @@ const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId }) => {
 
     const formattedBirthday = formatBirthday(birthday)
 
+    const gender = getGender(details.gender)
+    const personStats = [
+        { label: 'gender', value: gender || '—' },
+        { label: 'born', value: formattedBirthday ? formattedBirthday.replace(/^Born\s+/, '') : '—' },
+        { label: 'location', value: placeOfBirth || '—' }
+    ]
+
+    const renderGrid = (items: FilmographyItem[], type: 'movie' | 'tv') => {
+        if (items.length === 0) {
+            return (
+                <div className="profile-empty">
+                    <i className={`fa-solid ${type === 'movie' ? 'fa-film' : 'fa-tv'} profile-empty__icon`} />
+                    <h3>{type === 'movie' ? 'No movies yet' : 'No TV shows yet'}</h3>
+                </div>
+            )
+        }
+
+        return (
+            <div className="discover-grid">
+                {items.map((item) => (
+                    <MediaCard
+                        key={item.id}
+                        item={item}
+                        isInWatchlist={watchlistIds.has(item.id)}
+                        onAdd={handleAddToWatchlist}
+                        showIcons={showIcons}
+                    />
+                ))}
+            </div>
+        )
+    }
+
     return (
-        <div className="detail-page___person">
-            <div className="detail-page__content">
-                <div className="detail-page__main">
-                    <div className="detail-page__person-header">
-                        <div className="detail-page__person-photo">
-                            {profileUrl ? (
-                                <img src={profileUrl} alt={title} />
-                            ) : (
-                                <div className="detail-page__person-no-photo">
-                                    <span className="detail-page__person-initial">{title.charAt(0)}</span>
-                                </div>
-                            )}
-                        </div>
-                        <div className="detail-page__person-info">
-                            <h1 className="detail-page__person-name">{title}</h1>
-                            <div className="detail-page__person-meta">
-                                {getGender(details.gender) && <span>{getGender(details.gender)}</span>}
-                                {formattedBirthday && <span>{formattedBirthday}</span>}
+        <section className="dashboard-page profile-page detail-page detail-page--person">
+            <div className="dashboard-shell">
+                <div className="profile-hero">
+                    <div className="profile-hero__content">
+                        <div className="profile-hero__top-row">
+                            <div className="profile-hero__avatar-wrap">
+                                {profileUrl ? (
+                                    <img
+                                        src={profileUrl}
+                                        alt={title}
+                                        className="profile-hero__avatar"
+                                    />
+                                ) : (
+                                    <div className="profile-hero__avatar profile-hero__avatar--placeholder">
+                                        {title.charAt(0).toUpperCase()}
+                                    </div>
+                                )}
                             </div>
-                            {placeOfBirth && (
-                                <p className="detail-page__person-location">
-                                    {placeOfBirth}
-                                </p>
-                            )}
+
+                            <div className="profile-hero__info">
+                                <div className="profile-hero__identity">
+                                    <h1 className="profile-hero__name">{title}</h1>
+                                </div>
+
+                                <div className="profile-hero__stats">
+                                    {personStats.map((stat) => (
+                                        <div className="profile-stat" key={stat.label}>
+                                            <span className="profile-stat__label">{stat.label}</span>
+                                            <span className="profile-stat__value">{stat.value}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
                         </div>
+
+                        {details.biography && (
+                            <p className="profile-hero__bio">{details.biography}</p>
+                        )}
                     </div>
+                </div>
+
+                <div className="profile-tabs">
+                    <button
+                        className={`profile-tab ${activeTab === 'movies' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('movies')}
+                    >
+                        <span className="profile-tab__text">Movies</span>
+                    </button>
+                    <button
+                        className={`profile-tab ${activeTab === 'tv' ? 'active' : ''}`}
+                        onClick={() => setActiveTab('tv')}
+                    >
+                        <span className="profile-tab__text">TV Shows</span>
+                    </button>
+                </div>
+
+                <div className="profile-tab-content">
+                    {activeTab === 'movies' ? renderGrid(movies, 'movie') : renderGrid(tvShows, 'tv')}
                 </div>
             </div>
 
-            {(movies.length > 0 || tvShows.length > 0) && (
-                <div className="detail-page__content">
-                    <div className="detail-page__main">
-                        {movies.length > 0 && (
-                            <div className="detail-page__filmography-section">
-                                <h2 className="detail-page__section-title">Movies</h2>
-                                <div className="discover-grid">
-                                    {movies.map((movie) => (
-                                        <MediaCard
-                                            key={movie.id}
-                                            item={movie}
-                                            isInWatchlist={watchlistIds.has(movie.id)}
-                                            onAdd={handleAddToWatchlist}
-                                            showIcons={showIcons}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {tvShows.length > 0 && (
-                            <div className="detail-page__filmography-section">
-                                <h2 className="detail-page__section-title">TV Shows</h2>
-                                <div className="discover-grid">
-                                    {tvShows.map((show) => (
-                                        <MediaCard
-                                            key={show.id}
-                                            item={show}
-                                            isInWatchlist={watchlistIds.has(show.id)}
-                                            onAdd={handleAddToWatchlist}
-                                            showIcons={showIcons}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
             {removeConfirmItem && (
                 <ConfirmModal
                     isOpen={true}
@@ -266,7 +292,7 @@ const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId }) => {
                     confirmColor="danger"
                 />
             )}
-        </div>
+        </section>
     )
 }
 

@@ -66,9 +66,7 @@ const MobileTVShows: React.FC = () => {
         })
     }, [tvShows, committedQuery])
 
-    useEffect(() => {
-        window.scrollTo(0, 0)
-    }, [])
+    
 
     useEffect(() => {
         let active = true
