@@ -24,6 +24,7 @@ const buildHref = (type: DetailType, id: number, season?: number, episode?: numb
 // synchronously in open()/syncFromURL() because the detail page inside the
 // overlay overrides document.title before any overlay effect can read it.
 let baseTitle = ''
+let savedScrollY = 0
 
 export const getDetailBaseTitle = (): string => baseTitle
 
@@ -40,7 +41,13 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
 
   open: (type, id, season, episode) => {
     const current = get()
-    if (!current.isOpen) baseTitle = document.title
+    if (!current.isOpen) {
+      baseTitle = document.title
+      savedScrollY = window.scrollY
+      if ('scrollRestoration' in window.history) {
+        window.history.scrollRestoration = 'manual'
+      }
+    }
 
     const sameContent =
       current.isOpen &&
@@ -56,12 +63,24 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
 
   // Update state in response to history back/forward. Never pushes history.
   syncFromURL: (type, id, season, episode) => {
-    if (!get().isOpen) baseTitle = document.title
+    if (!get().isOpen) {
+      baseTitle = document.title
+      savedScrollY = window.scrollY
+      if ('scrollRestoration' in window.history) {
+        window.history.scrollRestoration = 'manual'
+      }
+    }
     set({ isOpen: true, type, id, season, episode })
   },
 
   close: () => {
     set({ isOpen: false, type: null, id: null, season: undefined, episode: undefined })
+    requestAnimationFrame(() => {
+      if ('scrollRestoration' in window.history) {
+        window.history.scrollRestoration = 'auto'
+      }
+      window.scrollTo({ top: savedScrollY, behavior: 'auto' })
+    })
   },
 }))
 

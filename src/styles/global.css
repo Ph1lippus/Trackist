@@ -166,6 +166,34 @@
     .detail-page{
         padding: 0rem;
     }
+    .detail-page--no-scroll {
+        height: auto !important;
+        overflow: visible !important;
+    }
+    .detail-page__content--split {
+        height: auto !important;
+        overflow: visible !important;
+        display: block !important;
+    }
+    .detail-page__main,
+    .detail-page__main--movie,
+    .detail-page__main--tv,
+    .detail-page__left,
+    .detail-page__right {
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+    }
+    .detail-page__main--tv {
+        display: block !important;
+        grid-template-columns: none !important;
+    }
+    .detail-page__episode-list {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        padding-bottom: 0 !important;
+    }
     .detail-page__episode-card{
         margin-right: 0px!important;
     }
@@ -462,19 +490,7 @@ html {
     background: linear-gradient(41deg, #0c0b11 0%, #2c2b55 55%, #5a5a9e 100%);
     background-attachment: fixed;
 }
-@media (max-width: 768px) {
-    html:has(.container.navbar-inner.no-back-btn) {
-        background: #2c2b55;
-    }
-    .container.navbar-inner.no-back-btn {
-        background: #2c2b55;
-    }
-}  
 
-.container.navbar-inner.no-back-btn {
-    backdrop-filter: blur(25px);
-    border-radius: 0px 0px 20px 20px;
-}
 
 
 html,
@@ -525,7 +541,6 @@ html::before {
     justify-content: center;
     width: 100%;
     padding: 0 0 0 0;
-    padding-top: var(--navbar-height); /* Account for fixed navbar */
 }
 .page-main--no-footer {
     padding-bottom: 6rem;
@@ -598,9 +613,11 @@ html::before {
     z-index: 100;
 }
 
-/* Navbar is always fixed at top for consistent UX across all pages */
+/* Keep the primary navbar in normal document flow so route transitions do not
+   create a vertical jump when a detail modal closes. The modal still renders
+   beneath it and the scroll restoration logic keeps the page stable. */
 .navbar-brand-row {
-    position: fixed;
+    position: sticky;
     top: 0;
     left: 0;
     right: 0;
@@ -6044,7 +6061,7 @@ i.fa-solid.fa-trash:hover {
     position: fixed;
     inset: 0;
     z-index: 80;
-    background: linear-gradient(41deg, #0c0b11 0%, #2c2b55 55%, #5a5a9e 100%);
+    background: #2c2b55;
     background-attachment: fixed;
 }
 
