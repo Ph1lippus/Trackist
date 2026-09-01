@@ -6113,6 +6113,17 @@ i.fa-solid.fa-trash:hover {
     .detail-overlay__scroll {
         top: calc(var(--navbar-height) + env(safe-area-inset-top, 0px));
         bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .detail-page--no-scroll {
+        overflow-y: auto;
+        overflow-x: hidden;
+    }
+
+    .detail-page__content--split {
+        overflow-y: auto;
     }
 }
 
