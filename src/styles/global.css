@@ -22,7 +22,6 @@
         display: grid !important;
         grid-template-columns: 100px minmax(0, 1fr) !important;
         align-items: center !important;
-        gap: 1rem !important;
         min-height: unset !important;
     }
     .media-card__poster {
@@ -1392,7 +1391,6 @@ select.navbar-filter-field option {
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 1.4rem;
 }
 
 /* ===== DASHBOARD LINK BUTTON ===== */
@@ -1721,7 +1719,7 @@ select.navbar-filter-field option {
 /* Card grid - responsive grid of media cards */
 .discover-grid {
     display: grid;
-    gap: 1rem;
+    gap: 0.5rem;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     width: 100%;
     margin: 0 auto;
@@ -8380,7 +8378,6 @@ i.fa-solid.fa-trash:hover {
 .profile-hero__top-row {
     display: flex;
     align-items: center;
-    gap: 1.75rem;
     min-height: 180px;
 }
 
@@ -9659,7 +9656,6 @@ i.fa-solid.fa-trash:hover {
 
     .settings-page .dashboard-shell {
         max-width: 100%;
-        gap: 1rem;
     }
 
     .settings-mobile {
