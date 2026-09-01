@@ -11783,7 +11783,8 @@ i.fa-solid.fa-trash:hover {
     .discover-page,
     .dashboard-shell,
     .mobile-tvshows-page,
-    .mobile-movies-page {
+    .mobile-movies-page,
+    .upcoming-new-page {
         padding-top: 0.5rem !important;
     }
 
