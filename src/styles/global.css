@@ -11741,6 +11741,11 @@ i.fa-solid.fa-trash:hover {
         padding-top: calc(var(--navbar-height) + 0.75rem) !important;
         padding-bottom: calc(var(--bottom-nav-height) + 0.5rem) !important;
     }
+    
+    .discover-page {
+        padding-top: calc(var(--navbar-height) + 0.75rem) !important;
+        padding-bottom: calc(var(--bottom-nav-height) + 1rem) !important;
+    }
 
     .navbar-auth-link {
         display: none;
