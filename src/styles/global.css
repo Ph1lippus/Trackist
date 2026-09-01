@@ -11868,7 +11868,6 @@ i.fa-solid.fa-trash:hover {
         flex: 1;
         overflow-y: auto;
         min-height: 0;
-        padding-right: 0.5rem;
     }
 
     /* Episode Detail: description scrolls, header pinned */
