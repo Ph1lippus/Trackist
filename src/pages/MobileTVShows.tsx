@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useCallback, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { getTVEpisodeDetails, imageUrl } from '../services/tmdbService'
 import { markEpisodesWatched, checkAndUpdateCompleted } from '../services/watchlistService'
 
@@ -12,11 +11,11 @@ import { useMissingPosters } from '../hooks/useMissingPosters'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import ViewToggleButton from '../components/layout/ViewToggleButton'
 import { getCachedOrFetch } from '../services/cacheService'
+import useDetailModalStore from '../stores/detailModalStore'
 
 const MobileTVShows: React.FC = () => {
     const { isMobile } = useMobile()
     usePageTitle('Track1st - TV Shows')
-    const navigate = useNavigate()
     const { committedQuery } = useSearch()
     const tvShows = useLibraryStore((state) => state.tvShows)
     const isInitialized = useLibraryStore((state) => state.isInitialized)
@@ -316,7 +315,7 @@ const MobileTVShows: React.FC = () => {
             <div
                 key={show.id}
                 className="mobile-tvshow-card"
-                onClick={() => { if (show.tmdb_id) navigate(`/tv/${show.tmdb_id}`) }}
+                onClick={() => { if (show.tmdb_id) useDetailModalStore.getState().open('tv', show.tmdb_id) }}
             >
                 <div className="mobile-tvshow-card-poster">
                     {posterPath ? (
@@ -360,7 +359,7 @@ const MobileTVShows: React.FC = () => {
                 )}
             </div>
         )
-    }, [addingEpisode, completedEpisode, episodeTitles, handleAddEpisode, getEpisodesLeft, getEpisodeInfo, isMobile, navigate, missingPosters])
+    }, [addingEpisode, completedEpisode, episodeTitles, handleAddEpisode, getEpisodesLeft, getEpisodeInfo, isMobile, missingPosters])
 
     return (
         <section className="dashboard-page mobile-tvshows-page">

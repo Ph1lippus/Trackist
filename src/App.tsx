@@ -22,6 +22,7 @@ import SecondaryNavbar from './components/layout/SecondaryNavbar'
 import MobileBottomNavbar from './components/layout/MobileBottomNavbar'
 import DetailSidebarToggle from './components/layout/DetailSidebarToggle'
 import PWAUpdateModal from './components/modals/PWAUpdateModal'
+import DetailOverlay from './components/layout/DetailOverlay'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
@@ -59,6 +60,17 @@ import AdminSecurity from './pages/AdminSecurity'
 import { useSessionSecurity } from './hooks/useSessionSecurity'
 import { useDailyTVSync } from './hooks/useDailyTVSync'
 import mfaService from './services/mfaService'
+import useDetailModalStore from './stores/detailModalStore'
+
+// Wraps a route element so it renders nothing when the detail modal is open.
+// The modal owns the rendering; the underlying route must stay empty to avoid
+// duplicate detail pages stacking under the overlay.
+const ModalAware = ({ children }: { children: React.ReactNode }) => {
+    const isModalOpen = useDetailModalStore((s) => s.isOpen)
+    if (isModalOpen) return null
+    return <>{children}</>
+}
+
 // Legacy redirect component for /Lists/:id -> /ListsDetail/:id
 const LegacyListRedirect: React.FC = () => {
     const { id } = useParams<{ id: string }>()
@@ -70,6 +82,7 @@ const AppContent: React.FC = () => {
     const navigate = useNavigate()
     const user = useAuthStore((state) => state.user)
     const loading = useAuthStore((state) => state.loading)
+    const isModalOpen = useDetailModalStore((state) => state.isOpen)
     const [currentMonth, setCurrentMonth] = useState(new Date())
     const hasUpdatedLastActive = useRef(false)
     const [showUpdateModal, setShowUpdateModal] = useState(false)
@@ -393,7 +406,7 @@ const AppContent: React.FC = () => {
                 canGoBack={canGoBack}
                 goToToday={goToToday}
             />
-            <main className={`page-main flex-grow-1 ${hideFooter ? 'page-main--no-footer' : ''}`}>
+            <main className={`page-main flex-grow-1 ${hideFooter ? 'page-main--no-footer' : ''}${isModalOpen ? ' is-modal-backdrop-hidden' : ''}`} inert={isModalOpen || undefined}>
                 <Routes>
                     <Route path="/" element={user ? <Navigate to={defaultRoute} replace /> : <Home />} />
                     <Route path="/Discover" element={user ? <Discover key="discover" /> : <Navigate to="/login" replace />} />
@@ -422,13 +435,13 @@ const AppContent: React.FC = () => {
                     <Route path="/Profile/:username" element={user ? <Profile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile" element={user ? <Profile /> : <Navigate to="/login" replace />} />
                     <Route element={<DetailLayout />}>
-                        <Route path="/movie/:id" element={<MovieDetail />} />
-                        <Route path="/tv/:id" element={<TVShowDetail />} />
-                        <Route path="/tv/:id/season/:season/episode/:episode" element={<EpisodeDetail />} />
+                        <Route path="/movie/:id" element={<ModalAware><MovieDetail /></ModalAware>} />
+                        <Route path="/tv/:id" element={<ModalAware><TVShowDetail /></ModalAware>} />
+                        <Route path="/tv/:id/season/:season/episode/:episode" element={<ModalAware><EpisodeDetail /></ModalAware>} />
                         <Route path="/Upcoming" element={user ? <Upcoming currentMonth={currentMonth} /> : <Navigate to="/login" replace />} />
                         <Route path="/UpcomingNew" element={user ? <UpcomingNew /> : <Navigate to="/login" replace />} />
                     </Route>
-                    <Route path="/person/:id" element={<PersonDetail />} />
+                    <Route path="/person/:id" element={<ModalAware><PersonDetail /></ModalAware>} />
                     <Route path="/Lists" element={user ? <Lists /> : <Navigate to="/login" replace />} />
                     <Route path="/ListsDetail/:id" element={user ? <ListsDetail /> : <Navigate to="/login" replace />} />
                     <Route path="/Lists/new" element={user ? <ListsCreatePage /> : <Navigate to="/login" replace />} />
@@ -443,6 +456,7 @@ const AppContent: React.FC = () => {
             <SecondaryNavbar />
             <MobileBottomNavbar />
             <DetailSidebarToggle />
+            <DetailOverlay />
             {!hideFooter && !isDetailPage && <Footer loggedIn={Boolean(user)} />}
             <PWAUpdateModal
                 isOpen={showUpdateModal}

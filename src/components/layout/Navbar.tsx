@@ -14,6 +14,7 @@ import { useMobile } from '../../contexts/useMobile';
 import { createPortal } from 'react-dom';
 import useDiscoverStore, { useDiscoverFilters } from '../../stores/discoverStore';
 import type { WatchlistItem } from '../../types';
+import useDetailModalStore from '../../stores/detailModalStore';
 
 const NAVBAR_MEDIA_OPTIONS = [
     { value: 'all', label: 'All' },
@@ -118,12 +119,13 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const isListDetailPage = location.pathname.match(/^\/ListsDetail\/[a-f0-9-]+$/);
     const isListEditPage = location.pathname.match(/^\/ListsEditPage\/(new|[a-f0-9-]+)$/);
     const isSettingsSubPage = ['/MFA', '/Sessions', '/Settings', '/EditProfile', '/Credits', '/AdminSecurity'].includes(location.pathname) || location.pathname.startsWith('/Settings/');
-    const showBackButton = Boolean(isDetailPage || isListDetailPage || isListEditPage || isSettingsSubPage);
+    const detailModalOpen = useDetailModalStore((s) => s.isOpen);
+    const showBackButton = Boolean(isDetailPage || isListDetailPage || isListEditPage || isSettingsSubPage || detailModalOpen);
     
-    const showSearchBar = !['/login', '/register'].includes(location.pathname) && 
+    const showSearchBar = !detailModalOpen && !['/login', '/register'].includes(location.pathname) && 
         (['/Discover', '/Movies', '/Tvshows', '/', '/Finished', '/Friends', '/Followers', '/Following', '/Lists', '/MobileTVShows', '/MobileMovies'].includes(location.pathname) || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname.startsWith('/Followers/') || location.pathname.startsWith('/Following/') || location.pathname === '/MobileTVShows' || location.pathname === '/MobileMovies');
     
-    const showCalendarHeader = location.pathname === '/Upcoming' && currentMonth && navigateMonth && canGoBack;
+    const showCalendarHeader = !detailModalOpen && location.pathname === '/Upcoming' && currentMonth && navigateMonth && canGoBack;
     
     const monthName = currentMonth ? currentMonth.toLocaleDateString('en-US', { 
         month: 'long', 
@@ -343,7 +345,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                 const randomIndex = Math.floor(Math.random() * pool.length)
                 const randomMovie = pool[randomIndex]
                 if (randomMovie.tmdb_id) {
-                    navigate(`/movie/${randomMovie.tmdb_id}`)
+                    useDetailModalStore.getState().open('movie', randomMovie.tmdb_id)
                 }
             }
         } else if (isTVShowsPage) {
@@ -356,7 +358,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                 const randomIndex = Math.floor(Math.random() * pool.length)
                 const randomShow = pool[randomIndex]
                 if (randomShow.tmdb_id) {
-                    navigate(`/tv/${randomShow.tmdb_id}`)
+                    useDetailModalStore.getState().open('tv', randomShow.tmdb_id)
                 }
             }
         }
@@ -629,15 +631,19 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     );
 
     return (
-        <nav className="navbar-brand-row" aria-label="Main navigation">
+        <nav className={`navbar-brand-row${detailModalOpen ? ' is-modal-open' : ''}`} aria-label="Main navigation">
             <div className={`container navbar-inner${showBackButton ? '' : ' no-back-btn'}`}>
                 <div className="navbar-left">
                     {showBackButton && (
                         <button
                             className="navbar-back-btn"
                             onClick={() => {
-                                sessionStorage.setItem('scrollPosition', window.scrollY.toString());
-                                navigate(-1);
+                                if (detailModalOpen) {
+                                    useDetailModalStore.getState().close();
+                                    window.history.back();
+                                } else {
+                                    navigate(-1);
+                                }
                             }}
                             aria-label="Go back"
                         >

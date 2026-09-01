@@ -580,6 +580,25 @@ html::before {
     background-color: transparent;
     z-index: 100;
 }
+
+/* When the detail modal is open pin the navbar on top so it always stays
+   visible; keep it transparent so the page backdrop image shows behind it,
+   matching the routed detail pages. */
+.navbar-brand-row.is-modal-open {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 110;
+}
+
+/* While the detail modal is open the routed page stays mounted (to preserve its
+   scroll position) but is inert and not painted: it is removed from the
+   accessibility tree, focus, and pointer/hit-testing, and its compositing cost
+   is dropped. visibility:hidden keeps layout + scroll intact. */
+.page-main.is-modal-backdrop-hidden {
+    visibility: hidden;
+}
 .navbar-brand-row::before,
 .navbar-brand-row::after {
     content: "";
@@ -2572,7 +2591,7 @@ html.native-app *::-webkit-scrollbar {
 .detail-page__backdrop-overlay {
     position: absolute;
     inset: 0;
-    background-color: rgba(15, 16, 27, 0.35);
+    background-color: rgba(15, 16, 27, 0.4);
 }
 .detail-page__content {
     position: relative;
@@ -2717,7 +2736,7 @@ html.native-app *::-webkit-scrollbar {
     gap: 0.5rem;
 }
 .detail-page__genre {
-    backdrop-filter: blur(6px);
+    backdrop-filter: blur(12px);
     padding: 0.6rem 1rem;
     border-radius: 20px;
     font-size: 0.9rem;
@@ -3135,7 +3154,7 @@ html.native-app *::-webkit-scrollbar {
 }
 .detail-page__season-nav {
     background: rgba(255, 255, 255, 0.07);
-    color: rgba(255, 255, 255, 0.75);
+    color: var(--color-platinum);
     padding: 0 1rem;
     border: none;
     border-radius: 25px;
@@ -3171,7 +3190,7 @@ html.native-app *::-webkit-scrollbar {
     background: rgba(255, 255, 255, 0.07);
     border: none;
     border-radius: 25px;
-    color: rgba(255, 255, 255, 0.85);
+    color: var(--color-platinum);
     font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
@@ -3217,7 +3236,7 @@ html.native-app *::-webkit-scrollbar {
     padding: 0.6rem 1.2rem;
     background: transparent;
     border: none;
-    color: rgba(255, 255, 255, 0.8);
+    color: var(--color-platinum);
     font-size: 0.875rem;
     font-weight: 500;
     text-align: center;
@@ -3247,10 +3266,10 @@ html.native-app *::-webkit-scrollbar {
 .detail-page__episode-card {
     display: flex;
     gap: 1rem;
-    backdrop-filter: blur(5px);
+    backdrop-filter: blur(0px);
     padding: 0.75rem;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: rgba(0, 0, 0, 0.075);
+    border: none;
     border-radius: 25px;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -3262,11 +3281,9 @@ html.native-app *::-webkit-scrollbar {
 }
 .detail-page__episode-card.watched:hover {
     background: rgba(104, 255, 174, 0.25);
-    border-color: rgba(104, 255, 174, 0.7);
 }
 .detail-page__episode-card.watched {
     background: rgba(104, 255, 174, 0.15);
-    border-color: rgba(104, 255, 174, 0.5);
     opacity: 1;
 }
 .detail-page__episode-card.unreleased {
@@ -3332,7 +3349,7 @@ html.native-app *::-webkit-scrollbar {
 .detail-page__episode-ellipsis-btn {
     background: rgba(255, 255, 255, 0.07);
     border: none;
-    color: rgba(255, 255, 255, 0.75);
+    color: var(--color-platinum);
     cursor: pointer;
     width: 32px;
     height: 32px;
@@ -4159,7 +4176,7 @@ html.native-app *::-webkit-scrollbar {
 
     .detail-page__title {
         margin: 0 auto;
-        font-size: 1.6rem;
+        font-size: 4rem;
     }
 
     .detail-page__episode-still {
@@ -5869,6 +5886,43 @@ i.fa-solid.fa-trash:hover {
     color: var(--color-black);
 }
 
+
+/* ===== DETAIL OVERLAY ===== */
+.detail-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+    background: #050505;
+}
+
+.detail-overlay__scroll {
+    position: absolute;
+    top: 64px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+}
+
+.detail-overlay__content {
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-overlay .detail-page--no-scroll {
+    height: 100%;
+}
+
+@media (max-width: 768px) {
+    .detail-overlay__scroll {
+        top: calc(56px + env(safe-area-inset-top, 0px));
+        bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+    }
+}
 
 /* ===== CONFIRM MODAL ===== */
 .confirm-modal-overlay {

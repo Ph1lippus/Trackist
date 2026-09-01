@@ -26,10 +26,15 @@ interface FilmographyItem extends TMDBResult {
     media_type: 'movie' | 'tv'
 }
 
-const PersonDetail: React.FC = () => {
-    const { id } = useParams<{ id: string }>()
-    usePageTitle('Track1st - Person Detail')
+interface PersonDetailProps {
+    itemId?: number
+}
+
+const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId }) => {
+    const { id: paramId } = useParams<{ id: string }>()
+    const id = propId?.toString() ?? paramId
     const [details, setDetails] = useState<PersonDetails | null>(null)
+    usePageTitle(details?.name ? `${details.name} - Track1st` : 'Track1st - Person Detail')
     const [detailsLoading, setDetailsLoading] = useState(true)
     const [movies, setMovies] = useState<FilmographyItem[]>([])
     const [tvShows, setTVShows] = useState<FilmographyItem[]>([])

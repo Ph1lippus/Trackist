@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { imageUrl } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import type { WatchlistItem } from '../types'
@@ -10,11 +9,11 @@ import { useMissingPosters } from '../hooks/useMissingPosters'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import ViewToggleButton from '../components/layout/ViewToggleButton'
+import useDetailModalStore from '../stores/detailModalStore'
 
 const MobileMovies: React.FC = () => {
     const { isMobile } = useMobile()
     usePageTitle('Track1st - Movies')
-    const navigate = useNavigate()
     const { committedQuery } = useSearch()
     const movies = useLibraryStore((state) => state.movies)
     const missingPosters = useMissingPosters(movies)
@@ -100,7 +99,7 @@ const MobileMovies: React.FC = () => {
             <div
                 key={movie.id}
                 className="mobile-tvshow-card"
-                onClick={() => { if (movie.tmdb_id) navigate(`/movie/${movie.tmdb_id}`) }}
+                onClick={() => { if (movie.tmdb_id) useDetailModalStore.getState().open('movie', movie.tmdb_id) }}
             >
                 <div className="mobile-tvshow-card-poster">
                     {posterPath ? (
@@ -131,7 +130,7 @@ const MobileMovies: React.FC = () => {
                 </button>
             </div>
         )
-    }, [updatingId, confirmModal, handleToggleWatched, handleConfirmAction, isMobile, navigate, missingPosters])
+    }, [updatingId, confirmModal, handleToggleWatched, handleConfirmAction, isMobile, missingPosters])
 
     return (
         <section className="dashboard-page mobile-tvshows-page">

@@ -1,11 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
 import { loadCalendar, type CalendarItem } from '../services/calendarService'
 import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { formatDateString, isToday } from '../utils/dateUtils'
+import useDetailModalStore from '../stores/detailModalStore'
 
 interface UpcomingItem {
     id: string
@@ -79,7 +79,6 @@ const mapCalendarItem = (item: CalendarItem): UpcomingItem => ({
 })
 
 const UpcomingNew: React.FC = () => {
-    const navigate = useNavigate()
     usePageTitle('Track1st - Upcoming')
     const [upcomingItems, setUpcomingItems] = useState<UpcomingItem[]>([])
     const [hasLoaded, setHasLoaded] = useState(false)
@@ -188,10 +187,10 @@ const UpcomingNew: React.FC = () => {
                                             key={item.id}
                                             className="upcoming-new-card"
                                             onClick={() => {
-                                                if (item.type === 'movie') {
-                                                    navigate(`/movie/${item.item.tmdb_id}`)
-                                                } else {
-                                                    navigate(`/tv/${item.item.tmdb_id}`)
+                                                if (item.type === 'movie' && item.item.tmdb_id) {
+                                                    useDetailModalStore.getState().open('movie', item.item.tmdb_id)
+                                                } else if (item.item.tmdb_id) {
+                                                    useDetailModalStore.getState().open('tv', item.item.tmdb_id)
                                                 }
                                             }}
                                         >

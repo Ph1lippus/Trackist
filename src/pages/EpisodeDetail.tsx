@@ -11,6 +11,7 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import { useMobile } from '../contexts/useMobile'
 import ShareButton from '../components/media/ShareButton'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
+import useDetailModalStore from '../stores/detailModalStore'
 
 interface EpisodeData {
     id: number
@@ -23,13 +24,25 @@ interface EpisodeData {
     runtime?: number
 }
 
-const EpisodeDetail: React.FC = () => {
-    const { id, season, episode } = useParams<{ id: string; season: string; episode: string }>()
+interface EpisodeDetailProps {
+    itemId?: number
+    seasonNumber?: number
+    episodeNumber?: number
+}
+
+const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, episodeNumber }) => {
+    const { id: paramId, season: paramSeason, episode: paramEpisode } = useParams<{ id: string; season: string; episode: string }>()
+    const id = itemId?.toString() ?? paramId
+    const season = seasonNumber?.toString() ?? paramSeason
+    const episode = episodeNumber?.toString() ?? paramEpisode
     const { isMobile } = useMobile()
     const { isOpen: isSidebarOpen } = useDetailSidebar()
-    usePageTitle('Track1st - Episode Detail')
+    const isInModal = useDetailModalStore((s) => s.isOpen)
     const [tvDetails, setTvDetails] = useState<TMDBResult | null>(null)
     const [episodeData, setEpisodeData] = useState<EpisodeData | null>(null)
+    const episodeSlug = season && episode ? `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}` : ''
+    const pageTitleEpisode = tvDetails?.name ? `${episodeSlug}${episodeData?.name ? ` - ${episodeData.name}` : ''}` : ''
+    usePageTitle(tvDetails?.name ? `${tvDetails.name} - ${pageTitleEpisode} - Track1st` : 'Track1st - Episode Detail')
     const [loading, setLoading] = useState(true)
     const [isInWatchlist, setIsInWatchlist] = useState(false)
     const [watchlistId, setWatchlistId] = useState<string | null>(null)
@@ -37,8 +50,8 @@ const EpisodeDetail: React.FC = () => {
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean } | null>(null)
 
     useEffect(() => {
-        window.scrollTo(0, 0)
-    }, [id, season, episode])
+        if (!isInModal) window.scrollTo(0, 0)
+    }, [id, season, episode, isInModal])
 
     useEffect(() => {
         const fetchData = async () => {

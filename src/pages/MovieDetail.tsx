@@ -16,16 +16,24 @@ import stremioIcon from '../assets/stremio-logo-icon-only-fullcolor.svg'
 import letterboxdIcon from '../assets/letterboxd-decal-dots-pos-rgb-500px.png'
 import ShareButton from '../components/media/ShareButton'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
+import useDetailModalStore from '../stores/detailModalStore'
 
-const MovieDetail: React.FC = () => {
-    usePageTitle('Track1st - Movie Detail')
-    const { id } = useParams<{ id: string }>()
+interface MovieDetailProps {
+    itemId?: number
+}
+
+const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
+    const { id: paramId } = useParams<{ id: string }>()
+    const id = propId?.toString() ?? paramId
     const navigate = useNavigate()
+    const isInModal = useDetailModalStore((s) => s.isOpen)
     const { showStremioButton, loading: stremioLoading } = useShowStremioButton()
     const { showLetterboxButton, loading: letterboxLoading } = useShowLetterboxButton()
     const { isMobile } = useMobile()
     const { isOpen: isSidebarOpen } = useDetailSidebar()
     const [details, setDetails] = useState<TMDBResult | null>(null)
+    const movieTitle = details?.title || details?.name
+    usePageTitle(movieTitle ? `${movieTitle} - Track1st` : 'Track1st - Movie Detail')
     const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
@@ -57,8 +65,8 @@ const MovieDetail: React.FC = () => {
     }
 
     useEffect(() => {
-        window.scrollTo(0, 0)
-    }, [id])
+        if (!isInModal) window.scrollTo(0, 0)
+    }, [id, isInModal])
 
     useEffect(() => {
         const fetchDetails = async () => {
@@ -563,7 +571,13 @@ const MovieDetail: React.FC = () => {
                                     <div 
                                         key={c.id} 
                                         className="detail-page__cast-item"
-                                        onClick={() => navigate(`/person/${c.id}`)}
+                                        onClick={() => {
+                                            if (isInModal) {
+                                                useDetailModalStore.getState().open('person', c.id)
+                                            } else {
+                                                navigate(`/person/${c.id}`)
+                                            }
+                                        }}
                                     >
                                         {c.profile_path && (
                                             <img 

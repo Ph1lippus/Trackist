@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getResultImageUrl } from '../../services/searchService'
 import type { BaseSearchResult, SearchContextType, SearchResultsByKind } from '../../types/search'
+import useDetailModalStore from '../../stores/detailModalStore'
 
 interface SearchDropdownProps {
     isOpen: boolean
@@ -103,13 +104,13 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
     const handleResultClick = (result: BaseSearchResult) => {
         switch (result.kind) {
             case 'movie':
-                navigate(`/movie/${result.id}`)
+                useDetailModalStore.getState().open('movie', Number(result.id))
                 break
             case 'tv':
-                navigate(`/tv/${result.id}`)
+                useDetailModalStore.getState().open('tv', Number(result.id))
                 break
             case 'person':
-                navigate(`/person/${result.id}`)
+                useDetailModalStore.getState().open('person', Number(result.id))
                 break
             case 'user':
                 navigate(`/Profile/${result.title}`)

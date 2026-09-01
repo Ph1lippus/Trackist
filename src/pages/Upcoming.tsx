@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
 import { loadCalendar, type CalendarItem } from '../services/calendarService'
 import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
+import useDetailModalStore from '../stores/detailModalStore'
 import {
     getYearMonth,
     isToday,
@@ -90,7 +90,6 @@ interface UpcomingProps {
 }
 
 const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
-    const navigate = useNavigate()
     usePageTitle('Track1st - Upcoming')
     const [upcomingItems, setUpcomingItems] = useState<UpcomingItem[]>([])
     const [selectedDate, setSelectedDate] = useState<{dateKey: string, items: UpcomingItem[]} | null>(null)
@@ -265,10 +264,10 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                                 key={item.id}
                                                 className="calendar-episode"
                                                 onClick={() => {
-                                                    if (item.type === 'movie') {
-                                                        navigate(`/movie/${item.item.tmdb_id}`)
-                                                    } else {
-                                                        navigate(`/tv/${item.item.tmdb_id}`)
+                                                    if (item.type === 'movie' && item.item.tmdb_id) {
+                                                        useDetailModalStore.getState().open('movie', item.item.tmdb_id)
+                                                    } else if (item.item.tmdb_id) {
+                                                        useDetailModalStore.getState().open('tv', item.item.tmdb_id)
                                                     }
                                                 }}
                                                  style={{
@@ -334,10 +333,10 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                     key={item.id}
                                     className="upcoming-episode-card"
                                     onClick={() => {
-                                        if (item.type === 'movie') {
-                                            navigate(`/movie/${item.item.tmdb_id}`)
-                                        } else {
-                                            navigate(`/tv/${item.item.tmdb_id}`)
+                                        if (item.type === 'movie' && item.item.tmdb_id) {
+                                            useDetailModalStore.getState().open('movie', item.item.tmdb_id)
+                                        } else if (item.item.tmdb_id) {
+                                            useDetailModalStore.getState().open('tv', item.item.tmdb_id)
                                         }
                                     }}
                                 >

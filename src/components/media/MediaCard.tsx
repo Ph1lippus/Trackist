@@ -3,6 +3,7 @@ import { imageUrl } from '../../services/tmdbService'
 import type { TMDBResult } from '../../types'
 import { Link } from "react-router-dom"
 import { useMobile } from '../../contexts/useMobile'
+import useDetailModalStore from '../../stores/detailModalStore'
 
 type ResultItem = TMDBResult
 
@@ -121,6 +122,22 @@ const MediaCard: React.FC<MediaCardProps> = ({
         },
         [onDelete, item],
     )
+
+    const handleCardClick = useCallback(
+        (e: React.MouseEvent) => {
+            // Let modifier/middle-clicks keep their default behavior (open the
+            // detail route in a new tab) instead of opening the modal.
+            if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
+            if (selectable) return
+            if ((e.target as HTMLElement).closest('button')) return
+            e.preventDefault()
+            const mediaType = item.media_type as 'movie' | 'tv' | 'person'
+            if (mediaType) {
+                useDetailModalStore.getState().open(mediaType, item.id)
+            }
+        },
+        [selectable, item],
+    )
     const showAddButton = !compact && onAdd && !listMode && !hideAddButton && showIcons
     const actionIconsVisible = showIcons || forceActionIcons
     const showAddToListButton = !compact && onAddToList && !isPerson && !listMode && actionIconsVisible
@@ -143,16 +160,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
             <Link 
                 to={href} 
                 className="media-card__poster"
-                onClick={(e) => {
-                    if (selectable) {
-                        e.preventDefault()
-                        return
-                    }
-                    // Only prevent default if a button was clicked
-                    if ((e.target as HTMLElement).closest('button')) {
-                        e.preventDefault()
-                    }
-                }}
+                onClick={handleCardClick}
             >
                 {imgUrl && <img src={imgUrl} alt={displayTitle} loading="lazy" fetchPriority={priority ? "high" : "auto"} decoding="async" />}
                 {!imgUrl && (
@@ -250,11 +258,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
                 <h3>
                     <Link
                         to={href}
-                        onClick={(e) => {
-                            if (selectable) {
-                                e.preventDefault()
-                            }
-                        }}
+                        onClick={handleCardClick}
                         style={{ textDecoration: "none", color: "inherit" }}
                     >
                         {displayTitle}

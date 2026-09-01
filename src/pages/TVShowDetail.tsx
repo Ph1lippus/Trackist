@@ -17,6 +17,7 @@ import { useAuthStore } from '../stores/useAuthStore'
 import stremioIcon from '../assets/stremio-logo-icon-only-fullcolor.svg'
 import ShareButton from '../components/media/ShareButton'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
+import useDetailModalStore from '../stores/detailModalStore'
 
 interface LocalEpisode {
     id: string
@@ -32,14 +33,20 @@ interface LocalEpisode {
     watched: boolean // local only - true if in watchlist_episodes table
 }
 
-const TVShowDetail: React.FC = () => {
-    const { id } = useParams<{ id: string }>()
-    usePageTitle('Track1st - TV Show Detail')
+interface TVShowDetailProps {
+    itemId?: number
+}
+
+const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
+    const { id: paramId } = useParams<{ id: string }>()
+    const id = propId?.toString() ?? paramId
     const navigate = useNavigate()
+    const isInModal = useDetailModalStore((s) => s.isOpen)
     const { showStremioButton, loading: stremioLoading } = useShowStremioButton()
     const { isMobile } = useMobile()
     const { isOpen: isSidebarOpen } = useDetailSidebar()
     const [details, setDetails] = useState<TMDBResult | null>(null)
+    usePageTitle(details?.name ? `${details.name} - Track1st` : 'Track1st - TV Show Detail')
     const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
@@ -145,14 +152,14 @@ const TVShowDetail: React.FC = () => {
     }
 
     useEffect(() => {
-        window.scrollTo(0, 0)
+        if (!isInModal) window.scrollTo(0, 0)
         hasUserSelectedSeason.current = false
         hasAutoPositioned.current = false
         episodeToScrollRef.current = null
         seasonCache.current.clear()
         watchedKeysCache.current.clear()
         setEpisodes([])
-    }, [id])
+    }, [id, isInModal])
 
     useEffect(() => {
         if (episodeToScrollRef.current && episodeRefs.current[episodeToScrollRef.current] && !isMobile) {
@@ -1087,7 +1094,13 @@ const TVShowDetail: React.FC = () => {
                                             <div 
                                                 key={c.id} 
                                                 className="detail-page__cast-item"
-                                                onClick={() => navigate(`/person/${c.id}`)}
+                                                onClick={() => {
+                                                    if (isInModal) {
+                                                        useDetailModalStore.getState().open('person', c.id)
+                                                    } else {
+                                                        navigate(`/person/${c.id}`)
+                                                    }
+                                                }}
                                             >
                                                 {c.profile_path && (
                                                     <img 
@@ -1210,7 +1223,11 @@ const TVShowDetail: React.FC = () => {
                                             className="detail-page__episode-ellipsis-btn"
                                             onClick={(e) => {
                                                 e.stopPropagation()
-                                                navigate(`/tv/${id}/season/${ep.season_number}/episode/${ep.episode_number}`)
+                                                if (isInModal && id) {
+                                                    useDetailModalStore.getState().open('episode', Number(id), ep.season_number, ep.episode_number)
+                                                } else {
+                                                    navigate(`/tv/${id}/season/${ep.season_number}/episode/${ep.episode_number}`)
+                                                }
                                             }}
                                             title="View episode details"
                                         >

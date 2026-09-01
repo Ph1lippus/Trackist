@@ -1,8 +1,15 @@
 import { Outlet } from 'react-router-dom'
 import { useEffect } from 'react'
+import useDetailModalStore from '../../stores/detailModalStore'
 
 const DetailLayout = () => {
+  const isModalOpen = useDetailModalStore((s) => s.isOpen)
+
   useEffect(() => {
+    // When the detail is rendered inside the modal overlay, the overlay owns
+    // scroll locking and positioning. Only do layout work for direct route access.
+    if (isModalOpen) return
+
     // 1. Hide the scrollbar
     document.body.classList.add('no-scroll')
 
@@ -16,7 +23,7 @@ const DetailLayout = () => {
       // Restore scrollbar when leaving
       document.body.classList.remove('no-scroll')
     }
-  }, [])
+  }, [isModalOpen])
 
   return <Outlet />
 }

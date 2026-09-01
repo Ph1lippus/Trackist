@@ -36,7 +36,6 @@ interface DiscoverState {
     query: string
     page: number
     hasMore: boolean
-    scrollY: number
     watchlistIds: Set<number>
     isLoading: boolean
     isLoadingMore: boolean
@@ -59,15 +58,12 @@ interface DiscoverState {
     setSessionAddedIds: (ids: Set<number>) => void
     addToWatchlist: (id: number, item?: TMDBResult) => Promise<void>
     removeFromWatchlist: (id: number) => Promise<void>
-    saveScroll: () => void
-    restoreScroll: () => void
     resetFilters: () => void
     reset: () => void
     fetchData: (pageNum?: number) => Promise<void>
     loadInitialPages: (pagesToLoad?: number) => Promise<void>
     fetchGenres: () => Promise<void>
     fetchWatchlistIds: () => Promise<void>
-    setIsVisible: (visible: boolean) => void
     setFilters: (filters: Partial<DiscoverState>) => void
 }
 
@@ -85,7 +81,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     query: '',
     page: 1,
     hasMore: true,
-    scrollY: 0,
     watchlistIds: new Set<number>(),
     isLoading: false,
     isLoadingMore: false,
@@ -180,15 +175,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         }
     },
 
-    saveScroll: () => set({ scrollY: window.scrollY }),
-
-    restoreScroll: () => {
-        const { scrollY } = get()
-        requestAnimationFrame(() => {
-            window.scrollTo(0, scrollY)
-        })
-    },
-
     resetFilters: () => set({
         mediaType: 'all',
         sortBy: 'popularity.desc',
@@ -199,7 +185,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         page: 1,
         results: [],
         hasMore: true,
-        scrollY: 0,
         isDataLoaded: false,
         showAdded: true,
         sessionAddedIds: new Set<number>(),
@@ -216,7 +201,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         query: '',
         page: 1,
         hasMore: true,
-        scrollY: 0,
         watchlistIds: new Set<number>(),
         sessionAddedIds: new Set<number>(),
         isLoading: true,
@@ -224,12 +208,6 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         isDataLoaded: false,
         showAdded: true,
     }),
-
-    setIsVisible: (visible) => {
-        if (visible) {
-            get().restoreScroll()
-        }
-    },
 
     setFilters: (filters) => set(filters),
 
@@ -670,7 +648,6 @@ export const useDiscoverActions = () => {
         setShowAdded: state.setShowAdded,
         setSessionAddedIds: state.setSessionAddedIds,
         resetFilters: state.resetFilters,
-        saveScroll: state.saveScroll,
         addToWatchlist: state.addToWatchlist,
         removeFromWatchlist: state.removeFromWatchlist,
     }))
