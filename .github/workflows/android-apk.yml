@@ -129,12 +129,20 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          curl -fsS -X POST \
+          echo "Uploading version.json to $SUPABASE_URL ..."
+          RESPONSE=$(curl -sS -X POST \
             "$SUPABASE_URL/storage/v1/object/app-manifests/version.json" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Content-Type: application/json" \
             -H "x-upsert: true" \
-            --data-binary @version.json
+            --data-binary @version.json \
+            -w "\nHTTP_STATUS:%{http_code}" 2>&1)
+          echo "$RESPONSE"
+          STATUS=$(echo "$RESPONSE" | grep -o 'HTTP_STATUS:[0-9]*' | tail -1 | cut -d: -f2)
+          if [ "$STATUS" != "200" ]; then
+            echo "::error::Supabase upload failed with HTTP $STATUS"
+            exit 1
+          fi
           echo "version.json published to Supabase Storage"
 
       - name: Upload build artifact
