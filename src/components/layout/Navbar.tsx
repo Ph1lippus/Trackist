@@ -1,9 +1,11 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Check, ChevronLeft, ChevronRight, Loader2, RotateCcw, SlidersHorizontal, X } from 'lucide-react';
+import { StatusBar, Style } from '@capacitor/status-bar';
 import type { User } from '@supabase/supabase-js';
 import { supabase } from '../../services/supabaseClient';
 import { useSearch } from '../../hooks/useSearch';
+import { isNativePlatform } from '../../services/nativePush';
 import SearchDropdown from '../search/SearchDropdown';
 import ConfirmModal from '../modals/ConfirmModal';
 import { useSelectionStore } from '../../stores/useSelectionStore';
@@ -467,6 +469,15 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     })();
 
     const { isMobile } = useMobile();
+
+    useEffect(() => {
+        if (!isMobile || !isNativePlatform()) return;
+
+        const color = showBackButton ? '#12121c' : '#2c2b55';
+
+        void StatusBar.setBackgroundColor({ color }).catch(() => {});
+        void StatusBar.setStyle({ style: Style.Light }).catch(() => {});
+    }, [isMobile, showBackButton]);
 
     useEffect(() => {
         if (!location.pathname.startsWith('/Profile')) {
