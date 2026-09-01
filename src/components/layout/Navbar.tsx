@@ -118,6 +118,8 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
 
     const isDetailPage = location.pathname.match(/^\/(movie|tv|person)\/\d+$/) || 
                           location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/);
+    const isMediaDetailPage = location.pathname.match(/^\/(movie|tv)\/\d+$/) ||
+                             location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/);
     const isListDetailPage = location.pathname.match(/^\/ListsDetail\/[a-f0-9-]+$/);
     const isListEditPage = location.pathname.match(/^\/ListsEditPage\/(new|[a-f0-9-]+)$/);
     const isSettingsSubPage = ['/MFA', '/Sessions', '/Settings', '/EditProfile', '/Credits', '/AdminSecurity'].includes(location.pathname) || location.pathname.startsWith('/Settings/');
@@ -473,11 +475,17 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     useEffect(() => {
         if (!isMobile || !isNativePlatform()) return;
 
+        if (isMediaDetailPage) {
+            void StatusBar.setBackgroundColor({ color: '#00000000' }).catch(() => {});
+            void StatusBar.setStyle({ style: Style.Light }).catch(() => {});
+            return;
+        }
+
         const color = showBackButton ? '#12121c' : '#2c2b55';
 
         void StatusBar.setBackgroundColor({ color }).catch(() => {});
         void StatusBar.setStyle({ style: Style.Light }).catch(() => {});
-    }, [isMobile, showBackButton]);
+    }, [isMobile, showBackButton, isMediaDetailPage]);
 
     useEffect(() => {
         if (!location.pathname.startsWith('/Profile')) {

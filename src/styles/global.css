@@ -3348,7 +3348,7 @@ html.native-app *::-webkit-scrollbar {
     height: 90vh;
     overflow-y: auto;
     min-height: 0;
-    padding-bottom: 12vh;
+    padding-bottom: 25vh;
 }
 .detail-page__episode-card {
     display: flex;
