@@ -472,7 +472,7 @@ html {
 }  
 
 .container.navbar-inner.no-back-btn {
-    backdrop-filter: blur(50px);
+    backdrop-filter: blur(25px);
     border-radius: 0px 0px 20px 20px;
 }
 
@@ -2582,7 +2582,7 @@ html.native-app *::-webkit-scrollbar {
     overflow: hidden;
 }
 .detail-page--no-scroll {
-    height: 100vh;
+    height: calc(100vh - var(--navbar-height));
     overflow: hidden;
 }
 .detail-page--no-scroll::-webkit-scrollbar {
@@ -2622,6 +2622,13 @@ html.native-app *::-webkit-scrollbar {
     height: calc(100vh - 3.5rem);
     display: flex;
     flex-direction: column;
+    overflow: hidden;
+}
+
+@media (min-width: 769px) {
+    .detail-page__content--split {
+        height: 100%;
+    }
 }
 .detail-page__back {
     background: rgba(255, 255, 255, 0.1);
@@ -2650,7 +2657,7 @@ html.native-app *::-webkit-scrollbar {
     margin-bottom: 3.5rem;
 }
 .detail-page__logo-section {
-    margin-bottom: 4rem;
+    margin-bottom: 2.5rem;
     min-height: 80px;
     display: flex;
     align-items: center;
@@ -2666,7 +2673,7 @@ html.native-app *::-webkit-scrollbar {
 .detail-page__title {
     font-family: Georgia, serif;
     font-weight: 500;
-    font-size: 5rem;
+    font-size: 4rem;
     color: var(--color-platinum);
     margin: 0;
     line-height: 1.2;
@@ -2905,8 +2912,9 @@ html.native-app *::-webkit-scrollbar {
     padding-top: 1.5rem;
     display: flex;
     flex-direction: column;
-    gap: 2rem;
-    overflow: hidden;
+    gap: 1.5rem;
+    overflow-y: auto;
+    min-height: 0;
     padding-right: 1rem;
 }
 .detail-page__right {
@@ -2914,6 +2922,7 @@ html.native-app *::-webkit-scrollbar {
     flex-direction: column;
     height: 100%;
     overflow: hidden;
+    min-height: 0;
 }
 .detail-page__section-title {
     font-size: 1.2rem;
@@ -3179,6 +3188,10 @@ html.native-app *::-webkit-scrollbar {
     display: flex;
     flex-direction: column;
 }
+.detail-page__main--tv .detail-page__episodes-section {
+    flex: 1;
+    min-height: 0;
+}
 .detail-page__episodes-header {
     display: flex;
     justify-content: center;
@@ -3293,8 +3306,9 @@ html.native-app *::-webkit-scrollbar {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    flex: 1;
+    height: 90vh;
     overflow-y: auto;
+    min-height: 0;
     padding-bottom: 12vh;
 }
 .detail-page__episode-card {
@@ -3531,6 +3545,22 @@ html.native-app *::-webkit-scrollbar {
     height: auto;
     overflow: visible;
     background: transparent;
+}
+
+@media (min-width: 769px) {
+    .detail-overlay .detail-page--person {
+        height: 100%;
+        overflow: hidden;
+    }
+    .detail-overlay .detail-page--person .dashboard-shell {
+        height: 100%;
+        overflow: hidden;
+    }
+    .detail-overlay .detail-page--person .profile-tab-content {
+        flex: 1;
+        overflow-y: auto;
+        min-height: 0;
+    }
 }
 
 .detail-page__content--person {
@@ -6024,8 +6054,7 @@ i.fa-solid.fa-trash:hover {
     left: 0;
     right: 0;
     bottom: 0;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
     background: transparent;
@@ -6045,6 +6074,12 @@ i.fa-solid.fa-trash:hover {
     .detail-overlay__scroll {
         top: calc(var(--navbar-height) + env(safe-area-inset-top, 0px));
         bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+    }
+}
+
+@media (min-width: 769px) {
+    .detail-overlay__scroll {
+        overflow: hidden;
     }
 }
 
@@ -11703,10 +11738,12 @@ i.fa-solid.fa-trash:hover {
 /* Adjust page padding for mobile bottom navbar */
 @media (max-width: 768px) {
     .page-main {
+        padding-top: calc(var(--navbar-height) + 0.75rem) !important;
         padding-bottom: calc(var(--bottom-nav-height) + 0.5rem) !important;
     }
     
     .discover-page {
+        padding-top: calc(var(--navbar-height) + 0.75rem) !important;
         padding-bottom: calc(var(--bottom-nav-height) + 1rem) !important;
     }
 
@@ -11716,7 +11753,7 @@ i.fa-solid.fa-trash:hover {
 
     /* Mobile detail page layout: fixed header + scrollable content */
     .detail-page--no-scroll {
-        height: 100vh;
+        height: 100%;
         overflow: hidden;
         display: flex;
         flex-direction: column;
