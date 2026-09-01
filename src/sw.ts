@@ -54,13 +54,15 @@ registerRoute(
   })
 )
 
-// TMDB images - CacheFirst with long-lived cache
+// TMDB images - NetworkFirst with a shorter cache window so new TMDB backdrop selections
+// don't stay stuck behind stale browser/service-worker image responses.
 registerRoute(
   ({ url }) => url.hostname === 'image.tmdb.org',
-  new CacheFirst({
-    cacheName: 'tmdb-image-cache',
+  new NetworkFirst({
+    cacheName: 'tmdb-image-cache-v2',
+    networkTimeoutSeconds: 10,
     plugins: [
-      new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 60 * 60 * 24 * 30 }),
+      new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 60 * 30 }),
     ],
   })
 )
