@@ -184,20 +184,6 @@ const EditProfile: React.FC = () => {
             <main className="main">
                 <div className="container settings-page">
                     <div className="settings-panel settings-panel--subpage">
-                        <div className="settings-panel__header">
-                            <div className="settings-panel__title-row">
-                                <span className="settings-panel__title-icon">
-                                    {avatarUrl ? (
-                                        <img src={avatarUrl} alt="Current avatar" className="settings-panel__avatar-thumb" />
-                                    ) : (
-                                        <span className="settings-panel__avatar-placeholder">P</span>
-                                    )}
-                                </span>
-                                <h3>Edit Profile</h3>
-                            </div>
-                            <p>Update your display name, bio, and profile picture.</p>
-                        </div>
-
                         <form className="settings-form" onSubmit={handleSubmit} noValidate>
                             <div className="settings-avatar-picker">
                                 <button
@@ -210,10 +196,7 @@ const EditProfile: React.FC = () => {
                                     {!avatarUrl && <span>Choose image</span>}
                                     <span className="avatar-hover-overlay"><span className="avatar-hover-overlay__label">Change</span></span>
                                 </button>
-                                <div className="settings-avatar-picker__meta">
-                                    <span className="settings-avatar-picker__label">Profile photo</span>
-                                    <span className="settings-avatar-picker__hint">Square crop recommended</span>
-                                </div>
+
                                 <input
                                     ref={fileInputRef}
                                     type="file"

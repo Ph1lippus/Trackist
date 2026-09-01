@@ -462,6 +462,12 @@ html {
     background: linear-gradient(41deg, #0c0b11 0%, #2c2b55 55%, #5a5a9e 100%);
     background-attachment: fixed;
 }
+@media (max-width: 768px) {
+    html {
+        background: #2c2b55;
+    }
+}   
+
 
 html,
 body {
@@ -6695,6 +6701,7 @@ i.fa-solid.fa-trash:hover {
     align-items: center;
     gap: 0.9rem;
     padding: 0.55rem 0 0.85rem;
+    align-self: center;
 }
 
 .settings-avatar-picker__preview {
