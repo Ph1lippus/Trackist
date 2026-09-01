@@ -78,7 +78,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                     'movie-details-v2',
                     Number(id),
                     () => getMovieDetails(Number(id)),
-                    { ttl: 24 * 60 * 60 * 1000, staleWhileRevalidate: true }
+                    { ttl: 30 * 60 * 1000, staleWhileRevalidate: true }
                 )
                 setDetails(data)
                 

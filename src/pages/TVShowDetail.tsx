@@ -198,11 +198,10 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                     'tv-details-v2',
                     Number(id),
                     () => getTVDetails(Number(id)),
-                    { ttl: 24 * 60 * 60 * 1000, staleWhileRevalidate: true }
+                    { ttl: 30 * 60 * 1000, staleWhileRevalidate: true }
                 )
                 setDetails(data)
-                
-                // Find trailer from videos
+
                 if (data.videos?.results) {
                     const trailer = data.videos.results.find(
                         (v: { type: string; site: string; key: string }) => v.type === 'Trailer' && v.site === 'YouTube'
