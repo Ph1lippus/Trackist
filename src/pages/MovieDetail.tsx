@@ -388,6 +388,12 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                                     <i className="fa-solid fa-users"></i>
                                 </button>
                             )}
+                            <ShareButton
+                                url={window.location.href}
+                                title={`${title} on Track1st`}
+                                text={`I found ${title} on Track1st. Add it to your watchlist and see if it belongs in your next movie night.`}
+                            />
+                            <div className="detail-page__actions-spacer" />
                             {showStremioButton && !stremioLoading && (
                                 <button 
                                     className="detail-page__icon-btn"
@@ -435,97 +441,15 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                                     <img src={tmdbLogo} alt="TMDB" className="detail-page__tmdb-logo" />
                                 </button>
                             )}
+                        </div>
+
+                        {/* Mobile fixed action container */}
+                        <div className={`detail-page__actions-mobile${isSidebarOpen ? ' detail-page__actions-mobile--open' : ''}`}>
                             <ShareButton
                                 url={window.location.href}
                                 title={`${title} on Track1st`}
                                 text={`I found ${title} on Track1st. Add it to your watchlist and see if it belongs in your next movie night.`}
                             />
-                        </div>
-
-                        {/* Mobile fixed action container */}
-                        <div className={`detail-page__actions-mobile${isSidebarOpen ? ' detail-page__actions-mobile--open' : ''}`}>
-                            {!isInWatchlist ? (
-                                <>
-                                    <button 
-                                        className="detail-page__icon-btn"
-                                        onClick={handleAddToWatchlist}
-                                        disabled={adding}
-                                        title="Add to Watchlist"
-                                    >
-                                        <i className="fa-regular fa-bookmark"></i>
-                                    </button>
-                                    <button 
-                                        className="detail-page__icon-btn"
-                                        onClick={async () => {
-                                            setIsUpdatingStatus(true)
-                                            const newWatchlistId = await handleAddToWatchlist()
-                                            if (newWatchlistId) {
-                                                // Capture previous status from store
-                                                const previousStatus = useLibraryStore.getState().allItems.find(item => item.id === newWatchlistId)?.status
-                                                // Update status to completed via store
-                                                await useLibraryStore.getState().updateStatus(newWatchlistId, 'completed')
-                                                // Trigger Cosmic Confetti when transitioning from 'planning' to 'completed'
-                                                if (previousStatus === 'planning') {
-                                                    launchCosmicConfetti()
-                                                    // Invalidate cache to ensure Finished page shows updated data immediately
-                                                    await invalidateUserCache()
-                                                }
-                                            }
-                                            setIsUpdatingStatus(false)
-                                        }}
-                                        disabled={adding || isUpdatingStatus}
-                                        title="Mark as Watched"
-                                    >
-                                        <i className="fa-solid fa-eye"></i>
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    <button 
-                                        className="detail-page__icon-btn"
-                                        onClick={() => setConfirmModal({ isOpen: true })}
-                                        title="Remove from Watchlist"
-                                    >
-                                        <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
-                                    </button>
-                                    <button 
-                                        className="detail-page__icon-btn"
-                                        onClick={() => {
-                                            if (!watchlistId) return
-                                            const markAsWatched = watchlistStatus !== 'completed' && watchlistStatus !== 'caught_up'
-                                            setMarkWatchedModal({ isOpen: true, markAsWatched })
-                                        }}
-                                        disabled={isUpdatingStatus}
-                                        title={(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? 'Mark as Unwatched' : 'Mark as Watched'}
-                                    >
-                                        <i className={(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
-                                    </button>
-                                </>
-                            )}
-                            {trailerKey && (
-                                <button 
-                                    className="detail-page__icon-btn"
-                                    onClick={() => {
-                                        if (isMobile) {
-                                            window.open(`https://www.youtube.com/watch?v=${trailerKey}`, '_blank')
-                                        } else {
-                                            setShowTrailer(!showTrailer)
-                                        }
-                                    }}
-                                    title={showTrailer && !isMobile ? 'Close Trailer' : 'Watch Trailer'}
-                                >
-                                    <i className="fa-solid fa-clapperboard"></i>
-                                </button>
-                            )}
-                            {cast.length > 0 && (
-                                <button 
-                                    className="detail-page__icon-btn"
-                                    onClick={() => setShowCast(!showCast)}
-                                    title={showCast ? 'Hide Cast' : 'Cast'}
-                                >
-                                    <i className="fa-solid fa-users"></i>
-                                </button>
-                            )}
                             {showStremioButton && !stremioLoading && (
                                 <button 
                                     className="detail-page__icon-btn"
@@ -561,11 +485,88 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                                     <img src={letterboxdIcon} alt="Letterboxd" className="detail-page__letterbox-logo" />
                                 </button>
                             )}
-                            <ShareButton
-                                url={window.location.href}
-                                title={`${title} on Track1st`}
-                                text={`I found ${title} on Track1st. Add it to your watchlist and see if it belongs in your next movie night.`}
-                            />
+                            {cast.length > 0 && (
+                                <button 
+                                    className="detail-page__icon-btn"
+                                    onClick={() => setShowCast(!showCast)}
+                                    title={showCast ? 'Hide Cast' : 'Cast'}
+                                >
+                                    <i className="fa-solid fa-users"></i>
+                                </button>
+                            )}
+                            {trailerKey && (
+                                <button 
+                                    className="detail-page__icon-btn"
+                                    onClick={() => {
+                                        if (isMobile) {
+                                            window.open(`https://www.youtube.com/watch?v=${trailerKey}`, '_blank')
+                                        } else {
+                                            setShowTrailer(!showTrailer)
+                                        }
+                                    }}
+                                    title={showTrailer && !isMobile ? 'Close Trailer' : 'Watch Trailer'}
+                                >
+                                    <i className="fa-solid fa-clapperboard"></i>
+                                </button>
+                            )}
+                            {!isInWatchlist ? (
+                                <>
+                                    <button 
+                                        className="detail-page__icon-btn"
+                                        onClick={async () => {
+                                            setIsUpdatingStatus(true)
+                                            const newWatchlistId = await handleAddToWatchlist()
+                                            if (newWatchlistId) {
+                                                // Capture previous status from store
+                                                const previousStatus = useLibraryStore.getState().allItems.find(item => item.id === newWatchlistId)?.status
+                                                // Update status to completed via store
+                                                await useLibraryStore.getState().updateStatus(newWatchlistId, 'completed')
+                                                // Trigger Cosmic Confetti when transitioning from 'planning' to 'completed'
+                                                if (previousStatus === 'planning') {
+                                                    launchCosmicConfetti()
+                                                    // Invalidate cache to ensure Finished page shows updated data immediately
+                                                    await invalidateUserCache()
+                                                }
+                                            }
+                                            setIsUpdatingStatus(false)
+                                        }}
+                                        disabled={adding || isUpdatingStatus}
+                                        title="Mark as Watched"
+                                    >
+                                        <i className="fa-solid fa-eye"></i>
+                                    </button>
+                                    <button 
+                                        className="detail-page__icon-btn"
+                                        onClick={handleAddToWatchlist}
+                                        disabled={adding}
+                                        title="Add to Watchlist"
+                                    >
+                                        <i className="fa-regular fa-bookmark"></i>
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button 
+                                        className="detail-page__icon-btn"
+                                        onClick={() => {
+                                            if (!watchlistId) return
+                                            const markAsWatched = watchlistStatus !== 'completed' && watchlistStatus !== 'caught_up'
+                                            setMarkWatchedModal({ isOpen: true, markAsWatched })
+                                        }}
+                                        disabled={isUpdatingStatus}
+                                        title={(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? 'Mark as Unwatched' : 'Mark as Watched'}
+                                    >
+                                        <i className={(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
+                                    </button>
+                                    <button 
+                                        className="detail-page__icon-btn"
+                                        onClick={() => setConfirmModal({ isOpen: true })}
+                                        title="Remove from Watchlist"
+                                    >
+                                        <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
+                                    </button>
+                                </>
+                            )}
                         </div>
 
                         {!isMobile && showTrailer && trailerKey && (

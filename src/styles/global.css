@@ -3014,12 +3014,17 @@ html.native-app *::-webkit-scrollbar {
     width: fit-content;
 }
 
+.detail-page__actions-spacer {
+    flex-grow: 1;
+    min-width: 1.5rem;
+}
+
 /* Mobile fixed action container */
 .detail-page__actions-mobile {
     display: none;
     position: fixed;
     right: 0rem;
-        transform: translateY(-80%);
+    bottom: calc(var(--bottom-nav-height) + 1rem + 44px + 0.5rem);
     flex-direction: column;
     gap: 0.5rem;
     padding: 0.2rem;
@@ -3115,8 +3120,8 @@ html.native-app *::-webkit-scrollbar {
     height: 20px;
 }
 .detail-page__tmdb-logo {
-    width: 20px;
-    height: 20px;
+    width: 30px;
+    height: 30px;
 }
 .detail-page__stremio-logo {
     width: 20px;
@@ -11875,7 +11880,6 @@ i.fa-solid.fa-trash:hover {
     }
     .detail-page__actions-mobile {
         flex-shrink: 0;
-        margin-top: auto;
         border-top: none;
     }
 

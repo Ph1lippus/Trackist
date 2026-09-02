@@ -970,7 +970,8 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                 </div>
                             )}
                             
-                            <div className={isMobile ? `detail-page__actions-mobile${isSidebarOpen ? ' detail-page__actions-mobile--open' : ''}` : `detail-page__actions`}>
+                            {!isMobile ? (
+                            <div className="detail-page__actions">
                                 {!isInWatchlist ? (
                                     <>
                                         <button 
@@ -1061,7 +1062,13 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                         <i className="fa-solid fa-users"></i>
                                     </button>
                                 )}
-{showStremioButton && !stremioLoading && (
+                                <ShareButton
+                                    url={window.location.href}
+                                    title={`${title} on Track1st`}
+                                    text={`I found ${title} on Track1st. This one might deserve a place on your next binge list.`}
+                                />
+                                <div className="detail-page__actions-spacer" />
+                                {showStremioButton && !stremioLoading && (
                                      <button
                                          className="detail-page__icon-btn"
                                          onClick={async () => {
@@ -1077,7 +1084,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                          <img src={stremioIcon} alt="Stremio" className="detail-page__stremio-logo" />
                                      </button>
                                  )}
-                                {!isMobile && showTmdbButton && !tmdbLoading && (
+                                {showTmdbButton && !tmdbLoading && (
                                     <button
                                         className="detail-page__icon-btn detail-page__icon-btn--tmdb"
                                         onClick={() => {
@@ -1089,12 +1096,122 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                         <img src={tmdbLogo} alt="TMDB" className="detail-page__tmdb-logo" />
                                     </button>
                                 )}
+                            </div>
+                            ) : (
+                            <div className={`detail-page__actions-mobile${isSidebarOpen ? ' detail-page__actions-mobile--open' : ''}`}>
                                 <ShareButton
                                     url={window.location.href}
                                     title={`${title} on Track1st`}
                                     text={`I found ${title} on Track1st. This one might deserve a place on your next binge list.`}
                                 />
+                                {showStremioButton && !stremioLoading && (
+                                     <button
+                                         className="detail-page__icon-btn"
+                                         onClick={async () => {
+                                            if (!details) return
+                                            const nextEp = await getResumeEpisodeToWatch()
+                                            const sharingLink = nextEp
+                                                ? createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids?.imdb_id)
+                                                : createTVDeepLink(details.id, details.external_ids?.imdb_id)
+                                            openInStremio(sharingLink)
+                                        }}
+                                         title="Open in Stremio"
+                                     >
+                                         <img src={stremioIcon} alt="Stremio" className="detail-page__stremio-logo" />
+                                     </button>
+                                 )}
+                                {cast.length > 0 && (
+                                    <button 
+                                        className="detail-page__icon-btn"
+                                        onClick={() => setShowCast(!showCast)}
+                                        title={showCast ? 'Hide Cast' : 'Cast'}
+                                    >
+                                        <i className="fa-solid fa-users"></i>
+                                    </button>
+                                )}
+                                {trailerKey && (
+                                    <button 
+                                        className="detail-page__icon-btn"
+                                        onClick={() => {
+                                            if (isMobile) {
+                                                window.open(`https://www.youtube.com/watch?v=${trailerKey}`, '_blank')
+                                            } else {
+                                                setShowTrailer(!showTrailer)
+                                            }
+                                        }}
+                                        title={showTrailer && !isMobile ? 'Close Trailer' : 'Watch Trailer'}
+                                    >
+                                        <i className="fa-solid fa-clapperboard"></i>
+                                    </button>
+                                )}
+                                {!isInWatchlist ? (
+                                    <>
+                                        <button 
+                                            className="detail-page__icon-btn"
+                                            onClick={async () => {
+                                                setIsUpdatingStatus(true)
+                                                const newWatchlistId = await handleAddToWatchlist()
+                                                if (newWatchlistId && details) {
+                                                    // Gold standard: just set the status directly - no need to insert every episode
+                                                    const newStatus = await markShowAsFullyWatched(newWatchlistId, details.id)
+                                                    // Fire confetti if completed/caught_up
+                                                    if (newStatus === 'completed' || newStatus === 'caught_up') {
+                                                        launchCosmicConfetti()
+                                                    }
+                                                    // Refresh episodes
+                                                    setEpisodes(prev => prev.map(ep => ({ ...ep, watched: true })))
+                                                }
+                                                setIsUpdatingStatus(false)
+                                            }}
+                                            disabled={adding || isUpdatingStatus}
+                                            title="Mark as Watched"
+                                        >
+                                            <i className="fa-solid fa-eye"></i>
+                                        </button>
+                                        <button 
+                                            className="detail-page__icon-btn"
+                                            onClick={async () => {
+                                                await handleAddToWatchlist()
+                                            }}
+                                            disabled={adding}
+                                            title="Add to Watchlist"
+                                        >
+                                            <i className="fa-regular fa-bookmark"></i>
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <button 
+                                            className="detail-page__icon-btn"
+                                            onClick={() => setStatusChangeModal({ isOpen: true })}
+                                            disabled={isUpdatingStatus || modalLoading}
+                                            title="Change Status"
+                                        >
+                                            <i className="fa-solid fa-ellipsis"></i>
+                                        </button>
+                                        <button 
+                                            className="detail-page__icon-btn"
+                                            onClick={() => {
+                                                if (!watchlistId) return
+                                                const markAsWatched = watchlistStatus !== 'completed' && watchlistStatus !== 'caught_up'
+                                                setMarkWatchedModal({ isOpen: true, markAsWatched })
+                                            }}
+                                            disabled={isUpdatingStatus || modalLoading}
+                                            title={(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? 'Mark as Unwatched' : 'Mark as Watched'}
+                                        >
+                                            <i className={(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
+                                        </button>
+                                        <button 
+                                            className="detail-page__icon-btn"
+                                            onClick={() => setRemoveWatchlistModal({ isOpen: true })}
+                                            title="Remove from Watchlist"
+                                        >
+                                            <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
+                                        </button>
+                                    </>
+                                )}
                             </div>
+                            )}
 
                             {/* Action buttons (desktop inline / mobile fixed sidebar) */}
                             {!isMobile && showTrailer && trailerKey && (
