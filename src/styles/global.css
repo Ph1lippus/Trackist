@@ -157,7 +157,7 @@
         max-width: 100%!important;
     }
     .detail-page__overview-section {
-        margin-top: 14rem;
+        margin-top: 12rem;
         text-align: center;
     }
     .media-card__icon-btn, .detail-page__genres, .detail-page__actions, .detail-page__age-rating {
@@ -267,6 +267,7 @@
     }
     .detail-page__logo{
         max-width: 280px!important;
+        max-height: 180px!important;
         margin: 0 auto;
     }
     .discover-tabs{
