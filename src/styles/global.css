@@ -6119,7 +6119,6 @@ i.fa-solid.fa-trash:hover {
        scroll, matching a normal routed detail page. */
     .detail-overlay__scroll {
         top: 0;
-        bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
         overflow-y: auto;
         overflow-x: hidden;
     }
