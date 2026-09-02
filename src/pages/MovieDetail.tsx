@@ -575,46 +575,48 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
 
                     </div>
 
+                    </div>
                     {showCast && cast.length > 0 && (
-                        <div className="detail-page__cast-section">
-                            <div className="detail-page__cast-list">
-                                {cast.slice(0, isMobile && !showAllCast ? 12 : undefined).map((c: { id: number; name: string; profile_path?: string | null; character: string; order: number }) => (
-                                    <div 
-                                        key={c.id} 
-                                        className="detail-page__cast-item"
-                                        onClick={() => {
-                                            if (isInModal) {
-                                                useDetailModalStore.getState().open('person', c.id)
-                                            } else {
-                                                navigate(`/person/${c.id}`)
-                                            }
-                                        }}
-                                    >
-                                        {c.profile_path && (
-                                            <img 
-                                                className="detail-page__cast-photo" 
-                                                src={imageUrl(c.profile_path, 'w185') ?? ''} 
-                                                alt={c.name ?? ''} 
-                                                loading="lazy"
-                                            />
-                                        )}
-                                        <div className="detail-page__cast-info">
-                                            <span className="detail-page__cast-name">{c.name}</span>
-                                            {c.character && (
-                                                <span className="detail-page__cast-character">{c.character}</span>
+                        <div className="detail-page__episodes-container">
+                            <div className="detail-page__cast-section">
+                                <div className="detail-page__cast-list">
+                                    {cast.slice(0, isMobile && !showAllCast ? 12 : undefined).map((c: { id: number; name: string; profile_path?: string | null; character: string; order: number }) => (
+                                        <div 
+                                            key={c.id} 
+                                            className="detail-page__cast-item"
+                                            onClick={() => {
+                                                if (isInModal) {
+                                                    useDetailModalStore.getState().open('person', c.id)
+                                                } else {
+                                                    navigate(`/person/${c.id}`)
+                                                }
+                                            }}
+                                        >
+                                            {c.profile_path && (
+                                                <img 
+                                                    className="detail-page__cast-photo" 
+                                                    src={imageUrl(c.profile_path, 'w185') ?? ''} 
+                                                    alt={c.name ?? ''} 
+                                                    loading="lazy"
+                                                />
                                             )}
+                                            <div className="detail-page__cast-info">
+                                                <span className="detail-page__cast-name">{c.name}</span>
+                                                {c.character && (
+                                                    <span className="detail-page__cast-character">{c.character}</span>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
+                                {isMobile && !showAllCast && cast.length > 12 && (
+                                    <button className="detail-page__cast-more" onClick={() => setShowAllCast(true)}>
+                                        Show all cast
+                                    </button>
+                                )}
                             </div>
-                            {isMobile && !showAllCast && cast.length > 12 && (
-                                <button className="detail-page__cast-more" onClick={() => setShowAllCast(true)}>
-                                    Show all cast
-                                </button>
-                            )}
                         </div>
                     )}
-                    </div>
                     <div className="detail-page__right" style={{ display: 'none' }}>
                     </div>
                 </div>
