@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Share } from '@capacitor/share'
 import { isNativePlatform } from '../../services/nativePush'
+import { Check, Share2 } from 'lucide-react'
 
 const PUBLIC_APP_URL = 'https://track1st.vercel.app'
 
@@ -80,7 +81,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({ url, title, text, className =
             onClick={handleShare}
             title={copied ? 'Link copied!' : 'Share'}
         >
-            {showIcon && <i className={copied ? 'fa-solid fa-check' : 'fa-solid fa-share-nodes'}></i>}
+            {showIcon && (copied ? <Check size={18} /> : <Share2 size={18} />)}
             {label && <span>{copied ? 'Link copied' : label}</span>}
         </button>
     )

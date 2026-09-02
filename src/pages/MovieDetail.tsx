@@ -19,6 +19,7 @@ import tmdbLogo from '../assets/CompactTMDB.svg'
 import ShareButton from '../components/media/ShareButton'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
 import useDetailModalStore from '../stores/detailModalStore'
+import { AlignLeft, Bookmark, Clapperboard, Eye, EyeOff, Users, X } from 'lucide-react'
 
 interface MovieDetailProps {
     itemId?: number
@@ -43,6 +44,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
     const [showTrailer, setShowTrailer] = useState(false)
     const [trailerKey, setTrailerKey] = useState<string | null>(null)
     const [showCast, setShowCast] = useState(false)
+    const [showDescription, setShowDescription] = useState(false)
     const [showAllCast, setShowAllCast] = useState(false)
 
     useEffect(() => {
@@ -302,8 +304,10 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                     </div>
 
                     <div className="detail-page__overview-section">
-                        <h2 className="detail-page__section-title">Description</h2>
-                        <p className="detail-page__overview">{overview}</p>
+                        {(!isMobile || showDescription) && <>
+                            <h2 className="detail-page__section-title">Description</h2>
+                            <p className="detail-page__overview">{overview}</p>
+                        </>}
                         
                         <div className="detail-page__actions">
                             {!isInWatchlist ? (
@@ -314,7 +318,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                                         disabled={adding}
                                         title="Add to Watchlist"
                                     >
-                                        <i className="fa-regular fa-bookmark"></i>
+                                        <Bookmark size={18} color="#fff" />
                                     </button>
                                     <button 
                                         className="detail-page__icon-btn"
@@ -338,7 +342,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                                         disabled={adding || isUpdatingStatus}
                                         title="Mark as Watched"
                                     >
-                                        <i className="fa-solid fa-eye"></i>
+                                        <Eye size={18} />
                                     </button>
                                 </>
                             ) : (
@@ -348,7 +352,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                                         onClick={() => setConfirmModal({ isOpen: true })}
                                         title="Remove from Watchlist"
                                     >
-                                        <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
+                                        <Bookmark size={18} color="#68ffae" fill="#68ffae" />
                                     </button>
                                     <button 
                                         className="detail-page__icon-btn"
@@ -360,7 +364,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                                         disabled={isUpdatingStatus}
                                         title={(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? 'Mark as Unwatched' : 'Mark as Watched'}
                                     >
-                                        <i className={(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
+                                        {(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
                                 </>
                             )}
@@ -376,7 +380,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                                     }}
                                     title={showTrailer && !isMobile ? 'Close Trailer' : 'Watch Trailer'}
                                 >
-                                    <i className="fa-solid fa-clapperboard"></i>
+                                    <Clapperboard size={18} />
                                 </button>
                             )}
                             {cast.length > 0 && (
@@ -385,7 +389,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                                     onClick={() => setShowCast(!showCast)}
                                     title={showCast ? 'Hide Cast' : 'Cast'}
                                 >
-                                    <i className="fa-solid fa-users"></i>
+                                    <Users size={18} />
                                 </button>
                             )}
                             <ShareButton
@@ -445,6 +449,9 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
 
                         {/* Mobile fixed action container */}
                         <div className={`detail-page__actions-mobile${isSidebarOpen ? ' detail-page__actions-mobile--open' : ''}`}>
+                            <button className="detail-page__icon-btn" onClick={() => setShowDescription(!showDescription)} title={showDescription ? 'Hide Description' : 'Show Description'} aria-label={showDescription ? 'Hide Description' : 'Show Description'}>
+                                <AlignLeft size={18} />
+                            </button>
                             <ShareButton
                                 url={window.location.href}
                                 title={`${title} on Track1st`}
@@ -491,7 +498,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                                     onClick={() => setShowCast(!showCast)}
                                     title={showCast ? 'Hide Cast' : 'Cast'}
                                 >
-                                    <i className="fa-solid fa-users"></i>
+                                    <Users size={18} />
                                 </button>
                             )}
                             {trailerKey && (
@@ -506,7 +513,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                                     }}
                                     title={showTrailer && !isMobile ? 'Close Trailer' : 'Watch Trailer'}
                                 >
-                                    <i className="fa-solid fa-clapperboard"></i>
+                                    <Clapperboard size={18} />
                                 </button>
                             )}
                             {!isInWatchlist ? (
@@ -533,7 +540,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                                         disabled={adding || isUpdatingStatus}
                                         title="Mark as Watched"
                                     >
-                                        <i className="fa-solid fa-eye"></i>
+                                        <Eye size={18} />
                                     </button>
                                     <button 
                                         className="detail-page__icon-btn"
@@ -541,7 +548,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                                         disabled={adding}
                                         title="Add to Watchlist"
                                     >
-                                        <i className="fa-regular fa-bookmark"></i>
+                                        <Bookmark size={18} color="#fff" />
                                     </button>
                                 </>
                             ) : (
@@ -556,14 +563,14 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                                         disabled={isUpdatingStatus}
                                         title={(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? 'Mark as Unwatched' : 'Mark as Watched'}
                                     >
-                                        <i className={(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
+                                        {(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
                                     <button 
                                         className="detail-page__icon-btn"
                                         onClick={() => setConfirmModal({ isOpen: true })}
                                         title="Remove from Watchlist"
                                     >
-                                        <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
+                                        <Bookmark size={18} color="#68ffae" fill="#68ffae" />
                                     </button>
                                 </>
                             )}
@@ -576,7 +583,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                                         className="detail-page__trailer-close"
                                         onClick={() => setShowTrailer(false)}
                                     >
-                                        <i className="fa-solid fa-xmark"></i>
+                                        <X size={18} />
                                     </button>
                                     <iframe
                                         src={`https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&vq=hd1080`}

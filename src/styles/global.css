@@ -160,7 +160,6 @@
         max-width: 100%!important;
     }
     .detail-page__overview-section {
-        margin-top: 12rem;
         text-align: center;
     }
     .media-card__icon-btn, .detail-page__genres, .detail-page__actions, .detail-page__age-rating {
@@ -192,6 +191,7 @@
         grid-template-columns: none !important;
     }
     .detail-page__episode-list {
+        padding-bottom: 15vh!important;
         height: auto !important;
         max-height: none !important;
         overflow: visible !important;
@@ -272,6 +272,10 @@
         max-width: 280px!important;
         max-height: 180px!important;
         margin: 0 auto;
+    }
+    .detail-page__episode-hero {
+        margin: 0.5rem 0 0;
+        max-width: 100%;
     }
     .discover-tabs{
         margin: 0 auto;
@@ -2662,7 +2666,6 @@ html.native-app *::-webkit-scrollbar {
 }
 .detail-page__content {
     position: relative;
-    margin: 0 auto;
     padding: 0rem 0rem 0rem 4rem;
 }
 .detail-page__content--split {
@@ -3597,6 +3600,12 @@ html.native-app *::-webkit-scrollbar {
     background: transparent;
 }
 
+@media (max-width: 768px) {
+    .detail-overlay .detail-page--person {
+        padding-top: calc(var(--navbar-height) + env(safe-area-inset-top, 0px));
+    }
+}
+
 @media (min-width: 769px) {
     .detail-overlay .detail-page--person {
         height: 100%;
@@ -3630,6 +3639,74 @@ html.native-app *::-webkit-scrollbar {
     display: flex;
     flex-direction: column;
     height: calc(100vh - 3.5rem);
+}
+
+
+
+.detail-page__episode-hero {
+    position: relative;
+    width: 100%;
+    max-width: 560px;
+    margin: 2rem auto;
+    overflow: hidden;
+    
+    /* 1. FORCE MOBILE GPU SPEED BOOST */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    will-change: mask-image;
+
+    /* 2. APPLY THE SMOOTH TRANSPARENT MASK HERE INSTEAD */
+    mask-image: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0) 0%,
+        rgba(0, 0, 0, 0.3) 4%,
+        rgba(0, 0, 0, 0.75) 10%,
+        rgba(0, 0, 0, 1) 16%,
+        
+        rgba(0, 0, 0, 1) 84%,
+        rgba(0, 0, 0, 0.75) 90%,
+        rgba(0, 0, 0, 0.3) 96%,
+        rgba(0, 0, 0, 0) 100%
+    );
+    -webkit-mask-image: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0) 0%,
+        rgba(0, 0, 0, 0.3) 4%,
+        rgba(0, 0, 0, 0.75) 10%,
+        rgba(0, 0, 0, 1) 16%,
+        
+        rgba(0, 0, 0, 1) 84%,
+        rgba(0, 0, 0, 0.75) 90%,
+        rgba(0, 0, 0, 0.3) 96%,
+        rgba(0, 0, 0, 0) 100%
+    );
+}
+
+.detail-page__episode-hero img {
+    width: 100%;
+    display: block;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    
+    /* 3. KEEP THE SIDE CROPPING EFFECT SECURELY HERE */
+    transform: scale(1.2); 
+    will-change: transform;
+}
+
+
+
+
+.detail-page__episode-score {
+    position: absolute;
+    right: 0.5rem;
+    bottom: 2rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    color: #ffc107;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.9rem;
+    font-weight: 700;
 }
 .detail-page__subsection-title {
     font-size: 1.1rem;

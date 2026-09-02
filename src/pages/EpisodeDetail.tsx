@@ -9,9 +9,9 @@ import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useMobile } from '../contexts/useMobile'
-import useDetailModalStore from '../stores/detailModalStore'
 import ShareButton from '../components/media/ShareButton'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
+import { Eye, EyeOff } from 'lucide-react'
 
 interface EpisodeData {
     id: number
@@ -41,7 +41,6 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
     const season = seasonNumber?.toString() ?? paramSeason
     const episode = episodeNumber?.toString() ?? paramEpisode
     const { isMobile } = useMobile()
-    const isInModal = useDetailModalStore((s) => s.isOpen)
     const { isOpen: isSidebarOpen } = useDetailSidebar()
     const [tvDetails, setTvDetails] = useState<TMDBResult | null>(null)
     const [episodeData, setEpisodeData] = useState<EpisodeData | null>(null)
@@ -52,6 +51,7 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
     const [isInWatchlist, setIsInWatchlist] = useState(false)
     const [watchlistId, setWatchlistId] = useState<string | null>(null)
     const [watched, setWatched] = useState(false)
+    const [showDescription] = useState(true)
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean } | null>(null)
 
     
@@ -110,14 +110,6 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
         }
         fetchData()
     }, [id, season, episode])
-
-    // Push backdrop URL to the overlay store when in modal so it renders outside the scroll container
-    useEffect(() => {
-        if (!isInModal || !episodeData) return
-        const url = episodeData.still_path ? imageUrlOriginal(episodeData.still_path) : null
-        useDetailModalStore.getState().setBackdropUrl(url)
-        return () => { useDetailModalStore.getState().setBackdropUrl(null) }
-    }, [isInModal, episodeData])
 
     const getLogoUrl = (): string | null => {
         if (tvDetails?.images?.logos) {
@@ -207,22 +199,15 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
         return <div className="detail-page-error">Episode not found</div>
     }
 
-    const backdropUrl = episodeData.still_path ? imageUrlOriginal(episodeData.still_path) : null
+    const stillUrl = episodeData.still_path ? imageUrlOriginal(episodeData.still_path) : null
     const logoUrl = getLogoUrl()
     const title = tvDetails.name || 'Untitled'
     const episodeTitle = episodeData.name || `Episode ${episodeData.episode_number}`
-    const genres = tvDetails.genres || []
+    const episodeScore = typeof episodeData.vote_average === 'number' && episodeData.vote_average > 0 ? episodeData.vote_average.toFixed(1) : null
 
 
     return (
         <div className="detail-page detail-page--no-scroll">
-            {!isInModal && backdropUrl && (
-                <div className="detail-page__backdrop">
-                    <img src={backdropUrl} alt={episodeTitle} loading="lazy" />
-                    <div className="detail-page__backdrop-overlay" />
-                </div>
-            )}
-            
             <div className="detail-page__content detail-page__content--split">
                 <div className="detail-page__main detail-page__main--episode">
                     <div className="detail-page__left">
@@ -234,7 +219,7 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
                                     <h1 className="detail-page__title">{title}</h1>
                                 )}
                             </div>
-                            
+
                             <div className="detail-page__meta">
                                 {season != null && episode != null && (
                                     <span className="detail-page__year">
@@ -244,21 +229,25 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
                                 )}
                                 {episodeData.air_date && <span className="detail-page__year">{episodeData.air_date}</span>}
                                 {episodeData.runtime && <span className="detail-page__runtime">{episodeData.runtime} min</span>}
-                                {typeof episodeData.vote_average === 'number' && episodeData.vote_average > 0 && <span className="detail-page__rating">★ {episodeData.vote_average.toFixed(1)}</span>}
                             </div>
-                            {genres.length > 0 && (
-                                <div className="detail-page__genres">
-                                    {genres.map((g: { id: number; name: string }) => (
-                                        <span key={g.id} className="detail-page__genre">{g.name}</span>
-                                    ))}
-                                </div>
-                            )}
                         </div>
-                        
 
                         <div className="detail-page__overview-section">
-                            <h2 className="detail-page__section-title">Description</h2>
-                            <p className="detail-page__overview">{episodeData.overview || 'No description available.'}</p>
+                            {stillUrl && (
+                                <div className="detail-page__episode-hero">
+                                    <img src={stillUrl} alt={episodeTitle} loading="lazy" />
+                                    {episodeScore && (
+                                        <span className="detail-page__episode-score">
+                                            <span aria-hidden="true">★</span> {episodeScore}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+
+                            {showDescription && <>
+                                <h2 className="detail-page__section-title">Description</h2>
+                                <p className="detail-page__overview">{episodeData.overview || 'No description available.'}</p>
+                            </>}
                             
                             <div className={isMobile ? `detail-page__actions-mobile${isSidebarOpen ? ' detail-page__actions-mobile--open' : ''}` : 'detail-page__actions'}>
                                 <ShareButton
@@ -272,7 +261,7 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
                                         onClick={handleToggleWatched}
                                         title={watched ? 'Mark as Unwatched' : 'Mark as Watched'}
                                     >
-                                        <i className={watched ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'}></i>
+                                        {watched ? <EyeOff size={18} /> : <Eye size={18} />}
                                     </button>
                                 )}
                             </div>

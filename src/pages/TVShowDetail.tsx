@@ -15,7 +15,7 @@ import { useShowStremioButton } from '../hooks/useShowStremioButton'
 import { useShowTmdbButton } from '../hooks/useShowTmdbButton'
 import { useMobile } from '../contexts/useMobile'
 import { useAuthStore } from '../stores/useAuthStore'
-import { Check } from 'lucide-react'
+import { AlignLeft, Bookmark, Check, ChevronDown, ChevronLeft, ChevronRight, Clapperboard, Ellipsis, Eye, EyeOff, Users, X } from 'lucide-react'
 import stremioIcon from '../assets/stremio-logo-icon-only-fullcolor.svg'
 import tmdbLogo from '../assets/CompactTMDB.svg'
 import ShareButton from '../components/media/ShareButton'
@@ -83,6 +83,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
         episode: LocalEpisode
     } | null>(null)
     const [showCast, setShowCast] = useState(false)
+    const [showDescription, setShowDescription] = useState(false)
     const [showAllCast, setShowAllCast] = useState(false)
 
     useEffect(() => {
@@ -960,8 +961,10 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                         </div>
 
                         <div className="detail-page__overview-section">
-                            <h2 className="detail-page__section-title">Description</h2>
-                            <p className="detail-page__overview">{overview}</p>
+                            {(!isMobile || showDescription) && <>
+                                <h2 className="detail-page__section-title">Description</h2>
+                                <p className="detail-page__overview">{overview}</p>
+                            </>}
                             
                             {isInWatchlist && (watchlistStatus === 'paused' || watchlistStatus === 'dropped') && (
                                 <div className="detail-page__status">
@@ -982,7 +985,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                             disabled={adding}
                                             title="Add to Watchlist"
                                         >
-                                            <i className="fa-regular fa-bookmark"></i>
+                                            <Bookmark size={18} color="#fff" />
                                         </button>
                                         <button 
                                             className="detail-page__icon-btn"
@@ -1004,7 +1007,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                             disabled={adding || isUpdatingStatus}
                                             title="Mark as Watched"
                                         >
-                                            <i className="fa-solid fa-eye"></i>
+                                            <Eye size={18} />
                                         </button>
                                     </>
                                 ) : (
@@ -1014,7 +1017,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                             onClick={() => setRemoveWatchlistModal({ isOpen: true })}
                                             title="Remove from Watchlist"
                                         >
-                                            <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
+                                            <Bookmark size={18} color="#68ffae" fill="#68ffae" />
                                         </button>
                                         <button 
                                             className="detail-page__icon-btn"
@@ -1026,7 +1029,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                             disabled={isUpdatingStatus || modalLoading}
                                             title={(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? 'Mark as Unwatched' : 'Mark as Watched'}
                                         >
-                                            <i className={(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
+                                            {(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? <EyeOff size={18} /> : <Eye size={18} />}
                                         </button>
                                         <button 
                                             className="detail-page__icon-btn"
@@ -1034,7 +1037,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                             disabled={isUpdatingStatus || modalLoading}
                                             title="Change Status"
                                         >
-                                            <i className="fa-solid fa-ellipsis"></i>
+                                            <Ellipsis size={18} />
                                         </button>
                                     </>
                                 )}
@@ -1050,7 +1053,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                         }}
                                         title={showTrailer && !isMobile ? 'Close Trailer' : 'Watch Trailer'}
                                     >
-                                        <i className="fa-solid fa-clapperboard"></i>
+                                        <Clapperboard size={18} />
                                     </button>
                                 )}
                                 {cast.length > 0 && (
@@ -1059,7 +1062,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                         onClick={() => setShowCast(!showCast)}
                                         title={showCast ? 'Hide Cast' : 'Cast'}
                                     >
-                                        <i className="fa-solid fa-users"></i>
+                                        <Users size={18} />
                                     </button>
                                 )}
                                 <ShareButton
@@ -1099,6 +1102,9 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                             </div>
                             ) : (
                             <div className={`detail-page__actions-mobile${isSidebarOpen ? ' detail-page__actions-mobile--open' : ''}`}>
+                                <button className="detail-page__icon-btn" onClick={() => setShowDescription(!showDescription)} title={showDescription ? 'Hide Description' : 'Show Description'} aria-label={showDescription ? 'Hide Description' : 'Show Description'}>
+                                    <AlignLeft size={18} />
+                                </button>
                                 <ShareButton
                                     url={window.location.href}
                                     title={`${title} on Track1st`}
@@ -1126,7 +1132,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                         onClick={() => setShowCast(!showCast)}
                                         title={showCast ? 'Hide Cast' : 'Cast'}
                                     >
-                                        <i className="fa-solid fa-users"></i>
+                                        <Users size={18} />
                                     </button>
                                 )}
                                 {trailerKey && (
@@ -1141,7 +1147,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                         }}
                                         title={showTrailer && !isMobile ? 'Close Trailer' : 'Watch Trailer'}
                                     >
-                                        <i className="fa-solid fa-clapperboard"></i>
+                                        <Clapperboard size={18} />
                                     </button>
                                 )}
                                 {!isInWatchlist ? (
@@ -1166,7 +1172,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                             disabled={adding || isUpdatingStatus}
                                             title="Mark as Watched"
                                         >
-                                            <i className="fa-solid fa-eye"></i>
+                                            <Eye size={18} />
                                         </button>
                                         <button 
                                             className="detail-page__icon-btn"
@@ -1176,7 +1182,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                             disabled={adding}
                                             title="Add to Watchlist"
                                         >
-                                            <i className="fa-regular fa-bookmark"></i>
+                                            <Bookmark size={18} color="#fff" />
                                         </button>
                                     </>
                                 ) : (
@@ -1187,7 +1193,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                             disabled={isUpdatingStatus || modalLoading}
                                             title="Change Status"
                                         >
-                                            <i className="fa-solid fa-ellipsis"></i>
+                                            <Ellipsis size={18} />
                                         </button>
                                         <button 
                                             className="detail-page__icon-btn"
@@ -1199,14 +1205,14 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                             disabled={isUpdatingStatus || modalLoading}
                                             title={(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? 'Mark as Unwatched' : 'Mark as Watched'}
                                         >
-                                            <i className={(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? 'fa-solid fa-eye-slash' :'fa-solid fa-eye'}></i>
+                                            {(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? <EyeOff size={18} /> : <Eye size={18} />}
                                         </button>
                                         <button 
                                             className="detail-page__icon-btn"
                                             onClick={() => setRemoveWatchlistModal({ isOpen: true })}
                                             title="Remove from Watchlist"
                                         >
-                                            <i className="fa-solid fa-bookmark" style={{ color: '#68ffae' }}></i>
+                                            <Bookmark size={18} color="#68ffae" fill="#68ffae" />
                                         </button>
                                     </>
                                 )}
@@ -1221,7 +1227,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                             className="detail-page__trailer-close"
                                             onClick={() => setShowTrailer(false)}
                                         >
-                                            <i className="fa-solid fa-xmark"></i>
+                                            <X size={18} />
                                         </button>
                                         <iframe
                                             src={`https://www.youtube-nocookie.com/embed/${trailerKey}?autoplay=1&vq=hd1080`}
@@ -1293,7 +1299,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                             }}
                                             disabled={seasons.indexOf(selectedSeason) === 0}
                                         >
-                                            <i className="fa-solid fa-chevron-left"></i>
+                                            <ChevronLeft size={18} />
                                         </button>
                                         <div className="detail-page__season-dropdown" ref={seasonDropdownRef}>
                                             <button
@@ -1301,7 +1307,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                                 onClick={() => setSeasonDropdownOpen(!seasonDropdownOpen)}
                                             >
                                                 <span>Season {selectedSeason}</span>
-                                                <i className={`fa-solid fa-chevron-down ${seasonDropdownOpen ? 'rotated' : ''}`}></i>
+                                                <ChevronDown size={18} className={seasonDropdownOpen ? 'rotated' : ''} />
                                             </button>
                                             {seasonDropdownOpen && (
                                                 <div className="detail-page__season-dropdown-menu">
@@ -1330,7 +1336,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                             }}
                                             disabled={seasons.indexOf(selectedSeason) === seasons.length - 1}
                                         >
-                                            <i className="fa-solid fa-chevron-right"></i>
+                                            <ChevronRight size={18} />
                                         </button>
                                     </div>
                                 )}
@@ -1393,7 +1399,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                                 }}
                                                 title="View episode details"
                                             >
-                                                <i className="fa-solid fa-ellipsis"></i>
+                                                <Ellipsis size={18} />
                                             </button>
                                         </div>
                                     ))}
@@ -1418,7 +1424,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                             }}
                                             disabled={seasons.indexOf(selectedSeason) === 0}
                                         >
-                                            <i className="fa-solid fa-chevron-left"></i>
+                                            <ChevronLeft size={18} />
                                         </button>
                                         <div className="detail-page__season-dropdown" ref={seasonDropdownRef}>
                                             <button
@@ -1426,7 +1432,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                                 onClick={() => setSeasonDropdownOpen(!seasonDropdownOpen)}
                                             >
                                                 <span>Season {selectedSeason}</span>
-                                                <i className={`fa-solid fa-chevron-down ${seasonDropdownOpen ? 'rotated' : ''}`}></i>
+                                                <ChevronDown size={18} className={seasonDropdownOpen ? 'rotated' : ''} />
                                             </button>
                                             {seasonDropdownOpen && (
                                                 <div className="detail-page__season-dropdown-menu">
@@ -1455,7 +1461,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                             }}
                                             disabled={seasons.indexOf(selectedSeason) === seasons.length - 1}
                                         >
-                                            <i className="fa-solid fa-chevron-right"></i>
+                                            <ChevronRight size={18} />
                                         </button>
                                     </div>
                                 )}
@@ -1518,7 +1524,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                                 }}
                                                 title="View episode details"
                                             >
-                                                <i className="fa-solid fa-ellipsis"></i>
+                                                <Ellipsis size={18} />
                                             </button>
                                         </div>
                                     ))}
