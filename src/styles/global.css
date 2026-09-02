@@ -2768,7 +2768,6 @@ html.native-app *::-webkit-scrollbar {
     transform: none;
     width: max-content;
     max-width: min(440px, 80vw);
-    min-width: 220px;
     background: rgba(15, 15, 20, 0.98);
     border: 1px solid rgba(255, 255, 255, 0.15);
     color: var(--color-platinum);
@@ -3365,7 +3364,7 @@ html.native-app *::-webkit-scrollbar {
 .detail-page__episode-card {
     display: flex;
     gap: 1rem;
-    backdrop-filter: blur(8px);
+    backdrop-filter: blur(0px);
     padding: 0.75rem;
     background: rgba(17, 20, 25, 0.22);
     border: none;
