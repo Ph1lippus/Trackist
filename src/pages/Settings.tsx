@@ -699,7 +699,7 @@ const DataSection: React.FC<Pick<SettingsProps, 'dataProps'>> = ({ dataProps }) 
                         {cacheStats.memoryEntries + cacheStats.dbEntries} entries cached
                     </span>
                     <span className="settings-data-card__sub">
-                        {cacheStats.memoryEntries} in memory Â· {cacheStats.dbEntries} in database
+                        {cacheStats.memoryEntries} in memory · {cacheStats.dbEntries} in database
                     </span>
                 </div>
                 <button
@@ -819,7 +819,7 @@ const AdditionsSection: React.FC<Pick<SettingsProps, 'additionsProps'>> = ({ add
 
             <AdditionsToggleRow
                 label="TMDB Button"
-                desc="Show a TMDB icon on movie and TV show detail pages"
+                desc="Show a TMDB icon on movie and TV show detail pages (desktop only, not in the mobile sidebar)"
                 checked={showTmdbButton}
                 onChange={handleTmdbUpdate}
                 disabled={loadingStates.tmdb}

@@ -17,7 +17,7 @@ import { useMobile } from '../contexts/useMobile'
 import { useAuthStore } from '../stores/useAuthStore'
 import { Check } from 'lucide-react'
 import stremioIcon from '../assets/stremio-logo-icon-only-fullcolor.svg'
-import tmdbLogo from '../assets/TMDBLOGO.svg'
+import tmdbLogo from '../assets/CompactTMDB.svg'
 import ShareButton from '../components/media/ShareButton'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
 import useDetailModalStore from '../stores/detailModalStore'
@@ -1077,7 +1077,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                          <img src={stremioIcon} alt="Stremio" className="detail-page__stremio-logo" />
                                      </button>
                                  )}
-                                {showTmdbButton && !tmdbLoading && (
+                                {!isMobile && showTmdbButton && !tmdbLoading && (
                                     <button
                                         className="detail-page__icon-btn detail-page__icon-btn--tmdb"
                                         onClick={() => {

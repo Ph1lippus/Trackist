@@ -10,10 +10,12 @@ import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { createMovieDeepLink, openInStremio } from '../utils/stremioUtils'
 import { useShowStremioButton } from '../hooks/useShowStremioButton'
 import { useShowLetterboxButton } from '../hooks/useShowLetterboxButton'
+import { useShowTmdbButton } from '../hooks/useShowTmdbButton'
 import { useMobile } from '../contexts/useMobile'
 import { useAuthStore } from '../stores/useAuthStore'
 import stremioIcon from '../assets/stremio-logo-icon-only-fullcolor.svg'
 import letterboxdIcon from '../assets/letterboxd-decal-dots-pos-rgb-500px.png'
+import tmdbLogo from '../assets/CompactTMDB.svg'
 import ShareButton from '../components/media/ShareButton'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
 import useDetailModalStore from '../stores/detailModalStore'
@@ -29,6 +31,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
     const isInModal = useDetailModalStore((s) => s.isOpen)
     const { showStremioButton, loading: stremioLoading } = useShowStremioButton()
     const { showLetterboxButton, loading: letterboxLoading } = useShowLetterboxButton()
+    const { showTmdbButton, loading: tmdbLoading } = useShowTmdbButton()
     const { isMobile } = useMobile()
     const { isOpen: isSidebarOpen } = useDetailSidebar()
     const [details, setDetails] = useState<TMDBResult | null>(null)
@@ -418,6 +421,18 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                                     title="Open in Letterbox"
                                 >
                                     <img src={letterboxdIcon} alt="Letterboxd" className="detail-page__letterbox-logo" />
+                                </button>
+                            )}
+                            {showTmdbButton && !tmdbLoading && (
+                                <button 
+                                    className="detail-page__icon-btn detail-page__icon-btn--tmdb"
+                                    onClick={() => {
+                                        if (!details) return
+                                        openExternal(`https://www.themoviedb.org/movie/${details.id}`)
+                                    }}
+                                    title="Open on TMDB"
+                                >
+                                    <img src={tmdbLogo} alt="TMDB" className="detail-page__tmdb-logo" />
                                 </button>
                             )}
                             <ShareButton
