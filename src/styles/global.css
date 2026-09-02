@@ -192,7 +192,6 @@
         height: auto !important;
         max-height: none !important;
         overflow: visible !important;
-        padding-bottom: 0 !important;
     }
     .detail-page__episode-card{
         margin-right: 0px!important;
@@ -433,6 +432,11 @@
 
     .credit-card__text {
         font-size: 0.85rem !important;
+    }
+
+    .detail-page__episode-card:hover:not(.unreleased):not(.watched),
+    .detail-page__episode-card.watched:hover {
+        background: inherit !important;
     }
 }
 :root {
@@ -11823,7 +11827,6 @@ i.fa-solid.fa-trash:hover {
 
     .page-main {
         padding-top: calc(var(--navbar-height) + 0.5rem) !important;
-        padding-bottom: calc(var(--bottom-nav-height) + 0.5rem) !important;
     }
 
     .navbar-auth-link {
