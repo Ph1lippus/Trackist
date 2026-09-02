@@ -3641,6 +3641,21 @@ html.native-app *::-webkit-scrollbar {
     height: calc(100vh - 3.5rem);
 }
 
+.detail-page__backdrop-image--low-resolution {
+    filter: blur(5px);
+    transform: scale(1.02);
+}
+.detail-page--no-scroll > .detail-page__content {
+    position: relative;
+    z-index: 1;
+}
+
+@media (min-width: 769px) {
+    .detail-page__main--episode .detail-page__episode-hero {
+        display: none;
+    }
+}
+
 
 
 .detail-page__episode-hero {

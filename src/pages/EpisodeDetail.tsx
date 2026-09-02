@@ -53,6 +53,7 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
     const [watched, setWatched] = useState(false)
     const [showDescription] = useState(true)
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean } | null>(null)
+    const [isLowResolutionStill, setIsLowResolutionStill] = useState(false)
 
     
 
@@ -208,6 +209,23 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
 
     return (
         <div className="detail-page detail-page--no-scroll">
+            {!isMobile && stillUrl && (
+                <div
+                    className="detail-page__backdrop"
+                    aria-hidden="true"
+                >
+                    <img
+                        src={stillUrl}
+                        alt=""
+                        className={isLowResolutionStill ? 'detail-page__backdrop-image--low-resolution' : ''}
+                        onLoad={(event) => {
+                            const image = event.currentTarget
+                            setIsLowResolutionStill(image.naturalWidth < 1920 || image.naturalHeight < 1080)
+                        }}
+                    />
+                    <div className="detail-page__backdrop-overlay" />
+                </div>
+            )}
             <div className="detail-page__content detail-page__content--split">
                 <div className="detail-page__main detail-page__main--episode">
                     <div className="detail-page__left">
@@ -235,7 +253,11 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
                         <div className="detail-page__overview-section">
                             {stillUrl && (
                                 <div className="detail-page__episode-hero">
-                                    <img src={stillUrl} alt={episodeTitle} loading="lazy" />
+                                    <img
+                                        src={stillUrl}
+                                        alt={episodeTitle}
+                                        loading="lazy"
+                                    />
                                     {episodeScore && (
                                         <span className="detail-page__episode-score">
                                             <span aria-hidden="true">★</span> {episodeScore}
