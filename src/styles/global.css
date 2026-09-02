@@ -22,8 +22,8 @@
         grid-template-columns: 100px minmax(0, 1fr) !important;
         align-items: center !important;
         min-height: unset !important;
-        padding-left:1rem;
-        gap: 0rem;
+        padding-left:1rem!important;
+        gap: 0rem!important;
     }
     .media-card__poster {
         border: none !important;
@@ -687,7 +687,7 @@ html::before {
     grid-template-columns: auto 1fr auto;
     align-items: center;
     position: relative;
-    min-width: 98%;
+    min-width: 100%;
     gap: 0.9rem;
     height: 64px;
 }
@@ -6110,20 +6110,38 @@ i.fa-solid.fa-trash:hover {
 }
 
 @media (max-width: 768px) {
+    /* Whole overlay scrolls: the scroll area spans the full viewport (behind
+       the fixed transparent navbar) so content moves up under the navbar on
+       scroll, matching a normal routed detail page. */
     .detail-overlay__scroll {
-        top: calc(var(--navbar-height) + env(safe-area-inset-top, 0px));
+        top: 0;
         bottom: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
         overflow-y: auto;
         overflow-x: hidden;
     }
 
-    .detail-page--no-scroll {
-        overflow-y: auto;
-        overflow-x: hidden;
+    /* Undo the pinned/internal-scroll mobile layout inside the modal so the
+       entire detail content scrolls as one block. */
+    .detail-overlay .detail-page--no-scroll {
+        height: auto;
+        overflow: visible;
+        display: block;
+        padding-top: calc(var(--navbar-height) + env(safe-area-inset-top, 0px));
     }
-
-    .detail-page__content--split {
-        overflow-y: auto;
+    .detail-overlay .detail-page__content--split,
+    .detail-overlay .detail-page__main,
+    .detail-overlay .detail-page__main--movie,
+    .detail-overlay .detail-page__main--tv,
+    .detail-overlay .detail-page__main--episode,
+    .detail-overlay .detail-page__main--person,
+    .detail-overlay .detail-page__left,
+    .detail-overlay .detail-page__right,
+    .detail-overlay .detail-page__overview-section,
+    .detail-overlay .detail-page__episodes-container {
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: visible !important;
+        flex: none !important;
     }
 }
 
@@ -11796,7 +11814,7 @@ i.fa-solid.fa-trash:hover {
     .mobile-tvshows-page,
     .mobile-movies-page,
     .upcoming-new-page {
-        padding-top: 0.5rem !important;
+        padding-top: 0.8rem !important;
     }
 
     .discover-page {

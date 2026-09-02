@@ -217,7 +217,16 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
         fetchDetails()
     }, [id])
 
-    // Cache for season data: season_number -> episodes array
+    // Push backdrop URL to the overlay store when in modal so it renders outside the scroll container
+    useEffect(() => {
+        if (!isInModal || !details) return
+        const heroPoster = isMobile ? getBestPoster(details?.images?.posters) : null
+        const url = heroPoster
+            ? imageUrlOriginal(heroPoster)
+            : imageUrlOriginal(getBestBackdropPath(details?.images?.backdrops) ?? details?.backdrop_path ?? null)
+        useDetailModalStore.getState().setBackdropUrl(url)
+        return () => { useDetailModalStore.getState().setBackdropUrl(null) }
+    }, [isInModal, details, isMobile])
     const seasonCache = useRef<Map<number, LocalEpisode[]>>(new Map())
     const watchedKeysCache = useRef<Set<string>>(new Set())
 
@@ -903,7 +912,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
 
     return (
         <div className="detail-page detail-page--no-scroll">
-            {backdropUrl && (
+            {!isInModal && backdropUrl && (
                 <div className="detail-page__backdrop">
                     <img src={backdropUrl} alt={title} loading="lazy" />
                     <div className="detail-page__backdrop-overlay" />

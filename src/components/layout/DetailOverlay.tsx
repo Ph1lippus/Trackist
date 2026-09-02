@@ -7,7 +7,7 @@ import PersonDetail from '../../pages/PersonDetail'
 import EpisodeDetail from '../../pages/EpisodeDetail'
 
 const DetailOverlay: React.FC = () => {
-  const { isOpen, type, id, season, episode, close } = useDetailModalStore()
+  const { isOpen, type, id, season, episode, backdropUrl, close } = useDetailModalStore()
   const location = useLocation()
   const scrollRef = useRef<HTMLDivElement>(null)
   const previouslyFocused = useRef<HTMLElement | null>(null)
@@ -108,6 +108,12 @@ const DetailOverlay: React.FC = () => {
 
   return (
     <div className="detail-overlay" role="dialog" aria-modal="true" aria-label={`${type} details`}>
+      {backdropUrl && type !== 'person' && (
+        <div className="detail-page__backdrop">
+          <img src={backdropUrl} alt="" loading="lazy" />
+          <div className="detail-page__backdrop-overlay" />
+        </div>
+      )}
       <div className="detail-overlay__scroll" ref={scrollRef}>
         <div className="detail-overlay__content">
           {type === 'movie' && <MovieDetail itemId={id} />}

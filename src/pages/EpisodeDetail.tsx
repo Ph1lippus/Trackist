@@ -9,6 +9,7 @@ import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useMobile } from '../contexts/useMobile'
+import useDetailModalStore from '../stores/detailModalStore'
 import ShareButton from '../components/media/ShareButton'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
 
@@ -40,6 +41,7 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
     const season = seasonNumber?.toString() ?? paramSeason
     const episode = episodeNumber?.toString() ?? paramEpisode
     const { isMobile } = useMobile()
+    const isInModal = useDetailModalStore((s) => s.isOpen)
     const { isOpen: isSidebarOpen } = useDetailSidebar()
     const [tvDetails, setTvDetails] = useState<TMDBResult | null>(null)
     const [episodeData, setEpisodeData] = useState<EpisodeData | null>(null)
@@ -108,6 +110,14 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
         }
         fetchData()
     }, [id, season, episode])
+
+    // Push backdrop URL to the overlay store when in modal so it renders outside the scroll container
+    useEffect(() => {
+        if (!isInModal || !episodeData) return
+        const url = episodeData.still_path ? imageUrlOriginal(episodeData.still_path) : null
+        useDetailModalStore.getState().setBackdropUrl(url)
+        return () => { useDetailModalStore.getState().setBackdropUrl(null) }
+    }, [isInModal, episodeData])
 
     const getLogoUrl = (): string | null => {
         if (tvDetails?.images?.logos) {
@@ -206,7 +216,7 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
 
     return (
         <div className="detail-page detail-page--no-scroll">
-            {backdropUrl && (
+            {!isInModal && backdropUrl && (
                 <div className="detail-page__backdrop">
                     <img src={backdropUrl} alt={episodeTitle} loading="lazy" />
                     <div className="detail-page__backdrop-overlay" />

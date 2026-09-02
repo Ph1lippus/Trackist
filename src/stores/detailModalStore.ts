@@ -8,8 +8,10 @@ interface DetailModalState {
   id: number | null
   season?: number
   episode?: number
+  backdropUrl: string | null
   open: (type: DetailType, id: number, season?: number, episode?: number) => void
   syncFromURL: (type: DetailType, id: number, season?: number, episode?: number) => void
+  setBackdropUrl: (url: string | null) => void
   close: () => void
 }
 
@@ -37,6 +39,9 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
   id: null,
   season: undefined,
   episode: undefined,
+  backdropUrl: null,
+
+  setBackdropUrl: (url) => set({ backdropUrl: url }),
 
   open: (type, id, season, episode) => {
     const current = get()
@@ -50,7 +55,7 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
       current.episode === episode
     if (sameContent) return
 
-    set({ isOpen: true, type, id, season, episode })
+    set({ isOpen: true, type, id, season, episode, backdropUrl: null })
     window.history.pushState({ detailModal: true }, '', buildHref(type, id, season, episode))
   },
 
@@ -61,7 +66,7 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
   },
 
   close: () => {
-    set({ isOpen: false, type: null, id: null, season: undefined, episode: undefined })
+    set({ isOpen: false, type: null, id: null, season: undefined, episode: undefined, backdropUrl: null })
   },
 }))
 

@@ -98,6 +98,17 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
         fetchDetails()
     }, [id])
 
+    // Push backdrop URL to the overlay store when in modal so it renders outside the scroll container
+    useEffect(() => {
+        if (!isInModal || !details) return
+        const heroPoster = isMobile ? getBestPoster(details?.images?.posters) : null
+        const url = heroPoster
+            ? imageUrlOriginal(heroPoster)
+            : imageUrlOriginal(getBestBackdropPath(details?.images?.backdrops) ?? details?.backdrop_path ?? null)
+        useDetailModalStore.getState().setBackdropUrl(url)
+        return () => { useDetailModalStore.getState().setBackdropUrl(null) }
+    }, [isInModal, details, isMobile])
+
     const formatRuntime = (minutes?: number): string => {
         if (!minutes) return ''
         const hours = Math.floor(minutes / 60)
@@ -238,7 +249,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
         })
     return (
         <div className="detail-page detail-page--no-scroll">
-            {backdropUrl && (
+            {!isInModal && backdropUrl && (
                 <div className="detail-page__backdrop">
                     <img src={backdropUrl} alt={title} loading="lazy" />
                     <div className="detail-page__backdrop-overlay" />
