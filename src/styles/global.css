@@ -3187,6 +3187,8 @@ html.native-app *::-webkit-scrollbar {
     transition: all 0.2s ease;
     height: 100%;
     text-align: center;
+    text-decoration: none;
+    color: inherit;
 }
 .detail-page__cast-item:hover {
     background: rgba(133, 138, 227, 0.15);
@@ -5246,7 +5248,7 @@ html.native-app *::-webkit-scrollbar {
         overflow-y: auto;
         overscroll-behavior: contain;
         padding: env(safe-area-inset-top, 0px) 1rem calc(var(--bottom-nav-height) + 2.5rem + env(safe-area-inset-bottom, 0px));
-        z-index: 10000;
+    z-index: 10001;
     }
 
     .discover-filter-menu__header {
@@ -11656,7 +11658,7 @@ html.native-app .detail-overlay .detail-page__right {
     background: rgba(18, 18, 28, 1);
     color: var(--color-platinum);
     cursor: pointer;
-    z-index: 9998;
+    z-index: 10001;
     display: flex;
     align-items: center;
     justify-content: center;

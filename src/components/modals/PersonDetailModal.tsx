@@ -143,13 +143,15 @@ const PersonDetailModal: React.FC<PersonDetailModalProps> = ({ item, onClose, on
                                     ) : (
                                         <div className="modal-cast-list">
                                             {movies.slice(0, 20).map((movie) => (
-                                                <span
+                                                <a
                                                     key={movie.id}
                                                     className="modal-cast-item"
+                                                    href={`/${movie.media_type}/${movie.id}`}
                                                     onClick={(e) => {
                                                         e.stopPropagation()
                                                         onMediaClick?.(movie)
                                                     }}
+                                                    title={movie.title || movie.name || 'Untitled'}
                                                 >
                                                     {movie.poster_path && (
                                                         <img
@@ -158,7 +160,7 @@ const PersonDetailModal: React.FC<PersonDetailModalProps> = ({ item, onClose, on
                                                         />
                                                     )}
                                                     <span>{movie.title || movie.name || 'Untitled'}</span>
-                                                </span>
+                                                </a>
                                             ))}
                                         </div>
                                     )}
@@ -175,13 +177,15 @@ const PersonDetailModal: React.FC<PersonDetailModalProps> = ({ item, onClose, on
                                     ) : (
                                         <div className="modal-cast-list">
                                             {tvShows.slice(0, 20).map((show) => (
-                                                <span
+                                                <a
                                                     key={show.id}
                                                     className="modal-cast-item"
+                                                    href={`/${show.media_type}/${show.id}`}
                                                     onClick={(e) => {
                                                         e.stopPropagation()
                                                         onMediaClick?.(show)
                                                     }}
+                                                    title={show.title || show.name || 'Untitled'}
                                                 >
                                                     {show.poster_path && (
                                                         <img
@@ -190,7 +194,7 @@ const PersonDetailModal: React.FC<PersonDetailModalProps> = ({ item, onClose, on
                                                         />
                                                     )}
                                                     <span>{show.title || show.name || 'Untitled'}</span>
-                                                </span>
+                                                </a>
                                             ))}
                                         </div>
                                     )}

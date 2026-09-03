@@ -7,7 +7,8 @@ import useDetailModalStore from '../../stores/detailModalStore'
 
 const isDetailPage = (pathname: string): boolean =>
     /^\/(movie|tv)\/\d+$/.test(pathname) ||
-    /^\/tv\/\d+\/season\/\d+\/episode\/\d+$/.test(pathname)
+    /^\/tv\/\d+\/season\/\d+\/episode\/\d+$/.test(pathname) ||
+    /^\/person\/\d+$/.test(pathname)
 
 const DetailSidebarToggle: React.FC = () => {
     const location = useLocation()

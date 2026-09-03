@@ -241,7 +241,12 @@ const UpcomingNew: React.FC = () => {
                             </div>
                         ))}
                     </div>
-                ) : null}
+                ) : (
+                    <div className="upcoming-new-loading">
+                        <div className="discover-spinner" />
+                        <p>Loading your upcoming episodes...</p>
+                    </div>
+                )}
             </div>
             <button className="upcoming-new-scroll-top" onClick={scrollToTop} aria-label="Scroll to top" title="Back to top">
                 <i className="fas fa-arrow-up"></i>

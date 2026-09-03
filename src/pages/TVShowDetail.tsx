@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getBestBackdropPath, getBestPoster } from '../services/tmdbService'
+import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getBestBackdropPath, getBestPoster, isNoLanguageCode } from '../services/tmdbService'
 import { formatStatus } from '../utils/statusUtils'
 import { markEpisodeWatched, unmarkEpisodeWatched, markEpisodesWatched, unmarkEpisodesWatched, recomputeDenormalizedFields, getWatchedEpisodes, checkAndUpdateCompleted, markShowAsFullyWatched, removeAllWatchedEpisodes } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
@@ -503,22 +503,24 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
 
     const getLogoUrl = (): string | null => {
         if (details?.images?.logos) {
-            const logos = details.images.logos as Array<{ file_path: string; iso_639_1?: string | null }>
-            const englishLogo = logos.find(
-                (logo) => logo.iso_639_1 === 'en'
-            )
-            if (englishLogo) {
-                return imageUrlOriginal(englishLogo.file_path)
-            }
-            const noLanguageLogo = logos.find(
-                (logo) => logo.iso_639_1 == null || logo.iso_639_1 === '' || logo.iso_639_1 === 'xx' || logo.iso_639_1 === 'und'
-            )
-            if (noLanguageLogo) {
-                return imageUrlOriginal(noLanguageLogo.file_path)
-            }
-            if (logos.length > 0) {
-                return imageUrlOriginal(logos[0].file_path)
-            }
+            const logos = details.images.logos as Array<{ file_path: string; width?: number; height?: number; vote_average?: number; vote_count?: number; iso_639_1?: string | null }>
+            const sorted = [...logos].sort((a, b) => {
+                const aRes = (a.width ?? 0) * (a.height ?? 0)
+                const bRes = (b.width ?? 0) * (b.height ?? 0)
+                if (bRes !== aRes) return bRes - aRes
+                const aVote = a.vote_average ?? 0
+                const bVote = b.vote_average ?? 0
+                if (bVote !== aVote) return bVote - aVote
+                const aCount = a.vote_count ?? 0
+                const bCount = b.vote_count ?? 0
+                if (bCount !== aCount) return bCount - aCount
+                return 0
+            })
+            const english = sorted.find(l => l.iso_639_1 === 'en')
+            if (english) return imageUrlOriginal(english.file_path)
+            const noLang = sorted.find(l => isNoLanguageCode(l.iso_639_1))
+            if (noLang) return imageUrlOriginal(noLang.file_path)
+            return imageUrlOriginal(sorted[0].file_path)
         }
         return null
     }  
@@ -1253,10 +1255,12 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                             <div className="detail-page__cast-section">
                                 <div className="detail-page__cast-list">
                                         {cast.slice(0, isMobile && !showAllCast ? 12 : undefined).map((c: { id: number; name: string; profile_path?: string | null; character: string; order: number }) => (
-                                            <div 
-                                                key={c.id} 
+                                            <a
+                                                key={c.id}
                                                 className="detail-page__cast-item"
-                                                onClick={() => {
+                                                href={`/person/${c.id}`}
+                                                onClick={(e) => {
+                                                    e.preventDefault()
                                                     if (isInModal) {
                                                         useDetailModalStore.getState().open('person', c.id)
                                                     } else {
@@ -1265,9 +1269,9 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                                 }}
                                             >
                                                 {c.profile_path && (
-                                                    <img 
-                                                        className="detail-page__cast-photo" 
-                                                        src={imageUrl(c.profile_path, 'w185') ?? ''} 
+                                                    <img
+                                                        className="detail-page__cast-photo"
+                                                        src={imageUrl(c.profile_path, 'w185') ?? ''}
                                                         alt={c.name ?? ''}
                                                         loading="lazy"
                                                         width="90"
@@ -1280,7 +1284,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                                         <span className="detail-page__cast-character">{c.character}</span>
                                                     )}
                                                 </div>
-                                            </div>
+                                            </a>
                                         ))}
                                 </div>
                                 {isMobile && !showAllCast && cast.length > 12 && (

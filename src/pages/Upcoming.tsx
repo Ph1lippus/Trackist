@@ -124,6 +124,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
     const [upcomingItems, setUpcomingItems] = useState<UpcomingItem[]>([])
     const [selectedDate, setSelectedDate] = useState<{dateKey: string, items: UpcomingItem[]} | null>(null)
     const [dayCellInnerWidth, setDayCellInnerWidth] = useState(0)
+    const [loading, setLoading] = useState(true)
     const calendarGridRef = useRef<HTMLDivElement>(null)
 
     const monthKey = useMemo(() => {
@@ -209,8 +210,12 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
 
             loadCalendar(user.id, (freshItems) => {
                 setUpcomingItems(freshItems.map(mapCalendarItem))
+                setLoading(false)
             }).then((items) => {
                 setUpcomingItems(items.map(mapCalendarItem))
+                setLoading(false)
+            }).catch(() => {
+                setLoading(false)
             })
 
             const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
@@ -252,9 +257,15 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
         <section className="dashboard-page" style={{ height: '100vh', overflow: 'hidden' }}>
             <div className="dashboard-shell" style={{ height: '100%', overflow: 'hidden' }}>
                 <div className="upcoming-layout" style={{ height: '100%' }}>
-                    <main className="upcoming-main" style={{ overflowY: 'auto' }}>
-                        <div className="calendar-grid" ref={calendarGridRef}>
-                        {weekDays.map(day => (
+                        <main className="upcoming-main" style={{ overflowY: 'auto' }}>
+                            <div className="calendar-grid" ref={calendarGridRef}>
+                            {loading && (
+                                <div className="upcoming-loading">
+                                    <div className="discover-spinner" />
+                                    <p>Loading your calendar...</p>
+                                </div>
+                            )}
+                            {weekDays.map(day => (
                             <div key={day} className="calendar-weekday">{day}</div>
                         ))}
                         {calendarDays.map((day, index) => {
