@@ -51,7 +51,6 @@ import Lists from './pages/Lists'
 import ListsDetail from './pages/ListsDetail'
 import ListsEditPage from './pages/ListsEditPage'
 import ListsCreatePage from './pages/ListsCreatePage'
-import Finished from './pages/Finished'
 import MobileTVShows from './pages/MobileTVShows'
 import MobileMovies from './pages/MobileMovies'
 import DetailLayout from './components/layout/DetailLayout'
@@ -355,7 +354,7 @@ const AppContent: React.FC = () => {
         setNativeUpdateVersion(null)
     }
 
-    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Friends', '/Statistics', '/Finished', '/Lists', '/Profile', '/Admin', '/MobileTVShows', '/MobileMovies', '/Followers', '/Following', '/Credits']
+    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Friends', '/Lists', '/Profile', '/Admin', '/MobileTVShows', '/MobileMovies', '/Followers', '/Following', '/Credits']
     const settingsPages = ['/Settings', '/MFA', '/Sessions', '/AdminSecurity', '/EditProfile',
         '/Settings/account', '/Settings/profile', '/Settings/security', '/Settings/notifications',
         '/Settings/app', '/Settings/data', '/Settings/additions', '/Settings/danger']
@@ -450,7 +449,6 @@ const AppContent: React.FC = () => {
                     {/* Legacy redirects for old URLs */}
                     <Route path="/Lists/new" element={<Navigate to="/Lists/new" replace />} />
                     <Route path="/Lists/:id" element={<LegacyListRedirect />} />
-                    <Route path="/Finished" element={user ? <Finished /> : <Navigate to="/login" replace />} />
                     <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />
                 </Routes>
                 <ScrollToTop />

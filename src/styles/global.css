@@ -1,4 +1,10 @@
 ﻿@media (max-width: 768px) {
+    .friend-card {
+        border-radius: 0px !important;
+    }
+    .friends-page {
+        padding: 0rem 0rem 7rem !important;
+    }
     .detail-page__logo-section{
         padding-left: 0rem !important;
     }
@@ -112,7 +118,7 @@
         border-radius: 0px!important;
     }
     .detail-page__episode-still{
-        border-radius: 0px 25px 25px 0px;
+        border-radius: 0px 16px 16px 0px;
     }
     .detail-page__episode-card{
         border-radius: 0px!important;
@@ -350,6 +356,7 @@
     /* Remove expensive image blur on unwatched episode cards for mobile performance */
     .detail-page__episode-still img {
         filter: none !important;
+        scale: 1.15;
     }
 
     /* Reduce motion on mobile for slower devices */
@@ -519,7 +526,8 @@ html {
 }  
 
 .container.navbar-inner.no-back-btn {
-    backdrop-filter: blur(12px);
+    backdrop-filter: blur(8px);
+    will-change: transform;
 }
 
 
@@ -3241,6 +3249,13 @@ html.native-app *::-webkit-scrollbar {
     display: flex;
     flex-direction: column;
 }
+.detail-page__episodes-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    min-height: 200px;
+}
 .detail-page__main--tv .detail-page__episodes-section {
     flex: 1;
     min-height: 0;
@@ -3479,6 +3494,11 @@ html.native-app *::-webkit-scrollbar {
     .detail-page__episode-ellipsis-btn:hover {
         background: rgba(133, 138, 227, 0.18);
         color: var(--color-primary);
+    }
+}
+@media (max-width: 768px) {
+    .detail-page__episode-ellipsis-btn {
+        display: none;
     }
 }
 .detail-page__cast-more {
@@ -4438,7 +4458,7 @@ html.native-app *::-webkit-scrollbar {
     }
 
     .detail-page__episode-still {
-        width: 120px;
+        width: 140px;
     }
     .detail-page__btn {
         width: 100%;
@@ -5119,7 +5139,7 @@ html.native-app *::-webkit-scrollbar {
     width: 32px;
     height: 32px;
     border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.1);
     background: rgba(255, 255, 255, 0.05);
     color: rgba(255, 255, 255, 0.6);
     cursor: pointer;
@@ -5132,11 +5152,8 @@ html.native-app *::-webkit-scrollbar {
 }
 
 .secondary-navbar-scroll-top:hover {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: var(--color-black);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(133, 138, 227, 0.25);
+    background: #4a4d5a;
+    color: var(--color-platinum);
 }
 
 .secondary-navbar-scroll-top:focus {
@@ -5678,6 +5695,12 @@ button:focus-visible {
     padding: 0.5rem 0;
     display: flex;
     justify-content: center;
+    transition: transform 0.22s ease-out;
+    will-change: transform;
+}
+
+.secondary-navbar--hidden {
+    transform: translateY(calc(100% + 1rem));
 }
 
 .secondary-navbar-inner {
@@ -6213,6 +6236,11 @@ i.fa-solid.fa-trash:hover {
 }
 
 @media (max-width: 768px) {
+    /* Show stars background through the overlay on mobile */
+    .detail-overlay {
+        background: transparent !important;
+    }
+
     /* Whole overlay scrolls: the scroll area spans the full viewport (behind
        the fixed transparent navbar) so content moves up under the navbar on
        scroll, matching a normal routed detail page. */
@@ -7059,8 +7087,37 @@ i.fa-solid.fa-trash:hover {
     margin-bottom: 2rem;
 }
 
+.profile-watchlist-category--dropped {
+    margin-top: 2.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 2rem;
+}
+
+.profile-watchlist-category__title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 1rem;
+}
+
+.profile-watchlist-category__title i {
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 1rem;
+}
+
 .profile-watchlist-category:last-child {
     margin-bottom: 0;
+}
+
+.profile-btn--icon {
+    width: 36px;
+    min-width: 36px;
+    flex: none;
+    padding: 0;
+    font-size: 1.05rem;
 }
 
 .profile-category-title {

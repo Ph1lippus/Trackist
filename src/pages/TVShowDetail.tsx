@@ -62,7 +62,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
     
     const [seasons, setSeasons] = useState<number[]>([])
     const [episodes, setEpisodes] = useState<LocalEpisode[]>([])
-    const [selectedSeason, setSelectedSeason] = useState(1)
+    const [selectedSeason, setSelectedSeason] = useState(0)
     const [showTrailer, setShowTrailer] = useState(false)
     const [trailerKey, setTrailerKey] = useState<string | null>(null)
     const [confirmModal, setConfirmModal] = useState<{
@@ -1287,7 +1287,12 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                     {isMobile && (
                         <div className="detail-page__episodes-container">
                             <div className="detail-page__episodes-section">
-                                {seasons.length > 1 && (
+                                {selectedSeason === 0 ? (
+                                    <div className="detail-page__episodes-loading">
+                                        <div className="discover-spinner" />
+                                    </div>
+                                ) : null}
+                                {selectedSeason > 0 && seasons.length > 1 && (
                                     <div className="detail-page__episodes-header">
                                         <button 
                                             className="detail-page__season-nav"
@@ -1348,15 +1353,21 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                             ref={(el) => { episodeRefs.current[ep.id] = el }}
                                             className={`detail-page__episode-card ${ep.watched ? 'watched' : ''} ${!isEpisodeReleased(ep) ? 'unreleased' : ''} ${!ep.still_path ? 'no-poster' : ''}`}
                                             style={{ cursor: isEpisodeReleased(ep) ? 'pointer' : 'default' }}
-                                            onClick={() => {
+                                            onClick={(e) => {
+                                                if (isMobile && (e.target as HTMLElement).closest('.detail-page__episode-still')) {
+                                                    if (isInModal && id) {
+                                                        useDetailModalStore.getState().open('episode', Number(id), ep.season_number, ep.episode_number)
+                                                    } else {
+                                                        navigate(`/tv/${id}/season/${ep.season_number}/episode/${ep.episode_number}`)
+                                                    }
+                                                    return
+                                                }
                                                 if (isEpisodeReleased(ep)) {
                                                     if (!ep.watched && hasUnwatchedEpisodesBefore(ep)) {
                                                         setAddEpisodeModal({ isOpen: true, episode: ep })
                                                     } else if (!ep.watched) {
-                                                        // Mark as watched
                                                         markEpisodeAsWatched(ep, false)
                                                     } else {
-                                                        // Toggle to unwatched
                                                         markEpisodeAsWatched(ep, false)
                                                     }
                                                 }
@@ -1412,7 +1423,11 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                     {!isMobile && (
                         <div className="detail-page__right">
                             <div className="detail-page__episodes-section">
-                                {seasons.length > 1 && (
+                                {selectedSeason === 0 ? (
+                                    <div className="detail-page__episodes-loading">
+                                        <div className="discover-spinner" />
+                                    </div>
+                                ) : seasons.length > 1 && (
                                     <div className="detail-page__episodes-header">
                                         <button 
                                             className="detail-page__season-nav"
