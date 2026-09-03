@@ -10639,29 +10639,6 @@ i.fa-solid.fa-trash:hover {
     position: relative;
 }
 
-.upcoming-episode-card-badge {
-    position: absolute;
-    top: 0.5rem;
-    right: 0.5rem;
-    min-width: 22px;
-    height: 22px;
-    padding: 0 0.4rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(133, 138, 227, 0.95);
-    color: #fff;
-    font-size: 0.7rem;
-    font-weight: 700;
-    border-radius: 11px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-}
-
-.upcoming-episode-details--count {
-    color: var(--color-primary);
-    font-weight: 600;
-}
-
 /* ===== NAVBAR CALENDAR HEADER ===== */
 .navbar-center {
     grid-column: 2;
@@ -11665,6 +11642,11 @@ i.fa-solid.fa-trash:hover {
 .upcoming-new-card:hover .upcoming-new-card-arrow {
     color: var(--color-primary);
     transform: translateX(2px);
+}
+
+.upcoming-new-card-episode-label {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
 }
 
 .upcoming-new-scroll-top {

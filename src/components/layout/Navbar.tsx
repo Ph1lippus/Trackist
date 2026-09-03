@@ -490,7 +490,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         }
 
         const isSettingsPage = location.pathname === '/Settings' || location.pathname.startsWith('/Settings/');
-        const color = isSearchPage || isSettingsPage ? '#2c2b55' : showBackButton ? '#12121c' : '#2c2b55';
+        const color = '#2c2b55';
 
         void StatusBar.setBackgroundColor({ color }).catch(() => {});
         void StatusBar.setStyle({ style: Style.Light }).catch(() => {});
