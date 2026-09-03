@@ -229,11 +229,17 @@ export function useUnifiedSearch(): UseUnifiedSearchReturn {
         const trimmed = inputValue.trim()
         setCommittedQuery(trimmed)
         setIsDropdownOpen(false)
-        // If above min chars and we haven't searched yet, run it now
-        if (trimmed.length >= DEFAULT_SEARCH_CONFIG.minChars && results.length === 0) {
-            void executeSearch(trimmed, context)
+        if (debounceTimer.current) {
+            clearTimeout(debounceTimer.current)
+            debounceTimer.current = null
         }
-    }, [inputValue, results.length, executeSearch, context])
+        if (abortController.current) {
+            abortController.current.abort()
+            abortController.current = null
+            currentRequestId.current++
+            setIsLoading(false)
+        }
+    }, [inputValue])
 
     const groupedResults = groupResultsByKind(results)
 

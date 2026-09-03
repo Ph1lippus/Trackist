@@ -194,6 +194,7 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
                     {/* Footer with search-all hint */}
                     <div className="search-dropdown__footer">
                         <button
+                            type="button"
                             className="search-dropdown__footer-btn"
                             onClick={onCommit}
                         >
@@ -217,6 +218,7 @@ const SearchResultRow: React.FC<{
 
     return (
         <button
+            type="button"
             className={`search-dropdown__item${imgUrl ? '' : ' search-dropdown__item--no-poster'}`}
             onClick={onClick}
             role="option"
