@@ -60,6 +60,70 @@ const orderItemsLikeMiniCards = (items: UpcomingItem[]): UpcomingItem[] => {
     return [...movies, ...result]
 }
 
+/**
+ * Build the list of cards shown in the side panel.
+ * Multiple episodes from the same show (same tmdb_id) on the same day are
+ * collapsed into a single card so a show with several airing episodes doesn't
+ * flood the panel with duplicate-looking rows.
+ */
+const buildSidePanelCards = (items: UpcomingItem[]): SidePanelCard[] => {
+    const movies: UpcomingItem[] = []
+    const groups = new Map<string, UpcomingItem[]>()
+
+    for (const item of items) {
+        if (item.type === 'movie') {
+            movies.push(item)
+            continue
+        }
+        // Group episode items by show tmdb_id; items without an id get their own group.
+        const key = item.item.tmdb_id != null ? `tv:${item.item.tmdb_id}` : `ep:${item.id}`
+        if (!groups.has(key)) groups.set(key, [])
+        groups.get(key)!.push(item)
+    }
+
+    const cards: SidePanelCard[] = []
+    for (const movie of movies) {
+        cards.push({ type: 'movie', items: [movie] })
+    }
+    for (const epList of groups.values()) {
+        cards.push({ type: 'episode', items: epList })
+    }
+    return cards
+}
+
+interface SidePanelCard {
+    type: 'episode' | 'movie'
+    items: UpcomingItem[]
+}
+
+/**
+ * Produce a short label for a group of episodes from the same show.
+ * Examples: "3 episodes", "S2 E3, E4, E5", "S1 E1 · S2 E3".
+ */
+const EpisodeSummary = (episodes: UpcomingItem[]): string => {
+    if (episodes.length <= 1) {
+        const ep = episodes[0]?.episode
+        return ep ? `S${ep.season_number} E${ep.episode_number}` : 'Episode'
+    }
+    const bySeason = new Map<number, number[]>()
+    for (const item of episodes) {
+        const ep = item.episode
+        if (!ep) continue
+        const list = bySeason.get(ep.season_number) || []
+        list.push(ep.episode_number)
+        bySeason.set(ep.season_number, list)
+    }
+    if (bySeason.size === 0) return `${episodes.length} episodes`
+
+    const parts = Array.from(bySeason.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([season, eps]) => {
+            const sorted = eps.slice().sort((a, b) => a - b)
+            return `S${season} E${sorted.join(', E')}`
+        })
+    return parts.join(' · ')
+}
+
 const mapCalendarItem = (item: CalendarItem): UpcomingItem => ({
     id: item.id,
     title: item.title,
@@ -328,43 +392,59 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                             </button>
                         </div>
                         <div className="upcoming-side-panel-content">
-                            {orderItemsLikeMiniCards(selectedDate.items).map((item) => (
-                                <div
-                                    key={item.id}
-                                    className="upcoming-episode-card"
-                                    onClick={() => {
-                                        if (item.type === 'movie' && item.item.tmdb_id) {
-                                            useDetailModalStore.getState().open('movie', item.item.tmdb_id)
-                                        } else if (item.item.tmdb_id) {
-                                            useDetailModalStore.getState().open('tv', item.item.tmdb_id)
-                                        }
-                                    }}
-                                >
-                                    <div className="upcoming-episode-card-poster">
-                                        {item.item.poster_path ? (
-                                            <img
-                                                src={imageUrl(item.item.poster_path, 'w185') || ''}
-                                                alt={item.item.title}
-                                            />
-                                        ) : (
-                                            <div className="upcoming-episode-card-no-poster">
-                                                <span>{item.item.title}</span>
-                                            </div>
-                                        )}
+                            {buildSidePanelCards(selectedDate.items).map((card) => {
+                                const first = card.items[0]
+                                const count = card.items.length
+                                const showTmdbId = first.item.tmdb_id
+                                return (
+                                    <div
+                                        key={card.type === 'movie' ? `m-${first.id}` : `tv-${showTmdbId ?? first.id}`}
+                                        className="upcoming-episode-card"
+                                        onClick={() => {
+                                            if (card.type === 'movie' && showTmdbId) {
+                                                useDetailModalStore.getState().open('movie', showTmdbId)
+                                            } else if (showTmdbId) {
+                                                useDetailModalStore.getState().open('tv', showTmdbId)
+                                            }
+                                        }}
+                                    >
+                                        <div className="upcoming-episode-card-poster">
+                                            {first.item.poster_path ? (
+                                                <img
+                                                    src={imageUrl(first.item.poster_path, 'w185') || ''}
+                                                    alt={first.item.title}
+                                                />
+                                            ) : (
+                                                <div className="upcoming-episode-card-no-poster">
+                                                    <span>{first.item.title}</span>
+                                                </div>
+                                            )}
+                                            {card.type === 'episode' && count > 1 && (
+                                                <span className="upcoming-episode-card-badge">{count}</span>
+                                            )}
+                                        </div>
+                                        <div className="upcoming-episode-card-info">
+                                            <h4>{first.title}</h4>
+                                            {card.type === 'episode' && (
+                                                count > 1 ? (
+                                                    <p className="upcoming-episode-details upcoming-episode-details--count">
+                                                        {EpisodeSummary(card.items)}
+                                                    </p>
+                                                ) : (
+                                                    <p className="upcoming-episode-details">
+                                                        {first.episode
+                                                            ? `S${first.episode.season_number} E${first.episode.episode_number}`
+                                                            : 'Episode'}
+                                                    </p>
+                                                )
+                                            )}
+                                            {card.type === 'movie' && (
+                                                <p className="upcoming-episode-details">Movie Release</p>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="upcoming-episode-card-info">
-                                        <h4>{item.title}</h4>
-                                        {item.episode && (
-                                            <p className="upcoming-episode-details">
-                                                S{item.episode.season_number} E{item.episode.episode_number}
-                                            </p>
-                                        )}
-                                        {item.type === 'movie' && (
-                                            <p className="upcoming-episode-details">Movie Release</p>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
+                                )
+                            })}
                         </div>
                     </div>
                 )}

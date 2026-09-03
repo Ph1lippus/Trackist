@@ -10,7 +10,6 @@ export type SearchContextType =
     | 'movies'
     | 'tvshows'
     | 'finished'
-    | 'friends'
     | 'lists'
 
 /**

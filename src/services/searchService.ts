@@ -36,7 +36,7 @@ function tmdbToSearchResult(r: TMDBResult, score?: number): BaseSearchResult {
 }
 
 /**
- * Context A — Discover: global scope across Movies, TV, People, and Public User Lists.
+ * Context A — Discover: global scope across Movies, TV, People, Trackist Users, and Public User Lists.
  * Uses TMDB multi + person search, then applies fuzzy post-filtering for typo tolerance.
  */
 async function searchDiscover(
@@ -45,9 +45,11 @@ async function searchDiscover(
     maxPerKind: number
 ): Promise<BaseSearchResult[]> {
     // TMDB search (multi + person in parallel)
-    const [multiRes, personRes] = await Promise.all([
+    const [multiRes, personRes, lists, users] = await Promise.all([
         searchMulti(query, 1),
         searchPerson(query, 1),
+        searchPublicLists(query, signal, maxPerKind),
+        searchUsers(query, signal, maxPerKind),
     ])
 
     if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
@@ -91,10 +93,7 @@ async function searchDiscover(
         else if (result.kind === 'person' && people.length < maxPerKind) people.push(result)
     }
 
-    // Also search public user lists from Supabase
-    const lists = await searchPublicLists(query, signal, maxPerKind)
-
-    return [...movies, ...tv, ...people, ...lists]
+    return [...movies, ...tv, ...people, ...users, ...lists]
 }
 
 /**
@@ -150,10 +149,10 @@ async function searchMedia(
 }
 
 /**
- * Context C — Friends: social directory. Internal DB only (profiles table).
- * Searches display_name and friendship status.
+ * Search Trackist users (profiles table) by display name.
+ * Used by the discover context ("Users" section) to find friends and people.
  */
-async function searchFriends(
+async function searchUsers(
     query: string,
     signal: AbortSignal,
     maxPerKind: number
@@ -303,8 +302,6 @@ export async function runSearch(
             return searchMedia(query, signal, maxPerKind, ['tv'])
         case 'finished':
             return searchMedia(query, signal, maxPerKind, ['movie', 'tv'])
-        case 'friends':
-            return searchFriends(query, signal, maxPerKind)
         case 'lists':
             return searchLists(query, signal, maxPerKind)
         default:

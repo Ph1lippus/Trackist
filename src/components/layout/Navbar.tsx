@@ -122,13 +122,15 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                              location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/);
     const isListDetailPage = location.pathname.match(/^\/ListsDetail\/[a-f0-9-]+$/);
     const isListEditPage = location.pathname.match(/^\/ListsEditPage\/(new|[a-f0-9-]+)$/);
-    const isSettingsSubPage = ['/MFA', '/Sessions', '/Settings', '/EditProfile', '/Credits', '/AdminSecurity'].includes(location.pathname) || location.pathname.startsWith('/Settings/');
+    const isSettingsSubPage = ['/MFA', '/Sessions', '/Settings', '/EditProfile', '/Credits', '/AdminSecurity', '/Statistics'].includes(location.pathname) || location.pathname.startsWith('/Settings/');
     const detailModalOpen = useDetailModalStore((s) => s.isOpen);
     const detailModalType = useDetailModalStore((s) => s.type);
-    const showBackButton = Boolean(isDetailPage || isListDetailPage || isListEditPage || isSettingsSubPage || detailModalOpen);
+    const backdropUrl = useDetailModalStore((s) => s.backdropUrl);
+    const isSearchPage = location.pathname === '/Search';
+    const showBackButton = Boolean(isDetailPage || isListDetailPage || isListEditPage || isSettingsSubPage || detailModalOpen || isSearchPage);
     
     const showSearchBar = !detailModalOpen && !['/login', '/register'].includes(location.pathname) && 
-        (['/Discover', '/Movies', '/Tvshows', '/', '/Finished', '/Friends', '/Followers', '/Following', '/Lists', '/MobileTVShows', '/MobileMovies'].includes(location.pathname) || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname.startsWith('/Followers/') || location.pathname.startsWith('/Following/') || location.pathname === '/MobileTVShows' || location.pathname === '/MobileMovies');
+        (['/Discover', '/Movies', '/Tvshows', '/', '/Finished', '/Search', '/Followers', '/Following', '/Lists', '/MobileTVShows', '/MobileMovies'].includes(location.pathname) || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname.startsWith('/Followers/') || location.pathname.startsWith('/Following/') || location.pathname === '/MobileTVShows' || location.pathname === '/MobileMovies');
     
     const showCalendarHeader = !detailModalOpen && location.pathname === '/Upcoming' && currentMonth && navigateMonth && canGoBack;
     
@@ -465,7 +467,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
             case 'movies': return 'Search your movies…';
             case 'tvshows': return 'Search your TV shows…';
             case 'finished': return 'Search finished movies & TV…';
-            case 'friends': return 'Search users…';
             case 'lists': return 'Search lists…';
             default: return 'Search…';
         }
@@ -477,7 +478,10 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         if (!isMobile || !isNativePlatform()) return;
 
         const isMediaDetail = isMediaDetailPage ||
-            (detailModalOpen && detailModalType !== null && detailModalType !== 'person');
+            (detailModalOpen &&
+                detailModalType !== null &&
+                detailModalType !== 'person' &&
+                !!backdropUrl);
 
         if (isMediaDetail) {
             void StatusBar.setBackgroundColor({ color: '#00000000' }).catch(() => {});
@@ -485,11 +489,12 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
             return;
         }
 
-        const color = showBackButton ? '#12121c' : '#2c2b55';
+        const isSettingsPage = location.pathname === '/Settings' || location.pathname.startsWith('/Settings/');
+        const color = isSearchPage || isSettingsPage ? '#2c2b55' : showBackButton ? '#12121c' : '#2c2b55';
 
         void StatusBar.setBackgroundColor({ color }).catch(() => {});
         void StatusBar.setStyle({ style: Style.Light }).catch(() => {});
-    }, [isMobile, showBackButton, isMediaDetailPage, detailModalOpen, detailModalType]);
+    }, [isMobile, showBackButton, isMediaDetailPage, detailModalOpen, detailModalType, backdropUrl, isSearchPage]);
 
     useEffect(() => {
         if (!location.pathname.startsWith('/Profile')) {
@@ -655,7 +660,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
 
     return (
         <nav className={`navbar-brand-row${detailModalOpen ? ' is-modal-open' : ''}`} aria-label="Main navigation">
-            <div className={`container navbar-inner${showBackButton ? '' : ' no-back-btn'}`}>
+            <div className={`container navbar-inner${showBackButton ? '' : ' no-back-btn'}${isSearchPage ? ' is-search' : ''}`}>
                 <div className="navbar-left">
                     {showBackButton && (
                         <button
@@ -741,6 +746,18 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                         className="navbar-search-input"
                                         placeholder={searchPlaceholder}
                                         value={inputValue}
+                                        readOnly={isMobile && location.pathname !== '/Search'}
+                                        onFocus={() => {
+                                            if (isMobile && location.pathname !== '/Search') {
+                                                navigate('/Search')
+                                            }
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (isMobile && location.pathname !== '/Search') {
+                                                e.preventDefault()
+                                                navigate('/Search')
+                                            }
+                                        }}
                                         onChange={(e) => setInputValue(e.target.value)}
                                         autoComplete="off"
                                         spellCheck="false"
@@ -757,7 +774,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                     )}
                                 </div>
                                 <SearchDropdown
-                                    isOpen={isDropdownOpen}
+                                    isOpen={!isMobile && isDropdownOpen}
                                     isLoading={isLoading}
                                     results={results}
                                     groupedResults={groupedResults}

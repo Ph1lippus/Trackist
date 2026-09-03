@@ -73,7 +73,7 @@ let fetchGeneration = 0
 const useDiscoverStore = create<DiscoverState>((set, get) => ({
     // Initial state
     results: [],
-    mediaType: 'movie',
+    mediaType: 'all',
     sortBy: 'popularity.desc',
     selectedGenres: [],
     yearFrom: null,

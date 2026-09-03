@@ -15,7 +15,6 @@ import { groupResultsByKind } from '../services/searchService'
  * - /Movies          -> movies
  * - /Tvshows         -> tvshows
  * - /Finished        -> finished
- * - /Friends         -> friends
  * - /Lists*          -> lists
  */
 export function deriveSearchContext(pathname: string): SearchContextType {
@@ -25,7 +24,6 @@ export function deriveSearchContext(pathname: string): SearchContextType {
     if (pathname === '/Tvshows') return 'tvshows'
     if (pathname === '/MobileTVShows') return 'tvshows'
     if (pathname === '/Finished') return 'finished'
-    if (pathname === '/Friends') return 'friends'
     if (pathname.startsWith('/Lists')) return 'lists'
     // Default to discover for unknown authenticated pages
     return 'discover'

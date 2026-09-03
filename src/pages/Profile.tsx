@@ -350,7 +350,6 @@ const ProfilePage: React.FC = () => {
             <section className="dashboard-page">
                 <div className="dashboard-shell">
                     <div className="profile-not-found">
-                        <i className="fa-solid fa-user-slash profile-not-found__icon"></i>
                         <h2>User not found</h2>
                         <p>The profile you're looking for doesn't exist or has been removed.</p>
                         <Link to="/Discover" className="dashboard-link-btn">Back to Discover</Link>
@@ -527,7 +526,6 @@ const ProfilePage: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className="profile-empty">
-                                    <i className="fa-solid fa-tv profile-empty__icon"></i>
                                     <h3>Not watching anything yet</h3>
                                 </div>
                             )}
@@ -572,7 +570,6 @@ const ProfilePage: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className="profile-empty">
-                                    <i className="fa-solid fa-film profile-empty__icon"></i>
                                     <h3>No movies to watch</h3>
                                 </div>
                             )}
@@ -617,7 +614,6 @@ const ProfilePage: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className="profile-empty">
-                                    <i className="fa-solid fa-check-circle profile-empty__icon"></i>
                                     <h3>Nothing finished yet</h3>
                                 </div>
                             )}
@@ -678,7 +674,6 @@ const ProfilePage: React.FC = () => {
                                                     <img src={imageUrl(list.poster, 'w342') ?? undefined} alt={list.title} />
                                                 ) : (
                                                     <div className="lists-page__card-placeholder">
-                                                        <i className="fa-regular fa-images" />
                                                     </div>
                                                 )}
                                             </div>
@@ -694,7 +689,6 @@ const ProfilePage: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className="profile-empty">
-                                    <i className="fa-solid fa-list profile-empty__icon"></i>
                                     <h3>No lists yet</h3>
                                     {isOwnProfile && (
                                         <Link to="/lists" className="dashboard-link-btn">Create a list</Link>
