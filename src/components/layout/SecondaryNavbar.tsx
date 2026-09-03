@@ -32,6 +32,8 @@ const SecondaryNavbar: React.FC = () => {
 
     const isActivePage = getActiveTabIndex() !== -1;
 
+    const pillPosRef = useRef({ left: -1, width: -1 });
+
     useEffect(() => {
         const updatePillPosition = () => {
             const pill = pillRef.current;
@@ -48,15 +50,23 @@ const SecondaryNavbar: React.FC = () => {
 
             pill.style.opacity = '1';
 
+            const left = activeTab.offsetLeft;
+            const width = activeTab.offsetWidth;
+            const cached = pillPosRef.current;
+
+            if (cached.left === left && cached.width === width) return;
+            cached.left = left;
+            cached.width = width;
+
             const shouldAnimate = !isInitialRender.current;
             
             if (shouldAnimate) {
-                pill.style.transform = `translateX(${activeTab.offsetLeft}px)`;
-                pill.style.width = `${activeTab.offsetWidth}px`;
+                pill.style.transform = `translateX(${left}px)`;
+                pill.style.width = `${width}px`;
             } else {
                 pill.style.transition = 'none';
-                pill.style.transform = `translateX(${activeTab.offsetLeft}px)`;
-                pill.style.width = `${activeTab.offsetWidth}px`;
+                pill.style.transform = `translateX(${left}px)`;
+                pill.style.width = `${width}px`;
                 void pill.offsetWidth;
                 pill.style.transition = '';
                 isInitialRender.current = false;
@@ -148,6 +158,7 @@ const SecondaryNavbar: React.FC = () => {
         if (!el) return;
         el.classList.remove('secondary-navbar--hidden');
         scrollStateRef.current.isHidden = false;
+        pillPosRef.current = { left: -1, width: -1 };
         // Reset the baseline to the new page's scroll position so the navbar
         // doesn't animate out/in merely because the scroll position jumped.
         requestAnimationFrame(() => {

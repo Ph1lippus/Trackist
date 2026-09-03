@@ -381,7 +381,8 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     if (r.profile_path && !r.title && !r.media_type) {
                         return { ...r, media_type: 'person' as const }
                     }
-                    return { ...r, media_type: r.media_type || (r.title ? 'movie' as const : 'tv' as const) }
+                    if (r.media_type) return r
+                    return { ...r, media_type: r.title ? 'movie' as const : 'tv' as const }
                 })
 
                 if (mediaType === 'movie') {
@@ -390,7 +391,10 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     combined = combined.filter(r => r.media_type === 'tv')
                 } else if (mediaType === 'person') {
                     const data = await getPopularPeople(pageNum)
-                    const raw = (data.results || []).map(r => ({ ...r, media_type: 'person' as const }))
+                    const raw = (data.results || []).map(r => {
+                        if (r.media_type === 'person') return r
+                        return { ...r, media_type: 'person' as const }
+                    })
                     const seen2 = new Set<number>()
                     newResults = raw.filter(item => {
                         if (seen2.has(item.id)) return false
@@ -407,8 +411,14 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                         Promise.all(personIds.map(id => getPersonTV(id))),
                     ])
                     const films = [
-                        ...personMovies.flatMap(d => (d.results || []).map(r => ({ ...r, media_type: 'movie' as const }))),
-                        ...personTV.flatMap(d => (d.results || []).map(r => ({ ...r, media_type: 'tv' as const }))),
+                        ...personMovies.flatMap(d => (d.results || []).map(r => {
+                            if (r.media_type === 'movie') return r
+                            return { ...r, media_type: 'movie' as const }
+                        })),
+                        ...personTV.flatMap(d => (d.results || []).map(r => {
+                            if (r.media_type === 'tv') return r
+                            return { ...r, media_type: 'tv' as const }
+                        })),
                     ]
                     const filmSeen = new Set<number>()
                     const uniqueFilms = films.filter(f => {
@@ -422,7 +432,10 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 newResults = combined
             } else if (mediaType === 'person') {
                 const data = await getPopularPeople(pageNum)
-                newResults = (data.results || []).map(r => ({ ...r, media_type: 'person' as const }))
+                newResults = (data.results || []).map(r => {
+                    if (r.media_type === 'person') return r
+                    return { ...r, media_type: 'person' as const }
+                })
                 totalPages = (data as { total_pages?: number }).total_pages || 1
             } else if (mediaType === 'all') {
                 const movieCacheKey = `${query}-${pageNum}-${sortBy}-${yearFrom}-${yearTo}-${selectedGenres.join(',')}-min-100`
@@ -457,14 +470,14 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     ),
                 ])
 
-                const movies = ((moviesData as { results: TMDBResult[] }).results || []).map(r => ({
-                    ...r,
-                    media_type: 'movie' as const,
-                }))
-                const tv = ((tvData as { results: TMDBResult[] }).results || []).map(r => ({
-                    ...r,
-                    media_type: 'tv' as const,
-                }))
+                const movies = ((moviesData as { results: TMDBResult[] }).results || []).map(r => {
+                    if (r.media_type === 'movie') return r
+                    return { ...r, media_type: 'movie' as const }
+                })
+                const tv = ((tvData as { results: TMDBResult[] }).results || []).map(r => {
+                    if (r.media_type === 'tv') return r
+                    return { ...r, media_type: 'tv' as const }
+                })
 
                 let combined: TMDBResult[] = [...movies, ...tv]
 
@@ -498,10 +511,10 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     }),
                     { ttl: 6 * 60 * 60 * 1000, staleWhileRevalidate: true }
                 )
-                const movieResults = ((data as { results: TMDBResult[] }).results || []).map(r => ({
-                    ...r,
-                    media_type: 'movie' as const,
-                }))
+                const movieResults = ((data as { results: TMDBResult[] }).results || []).map(r => {
+                    if (r.media_type === 'movie') return r
+                    return { ...r, media_type: 'movie' as const }
+                })
 
                 const shouldFilterGenres = !query.trim() && selectedGenres.length === 0
                 if (shouldFilterGenres) {
@@ -530,10 +543,10 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     }),
                     { ttl: 6 * 60 * 60 * 1000, staleWhileRevalidate: true }
                 )
-                const tvResults = ((data as { results: TMDBResult[] }).results || []).map(r => ({
-                    ...r,
-                    media_type: 'tv' as const,
-                }))
+                const tvResults = ((data as { results: TMDBResult[] }).results || []).map(r => {
+                    if (r.media_type === 'tv') return r
+                    return { ...r, media_type: 'tv' as const }
+                })
 
                 const shouldFilterGenres = !query.trim() && selectedGenres.length === 0
                 if (shouldFilterGenres) {

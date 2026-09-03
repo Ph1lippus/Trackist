@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { Check, ChevronLeft, ChevronRight, Loader2, RotateCcw, SlidersHorizontal, X } from 'lucide-react';
 import { StatusBar, Style } from '@capacitor/status-bar';
@@ -532,7 +532,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         void resolveProfileTitle();
     }, [location.pathname]);
 
-    const filterMenuContent = (
+    const filterMenuContent = useMemo(() => (
         <div
             ref={filtersRef}
             className={`discover-filter-menu ${filtersOpen ? (filtersClosing ? 'is-closing' : 'is-open') : ''}`}
@@ -653,7 +653,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                 </div>
             </div>
         </div>
-    );
+    ), [filtersOpen, filtersClosing, stagedSort, stagedYearFrom, stagedYearTo, stagedShowAdded, stagedGenres, stagedMedia, discoverGenres, thisYear, closeFilters, setStagedSort, setStagedYearFrom, setStagedYearTo, setStagedShowAdded, setStagedGenres, setStagedMedia, handleCancelAllFilters, handleApplyFilters]);
 
     return (
         <nav className={`navbar-brand-row${detailModalOpen ? ' is-modal-open' : ''}`} aria-label="Main navigation">
@@ -926,4 +926,4 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     );
 };
 
-export default Navbar;
+export default React.memo(Navbar);
