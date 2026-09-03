@@ -125,7 +125,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const isSettingsSubPage = ['/MFA', '/Sessions', '/Settings', '/EditProfile', '/Credits', '/AdminSecurity', '/Statistics'].includes(location.pathname) || location.pathname.startsWith('/Settings/');
     const detailModalOpen = useDetailModalStore((s) => s.isOpen);
     const detailModalType = useDetailModalStore((s) => s.type);
-    const backdropUrl = useDetailModalStore((s) => s.backdropUrl);
     const isSearchPage = location.pathname === '/Search';
     const showBackButton = Boolean(isDetailPage || isListDetailPage || isListEditPage || isSettingsSubPage || detailModalOpen || isSearchPage);
     
@@ -480,8 +479,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
         const isMediaDetail = isMediaDetailPage ||
             (detailModalOpen &&
                 detailModalType !== null &&
-                detailModalType !== 'person' &&
-                !!backdropUrl);
+                detailModalType !== 'person');
 
         if (isMediaDetail) {
             void StatusBar.setBackgroundColor({ color: '#00000000' }).catch(() => {});
@@ -493,7 +491,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
 
         void StatusBar.setBackgroundColor({ color }).catch(() => {});
         void StatusBar.setStyle({ style: Style.Light }).catch(() => {});
-    }, [isMobile, showBackButton, isMediaDetailPage, detailModalOpen, detailModalType, backdropUrl, isSearchPage]);
+    }, [isMobile, showBackButton, isMediaDetailPage, detailModalOpen, detailModalType, isSearchPage]);
 
     useEffect(() => {
         if (!location.pathname.startsWith('/Profile')) {
@@ -659,7 +657,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
 
     return (
         <nav className={`navbar-brand-row${detailModalOpen ? ' is-modal-open' : ''}`} aria-label="Main navigation">
-            <div className={`container navbar-inner${showBackButton ? '' : ' no-back-btn'}${isSearchPage ? ' is-search' : ''}`}>
+            <div className={`container navbar-inner${showBackButton ? '' : ' no-back-btn'}${isSearchPage ? ' is-search' : ''}${detailModalOpen ? ' is-modal-open' : ''}`}>
                 <div className="navbar-left">
                     {showBackButton && (
                         <button

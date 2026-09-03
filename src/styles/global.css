@@ -527,7 +527,7 @@ html {
     .navbar-brand-row {
         position: relative;
     }
-    .container.navbar-inner.no-back-btn {
+    .container.navbar-inner.no-back-btn:not(.is-modal-open) {
         backdrop-filter: blur(0px);
         background: #2c2b55;
     }

@@ -194,11 +194,17 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                 setLoading(false)
                 return
             }
+            const numericId = Number(id)
+            if (!Number.isFinite(numericId) || numericId <= 0) {
+                console.warn('[TVShowDetail] invalid id from route:', id)
+                setLoading(false)
+                return
+            }
             try {
                 const data = await getCachedOrFetch(
                     'tv-details-v2',
-                    Number(id),
-                    () => getTVDetails(Number(id)),
+                    numericId,
+                    () => getTVDetails(numericId),
                     { ttl: 30 * 60 * 1000, staleWhileRevalidate: true }
                 )
                 setDetails(data)
@@ -210,7 +216,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                     if (trailer) setTrailerKey(trailer.key)
                 }
             } catch (err) {
-                console.error('Failed to load TV show details:', err)
+                console.error('[TVShowDetail] failed to load TV show details:', id, err)
             } finally {
                 setLoading(false)
             }

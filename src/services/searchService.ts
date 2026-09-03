@@ -26,7 +26,7 @@ function tmdbToSearchResult(r: TMDBResult, score?: number): BaseSearchResult {
 
     return {
         id: r.id,
-        kind: (isPerson ? 'person' : (r.media_type as 'movie' | 'tv')) ?? 'movie',
+        kind: isPerson ? 'person' : r.media_type === 'tv' ? 'tv' : r.media_type === 'movie' ? 'movie' : 'movie',
         title,
         subtitle,
         image: isPerson ? r.profile_path ?? null : r.poster_path ?? null,
@@ -128,12 +128,11 @@ async function searchMedia(
         return true
     })
 
-    // Normalize + STRICT type lock: omit people, lists, cross-media
-    combined = combined
-        .map(r => ({
-            ...r,
-            media_type: r.media_type || (r.title ? 'movie' as const : 'tv' as const),
-        }))
+    // STRICT type lock: only keep results whose media_type is explicitly one of
+    // the allowed types. Inferring "movie" vs "tv" from presence of `title`
+    // misclassifies real TV shows (which use `name` on TMDB) as movies, leading
+    // to a 404 when the user opens them from a TV results list.
+    combined = combined.filter(r => r.media_type === 'movie' || r.media_type === 'tv')
         .filter(r => allowedTypes.includes(r.media_type as 'movie' | 'tv'))
 
     // Fuzzy post-filter

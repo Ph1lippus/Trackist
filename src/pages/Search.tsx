@@ -1,9 +1,10 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
 import useDetailModalStore from '../stores/detailModalStore'
 import { getResultImageUrl } from '../services/searchService'
+import { useMobile } from '../contexts/useMobile'
 import type { BaseSearchResult, SearchResultsByKind } from '../types/search'
 
 const SECTION_LABELS: Record<keyof SearchResultsByKind, string> = {
@@ -27,6 +28,7 @@ const TABS: Array<{ value: FilterTab; label: string }> = [
 const Search: React.FC = () => {
     const navigate = useNavigate()
     usePageTitle('Search')
+    const { isMobile } = useMobile()
     const [activeTab, setActiveTab] = useState<FilterTab>('all')
     const {
         groupedResults,
@@ -70,6 +72,25 @@ const Search: React.FC = () => {
                         : ['users']
 
     const hasResults = visibleSections.some((s) => groupedResults[s].length > 0)
+
+    // On mobile, auto-focus the global navbar search input so the soft keyboard
+    // appears immediately after navigating from the discover page's search bar.
+    useEffect(() => {
+        if (!isMobile) return
+        const focusInput = () => {
+            const el = document.querySelector<HTMLInputElement>('.navbar-search-input')
+            if (el && document.activeElement !== el) {
+                el.focus({ preventScroll: true })
+            }
+        }
+        // Wait a tick for the route transition + remount to settle
+        const t1 = window.setTimeout(focusInput, 0)
+        const t2 = window.setTimeout(focusInput, 80)
+        return () => {
+            window.clearTimeout(t1)
+            window.clearTimeout(t2)
+        }
+    }, [isMobile])
 
     const showMinCharsHint = belowMinChars && !isLoading
     const showNoResults = !isLoading && !hasResults && !showMinCharsHint && query.length >= 3
