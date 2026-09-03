@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import type { ReactNode } from 'react'
 
 interface ConfirmModalProps {
@@ -15,7 +15,7 @@ interface ConfirmModalProps {
     customContent?: ReactNode
 }
 
-const ConfirmModal: React.FC<ConfirmModalProps> = ({
+const ConfirmModal = React.memo<ConfirmModalProps>(({
     isOpen,
     title,
     message,
@@ -28,11 +28,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
     confirmLoading = false,
     customContent
 }) => {
-    if (!isOpen) return null
-
-    const isDisabled = disabled || confirmLoading
-
-    const getConfirmColorStyle = () => {
+    const colorStyle = useMemo(() => {
         switch (confirmColor) {
             case 'success':
                 return {
@@ -53,9 +49,11 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
                     hoverBg: 'rgba(133,138,227,0.15)'
                 }
         }
-    }
+    }, [confirmColor])
 
-    const colorStyle = getConfirmColorStyle()
+    if (!isOpen) return null
+
+    const isDisabled = disabled || confirmLoading
 
     return (
         <div 
@@ -117,6 +115,6 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
             </div>
         </div>
     )
-}
+})
 
 export default ConfirmModal

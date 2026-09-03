@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getMovieDetails, imageUrl, imageUrlOriginal, getBestBackdropPath, getBestPoster } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
@@ -223,6 +223,14 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
         }
     }
 
+    const cast = useMemo(() => (details?.credits?.cast || [])
+        .slice(0, 10)
+        .sort((a: { profile_path?: string | null }, b: { profile_path?: string | null }) => {
+            if (a.profile_path && !b.profile_path) return -1
+            if (!a.profile_path && b.profile_path) return 1
+            return 0
+        }), [details?.credits?.cast])
+
     if (loading) {
         return <div className="detail-page-loading" aria-live="polite">Loading movie...</div>
     }
@@ -245,13 +253,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
     const ageRating = getAgeRating()
     const overview = details?.overview || 'No description available.'
     const genres = details?.genres || []
-    const cast = (details?.credits?.cast || [])
-        .slice(0, 10)
-        .sort((a: { profile_path?: string | null }, b: { profile_path?: string | null }) => {
-            if (a.profile_path && !b.profile_path) return -1
-            if (!a.profile_path && b.profile_path) return 1
-            return 0
-        })
+    const shareUrl = window.location.href
     return (
         <div className="detail-page detail-page--no-scroll">
             {!isInModal && backdropUrl && (
@@ -393,7 +395,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                                 </button>
                             )}
                             <ShareButton
-                                url={window.location.href}
+                                url={shareUrl}
                                 title={`${title} on Track1st`}
                                 text={`I found ${title} on Track1st. Add it to your watchlist and see if it belongs in your next movie night.`}
                             />
@@ -453,7 +455,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                                 <AlignLeft size={18} />
                             </button>
                             <ShareButton
-                                url={window.location.href}
+                                url={shareUrl}
                                 title={`${title} on Track1st`}
                                 text={`I found ${title} on Track1st. Add it to your watchlist and see if it belongs in your next movie night.`}
                             />
@@ -621,6 +623,8 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                                                     src={imageUrl(c.profile_path, 'w185') ?? ''} 
                                                     alt={c.name ?? ''} 
                                                     loading="lazy"
+                                                    width="90"
+                                                    height="90"
                                                 />
                                             )}
                                             <div className="detail-page__cast-info">
@@ -692,4 +696,4 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
     )
 }
 
-export default MovieDetail
+export default React.memo(MovieDetail)
