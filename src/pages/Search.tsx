@@ -14,14 +14,6 @@ const SECTION_LABELS: Record<keyof SearchResultsByKind, string> = {
     lists: 'Lists',
 }
 
-const SECTION_ICONS: Record<keyof SearchResultsByKind, string> = {
-    movies: 'fa-film',
-    tv: 'fa-tv',
-    people: 'fa-user',
-    users: 'fa-users',
-    lists: 'fa-list-ul',
-}
-
 type FilterTab = 'all' | 'movies' | 'tv' | 'people' | 'users'
 
 const TABS: Array<{ value: FilterTab; label: string }> = [
@@ -43,7 +35,6 @@ const Search: React.FC = () => {
         belowMinChars,
         error,
         inputValue,
-        clear,
     } = useSearch()
 
     const handleClickResult = (result: BaseSearchResult) => {

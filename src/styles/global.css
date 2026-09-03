@@ -5704,7 +5704,7 @@ button:focus-visible {
     background: transparent;
     backdrop-filter: none;
     z-index: 100;
-    padding: 0.5rem 0;
+    padding: 1rem 0;
     display: flex;
     justify-content: center;
     transition: transform 0.22s ease-out;
