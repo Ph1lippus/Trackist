@@ -489,7 +489,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
             return;
         }
 
-        const isSettingsPage = location.pathname === '/Settings' || location.pathname.startsWith('/Settings/');
         const color = '#2c2b55';
 
         void StatusBar.setBackgroundColor({ color }).catch(() => {});
