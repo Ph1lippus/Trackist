@@ -79,6 +79,7 @@ export function useUnifiedSearch(): UseUnifiedSearchReturn {
     const [error, setError] = useState<string | null>(null)
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
     const [committedQuery, setCommittedQuery] = useState('')
+    const previousPathname = useRef(location.pathname)
 
     // Refs for cleanup
     const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -220,6 +221,14 @@ export function useUnifiedSearch(): UseUnifiedSearchReturn {
             abortController.current = null
         }
     }, [])
+
+    // Search is a separate native screen, so returning to Discover must start
+    // with Discover's unfiltered state rather than restoring the search term.
+    useEffect(() => {
+        const leftSearchPage = previousPathname.current === '/Search' && location.pathname !== '/Search'
+        previousPathname.current = location.pathname
+        if (leftSearchPage) clear()
+    }, [location.pathname, clear])
 
     const closeDropdown = useCallback(() => {
         setIsDropdownOpen(false)

@@ -6287,6 +6287,20 @@ i.fa-solid.fa-trash:hover {
     }
 }
 
+/* Native detail views should let the shared backdrop and app background show
+   through instead of painting an opaque page surface over them. */
+html.native-app .detail-overlay,
+html.native-app .detail-overlay__scroll,
+html.native-app .detail-overlay__content,
+html.native-app .detail-overlay .detail-page,
+html.native-app .detail-overlay .detail-page__content,
+html.native-app .detail-overlay .detail-page__content--split,
+html.native-app .detail-overlay .detail-page__main,
+html.native-app .detail-overlay .detail-page__left,
+html.native-app .detail-overlay .detail-page__right {
+    background: transparent !important;
+}
+
 @media (min-width: 769px) {
     .detail-overlay__scroll {
         overflow: hidden;

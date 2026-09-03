@@ -666,6 +666,9 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                 if (detailModalOpen) {
                                     useDetailModalStore.getState().close();
                                     window.history.back();
+                                } else if (isSearchPage) {
+                                    clear();
+                                    navigate('/Discover', { replace: true });
                                 } else {
                                     navigate(-1);
                                 }
