@@ -1,6 +1,7 @@
 ﻿import React, { useEffect, useRef, useCallback } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import useDetailModalStore from '../../stores/detailModalStore';
 
 const THRESHOLD = 5;
 
@@ -9,6 +10,7 @@ const SecondaryNavbar: React.FC = () => {
     const tabsRef = useRef<HTMLDivElement>(null);
     const navRef = useRef<HTMLElement>(null);
     const location = useLocation();
+    const navigate = useNavigate();
     const { user } = useAuth();
     const isInitialRender = useRef(true);
 
@@ -84,18 +86,36 @@ const SecondaryNavbar: React.FC = () => {
         };
     }, [getActiveTabIndex, isActivePage]);
 
-    const handleTabClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>) => {
+    const scrollToTop = useCallback(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        setTimeout(() => window.scrollTo(0, 0), 400)
+    }, [])
+
+    const handleTabClick = useCallback((e: React.MouseEvent<HTMLAnchorElement>, index: number, to: string) => {
         const pill = pillRef.current;
         if (pill) {
             pill.style.transform = `translateX(${e.currentTarget.offsetLeft}px)`;
             pill.style.width = `${e.currentTarget.offsetWidth}px`;
         }
-    }, []);
 
-    const scrollToTop = useCallback(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' })
-        setTimeout(() => window.scrollTo(0, 0), 400)
-    }, [])
+        if (index !== getActiveTabIndex()) return;
+
+        e.preventDefault();
+
+        const modalWasOpen = useDetailModalStore.getState().isOpen;
+        if (modalWasOpen) {
+            useDetailModalStore.getState().close();
+            window.history.replaceState(null, '', location.pathname + location.search + location.hash);
+        }
+
+        if (location.pathname !== to) {
+            navigate(to);
+        } else if (modalWasOpen) {
+            setTimeout(scrollToTop, 0);
+        } else {
+            scrollToTop();
+        }
+    }, [getActiveTabIndex, location.pathname, location.hash, location.search, navigate, scrollToTop])
 
     // Hyper-responsive scroll hide/show for the secondary navbar (desktop only)
     const scrollStateRef = useRef({ lastScrollY: window.scrollY, isHidden: false });
@@ -181,7 +201,7 @@ const SecondaryNavbar: React.FC = () => {
                         }
                         role="tab"
                         data-index={index}
-                        onClick={handleTabClick}
+                        onClick={(e) => handleTabClick(e, index, item.to)}
                     >
                         {item.label}
                     </NavLink>
