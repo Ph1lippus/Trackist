@@ -2662,7 +2662,7 @@ html.native-app *::-webkit-scrollbar {
 .detail-page__backdrop-overlay {
     position: absolute;
     inset: 0;
-    background-color: rgba(15, 16, 27, 0.3);
+    background-color: rgba(15, 16, 27, 0.4);
 }
 .detail-page__content {
     position: relative;
@@ -2724,7 +2724,7 @@ html.native-app *::-webkit-scrollbar {
     font-family: Georgia, serif;
     font-weight: 500;
     font-size: 4rem;
-    color: var(--color-platinum);
+    color: #ffffff;
     margin: 0;
     line-height: 1.2;
     letter-spacing: 2px;
@@ -2743,7 +2743,7 @@ html.native-app *::-webkit-scrollbar {
 .detail-page__seasons,
 .detail-page__age-rating {
     font-size: 0.9rem;
-    color: rgba(255, 255, 255, 0.8);
+    color: #ffffff;
     font-weight: 500;
     padding: 0.35rem 1rem;
     transition: all 0.2s ease;
@@ -2820,7 +2820,7 @@ html.native-app *::-webkit-scrollbar {
     padding: 0.6rem 1rem;
     border-radius: 20px;
     font-size: 0.9rem;
-    color: var(--color-platinum);
+    color: #ffffff;
     font-weight: 500;
 }
 .detail-page__providers {
@@ -2958,7 +2958,6 @@ html.native-app *::-webkit-scrollbar {
     overflow: hidden;
 }
 .detail-page__left {
-    padding-top: 1.5rem;
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
@@ -2976,7 +2975,7 @@ html.native-app *::-webkit-scrollbar {
 .detail-page__section-title {
     font-size: 1.2rem;
     font-weight: 700;
-    color: var(--color-platinum);
+    color: #ffffff;
     padding: 0rem 1rem;
 }
 .detail-page__overview {
@@ -2984,6 +2983,7 @@ html.native-app *::-webkit-scrollbar {
     line-height: 1.7;
     margin: 0 0 1.5rem 0;
     padding: 0rem 1rem;
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .detail-page__main--movie .detail-page__overview {
