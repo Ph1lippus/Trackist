@@ -10,7 +10,7 @@ export default defineConfig({
       strategies: 'injectManifest',
       srcDir: 'src',
       filename: 'sw.ts',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icons.svg'],
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icons.svg', 'starfield-tile.svg', 'starfield-tile-mobile.svg'],
       manifest: {
         name: 'Track1st',
         short_name: 'Track1st',

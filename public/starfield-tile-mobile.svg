@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="350" height="350" viewBox="0 0 350 350">
+  <defs>
+    <radialGradient id="w1-40">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="w1-35">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.35"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="w2-45">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="lav1-5-40">
+      <stop offset="0" stop-color="#858ae3" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#858ae3" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="peri1-5-40">
+      <stop offset="0" stop-color="#a9ace4" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#a9ace4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="purp1-5-40">
+      <stop offset="0" stop-color="#c864ff" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#c864ff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="52.5" cy="70" r="1" fill="url(#w1-40)"/>
+  <circle cx="122.5" cy="157.5" r="1.5" fill="url(#lav1-5-40)"/>
+  <circle cx="192.5" cy="262.5" r="1" fill="url(#w1-35)"/>
+  <circle cx="262.5" cy="122.5" r="1.5" fill="url(#peri1-5-40)"/>
+  <circle cx="315" cy="227.5" r="1" fill="url(#w1-35)"/>
+  <circle cx="87.5" cy="210" r="2" fill="url(#w2-45)"/>
+  <circle cx="227.5" cy="297.5" r="1.5" fill="url(#purp1-5-40)"/>
+  <circle cx="157.5" cy="140" r="1" fill="url(#w1-40)"/>
+</svg>
