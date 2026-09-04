@@ -126,7 +126,7 @@
         border-radius: 0px!important;
     }
     .detail-page__episode-still{
-        border-radius: 0px 16px 16px 0px;
+        border-radius: 0px 12px 12px 0px;
     }
     .detail-page__episode-card{
         border-radius: 0px!important;
@@ -364,7 +364,7 @@
     /* Remove expensive image blur on unwatched episode cards for mobile performance */
     .detail-page__episode-still img {
         filter: none !important;
-        scale: 1.15;
+        scale: 1.20;
     }
 
     /* Reduce motion on mobile for slower devices */
@@ -4432,7 +4432,7 @@ html.native-app *::-webkit-scrollbar {
     }
 
     .detail-page__episode-still {
-        width: 140px;
+        width: 130px;
     }
     .detail-page__btn {
         width: 100%;
