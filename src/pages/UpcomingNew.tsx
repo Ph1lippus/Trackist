@@ -23,12 +23,16 @@ interface UpcomingItem {
     }
 }
 
-const orderItemsByDay = (items: UpcomingItem[]): UpcomingItem[] => {
-    const movies = items.filter(item => item.type === 'movie')
+const buildGroupedCards = (items: UpcomingItem[]): UpcomingItem[] => {
+    const movies: UpcomingItem[] = []
     const groups = new Map<string, UpcomingItem[]>()
+
     for (const item of items) {
-        if (item.type !== 'episode') continue
-        const key = String(item.item.tmdb_id)
+        if (item.type === 'movie') {
+            movies.push(item)
+            continue
+        }
+        const key = item.item.tmdb_id != null ? `tv:${item.item.tmdb_id}` : `ep:${item.id}`
         if (!groups.has(key)) groups.set(key, [])
         groups.get(key)!.push(item)
     }
@@ -37,20 +41,16 @@ const orderItemsByDay = (items: UpcomingItem[]): UpcomingItem[] => {
         const quantityDifference = a.length - b.length
         return quantityDifference || a[0].title.localeCompare(b[0].title)
     })
-    const episodes: UpcomingItem[] = []
-    const pointers = sortedGroups.map(() => 0)
-    let addedEpisode = true
-    while (addedEpisode) {
-        addedEpisode = false
-        for (let index = 0; index < sortedGroups.length; index++) {
-            const group = sortedGroups[index]
-            if (pointers[index] < group.length) {
-                episodes.push(group[pointers[index]++])
-                addedEpisode = true
-            }
-        }
+
+    const cards: UpcomingItem[] = [...movies]
+    for (const group of sortedGroups) {
+        group.sort((a, b) => {
+            const seasonDiff = (a.episode?.season_number || 0) - (b.episode?.season_number || 0)
+            return seasonDiff || (a.episode?.episode_number || 0) - (b.episode?.episode_number || 0)
+        })
+        cards.push(...group)
     }
-    return [...movies, ...episodes]
+    return cards
 }
 
 const mapCalendarItem = (item: CalendarItem): UpcomingItem => ({
@@ -153,8 +153,8 @@ const UpcomingNew: React.FC = () => {
 
     const sortedGroupedItems = useMemo(() => {
         return Object.keys(groupedItems).sort().map(date => {
-            const items = orderItemsByDay(groupedItems[date])
-            return { date, items }
+            const cards = buildGroupedCards(groupedItems[date])
+            return { date, cards }
         })
     }, [groupedItems])
 
@@ -168,7 +168,7 @@ const UpcomingNew: React.FC = () => {
                     </div>
                 ) : hasLoaded ? (
                     <div className="upcoming-new-list">
-                        {sortedGroupedItems.map(({ date, items }) => (
+                        {sortedGroupedItems.map(({ date, cards }) => (
                             <div key={date} className="upcoming-new-date-group">
                                 <div className={`upcoming-new-date-label ${isToday(date) ? 'today' : ''}`}>
                                     <span className="upcoming-new-date-main">
@@ -182,69 +182,71 @@ const UpcomingNew: React.FC = () => {
                                 </div>
 
                                 <div className="upcoming-new-cards">
-                                    {items.map((item) => (
-                                        <div
-                                            key={item.id}
-                                            className="upcoming-new-card"
-                                            onClick={() => {
-                                                if (item.type === 'movie' && item.item.tmdb_id) {
-                                                    useDetailModalStore.getState().open('movie', item.item.tmdb_id)
-                                                } else if (item.item.tmdb_id) {
-                                                    useDetailModalStore.getState().open('tv', item.item.tmdb_id)
-                                                }
-                                            }}
-                                        >
-                                            <div className="upcoming-new-card-poster">
-                                                {item.item.poster_path ? (
+                                    {cards.map((item) => {
+                                        const showTmdbId = item.item.tmdb_id
+                                        return (
+                                            <div
+                                                key={item.id}
+                                                className="upcoming-new-card"
+                                                onClick={() => {
+                                                    if (item.type === 'movie' && showTmdbId) {
+                                                        useDetailModalStore.getState().open('movie', showTmdbId)
+                                                    } else if (showTmdbId) {
+                                                        useDetailModalStore.getState().open('tv', showTmdbId)
+                                                    }
+                                                }}
+                                            >
+                                                <div className="upcoming-new-card-poster">
+                                                    {item.item.poster_path ? (
                                                         <img
                                                             src={imageUrl(item.item.poster_path, 'w185') || ''}
                                                             alt={item.item.title}
                                                             loading="lazy"
                                                         />
-                                                ) : (
-                                                    <div className="upcoming-new-card-no-poster">
-                                                        <span>{item.item.title}</span>
-                                                    </div>
-                                                )}
+                                                    ) : (
+                                                        <div className="upcoming-new-card-no-poster">
+                                                            <span>{item.item.title}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="upcoming-new-card-body">
+                                                    <h3 className="upcoming-new-card-title">{item.title}</h3>
+
+                                                    {item.type === 'episode' && item.episode && (
+                                                        <div className="upcoming-new-card-info">
+                                                            <span className="upcoming-new-card-episode-label">
+                                                                S{item.episode.season_number} E{item.episode.episode_number}
+                                                                {item.episode.title && (
+                                                                    <span> - {item.episode.title}</span>
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                    )}
+
+                                                    {item.type === 'movie' && (
+                                                        <p className="upcoming-new-card-movie-release">
+                                                            Movie Release
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                <div className="upcoming-new-card-arrow">
+                                                    &rsaquo;
+                                                </div>
                                             </div>
-
-                                            <div className="upcoming-new-card-body">
-                                                <h3 className="upcoming-new-card-title">{item.title}</h3>
-
-                                                {item.episode && (
-                                                    <div className="upcoming-new-card-info">
-                                                        <span className="upcoming-new-card-season">
-                                                            Season {item.episode.season_number}
-                                                        </span>
-                                                        <span className="upcoming-new-card-episode">
-                                                            Episode {item.episode.episode_number}
-                                                        </span>
-                                                    </div>
-                                                )}
-
-                                                {item.episode?.title && (
-                                                    <p className="upcoming-new-card-episode-title">
-                                                        &quot;{item.episode.title}&quot;
-                                                    </p>
-                                                )}
-
-                                                 {item.type === 'movie' && (
-                                                     <p className="upcoming-new-card-movie-release">
-                                                         Movie Release
-                                                     </p>
-                                                 )}
-                                            </div>
-
-                                            <div className="upcoming-new-card-arrow">
-                                                &rsaquo;
-                                            </div>
-                                        </div>
-                                    ))}
+                                        )
+                                    })}
                                 </div>
                             </div>
                         ))}
                     </div>
-                ) : null}
+                ) : (
+                    <div className="upcoming-new-loading">
+                        <div className="discover-spinner" />
+                        <p>Loading your upcoming episodes...</p>
+                    </div>
+                )}
             </div>
             <button className="upcoming-new-scroll-top" onClick={scrollToTop} aria-label="Scroll to top" title="Back to top">
                 <i className="fas fa-arrow-up"></i>

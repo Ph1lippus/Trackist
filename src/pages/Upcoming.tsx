@@ -60,6 +60,36 @@ const orderItemsLikeMiniCards = (items: UpcomingItem[]): UpcomingItem[] => {
     return [...movies, ...result]
 }
 
+const buildSidePanelCards = (items: UpcomingItem[]): UpcomingItem[] => {
+    const movies: UpcomingItem[] = []
+    const groups = new Map<string, UpcomingItem[]>()
+
+    for (const item of items) {
+        if (item.type === 'movie') {
+            movies.push(item)
+            continue
+        }
+        const key = item.item.tmdb_id != null ? `tv:${item.item.tmdb_id}` : `ep:${item.id}`
+        if (!groups.has(key)) groups.set(key, [])
+        groups.get(key)!.push(item)
+    }
+
+    const sortedGroups = Array.from(groups.values()).sort((a, b) => {
+        const quantityDifference = a.length - b.length
+        return quantityDifference || a[0].title.localeCompare(b[0].title)
+    })
+
+    const cards: UpcomingItem[] = [...movies]
+    for (const group of sortedGroups) {
+        group.sort((a, b) => {
+            const seasonDiff = (a.episode?.season_number || 0) - (b.episode?.season_number || 0)
+            return seasonDiff || (a.episode?.episode_number || 0) - (b.episode?.episode_number || 0)
+        })
+        cards.push(...group)
+    }
+    return cards
+}
+
 const mapCalendarItem = (item: CalendarItem): UpcomingItem => ({
     id: item.id,
     title: item.title,
@@ -94,6 +124,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
     const [upcomingItems, setUpcomingItems] = useState<UpcomingItem[]>([])
     const [selectedDate, setSelectedDate] = useState<{dateKey: string, items: UpcomingItem[]} | null>(null)
     const [dayCellInnerWidth, setDayCellInnerWidth] = useState(0)
+    const [loading, setLoading] = useState(true)
     const calendarGridRef = useRef<HTMLDivElement>(null)
 
     const monthKey = useMemo(() => {
@@ -179,8 +210,12 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
 
             loadCalendar(user.id, (freshItems) => {
                 setUpcomingItems(freshItems.map(mapCalendarItem))
+                setLoading(false)
             }).then((items) => {
                 setUpcomingItems(items.map(mapCalendarItem))
+                setLoading(false)
+            }).catch(() => {
+                setLoading(false)
             })
 
             const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
@@ -222,9 +257,15 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
         <section className="dashboard-page" style={{ height: '100vh', overflow: 'hidden' }}>
             <div className="dashboard-shell" style={{ height: '100%', overflow: 'hidden' }}>
                 <div className="upcoming-layout" style={{ height: '100%' }}>
-                    <main className="upcoming-main" style={{ overflowY: 'auto' }}>
-                        <div className="calendar-grid" ref={calendarGridRef}>
-                        {weekDays.map(day => (
+                        <main className="upcoming-main" style={{ overflowY: 'auto' }}>
+                            <div className="calendar-grid" ref={calendarGridRef}>
+                            {loading && (
+                                <div className="upcoming-loading">
+                                    <div className="discover-spinner" />
+                                    <p>Loading your calendar...</p>
+                                </div>
+                            )}
+                            {weekDays.map(day => (
                             <div key={day} className="calendar-weekday">{day}</div>
                         ))}
                         {calendarDays.map((day, index) => {
@@ -328,43 +369,49 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                             </button>
                         </div>
                         <div className="upcoming-side-panel-content">
-                            {orderItemsLikeMiniCards(selectedDate.items).map((item) => (
-                                <div
-                                    key={item.id}
-                                    className="upcoming-episode-card"
-                                    onClick={() => {
-                                        if (item.type === 'movie' && item.item.tmdb_id) {
-                                            useDetailModalStore.getState().open('movie', item.item.tmdb_id)
-                                        } else if (item.item.tmdb_id) {
-                                            useDetailModalStore.getState().open('tv', item.item.tmdb_id)
-                                        }
-                                    }}
-                                >
-                                    <div className="upcoming-episode-card-poster">
-                                        {item.item.poster_path ? (
-                                            <img
-                                                src={imageUrl(item.item.poster_path, 'w185') || ''}
-                                                alt={item.item.title}
-                                            />
-                                        ) : (
-                                            <div className="upcoming-episode-card-no-poster">
-                                                <span>{item.item.title}</span>
-                                            </div>
-                                        )}
+                            {buildSidePanelCards(selectedDate.items).map((item) => {
+                                const showTmdbId = item.item.tmdb_id
+                                return (
+                                    <div
+                                        key={item.id}
+                                        className="upcoming-episode-card"
+                                        onClick={() => {
+                                            if (item.type === 'movie' && showTmdbId) {
+                                                useDetailModalStore.getState().open('movie', showTmdbId)
+                                            } else if (showTmdbId) {
+                                                useDetailModalStore.getState().open('tv', showTmdbId)
+                                            }
+                                        }}
+                                    >
+                                        <div className="upcoming-episode-card-poster">
+                                            {item.item.poster_path ? (
+                                                <img
+                                                    src={imageUrl(item.item.poster_path, 'w185') || ''}
+                                                    alt={item.item.title}
+                                                />
+                                            ) : (
+                                                <div className="upcoming-episode-card-no-poster">
+                                                    <span>{item.item.title}</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="upcoming-episode-card-info">
+                                            <h4>{item.title}</h4>
+                                            {item.type === 'episode' && item.episode && (
+                                                <p className="upcoming-episode-details">
+                                                    S{item.episode.season_number} E{item.episode.episode_number}
+                                                    {item.episode.title && (
+                                                        <span> - {item.episode.title}</span>
+                                                    )}
+                                                </p>
+                                            )}
+                                            {item.type === 'movie' && (
+                                                <p className="upcoming-episode-details">Movie Release</p>
+                                            )}
+                                        </div>
                                     </div>
-                                    <div className="upcoming-episode-card-info">
-                                        <h4>{item.title}</h4>
-                                        {item.episode && (
-                                            <p className="upcoming-episode-details">
-                                                S{item.episode.season_number} E{item.episode.episode_number}
-                                            </p>
-                                        )}
-                                        {item.type === 'movie' && (
-                                            <p className="upcoming-episode-details">Movie Release</p>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
+                                )
+                            })}
                         </div>
                     </div>
                 )}

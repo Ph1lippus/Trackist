@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useRef } from 'react'
+import React, { useEffect, useState, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getBestBackdropPath, getBestPoster } from '../services/tmdbService'
+import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getBestBackdropPath, getBestPoster, isNoLanguageCode } from '../services/tmdbService'
 import { formatStatus } from '../utils/statusUtils'
 import { markEpisodeWatched, unmarkEpisodeWatched, markEpisodesWatched, unmarkEpisodesWatched, recomputeDenormalizedFields, getWatchedEpisodes, checkAndUpdateCompleted, markShowAsFullyWatched, removeAllWatchedEpisodes } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
@@ -62,7 +62,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
     
     const [seasons, setSeasons] = useState<number[]>([])
     const [episodes, setEpisodes] = useState<LocalEpisode[]>([])
-    const [selectedSeason, setSelectedSeason] = useState(1)
+    const [selectedSeason, setSelectedSeason] = useState(0)
     const [showTrailer, setShowTrailer] = useState(false)
     const [trailerKey, setTrailerKey] = useState<string | null>(null)
     const [confirmModal, setConfirmModal] = useState<{
@@ -194,11 +194,17 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                 setLoading(false)
                 return
             }
+            const numericId = Number(id)
+            if (!Number.isFinite(numericId) || numericId <= 0) {
+                console.warn('[TVShowDetail] invalid id from route:', id)
+                setLoading(false)
+                return
+            }
             try {
                 const data = await getCachedOrFetch(
                     'tv-details-v2',
-                    Number(id),
-                    () => getTVDetails(Number(id)),
+                    numericId,
+                    () => getTVDetails(numericId),
                     { ttl: 30 * 60 * 1000, staleWhileRevalidate: true }
                 )
                 setDetails(data)
@@ -210,7 +216,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                     if (trailer) setTrailerKey(trailer.key)
                 }
             } catch (err) {
-                console.error('Failed to load TV show details:', err)
+                console.error('[TVShowDetail] failed to load TV show details:', id, err)
             } finally {
                 setLoading(false)
             }
@@ -497,22 +503,24 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
 
     const getLogoUrl = (): string | null => {
         if (details?.images?.logos) {
-            const logos = details.images.logos as Array<{ file_path: string; iso_639_1?: string | null }>
-            const englishLogo = logos.find(
-                (logo) => logo.iso_639_1 === 'en'
-            )
-            if (englishLogo) {
-                return imageUrlOriginal(englishLogo.file_path)
-            }
-            const noLanguageLogo = logos.find(
-                (logo) => logo.iso_639_1 == null || logo.iso_639_1 === '' || logo.iso_639_1 === 'xx' || logo.iso_639_1 === 'und'
-            )
-            if (noLanguageLogo) {
-                return imageUrlOriginal(noLanguageLogo.file_path)
-            }
-            if (logos.length > 0) {
-                return imageUrlOriginal(logos[0].file_path)
-            }
+            const logos = details.images.logos as Array<{ file_path: string; width?: number; height?: number; vote_average?: number; vote_count?: number; iso_639_1?: string | null }>
+            const sorted = [...logos].sort((a, b) => {
+                const aRes = (a.width ?? 0) * (a.height ?? 0)
+                const bRes = (b.width ?? 0) * (b.height ?? 0)
+                if (bRes !== aRes) return bRes - aRes
+                const aVote = a.vote_average ?? 0
+                const bVote = b.vote_average ?? 0
+                if (bVote !== aVote) return bVote - aVote
+                const aCount = a.vote_count ?? 0
+                const bCount = b.vote_count ?? 0
+                if (bCount !== aCount) return bCount - aCount
+                return 0
+            })
+            const english = sorted.find(l => l.iso_639_1 === 'en')
+            if (english) return imageUrlOriginal(english.file_path)
+            const noLang = sorted.find(l => isNoLanguageCode(l.iso_639_1))
+            if (noLang) return imageUrlOriginal(noLang.file_path)
+            return imageUrlOriginal(sorted[0].file_path)
         }
         return null
     }  
@@ -872,7 +880,14 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
         }
     }
 
-    const filteredEpisodes = episodes.filter(ep => ep.season_number === selectedSeason && !!ep.air_date)
+    const filteredEpisodes = useMemo(() => episodes.filter(ep => ep.season_number === selectedSeason && !!ep.air_date), [episodes, selectedSeason])
+    const cast = useMemo(() => (details?.credits?.cast || [])
+        .slice(0, 10)
+        .sort((a: { profile_path?: string | null }, b: { profile_path?: string | null }) => {
+            if (a.profile_path && !b.profile_path) return -1
+            if (!a.profile_path && b.profile_path) return 1
+            return 0
+        }), [details])
 
     if (loading) {
         return <div className="detail-page-loading" aria-live="polite">Loading TV show...</div>
@@ -901,15 +916,9 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
     const ageRating = getAgeRating()
     const overview = details?.overview || 'No description available.'
     const genres = details?.genres || []
-    const cast = (details?.credits?.cast || [])
-        .slice(0, 10)
-        .sort((a: { profile_path?: string | null }, b: { profile_path?: string | null }) => {
-            if (a.profile_path && !b.profile_path) return -1
-            if (!a.profile_path && b.profile_path) return 1
-            return 0
-        })
     // Count seasons that actually have episodes for display
     const displaySeasonCount = seasons.length
+    const shareUrl = window.location.href
 
     return (
         <div className="detail-page detail-page--no-scroll">
@@ -1066,7 +1075,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                     </button>
                                 )}
                                 <ShareButton
-                                    url={window.location.href}
+                                    url={shareUrl}
                                     title={`${title} on Track1st`}
                                     text={`I found ${title} on Track1st. This one might deserve a place on your next binge list.`}
                                 />
@@ -1106,7 +1115,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                     <AlignLeft size={18} />
                                 </button>
                                 <ShareButton
-                                    url={window.location.href}
+                                    url={shareUrl}
                                     title={`${title} on Track1st`}
                                     text={`I found ${title} on Track1st. This one might deserve a place on your next binge list.`}
                                 />
@@ -1246,10 +1255,12 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                             <div className="detail-page__cast-section">
                                 <div className="detail-page__cast-list">
                                         {cast.slice(0, isMobile && !showAllCast ? 12 : undefined).map((c: { id: number; name: string; profile_path?: string | null; character: string; order: number }) => (
-                                            <div 
-                                                key={c.id} 
+                                            <a
+                                                key={c.id}
                                                 className="detail-page__cast-item"
-                                                onClick={() => {
+                                                href={`/person/${c.id}`}
+                                                onClick={(e) => {
+                                                    e.preventDefault()
                                                     if (isInModal) {
                                                         useDetailModalStore.getState().open('person', c.id)
                                                     } else {
@@ -1258,11 +1269,13 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                                 }}
                                             >
                                                 {c.profile_path && (
-                                                    <img 
-                                                        className="detail-page__cast-photo" 
-                                                        src={imageUrl(c.profile_path, 'w185') ?? ''} 
+                                                    <img
+                                                        className="detail-page__cast-photo"
+                                                        src={imageUrl(c.profile_path, 'w185') ?? ''}
                                                         alt={c.name ?? ''}
                                                         loading="lazy"
+                                                        width="90"
+                                                        height="90"
                                                     />
                                                 )}
                                                 <div className="detail-page__cast-info">
@@ -1271,7 +1284,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                                         <span className="detail-page__cast-character">{c.character}</span>
                                                     )}
                                                 </div>
-                                            </div>
+                                            </a>
                                         ))}
                                 </div>
                                 {isMobile && !showAllCast && cast.length > 12 && (
@@ -1287,7 +1300,12 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                     {isMobile && (
                         <div className="detail-page__episodes-container">
                             <div className="detail-page__episodes-section">
-                                {seasons.length > 1 && (
+                                {selectedSeason === 0 ? (
+                                    <div className="detail-page__episodes-loading">
+                                        <div className="discover-spinner" />
+                                    </div>
+                                ) : null}
+                                {selectedSeason > 0 && seasons.length > 1 && (
                                     <div className="detail-page__episodes-header">
                                         <button 
                                             className="detail-page__season-nav"
@@ -1346,17 +1364,22 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                         <div 
                                             key={ep.id} 
                                             ref={(el) => { episodeRefs.current[ep.id] = el }}
-                                            className={`detail-page__episode-card ${ep.watched ? 'watched' : ''} ${!isEpisodeReleased(ep) ? 'unreleased' : ''} ${!ep.still_path ? 'no-poster' : ''}`}
-                                            style={{ cursor: isEpisodeReleased(ep) ? 'pointer' : 'default' }}
-                                            onClick={() => {
+                                             className={`detail-page__episode-card ${ep.watched ? 'watched' : ''} ${!isEpisodeReleased(ep) ? 'unreleased' : ''} ${!ep.still_path ? 'no-poster' : ''}`}
+                                             onClick={(e) => {
+                                                if (isMobile && (e.target as HTMLElement).closest('.detail-page__episode-still')) {
+                                                    if (isInModal && id) {
+                                                        useDetailModalStore.getState().open('episode', Number(id), ep.season_number, ep.episode_number)
+                                                    } else {
+                                                        navigate(`/tv/${id}/season/${ep.season_number}/episode/${ep.episode_number}`)
+                                                    }
+                                                    return
+                                                }
                                                 if (isEpisodeReleased(ep)) {
                                                     if (!ep.watched && hasUnwatchedEpisodesBefore(ep)) {
                                                         setAddEpisodeModal({ isOpen: true, episode: ep })
                                                     } else if (!ep.watched) {
-                                                        // Mark as watched
                                                         markEpisodeAsWatched(ep, false)
                                                     } else {
-                                                        // Toggle to unwatched
                                                         markEpisodeAsWatched(ep, false)
                                                     }
                                                 }
@@ -1364,7 +1387,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                         >
                                             {ep.still_path && (
                                                 <div className="detail-page__episode-still">
-                                                    <img src={imageUrl(ep.still_path, 'w300') || ''} alt={ep.title || `Episode ${ep.episode_number}`} loading="lazy" />
+                                                    <img src={imageUrl(ep.still_path, 'w300') || ''} alt={ep.title || `Episode ${ep.episode_number}`} loading="lazy" width="160" height="90" />
                                                 </div>
                                             )}
                                             <div className="detail-page__episode-info">
@@ -1412,7 +1435,11 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                     {!isMobile && (
                         <div className="detail-page__right">
                             <div className="detail-page__episodes-section">
-                                {seasons.length > 1 && (
+                                {selectedSeason === 0 ? (
+                                    <div className="detail-page__episodes-loading">
+                                        <div className="discover-spinner" />
+                                    </div>
+                                ) : seasons.length > 1 && (
                                     <div className="detail-page__episodes-header">
                                         <button 
                                             className="detail-page__season-nav"
@@ -1471,9 +1498,8 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                         <div 
                                             key={ep.id} 
                                             ref={(el) => { episodeRefs.current[ep.id] = el }}
-                                            className={`detail-page__episode-card ${ep.watched ? 'watched' : ''} ${!isEpisodeReleased(ep) ? 'unreleased' : ''} ${!ep.still_path ? 'no-poster' : ''}`}
-                                            style={{ cursor: isEpisodeReleased(ep) ? 'pointer' : 'default' }}
-                                            onClick={() => {
+                                             className={`detail-page__episode-card ${ep.watched ? 'watched' : ''} ${!isEpisodeReleased(ep) ? 'unreleased' : ''} ${!ep.still_path ? 'no-poster' : ''}`}
+                                             onClick={() => {
                                                 if (isEpisodeReleased(ep)) {
                                                     if (!ep.watched && hasUnwatchedEpisodesBefore(ep)) {
                                                         setAddEpisodeModal({ isOpen: true, episode: ep })
@@ -1489,7 +1515,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                         >
                                             {ep.still_path && (
                                                 <div className="detail-page__episode-still">
-                                                    <img src={imageUrl(ep.still_path, 'w300') || ''} alt={ep.title || `Episode ${ep.episode_number}`} loading="lazy" />
+                                                    <img src={imageUrl(ep.still_path, 'w300') || ''} alt={ep.title || `Episode ${ep.episode_number}`} loading="lazy" width="160" height="90" />
                                                 </div>
                                             )}
                                             <div className="detail-page__episode-info">
@@ -1803,7 +1829,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
     )
 }
 
-export default TVShowDetail
+export default React.memo(TVShowDetail)
 
 
 

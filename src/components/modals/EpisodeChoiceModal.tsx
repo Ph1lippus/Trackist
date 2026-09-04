@@ -97,4 +97,4 @@ const EpisodeChoiceModal: React.FC<EpisodeChoiceModalProps> = ({
     )
 }
 
-export default EpisodeChoiceModal
+export default React.memo(EpisodeChoiceModal)

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useParams } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails, imageUrlOriginal } from '../services/tmdbService'
 import { markEpisodeWatched, unmarkEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
@@ -35,7 +35,7 @@ const normalizeEpisodeScore = (value?: number | null): number | undefined => {
     return value
 }
 
-const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, episodeNumber }) => {
+const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, episodeNumber }) => {
     const { id: paramId, season: paramSeason, episode: paramEpisode } = useParams<{ id: string; season: string; episode: string }>()
     const id = itemId?.toString() ?? paramId
     const season = seasonNumber?.toString() ?? paramSeason
@@ -112,7 +112,7 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
         fetchData()
     }, [id, season, episode])
 
-    const getLogoUrl = (): string | null => {
+    const logoUrl = useMemo(() => {
         if (tvDetails?.images?.logos) {
             const englishLogo = tvDetails.images.logos.find(
                 (logo: { iso_639_1?: string | null; file_path: string }) => logo.iso_639_1 === 'en'
@@ -131,7 +131,7 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
             }
         }
         return null
-    }
+    }, [tvDetails?.images?.logos])
 
     const handleToggleWatched = async () => {
         if (!watchlistId || !id || !season || !episode || !episodeData) return
@@ -201,7 +201,6 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
     }
 
     const stillUrl = episodeData.still_path ? imageUrlOriginal(episodeData.still_path) : null
-    const logoUrl = getLogoUrl()
     const title = tvDetails.name || 'Untitled'
     const episodeTitle = episodeData.name || `Episode ${episodeData.episode_number}`
     const episodeScore = typeof episodeData.vote_average === 'number' && episodeData.vote_average > 0 ? episodeData.vote_average.toFixed(1) : null
@@ -308,6 +307,6 @@ const EpisodeDetail: React.FC<EpisodeDetailProps> = ({ itemId, seasonNumber, epi
             )}
         </div>
     )
-}
+})
 
 export default EpisodeDetail

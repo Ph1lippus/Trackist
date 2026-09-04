@@ -18,7 +18,7 @@ const MobileBottomNavbar: React.FC = () => {
         { to: '/MobileTVShows', icon: Tv, label: 'TV Shows'},
         { to: '/Movies', icon: Film, label: 'Movies'},
         { to: '/Discover', icon: Compass, label: 'Discover'},
-        { to: '/UpcomingNew', icon: CalendarDays, label: 'Upcoming'},
+        { to: '/UpcomingNew', icon: CalendarDays, label: 'Calendar'},
         { to: '/Profile', icon: CircleUser, label: 'Profile'},
     ];
 

@@ -337,6 +337,10 @@ const ProfilePage: React.FC = () => {
         item.status === 'completed' || item.status === 'caught_up'
     ), [watchlistItems])
 
+    const droppedItems = useMemo(() => watchlistItems.filter(item =>
+        item.status === 'dropped'
+    ), [watchlistItems])
+
     if (!isProfileDataLoaded) {
         return <section className="dashboard-page profile-page" />
     }
@@ -346,7 +350,6 @@ const ProfilePage: React.FC = () => {
             <section className="dashboard-page">
                 <div className="dashboard-shell">
                     <div className="profile-not-found">
-                        <i className="fa-solid fa-user-slash profile-not-found__icon"></i>
                         <h2>User not found</h2>
                         <p>The profile you're looking for doesn't exist or has been removed.</p>
                         <Link to="/Discover" className="dashboard-link-btn">Back to Discover</Link>
@@ -434,6 +437,16 @@ const ProfilePage: React.FC = () => {
                                 label="Share Profile"
                                 showIcon={false}
                             />
+                            {isOwnProfile && (
+                                <Link
+                                    to="/Statistics"
+                                    className="profile-btn profile-btn--icon"
+                                    aria-label="Statistics"
+                                    title="Statistics"
+                                >
+                                    <i className="fa-solid fa-chart-simple"></i>
+                                </Link>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -513,7 +526,6 @@ const ProfilePage: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className="profile-empty">
-                                    <i className="fa-solid fa-tv profile-empty__icon"></i>
                                     <h3>Not watching anything yet</h3>
                                 </div>
                             )}
@@ -558,7 +570,6 @@ const ProfilePage: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className="profile-empty">
-                                    <i className="fa-solid fa-film profile-empty__icon"></i>
                                     <h3>No movies to watch</h3>
                                 </div>
                             )}
@@ -603,8 +614,45 @@ const ProfilePage: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className="profile-empty">
-                                    <i className="fa-solid fa-check-circle profile-empty__icon"></i>
                                     <h3>Nothing finished yet</h3>
+                                </div>
+                            )}
+
+                            {droppedItems.length > 0 && (
+                                <div className="profile-watchlist-category profile-watchlist-category--dropped">
+                                    <h4 className="profile-watchlist-category__title">
+                                        Dropped
+                                    </h4>
+                                    <VirtuosoGrid
+                                        increaseViewportBy={{
+                                            top: isMobile ? 200 : 400,
+                                            bottom: isMobile ? 120 : 240,
+                                        }}
+                                        computeItemKey={(index) => droppedItems[index]?.id ?? index}
+                                        style={{ width: '100%' }}
+                                        useWindowScroll={true}
+                                        data={droppedItems}
+                                        overscan={isMobile ? 10 : 20}
+                                        listClassName="discover-grid"
+                                        itemContent={(index) => {
+                                            const item = droppedItems[index]
+                                            const tmdbItem: TMDBResult = {
+                                                id: item.tmdb_id as number,
+                                                title: item.title,
+                                                poster_path: item.poster_path,
+                                                media_type: item.media_type === 'anime' ? 'tv' : item.media_type
+                                            }
+                                            return (
+                                                <MediaCard
+                                                    item={tmdbItem}
+                                                    isInWatchlist={currentUserWatchlistIds.has(tmdbItem.id)}
+                                                    onAdd={handleAddToWatchlist}
+                                                    hideAddButton={isOwnProfile}
+                                                    showIcons={showIcons}
+                                                />
+                                            )
+                                        }}
+                                    />
                                 </div>
                             )}
                         </div>
@@ -626,7 +674,6 @@ const ProfilePage: React.FC = () => {
                                                     <img src={imageUrl(list.poster, 'w342') ?? undefined} alt={list.title} />
                                                 ) : (
                                                     <div className="lists-page__card-placeholder">
-                                                        <i className="fa-regular fa-images" />
                                                     </div>
                                                 )}
                                             </div>
@@ -642,7 +689,6 @@ const ProfilePage: React.FC = () => {
                                 </div>
                             ) : (
                                 <div className="profile-empty">
-                                    <i className="fa-solid fa-list profile-empty__icon"></i>
                                     <h3>No lists yet</h3>
                                     {isOwnProfile && (
                                         <Link to="/lists" className="dashboard-link-btn">Create a list</Link>

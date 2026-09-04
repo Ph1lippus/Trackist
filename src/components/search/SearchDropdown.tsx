@@ -25,14 +25,6 @@ const SECTION_LABELS: Record<keyof SearchResultsByKind, string> = {
     lists: 'Lists',
 }
 
-const SECTION_ICONS: Record<keyof SearchResultsByKind, string> = {
-    movies: 'fa-film',
-    tv: 'fa-tv',
-    people: 'fa-user',
-    users: 'fa-users',
-    lists: 'fa-list-ul',
-}
-
 /**
  * Context-aware predictive search dropdown.
  *
@@ -41,7 +33,6 @@ const SECTION_ICONS: Record<keyof SearchResultsByKind, string> = {
  *  - movies: single Movies section
  *  - tvshows: single TV Shows section
  *  - finished: Movies + TV sections
- *  - friends: single Users section
  *  - lists: single Lists section
  */
 const SearchDropdown: React.FC<SearchDropdownProps> = ({
@@ -85,15 +76,13 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
     const visibleSections = useMemo<Array<keyof SearchResultsByKind>>(() => {
         switch (context) {
             case 'discover':
-                return ['movies', 'tv', 'people', 'lists']
+                return ['movies', 'tv', 'people', 'users', 'lists']
             case 'movies':
                 return ['movies']
             case 'tvshows':
                 return ['tv']
             case 'finished':
                 return ['movies', 'tv']
-            case 'friends':
-                return ['users']
             case 'lists':
                 return ['lists']
             default:
@@ -131,6 +120,18 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
 
     return (
         <div className="search-dropdown" ref={dropdownRef} role="listbox">
+            <div className="search-dropdown__header">
+                <span className="search-dropdown__header-title">Search</span>
+                <button
+                    type="button"
+                    className="search-dropdown__header-close"
+                    onClick={onClose}
+                    aria-label="Close search"
+                    title="Close search"
+                >
+                </button>
+            </div>
+
             {/* Loading state */}
             {showLoading && (
                 <div className="search-dropdown__loading">
@@ -142,7 +143,6 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
             {/* Min chars hint */}
             {showMinCharsHint && (
                 <div className="search-dropdown__hint">
-                    <i className="fa-solid fa-keyboard"></i>
                     <p>Type at least 3 characters to search</p>
                 </div>
             )}
@@ -150,7 +150,6 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
             {/* Error state */}
             {error && !isLoading && (
                 <div className="search-dropdown__error">
-                    <i className="fa-solid fa-circle-exclamation"></i>
                     <p>{error}</p>
                 </div>
             )}
@@ -158,7 +157,6 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
             {/* No results */}
             {showNoResults && !error && (
                 <div className="search-dropdown__empty">
-                    <i className="fa-solid fa-magnifying-glass"></i>
                     <p>No results for "{query}"</p>
                 </div>
             )}
@@ -172,20 +170,22 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
                         return (
                             <div key={section} className="search-dropdown__section">
                                 <div className="search-dropdown__section-header">
-                                    <i className={`fa-solid ${SECTION_ICONS[section]}`}></i>
                                     <span>{SECTION_LABELS[section]}</span>
                                     <span className="search-dropdown__section-count">
                                         {sectionResults.length}
                                     </span>
                                 </div>
                                 <div className="search-dropdown__items">
-                                    {sectionResults.map((result) => (
-                                        <SearchResultRow
-                                            key={`${result.kind}-${result.id}`}
-                                            result={result}
-                                            onClick={() => handleResultClick(result)}
-                                        />
-                                    ))}
+                                    {sectionResults
+                                        .map((result) => ({ result, img: getResultImageUrl(result) }))
+                                        .sort((a, b) => Number(!a.img) - Number(!b.img))
+                                        .map(({ result }) => (
+                                            <SearchResultRow
+                                                key={`${result.kind}-${result.id}`}
+                                                result={result}
+                                                onClick={() => handleResultClick(result)}
+                                            />
+                                        ))}
                                 </div>
                             </div>
                         )
@@ -194,10 +194,10 @@ const SearchDropdown: React.FC<SearchDropdownProps> = ({
                     {/* Footer with search-all hint */}
                     <div className="search-dropdown__footer">
                         <button
+                            type="button"
                             className="search-dropdown__footer-btn"
                             onClick={onCommit}
                         >
-                            <i className="fa-solid fa-arrow-right"></i>
                             Press Enter for full results
                         </button>
                     </div>
@@ -215,32 +215,20 @@ const SearchResultRow: React.FC<{
     onClick: () => void
 }> = ({ result, onClick }) => {
     const imgUrl = getResultImageUrl(result)
-    const isPerson = result.kind === 'person'
-    const isUser = result.kind === 'user'
-    const isList = result.kind === 'list'
 
     return (
         <button
-            className="search-dropdown__item"
+            type="button"
+            className={`search-dropdown__item${imgUrl ? '' : ' search-dropdown__item--no-poster'}`}
             onClick={onClick}
             role="option"
             aria-selected="false"
         >
-            <div className={`search-dropdown__poster ${isPerson || isUser ? 'search-dropdown__poster--circle' : ''}`}>
-                {imgUrl ? (
+            {imgUrl && (
+                <div className={`search-dropdown__poster ${result.kind === 'person' || result.kind === 'user' ? 'search-dropdown__poster--circle' : ''}`}>
                     <img src={imgUrl} alt={result.title} loading="lazy" />
-                ) : (
-                    <div className="search-dropdown__no-poster">
-                        {isList ? (
-                            <i className="fa-solid fa-list-ul"></i>
-                        ) : isPerson || isUser ? (
-                            <span>{(result.title || 'U')[0].toUpperCase()}</span>
-                        ) : (
-                            <i className="fa-solid fa-film"></i>
-                        )}
-                    </div>
-                )}
-            </div>
+                </div>
+            )}
             <div className="search-dropdown__info">
                 <span className="search-dropdown__title">{result.title}</span>
                 {result.subtitle && (

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import type { ReactNode } from 'react'
 import { MobileContext } from './MobileContext'
 
@@ -25,8 +25,10 @@ export const MobileProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         return () => mql.removeEventListener('change', handleChange)
     }, [])
 
+    const mobileValue = useMemo(() => ({ isMobile }), [isMobile])
+
     return (
-        <MobileContext.Provider value={{ isMobile }}>
+        <MobileContext.Provider value={mobileValue}>
             {children}
         </MobileContext.Provider>
     )

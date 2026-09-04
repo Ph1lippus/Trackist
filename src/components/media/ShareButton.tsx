@@ -87,4 +87,4 @@ const ShareButton: React.FC<ShareButtonProps> = ({ url, title, text, className =
     )
 }
 
-export default ShareButton
+export default React.memo(ShareButton)

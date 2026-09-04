@@ -164,16 +164,15 @@ const Discover: React.FC = () => {
                     </div>
                 ) : (
                         <div style={{ flex: 1, minHeight: 0, width: '100%' }}>
-                            <VirtuosoGrid
-                                key={`${filters.mediaType}-${filters.sortBy}-${filters.selectedGenres.join(',')}-${filters.yearFrom ?? 'all'}-${filters.yearTo ?? 'all'}-${filters.query}`}
-                                increaseViewportBy={{
-                                        top: isMobile ? 200 : 400,
-                                        bottom: isMobile ? 400 : 800,
-                                    }}
-                                computeItemKey={(index) => visibleResults[index]?.id ?? index}
-                                style={{ width: '100%' }}
-                                useWindowScroll={true}
-                                data={visibleResults}
+                                <VirtuosoGrid
+                                    increaseViewportBy={{
+                                            top: isMobile ? 200 : 400,
+                                            bottom: isMobile ? 400 : 800,
+                                        }}
+                                    computeItemKey={(index) => visibleResults[index]?.id ?? index}
+                                    style={{ width: '100%' }}
+                                    useWindowScroll={true}
+                                    data={visibleResults}
                                 rangeChanged={(range) => {
                                     const { endIndex } = range
                                     const totalItems = visibleResults.length
@@ -183,7 +182,7 @@ const Discover: React.FC = () => {
                                         actions.fetchData(store.page + 1)
                                     }
                                 }}
-                                overscan={isMobile ? 50 : 100}
+                                overscan={50}
                                 listClassName="discover-grid"
                                 itemContent={(index) => {
                                     const item = visibleResults[index];

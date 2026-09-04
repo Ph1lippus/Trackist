@@ -4,6 +4,7 @@ import { getPersonDetails, getPersonMovies, getPersonTV, imageUrl } from '../ser
 import type { TMDBResult, WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
+import { useDetailSidebar } from '../hooks/useDetailSidebar'
 import MediaCard from '../components/media/MediaCard'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { useAuthStore } from '../stores/useAuthStore'
@@ -43,6 +44,8 @@ const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId }) => {
     const currentUser = useAuthStore((state) => state.user)
     const [removeConfirmItem, setRemoveConfirmItem] = useState<TMDBResult | null>(null)
     const { showIcons } = useMediaCardIcons()
+    const { isOpen: isSidebarOpen } = useDetailSidebar()
+    void isSidebarOpen
 
     const handleAddToWatchlist = useCallback(
         async (item: TMDBResult) => {
@@ -219,8 +222,11 @@ const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId }) => {
     }
 
     return (
-        <section className="dashboard-page profile-page detail-page detail-page--person">
-            <div className="dashboard-shell">
+        <section className="detail-page detail-page--no-scroll detail-page--person">
+            <div className="detail-page__content detail-page__content--split">
+                <div className="detail-page__main detail-page__main--person">
+                    <div className="detail-page__left">
+                        <div className="dashboard-shell">
                 <div className="profile-hero">
                     <div className="profile-hero__content">
                         <div className="profile-hero__top-row">
@@ -279,6 +285,10 @@ const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId }) => {
                     {activeTab === 'movies' ? renderGrid(movies, 'movie') : renderGrid(tvShows, 'tv')}
                 </div>
             </div>
+                        </div>
+                    </div>
+                    <div className="detail-page__right"></div>
+                </div>
 
             {removeConfirmItem && (
                 <ConfirmModal

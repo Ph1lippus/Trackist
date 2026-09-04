@@ -28,6 +28,7 @@ import Home from './pages/Home'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Discover from './pages/Discover'
+import Search from './pages/Search'
 import Movies from './pages/Movies'
 import TVShows from './pages/TVShows'
 import Upcoming from './pages/Upcoming'
@@ -37,7 +38,6 @@ import Credits from './pages/Credits'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import Profile from './pages/Profile'
-import Friends from './pages/Friends'
 import Followers from './pages/Followers'
 import Following from './pages/Following'
 import Statistics from './pages/Statistics'
@@ -51,7 +51,6 @@ import Lists from './pages/Lists'
 import ListsDetail from './pages/ListsDetail'
 import ListsEditPage from './pages/ListsEditPage'
 import ListsCreatePage from './pages/ListsCreatePage'
-import Finished from './pages/Finished'
 import MobileTVShows from './pages/MobileTVShows'
 import MobileMovies from './pages/MobileMovies'
 import DetailLayout from './components/layout/DetailLayout'
@@ -355,7 +354,7 @@ const AppContent: React.FC = () => {
         setNativeUpdateVersion(null)
     }
 
-    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Friends', '/Statistics', '/Finished', '/Lists', '/Profile', '/Admin', '/MobileTVShows', '/MobileMovies', '/Followers', '/Following', '/Credits']
+    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Lists', '/Profile', '/Admin', '/MobileTVShows', '/MobileMovies', '/Followers', '/Following', '/Credits', '/Search', '/Statistics']
     const settingsPages = ['/Settings', '/MFA', '/Sessions', '/AdminSecurity', '/EditProfile',
         '/Settings/account', '/Settings/profile', '/Settings/security', '/Settings/notifications',
         '/Settings/app', '/Settings/data', '/Settings/additions', '/Settings/danger']
@@ -411,11 +410,11 @@ const AppContent: React.FC = () => {
                 <Routes>
                     <Route path="/" element={user ? <Navigate to={defaultRoute} replace /> : <Home />} />
                     <Route path="/Discover" element={user ? <Discover key="discover" /> : <Navigate to="/login" replace />} />
+                    <Route path="/Search" element={user ? <Search /> : <Navigate to="/login" replace />} />
                     <Route path="/Movies" element={user ? <Movies /> : <Navigate to="/login" replace />} />
                     <Route path="/MobileMovies" element={user ? <MobileMovies /> : <Navigate to="/login" replace />} />
                     <Route path="/Tvshows" element={user ? <TVShows /> : <Navigate to="/login" replace />} />
                     <Route path="/MobileTVShows" element={user ? <MobileTVShows /> : <Navigate to="/login" replace />} />
-                    <Route path="/Friends" element={user ? <Friends /> : <Navigate to="/login" replace />} />
                     <Route path="/Followers" element={user ? <Followers /> : <Navigate to="/login" replace />} />
                     <Route path="/Following" element={user ? <Following /> : <Navigate to="/login" replace />} />
                     <Route path="/Followers/:username" element={user ? <Followers /> : <Navigate to="/login" replace />} />
@@ -450,7 +449,6 @@ const AppContent: React.FC = () => {
                     {/* Legacy redirects for old URLs */}
                     <Route path="/Lists/new" element={<Navigate to="/Lists/new" replace />} />
                     <Route path="/Lists/:id" element={<LegacyListRedirect />} />
-                    <Route path="/Finished" element={user ? <Finished /> : <Navigate to="/login" replace />} />
                     <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />
                 </Routes>
                 <ScrollToTop />

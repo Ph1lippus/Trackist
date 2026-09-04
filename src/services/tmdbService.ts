@@ -369,7 +369,7 @@ export const getExternalIds = async (id: number, mediaType: 'movie' | 'tv'): Pro
 }
 
 
-const isNoLanguageCode = (value?: string | null): boolean => {
+export const isNoLanguageCode = (value?: string | null): boolean => {
     if (value == null) return true
     if (value.trim() === '') return true
     const normalized = value.trim().toLowerCase().replace(/[-_].*$/, '')

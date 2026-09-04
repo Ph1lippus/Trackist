@@ -15,7 +15,6 @@ import { groupResultsByKind } from '../services/searchService'
  * - /Movies          -> movies
  * - /Tvshows         -> tvshows
  * - /Finished        -> finished
- * - /Friends         -> friends
  * - /Lists*          -> lists
  */
 export function deriveSearchContext(pathname: string): SearchContextType {
@@ -25,7 +24,6 @@ export function deriveSearchContext(pathname: string): SearchContextType {
     if (pathname === '/Tvshows') return 'tvshows'
     if (pathname === '/MobileTVShows') return 'tvshows'
     if (pathname === '/Finished') return 'finished'
-    if (pathname === '/Friends') return 'friends'
     if (pathname.startsWith('/Lists')) return 'lists'
     // Default to discover for unknown authenticated pages
     return 'discover'
@@ -81,6 +79,7 @@ export function useUnifiedSearch(): UseUnifiedSearchReturn {
     const [error, setError] = useState<string | null>(null)
     const [isDropdownOpen, setIsDropdownOpen] = useState(false)
     const [committedQuery, setCommittedQuery] = useState('')
+    const previousPathname = useRef(location.pathname)
 
     // Refs for cleanup
     const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -223,6 +222,14 @@ export function useUnifiedSearch(): UseUnifiedSearchReturn {
         }
     }, [])
 
+    // Search is a separate native screen, so returning to Discover must start
+    // with Discover's unfiltered state rather than restoring the search term.
+    useEffect(() => {
+        const leftSearchPage = previousPathname.current === '/Search' && location.pathname !== '/Search'
+        previousPathname.current = location.pathname
+        if (leftSearchPage) clear()
+    }, [location.pathname, clear])
+
     const closeDropdown = useCallback(() => {
         setIsDropdownOpen(false)
     }, [])
@@ -231,11 +238,17 @@ export function useUnifiedSearch(): UseUnifiedSearchReturn {
         const trimmed = inputValue.trim()
         setCommittedQuery(trimmed)
         setIsDropdownOpen(false)
-        // If above min chars and we haven't searched yet, run it now
-        if (trimmed.length >= DEFAULT_SEARCH_CONFIG.minChars && results.length === 0) {
-            void executeSearch(trimmed, context)
+        if (debounceTimer.current) {
+            clearTimeout(debounceTimer.current)
+            debounceTimer.current = null
         }
-    }, [inputValue, results.length, executeSearch, context])
+        if (abortController.current) {
+            abortController.current.abort()
+            abortController.current = null
+            currentRequestId.current++
+            setIsLoading(false)
+        }
+    }, [inputValue])
 
     const groupedResults = groupResultsByKind(results)
 
