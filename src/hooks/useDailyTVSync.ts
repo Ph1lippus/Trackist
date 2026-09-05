@@ -43,8 +43,7 @@ const syncWatchingShow = async (show: SyncShow): Promise<void> => {
         .from('watchlist')
         .update({
             total_episodes: totalReleasedEpisodes,
-            last_season_check: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            last_season_check: new Date().toISOString()
         })
         .eq('id', show.id)
         .eq('status', 'watching')

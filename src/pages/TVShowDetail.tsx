@@ -105,6 +105,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
     const isInWatchlist = !!watchlistItem
     const watchlistId = watchlistItem?.id ?? null
     const watchlistStatus = watchlistItem?.status ?? null
+    const hasStarted = ((watchlistItem as unknown as { watched_episodes_count?: number }).watched_episodes_count ?? 0) > 0
     const hasUserSelectedSeason = useRef(false)
     const episodeToScrollRef = useRef<string | null>(null)
     const episodeRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
@@ -1124,14 +1125,16 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                         >
                                             {(watchlistStatus === 'completed' || watchlistStatus === 'caught_up') ? <EyeOff size={18} /> : <Eye size={18} />}
                                         </button>
-                                        <button 
-                                            className="detail-page__icon-btn"
-                                            onClick={() => setStatusChangeModal({ isOpen: true })}
-                                            disabled={isUpdatingStatus || modalLoading}
-                                            title="Change Status"
-                                        >
-                                            <Ellipsis size={18} />
-                                        </button>
+                                        {hasStarted && (
+                                            <button 
+                                                className="detail-page__icon-btn"
+                                                onClick={() => setStatusChangeModal({ isOpen: true })}
+                                                disabled={isUpdatingStatus || modalLoading}
+                                                title="Change Status"
+                                            >
+                                                <Ellipsis size={18} />
+                                            </button>
+                                        )}
                                     </>
                                 )}
                                 {trailerKey && (
@@ -1280,14 +1283,16 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                     </>
                                 ) : (
                                     <>
-                                        <button 
-                                            className="detail-page__icon-btn"
-                                            onClick={() => setStatusChangeModal({ isOpen: true })}
-                                            disabled={isUpdatingStatus || modalLoading}
-                                            title="Change Status"
-                                        >
-                                            <Ellipsis size={18} />
-                                        </button>
+                                        {hasStarted && (
+                                            <button 
+                                                className="detail-page__icon-btn"
+                                                onClick={() => setStatusChangeModal({ isOpen: true })}
+                                                disabled={isUpdatingStatus || modalLoading}
+                                                title="Change Status"
+                                            >
+                                                <Ellipsis size={18} />
+                                            </button>
+                                        )}
                                         <button 
                                             className="detail-page__icon-btn"
                                             onClick={() => {

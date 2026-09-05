@@ -7,16 +7,20 @@ import useDetailModalStore from '../../stores/detailModalStore'
 
 const isDetailPage = (pathname: string): boolean =>
     /^\/(movie|tv)\/\d+$/.test(pathname) ||
-    /^\/tv\/\d+\/season\/\d+\/episode\/\d+$/.test(pathname) ||
-    /^\/person\/\d+$/.test(pathname)
+    /^\/tv\/\d+\/season\/\d+\/episode\/\d+$/.test(pathname)
 
 const DetailSidebarToggle: React.FC = () => {
     const location = useLocation()
     const { isMobile } = useMobile()
     const { isOpen, alwaysOpen, toggle } = useDetailSidebar()
     const isModalOpen = useDetailModalStore((state) => state.isOpen)
+    const modalType = useDetailModalStore((state) => state.type)
 
-    if (!isMobile || alwaysOpen || (!isDetailPage(location.pathname) && !isModalOpen)) return null
+    if (!isMobile || alwaysOpen) return null
+
+    // Person pages/modals render no action bar, so there is no sidebar to toggle.
+    const showable = isDetailPage(location.pathname) || (isModalOpen && modalType !== 'person')
+    if (!showable) return null
 
     return (
         <button
