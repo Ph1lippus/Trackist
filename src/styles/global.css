@@ -2912,7 +2912,6 @@ html.native-app *::-webkit-scrollbar {
 .detail-page__main {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
     width: 100%;
     flex: 1;
     overflow: hidden;

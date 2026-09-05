@@ -8,6 +8,7 @@ import type { TMDBResult, WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { createMovieDeepLink, openInStremio } from '../utils/stremioUtils'
+import { curateCast } from '../utils/castUtils'
 import { useShowStremioButton } from '../hooks/useShowStremioButton'
 import { useShowLetterboxButton } from '../hooks/useShowLetterboxButton'
 import { useShowTmdbButton } from '../hooks/useShowTmdbButton'
@@ -224,14 +225,9 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
         }
     }
 
-    const cast = useMemo(() => (details?.credits?.cast || [])
-        .filter((c: unknown): c is { id: number; name: string; profile_path?: string | null; character?: string | null; order?: number } =>
-            !!c && typeof c === 'object')
-        .sort((a, b) => {
-            if (a.profile_path && !b.profile_path) return -1
-            if (!a.profile_path && b.profile_path) return 1
-            return 0
-        }), [details?.credits?.cast])
+    const cast = useMemo(() => curateCast(
+        (details?.credits?.cast || []) as Array<{ id: number; name: string; profile_path?: string | null; character?: string | null; order?: number }>
+    ), [details?.credits?.cast])
 
     if (loading) {
         return <div className="detail-page-loading" aria-live="polite">Loading movie...</div>
@@ -618,7 +614,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                     </div>
                     {showCast && cast.length > 0 && (
                         <div className="detail-page__episodes-container">
-                            <CastList cast={cast} isInModal={isInModal} />
+                            <CastList cast={cast} isInModal={isInModal} maxItems={isMobile ? 8 : 16} />
                         </div>
                     )}
                     <div className="detail-page__right" style={{ display: 'none' }}>

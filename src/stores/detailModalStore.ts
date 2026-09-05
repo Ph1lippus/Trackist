@@ -12,6 +12,8 @@ interface DetailModalState {
   open: (type: DetailType, id: number, season?: number, episode?: number) => void
   syncFromURL: (type: DetailType, id: number, season?: number, episode?: number) => void
   setBackdropUrl: (url: string | null) => void
+  setRememberedSeason: (showId: number, season: number) => void
+  getRememberedSeason: (showId: number) => number | null
   close: () => void
 }
 
@@ -32,6 +34,13 @@ export const getDetailBaseTitle = (): string => baseTitle
 export const setDetailBaseTitle = (title: string): void => {
     baseTitle = title
 }
+
+// Remembered season per TV show id, kept for the current SPA session. Written
+// whenever the user lands on or selects a season within a TV show's detail, and
+// read on every subsequent mount so that navigating away (to an episode detail,
+// on the modal overlay or via page navigation) and coming back restores the exact
+// season they were on — instead of re-computing from progress each time.
+const rememberedSeasons = new Map<number, number>()
 
 const useDetailModalStore = create<DetailModalState>((set, get) => ({
   isOpen: false,
@@ -58,6 +67,12 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
     set({ isOpen: true, type, id, season, episode, backdropUrl: null })
     window.history.pushState({ detailModal: true }, '', buildHref(type, id, season, episode))
   },
+
+  setRememberedSeason: (showId, season) => {
+    rememberedSeasons.set(showId, season)
+  },
+
+  getRememberedSeason: (showId) => rememberedSeasons.get(showId) ?? null,
 
   // Update state in response to history back/forward. Never pushes history.
   syncFromURL: (type, id, season, episode) => {

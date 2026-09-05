@@ -11,6 +11,7 @@ import type { TMDBResult, WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { createEpisodeDeepLink, openInStremio, createTVDeepLink  } from '../utils/stremioUtils'
+import { curateCast } from '../utils/castUtils'
 import { useShowStremioButton } from '../hooks/useShowStremioButton'
 import { useShowTmdbButton } from '../hooks/useShowTmdbButton'
 import { useMobile } from '../contexts/useMobile'
@@ -63,7 +64,17 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
     
     const [seasons, setSeasons] = useState<number[]>([])
     const [episodes, setEpisodes] = useState<LocalEpisode[]>([])
-    const [selectedSeason, setSelectedSeason] = useState(0)
+    // Seed synchronously so the very first render already lands correctly: the
+    // remembered season when returning from an episode modal, otherwise the
+    // watchlist's stored current_season ("where we are") instead of a season-1
+    // flash. Falls back to 0 (spinner) when the show isn't in the watchlist yet.
+    const [selectedSeason, setSelectedSeason] = useState<number>(() => {
+        const numId = Number(id)
+        if (!Number.isFinite(numId) || numId <= 0) return 0
+        const remembered = useDetailModalStore.getState().getRememberedSeason(numId)
+        if (remembered != null) return remembered
+        return useLibraryStore.getState().allItems.find((item) => item.tmdb_id === numId)?.current_season ?? 0
+    })
     const [showTrailer, setShowTrailer] = useState(false)
     const [trailerKey, setTrailerKey] = useState<string | null>(null)
     const [confirmModal, setConfirmModal] = useState<{
@@ -342,15 +353,9 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                     .map((s: { season_number: number }) => s.season_number)
                 setSeasons(seasonList)
 
-                // Use stored progress before querying watched episodes so Season 1
-                // is never rendered briefly for shows the user has already started.
-                const storedSeason = watchlistItem?.current_season
-                const initialSeason = storedSeason && seasonList.includes(storedSeason)
-                    ? storedSeason
-                    : seasonList[0] || 1
-                setSelectedSeason(initialSeason)
-
-                // Get watched episodes from DB (these are episodes in watchlist_episodes table)
+                // Get watched episodes from DB (these are episodes in watchlist_episodes table).
+                // This must run before any season is loaded so episodes show the correct
+                // watched state, including when restoring a remembered season below.
                 if (isInWatchlist && watchlistId) {
                     const watchedEps = await getWatchedEpisodes(watchlistId)
                     watchedKeysCache.current = new Set(
@@ -359,6 +364,26 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                 } else {
                     watchedKeysCache.current = new Set()
                 }
+
+                // Restore the season the user was on (remembered across any navigations
+                // within this session) instead of re-computing from progress. This keeps
+                // them exactly where they were when they left the detail.
+                const rememberedSeason = useDetailModalStore.getState().getRememberedSeason(Number(id))
+                if (rememberedSeason != null && seasonList.includes(rememberedSeason)) {
+                    setSelectedSeason(rememberedSeason)
+                    await loadSeason(rememberedSeason)
+                    episodeToScrollRef.current = null
+                    return
+                }
+
+                // Use stored progress before querying watched episodes so Season 1
+                // is never rendered for shows the user has already started. "The
+                // season we are in" is the watchlist's current_season.
+                const storedSeason = watchlistItem?.current_season
+                const initialSeason = storedSeason && seasonList.includes(storedSeason)
+                    ? storedSeason
+                    : seasonList[0] || 1
+                setSelectedSeason(initialSeason)
 
                 // Find last watched episode directly from watchedKeysCache
                 let lastWatched: { season_number: number; episode_number: number } | null = null
@@ -371,7 +396,9 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                     }
                 }
 
-                let targetSeason = seasonList[0] || 1
+                let targetSeason = storedSeason && seasonList.includes(storedSeason)
+                    ? storedSeason
+                    : seasonList[0] || 1
                 let targetEpisode = 1
                 let scrollTarget: string | null = null
 
@@ -407,6 +434,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                 }
 
                 setSelectedSeason(targetSeason)
+                useDetailModalStore.getState().setRememberedSeason(Number(id), targetSeason)
                 episodeToScrollRef.current = scrollTarget
             } catch (err) {
                 console.error('Failed to load episodes:', err)
@@ -478,7 +506,17 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
     const handleSeasonChange = async (season: number) => {
         hasUserSelectedSeason.current = true
         setSelectedSeason(season)
+        if (id) useDetailModalStore.getState().setRememberedSeason(Number(id), season)
         await loadSeason(season)
+    }
+
+    // Open the episode detail sub-modal while ensuring the currently selected
+    // season is remembered, so returning from the episode restores it.
+    const openEpisodeModal = (rowSeason: number, rowEpisode: number) => {
+        if (!id) return
+        const numId = Number(id)
+        useDetailModalStore.getState().setRememberedSeason(numId, selectedSeason || rowSeason)
+        useDetailModalStore.getState().open('episode', numId, rowSeason, rowEpisode)
     }
 
     const hasUnwatchedEpisodesBefore = (episode: LocalEpisode): boolean => {
@@ -887,9 +925,10 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
     // Fetch and merge every season's cast so anthology shows (e.g. The Terror)
     // still show the actors from earlier seasons. Each season's list is cached.
     const [seasonCastState, setSeasonCastState] = useState<{ showId: number; cast: CastMember[] } | null>(null)
+    const fetchedSeasonCastRef = useRef<Set<string>>(new Set())
 
     useEffect(() => {
-        let active = true
+        if (!showCast) return
         const showId = details?.id
         const seasons = details?.seasons
         const seasonNumbers = (Array.isArray(seasons) ? seasons : [])
@@ -897,6 +936,15 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
             .filter((n): n is number => typeof n === 'number' && n > 0)
         if (!showId || seasonNumbers.length === 0) return
 
+        // Fetch season casts only on first open for a show; the result
+        // persists in seasonCastState so reopening the panel doesn't refetch.
+        const cacheKey = `seasonCast:${showId}`
+        if (seasonCastState?.showId === showId) return
+        const fetched = fetchedSeasonCastRef.current
+        if (fetched.has(cacheKey)) return
+        fetched.add(cacheKey)
+
+        let active = true
         const load = async () => {
             try {
                 const entries = await Promise.all(
@@ -931,34 +979,25 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                 }
                 setSeasonCastState({ showId, cast: merged })
             } catch (err) {
+                fetched.delete(cacheKey)
                 console.error('Failed to load season cast:', err)
             }
         }
         void load()
-        return () => { active = false }
-    }, [details])
+        return () => {
+            active = false
+            // If the fetch was aborted before completing (e.g. the panel was
+            // closed mid-flight), allow a retry on the next open. When it did
+            // complete, the seasonCastState guard above makes a refetch a no-op.
+            fetched.delete(cacheKey)
+        }
+    }, [details, showCast, seasonCastState?.showId])
 
     const cast = useMemo<CastMember[]>(() => {
         const base = (details?.credits?.cast || [])
             .filter((c: unknown): c is CastMember => !!c && typeof c === 'object')
         const seasonSource = seasonCastState && seasonCastState.showId === details?.id ? seasonCastState.cast : []
-        const seen = new Set<number>()
-        const merged: CastMember[] = []
-        for (const c of base) {
-            if (typeof c.id !== 'number' || seen.has(c.id)) continue
-            seen.add(c.id)
-            merged.push(c)
-        }
-        for (const c of seasonSource) {
-            if (seen.has(c.id)) continue
-            seen.add(c.id)
-            merged.push(c)
-        }
-        return merged.sort((a, b) => {
-            if (a.profile_path && !b.profile_path) return -1
-            if (!a.profile_path && b.profile_path) return 1
-            return 0
-        })
+        return curateCast(base, seasonSource)
     }, [details, seasonCastState])
 
     if (loading) {
@@ -1341,7 +1380,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                         </div>
 
                         {showCast && cast.length > 0 && (
-                            <CastList cast={cast} isInModal={isInModal} />
+                            <CastList cast={cast} isInModal={isInModal} maxItems={isMobile ? 8 : 16} />
                         )}
                     </div>
 
@@ -1417,7 +1456,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                              onClick={(e) => {
                                                 if (isMobile && (e.target as HTMLElement).closest('.detail-page__episode-still')) {
                                                     if (isInModal && id) {
-                                                        useDetailModalStore.getState().open('episode', Number(id), ep.season_number, ep.episode_number)
+                                                        openEpisodeModal(ep.season_number, ep.episode_number)
                                                     } else {
                                                         navigate(`/tv/${id}/season/${ep.season_number}/episode/${ep.episode_number}`)
                                                     }
@@ -1464,7 +1503,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                                 onClick={(e) => {
                                                     e.stopPropagation()
                                                     if (isInModal && id) {
-                                                        useDetailModalStore.getState().open('episode', Number(id), ep.season_number, ep.episode_number)
+                                                        openEpisodeModal(ep.season_number, ep.episode_number)
                                                     } else {
                                                         navigate(`/tv/${id}/season/${ep.season_number}/episode/${ep.episode_number}`)
                                                     }
@@ -1592,7 +1631,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                                                 onClick={(e) => {
                                                     e.stopPropagation()
                                                     if (isInModal && id) {
-                                                        useDetailModalStore.getState().open('episode', Number(id), ep.season_number, ep.episode_number)
+                                                        openEpisodeModal(ep.season_number, ep.episode_number)
                                                     } else {
                                                         navigate(`/tv/${id}/season/${ep.season_number}/episode/${ep.episode_number}`)
                                                     }
