@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { updateLastActive } from './services/profileService'
 import { initializeAuth, useAuthStore } from './stores/useAuthStore'
 import { SearchProvider } from './contexts/SearchContext'
@@ -27,6 +27,18 @@ import DetailOverlay from './components/layout/DetailOverlay'
 import ScrollToTop from './components/layout/ScrollToTop'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import Discover from './pages/Discover'
+import Search from './pages/Search'
+import Movies from './pages/Movies'
+import TVShows from './pages/TVShows'
+import Upcoming from './pages/Upcoming'
+import UpcomingNew from './pages/UpcomingNew'
+import Settings from './pages/Settings'
+import Profile from './pages/Profile'
+import Followers from './pages/Followers'
+import Following from './pages/Following'
+import Statistics from './pages/Statistics'
+import EditProfile from './pages/EditProfile'
 import Credits from './pages/Credits'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
@@ -35,11 +47,26 @@ import MovieDetail from './pages/MovieDetail'
 import TVShowDetail from './pages/TVShowDetail'
 import PersonDetail from './pages/PersonDetail'
 import EpisodeDetail from './pages/EpisodeDetail'
+import Lists from './pages/Lists'
+import ListsDetail from './pages/ListsDetail'
+import ListsEditPage from './pages/ListsEditPage'
+import ListsCreatePage from './pages/ListsCreatePage'
+import MobileTVShows from './pages/MobileTVShows'
+import MobileMovies from './pages/MobileMovies'
+import DetailLayout from './components/layout/DetailLayout'
+import MFA from './pages/MFA'
+import Sessions from './pages/Sessions'
+import AdminSecurity from './pages/AdminSecurity'
 import { useSessionSecurity } from './hooks/useSessionSecurity'
 import { useDailyTVSync } from './hooks/useDailyTVSync'
 import ErrorBoundary from './components/ErrorBoundary'
 import mfaService from './services/mfaService'
 import useDetailModalStore from './stores/detailModalStore'
+
+const LegacyListRedirect: React.FC = () => {
+    const { id } = useParams<{ id: string }>()
+    return <Navigate to={`/ListsDetail/${id}`} replace />
+}
 
 const AppContent: React.FC = () => {
     const location = useLocation()
@@ -47,6 +74,7 @@ const AppContent: React.FC = () => {
     const user = useAuthStore((state) => state.user)
     const loading = useAuthStore((state) => state.loading)
     const approved = useAuthStore((state) => state.approved)
+    const approvalLoading = useAuthStore((state) => state.approvalLoading)
     const isModalOpen = useDetailModalStore((state) => state.isOpen)
     const modalResetKey = useDetailModalStore((state) =>
         state.isOpen ? `${state.type ?? ''}-${state.id ?? ''}` : 'closed'
@@ -407,7 +435,11 @@ const AppContent: React.FC = () => {
         return <div className="detail-page-loading" aria-live="polite">Loading...</div>
     }
 
-    if (user && approved !== true) {
+    if (user && approvalLoading) {
+        return <div className="detail-page-loading" aria-live="polite">Checking account approval...</div>
+    }
+
+    if (user && approved === false) {
         return (
             <main className="main">
                 <div className="auth-layout">
@@ -434,17 +466,45 @@ const AppContent: React.FC = () => {
             <main className={`page-main flex-grow-1 ${hideFooter ? 'page-main--no-footer' : ''}${isModalOpen ? ' is-modal-backdrop-hidden' : ''}`} inert={isModalOpen || undefined}>
                 <ErrorBoundary resetKey={location.pathname}>
                     <Routes>
-                    <Route path="/" element={<Navigate to={user ? defaultRoute : '/login'} replace />} />
+                    <Route path="/" element={user ? <Navigate to={defaultRoute} replace /> : <Login />} />
+                    <Route path="/Discover" element={user ? <Discover key="discover" /> : <Navigate to="/login" replace />} />
+                    <Route path="/Search" element={user ? <Search /> : <Navigate to="/login" replace />} />
+                    <Route path="/Movies" element={user ? <Movies /> : <Navigate to="/login" replace />} />
+                    <Route path="/MobileMovies" element={user ? <MobileMovies /> : <Navigate to="/login" replace />} />
+                    <Route path="/Tvshows" element={user ? <TVShows /> : <Navigate to="/login" replace />} />
+                    <Route path="/MobileTVShows" element={user ? <MobileTVShows /> : <Navigate to="/login" replace />} />
+                    <Route path="/Followers" element={user ? <Followers /> : <Navigate to="/login" replace />} />
+                    <Route path="/Following" element={user ? <Following /> : <Navigate to="/login" replace />} />
+                    <Route path="/Followers/:username" element={user ? <Followers /> : <Navigate to="/login" replace />} />
+                    <Route path="/Following/:username" element={user ? <Following /> : <Navigate to="/login" replace />} />
+                    <Route path="/Statistics" element={user ? <Statistics /> : <Navigate to="/login" replace />} />
+                    <Route path="/Settings" element={user ? <Settings /> : <Navigate to="/login" replace />} />
+                    <Route path="/Settings/:section" element={user ? <Settings /> : <Navigate to="/login" replace />} />
                     <Route path="/login" element={user ? <Navigate to={defaultRoute} replace /> : <Login />} />
                     <Route path="/register" element={user ? <Navigate to={defaultRoute} replace /> : <Register />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/EditProfile" element={user ? <EditProfile /> : <Navigate to="/login" replace />} />
+                    <Route path="/Profile/:username" element={user ? <Profile /> : <Navigate to="/login" replace />} />
+                    <Route path="/Profile" element={user ? <Profile /> : <Navigate to="/login" replace />} />
                     <Route path="/Credits" element={<Credits />} />
-                    <Route path="/Admin" element={user ? <Admin /> : <Navigate to="/login" replace />} />
-                    <Route path="/movie/:id" element={<MovieDetail />} />
-                    <Route path="/tv/:id" element={<TVShowDetail />} />
-                    <Route path="/tv/:id/season/:season/episode/:episode" element={<EpisodeDetail />} />
+                    <Route element={<DetailLayout />}>
+                        <Route path="/movie/:id" element={<MovieDetail />} />
+                        <Route path="/tv/:id" element={<TVShowDetail />} />
+                        <Route path="/tv/:id/season/:season/episode/:episode" element={<EpisodeDetail />} />
+                        <Route path="/Upcoming" element={user ? <Upcoming currentMonth={currentMonth} /> : <Navigate to="/login" replace />} />
+                        <Route path="/UpcomingNew" element={user ? <UpcomingNew /> : <Navigate to="/login" replace />} />
+                    </Route>
                     <Route path="/person/:id" element={<PersonDetail />} />
+                    <Route path="/Lists" element={user ? <Lists /> : <Navigate to="/login" replace />} />
+                    <Route path="/ListsDetail/:id" element={user ? <ListsDetail /> : <Navigate to="/login" replace />} />
+                    <Route path="/Lists/new" element={user ? <ListsCreatePage /> : <Navigate to="/login" replace />} />
+                    <Route path="/ListsEditPage/:id" element={user ? <ListsEditPage /> : <Navigate to="/login" replace />} />
+                    <Route path="/Lists/:id" element={<LegacyListRedirect />} />
+                    <Route path="/Admin" element={<Admin />} />
+                    <Route path="/AdminSecurity" element={user ? <AdminSecurity /> : <Navigate to="/login" replace />} />
+                    <Route path="/MFA" element={user ? <MFA /> : <Navigate to="/login" replace />} />
+                    <Route path="/Sessions" element={user ? <Sessions /> : <Navigate to="/login" replace />} />
                     <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />
                 </Routes>
                 </ErrorBoundary>

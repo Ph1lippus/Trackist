@@ -89,8 +89,20 @@ let zxcvbnInstance: any = null
 
 const getZxcvbn = async () => {
     if (!zxcvbnInstance) {
-        const module = await import('@zxcvbn-ts/core')
-        zxcvbnInstance = module.default || module.ZxcvbnFactory || module
+        const [{ ZxcvbnFactory }, zxcvbnCommonPackage, zxcvbnEnPackage] = await Promise.all([
+            import('@zxcvbn-ts/core'),
+            import('@zxcvbn-ts/language-common'),
+            import('@zxcvbn-ts/language-en'),
+        ])
+        const options = {
+            dictionary: {
+                ...zxcvbnCommonPackage.dictionary,
+                ...zxcvbnEnPackage.dictionary,
+            },
+            graphs: zxcvbnCommonPackage.adjacencyGraphs,
+            translations: zxcvbnEnPackage.translations,
+        }
+        zxcvbnInstance = new ZxcvbnFactory(options)
     }
     return zxcvbnInstance
 }
@@ -138,7 +150,7 @@ export const validatePasswordStrength = async (password: string): Promise<Passwo
     }
     
     const zxcvbn = await getZxcvbn()
-    const result = zxcvbn(password)
+    const result = zxcvbn.check(password)
     
     const feedback: string[] = []
     
@@ -175,8 +187,8 @@ export const validatePasswordStrength = async (password: string): Promise<Passwo
     return {
         score: result.score,
         feedback,
-        crackTime: result.crackTimesSeconds.offlineFastHashing1e10PerSecond.toString(),
-        crackTimeDisplay: result.crackTimesDisplay.offlineFastHashing1e10PerSecond
+        crackTime: result.crackTimes.offlineFastHashingXPerSecond.seconds.toString(),
+        crackTimeDisplay: result.crackTimes.offlineFastHashingXPerSecond.display
     }
 }
 
