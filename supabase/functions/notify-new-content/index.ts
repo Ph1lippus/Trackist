@@ -553,8 +553,11 @@ serve(async (req: Request) => {
             let addedItem: NotifyItem | null = null
 
             if (isPremiere) {
-              const seasonRef = `S${seasonNumber}premiere:${firstDue.air_date}`
-              if (show.last_notified_ref !== seasonRef) {
+              const seasonRef = `S${seasonNumber}premiere:${firstDue.air_date}:${firstDueBucket}`
+              const legacyRef = `S${seasonNumber}premiere:${firstDue.air_date}`
+              const alreadyNotified = show.last_notified_ref === seasonRef ||
+                (firstDueBucket === 'tomorrow' && show.last_notified_ref === legacyRef)
+              if (!alreadyNotified) {
                 const providerStr = formatProviders(show.watch_providers)
                 const bucketLabel = firstDueBucket === 'today' ? 'Premieres today' : 'Coming tomorrow'
                 addedItem = addNotification({
@@ -570,8 +573,11 @@ serve(async (req: Request) => {
             } else if (wantEpisode) {
               if (dueEpisodes.length === 1) {
                 const ep = dueEpisodes[0]
-                const newRef = `S${seasonNumber}E${ep.episode_number}:${ep.air_date}`
-                if (show.last_notified_ref !== newRef) {
+                const newRef = `S${seasonNumber}E${ep.episode_number}:${ep.air_date}:${firstDueBucket}`
+                const legacyRef = `S${seasonNumber}E${ep.episode_number}:${ep.air_date}`
+                const alreadyNotified = show.last_notified_ref === newRef ||
+                  (firstDueBucket === 'tomorrow' && show.last_notified_ref === legacyRef)
+                if (!alreadyNotified) {
                   const providerStr = formatProviders(show.watch_providers)
                   const bucketLabel = firstDueBucket === 'today' ? 'Airing today' : 'Coming tomorrow'
                   addedItem = addNotification({
@@ -586,8 +592,11 @@ serve(async (req: Request) => {
                 }
               } else {
                 const epCount = dueEpisodes.length
-                const seasonRef = `S${seasonNumber}multi:${todayStr}`
-                if (show.last_notified_ref !== seasonRef) {
+                const seasonRef = `S${seasonNumber}multi:${firstDueBucket}:${firstDueBucket === 'today' ? todayStr : tomorrowStr}`
+                const legacyRef = `S${seasonNumber}multi:${todayStr}`
+                const alreadyNotified = show.last_notified_ref === seasonRef ||
+                  (firstDueBucket === 'tomorrow' && show.last_notified_ref === legacyRef)
+                if (!alreadyNotified) {
                   const providerStr = formatProviders(show.watch_providers)
                   const bucketLabel = dueEpisodes.some((episode) => episode.air_date === todayStr) ? 'Airing today' : 'Coming tomorrow'
                   addedItem = addNotification({
@@ -632,10 +641,13 @@ serve(async (req: Request) => {
 
             if (!notifyDate) continue
 
-            const newRef = notifyDate
+            const notificationStage = notifyDate === todayStr ? 'today' : 'tomorrow'
+            const newRef = `${notifyDate}:${notificationStage}`
+            const alreadyNotified = movie.last_movie_notified_ref === newRef ||
+              (notificationStage === 'tomorrow' && movie.last_movie_notified_ref === notifyDate)
             const due = isDueForUserDate(notifyDate, timezone, now, notifyHourSetting)
 
-            if (due && movie.last_movie_notified_ref !== newRef) {
+            if (due && !alreadyNotified) {
               const providerStr = formatProviders(movie.watch_providers)
               const bucketLabel = notifyDate === todayStr ? 'Released today' : 'Coming tomorrow'
               addNotification({
