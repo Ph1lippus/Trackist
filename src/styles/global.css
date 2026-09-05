@@ -5826,8 +5826,10 @@ button:focus-visible {
 .media-card--selected {
     opacity: 1 !important;
     transform: scale(1.02);
-    box-shadow: 0 0 0 2px var(--color-primary), 0 8px 25px rgba(133, 138, 227, 0.2);
     background: rgba(133, 138, 227, 0.08);
+}
+.media-card--selected .media-card__poster {
+    border-color: var(--color-primary);
 }
 
 .media-card__no-poster {
@@ -5963,6 +5965,10 @@ button:focus-visible {
 
     .media-card__poster:hover {
         border-color: transparent;
+    }
+
+    .media-card--selected .media-card__poster {
+        border: 3px solid var(--color-primary) !important;
     }
 
     .media-card__add-icon,

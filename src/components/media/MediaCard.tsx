@@ -125,10 +125,13 @@ const MediaCard: React.FC<MediaCardProps> = ({
 
     const handleCardClick = useCallback(
         (e: React.MouseEvent) => {
-            // Let modifier/middle-clicks keep their default behavior (open the
-            // detail route in a new tab) instead of opening the modal.
             if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return
-            if (selectable) return
+            if (selectable) {
+                e.preventDefault()
+                e.stopPropagation()
+                onSelect?.(item)
+                return
+            }
             if ((e.target as HTMLElement).closest('button')) return
             e.preventDefault()
             const mediaType = item.media_type as 'movie' | 'tv' | 'person'
@@ -136,7 +139,7 @@ const MediaCard: React.FC<MediaCardProps> = ({
                 useDetailModalStore.getState().open(mediaType, item.id)
             }
         },
-        [selectable, item],
+        [selectable, item, onSelect],
     )
     const showAddButton = !compact && onAdd && !listMode && !hideAddButton && showIcons
     const actionIconsVisible = showIcons || forceActionIcons
@@ -150,11 +153,6 @@ const MediaCard: React.FC<MediaCardProps> = ({
     return (
         <article 
             className={`media-card${selected ? ' media-card--selected' : ''}`}
-            onClick={() => {
-                if (selectable && onSelect) {
-                    onSelect(item)
-                }
-            }}
             style={{ cursor: selectable ? 'pointer' : undefined }}
         >
             <Link 
