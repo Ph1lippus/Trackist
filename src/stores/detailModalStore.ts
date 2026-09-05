@@ -11,6 +11,7 @@ interface DetailEntry {
   id: number
   season?: number
   episode?: number
+  backdropUrl?: string | null
 }
 
 interface DetailModalState {
@@ -95,10 +96,17 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
     }
 
     const stack = current.stack
+    const stackWithBackdrop = stack.length > 0
+      ? stack.map((entry, idx) =>
+          idx === stack.length - 1 ? { ...entry, backdropUrl: current.backdropUrl } : entry
+        )
+      : stack
     // Re-opening a detail already somewhere in the stack rewinds to it (avoids
     // duplicate layers that share the same scroll container key).
-    const existing = stack.findIndex((e) => sameEntry(e, type, id, season, episode))
-    const nextStack = existing !== -1 ? stack.slice(0, existing + 1) : [...stack, { type, id, season, episode }]
+    const existing = stackWithBackdrop.findIndex((e) => sameEntry(e, type, id, season, episode))
+    const nextStack = existing !== -1
+      ? stackWithBackdrop.slice(0, existing + 1)
+      : [...stackWithBackdrop, { type, id, season, episode }]
     const top = nextStack[nextStack.length - 1]
 
     set({
@@ -147,7 +155,7 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
         season: prev.season,
         episode: prev.episode,
         stack,
-        backdropUrl: null,
+        backdropUrl: prev.backdropUrl ?? null,
       })
     } else {
       dbg('goBack: last layer -> close')

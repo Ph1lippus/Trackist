@@ -133,6 +133,21 @@ const DetailOverlay: React.FC = () => {
     document.title = getDetailBaseTitle() || document.title
   }, [isOpen])
 
+  // Keep the current top entry's saved backdrop in sync with the global
+  // backdropUrl so that if the user later pops back to this layer, the
+  // correct backdrop is restored.
+  useEffect(() => {
+    if (!isOpen) return
+    const s = useDetailModalStore.getState()
+    if (s.stack.length === 0) return
+    const top = s.stack[s.stack.length - 1]
+    if (top.backdropUrl !== backdropUrl) {
+      const newStack = [...s.stack]
+      newStack[newStack.length - 1] = { ...top, backdropUrl }
+      useDetailModalStore.setState({ stack: newStack })
+    }
+  }, [backdropUrl, isOpen])
+
   if (!isOpen || !type || id == null || stack.length === 0) return null
 
   return (
