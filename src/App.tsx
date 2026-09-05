@@ -63,15 +63,6 @@ import ErrorBoundary from './components/ErrorBoundary'
 import mfaService from './services/mfaService'
 import useDetailModalStore from './stores/detailModalStore'
 
-// Wraps a route element so it renders nothing when the detail modal is open.
-// The modal owns the rendering; the underlying route must stay empty to avoid
-// duplicate detail pages stacking under the overlay.
-const ModalAware = ({ children }: { children: React.ReactNode }) => {
-    const isModalOpen = useDetailModalStore((s) => s.isOpen)
-    if (isModalOpen) return null
-    return <>{children}</>
-}
-
 // Legacy redirect component for /Lists/:id -> /ListsDetail/:id
 const LegacyListRedirect: React.FC = () => {
     const { id } = useParams<{ id: string }>()
@@ -440,13 +431,13 @@ const AppContent: React.FC = () => {
                     <Route path="/Profile/:username" element={user ? <Profile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile" element={user ? <Profile /> : <Navigate to="/login" replace />} />
                     <Route element={<DetailLayout />}>
-                        <Route path="/movie/:id" element={<ModalAware><MovieDetail /></ModalAware>} />
-                        <Route path="/tv/:id" element={<ModalAware><TVShowDetail /></ModalAware>} />
-                        <Route path="/tv/:id/season/:season/episode/:episode" element={<ModalAware><EpisodeDetail /></ModalAware>} />
+                        <Route path="/movie/:id" element={<MovieDetail />} />
+                        <Route path="/tv/:id" element={<TVShowDetail />} />
+                        <Route path="/tv/:id/season/:season/episode/:episode" element={<EpisodeDetail />} />
                         <Route path="/Upcoming" element={user ? <Upcoming currentMonth={currentMonth} /> : <Navigate to="/login" replace />} />
                         <Route path="/UpcomingNew" element={user ? <UpcomingNew /> : <Navigate to="/login" replace />} />
                     </Route>
-                    <Route path="/person/:id" element={<ModalAware><PersonDetail /></ModalAware>} />
+                    <Route path="/person/:id" element={<PersonDetail />} />
                     <Route path="/Lists" element={user ? <Lists /> : <Navigate to="/login" replace />} />
                     <Route path="/ListsDetail/:id" element={user ? <ListsDetail /> : <Navigate to="/login" replace />} />
                     <Route path="/Lists/new" element={user ? <ListsCreatePage /> : <Navigate to="/login" replace />} />

@@ -664,8 +664,12 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                             className="navbar-back-btn"
                             onClick={() => {
                                 if (detailModalOpen) {
-                                    useDetailModalStore.getState().close();
-                                    window.history.back();
+                                    // Pop exactly one layer of the modal stack
+                                    // in app state (no browser history involved,
+                                    // so one press can never close the whole
+                                    // stack). Device/browser Back still works
+                                    // through DetailOverlay's popstate handler.
+                                    useDetailModalStore.getState().back();
                                 } else if (isSearchPage) {
                                     clear();
                                     navigate('/Discover', { replace: true });
