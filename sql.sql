@@ -102,6 +102,7 @@ CREATE TABLE public.profiles (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   role text NOT NULL DEFAULT 'user'::text,
+  approved boolean NOT NULL DEFAULT false,
   show_stremio_button boolean NOT NULL DEFAULT false,
   show_letterbox_button boolean NOT NULL DEFAULT false,
   show_tmdb_button boolean NOT NULL DEFAULT false,

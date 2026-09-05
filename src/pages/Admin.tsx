@@ -15,6 +15,7 @@ interface ProfileRow {
     role: string | null
     created_at: string
     updated_at: string
+    approved: boolean
 }
 
 interface AdminStats {
@@ -195,7 +196,7 @@ const Admin: React.FC = () => {
                 const profilesData = await fetchAll<ProfileRow>(
                     supabase
                         .from('profiles')
-                        .select('id, display_name, avatar_url, role, created_at, updated_at')
+                        .select('id, display_name, avatar_url, role, approved, created_at, updated_at')
                         .order('created_at', { ascending: false })
                 )
 
@@ -385,6 +386,21 @@ const Admin: React.FC = () => {
             setRoleLoading(false)
             setRoleConfirm(null)
         }
+    }
+
+    const handleApprovalChange = async (userId: string, approved: boolean) => {
+        const { error } = await supabase
+            .from('profiles')
+            .update({ approved })
+            .eq('id', userId)
+
+        if (error) {
+            console.error('Failed to update account approval:', error)
+            alert('Failed to update account approval. Please try again.')
+            return
+        }
+
+        setProfiles(prev => prev.map(profile => profile.id === userId ? { ...profile, approved } : profile))
     }
 
     const handleEditUser = async () => {
@@ -714,6 +730,7 @@ const Admin: React.FC = () => {
                                                 <span className={`admin-role-badge admin-role-badge--${profile.role || 'user'}`}>
                                                     {profile.role || 'user'}
                                                 </span>
+                                                {!profile.approved && <span className="admin-role-badge admin-role-badge--pending">Pending</span>}
                                             </td>
                                             <td>{formatDate(profile.created_at)}</td>
                                             <td>{formatDate(profile.updated_at)}</td>
@@ -730,6 +747,13 @@ const Admin: React.FC = () => {
                                                             title="Edit user"
                                                         >
                                                             <i className="fas fa-pen"></i>
+                                                        </button>
+                                                        <button
+                                                            className="admin-action-btn"
+                                                            onClick={() => void handleApprovalChange(profile.id, !profile.approved)}
+                                                            title={profile.approved ? 'Lock account' : 'Approve account'}
+                                                        >
+                                                            <i className={`fas ${profile.approved ? 'fa-lock' : 'fa-check'}`}></i>
                                                         </button>
                                                         <button
                                                             className="admin-action-btn"
@@ -784,6 +808,7 @@ const Admin: React.FC = () => {
                                         <span className={`admin-role-badge admin-role-badge--${profile.role || 'user'}`}>
                                             {profile.role || 'user'}
                                         </span>
+                                        {!profile.approved && <span className="admin-role-badge admin-role-badge--pending">Pending</span>}
                                     </div>
                                     {avatarMessage?.userId === profile.id && (
                                         <div style={{
@@ -806,6 +831,13 @@ const Admin: React.FC = () => {
                                     </div>
                                     {profile.id !== globalUser.id && (
                                         <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                            <button
+                                                className="admin-user-card__action"
+                                                onClick={() => void handleApprovalChange(profile.id, !profile.approved)}
+                                            >
+                                                <i className={`fas ${profile.approved ? 'fa-lock' : 'fa-check'}`}></i>
+                                                {profile.approved ? 'Lock account' : 'Approve account'}
+                                            </button>
                                             <button
                                                 className="admin-user-card__action"
                                                 onClick={() => setEditUserConfirm({

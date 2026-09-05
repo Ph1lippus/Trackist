@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { updateLastActive } from './services/profileService'
 import { initializeAuth, useAuthStore } from './stores/useAuthStore'
 import { SearchProvider } from './contexts/SearchContext'
@@ -64,7 +64,6 @@ import ErrorBoundary from './components/ErrorBoundary'
 import mfaService from './services/mfaService'
 import useDetailModalStore from './stores/detailModalStore'
 
-// Legacy redirect component for /Lists/:id -> /ListsDetail/:id
 const LegacyListRedirect: React.FC = () => {
     const { id } = useParams<{ id: string }>()
     return <Navigate to={`/ListsDetail/${id}`} replace />
@@ -75,6 +74,7 @@ const AppContent: React.FC = () => {
     const navigate = useNavigate()
     const user = useAuthStore((state) => state.user)
     const loading = useAuthStore((state) => state.loading)
+    const approved = useAuthStore((state) => state.approved)
     const isModalOpen = useDetailModalStore((state) => state.isOpen)
     const modalResetKey = useDetailModalStore((state) =>
         state.isOpen ? `${state.type ?? ''}-${state.id ?? ''}` : 'closed'
@@ -435,6 +435,22 @@ const AppContent: React.FC = () => {
         return <div className="detail-page-loading" aria-live="polite">Loading...</div>
     }
 
+    if (user && approved !== true) {
+        return (
+            <main className="main">
+                <div className="auth-layout">
+                    <div className="auth-card approval-pending-card">
+                        <h2 className="auth-title">Account Pending Approval</h2>
+                        <p className="auth-text">An administrator needs to approve your account before you can use Trackist.</p>
+                        <button className="auth-submit-btn" onClick={() => void supabase.auth.signOut()}>
+                            Sign out
+                        </button>
+                    </div>
+                </div>
+            </main>
+        )
+    }
+
     return (
         <div className="d-flex flex-column min-vh-100">
             <Navbar 
@@ -460,11 +476,6 @@ const AppContent: React.FC = () => {
                     <Route path="/Statistics" element={user ? <Statistics /> : <Navigate to="/login" replace />} />
                     <Route path="/Settings" element={user ? <Settings /> : <Navigate to="/login" replace />} />
                     <Route path="/Settings/:section" element={user ? <Settings /> : <Navigate to="/login" replace />} />
-                    <Route path="/Admin" element={<Admin />} />
-                    <Route path="/AdminSecurity" element={user ? <AdminSecurity /> : <Navigate to="/login" replace />} />
-                    <Route path="/MFA" element={user ? <MFA /> : <Navigate to="/login" replace />} />
-                    <Route path="/Sessions" element={user ? <Sessions /> : <Navigate to="/login" replace />} />
-                    <Route path="/Credits" element={<Credits />} />
                     <Route path="/login" element={user ? <Navigate to={defaultRoute} replace /> : <Login />} />
                     <Route path="/register" element={user ? <Navigate to={defaultRoute} replace /> : <Register />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
@@ -472,6 +483,7 @@ const AppContent: React.FC = () => {
                     <Route path="/EditProfile" element={user ? <EditProfile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile/:username" element={user ? <Profile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile" element={user ? <Profile /> : <Navigate to="/login" replace />} />
+                    <Route path="/Credits" element={<Credits />} />
                     <Route element={<DetailLayout />}>
                         <Route path="/movie/:id" element={<MovieDetail />} />
                         <Route path="/tv/:id" element={<TVShowDetail />} />
@@ -484,9 +496,11 @@ const AppContent: React.FC = () => {
                     <Route path="/ListsDetail/:id" element={user ? <ListsDetail /> : <Navigate to="/login" replace />} />
                     <Route path="/Lists/new" element={user ? <ListsCreatePage /> : <Navigate to="/login" replace />} />
                     <Route path="/ListsEditPage/:id" element={user ? <ListsEditPage /> : <Navigate to="/login" replace />} />
-                    {/* Legacy redirects for old URLs */}
-                    <Route path="/Lists/new" element={<Navigate to="/Lists/new" replace />} />
                     <Route path="/Lists/:id" element={<LegacyListRedirect />} />
+                    <Route path="/Admin" element={<Admin />} />
+                    <Route path="/AdminSecurity" element={user ? <AdminSecurity /> : <Navigate to="/login" replace />} />
+                    <Route path="/MFA" element={user ? <MFA /> : <Navigate to="/login" replace />} />
+                    <Route path="/Sessions" element={user ? <Sessions /> : <Navigate to="/login" replace />} />
                     <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />
                 </Routes>
                 </ErrorBoundary>

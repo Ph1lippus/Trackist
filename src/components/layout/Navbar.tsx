@@ -129,7 +129,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const isSearchPage = location.pathname === '/Search';
     const showBackButton = Boolean(isDetailPage || isListDetailPage || isListEditPage || isSettingsSubPage || detailModalOpen || isSearchPage);
     
-    const showSearchBar = !detailModalOpen && !['/login', '/register'].includes(location.pathname) && 
+    const showSearchBar = !detailModalOpen && user && !['/login', '/register'].includes(location.pathname) && 
         (['/Discover', '/Movies', '/Tvshows', '/', '/Finished', '/Search', '/Followers', '/Following', '/Lists', '/MobileTVShows', '/MobileMovies'].includes(location.pathname) || location.pathname.startsWith('/ListsDetail/') || location.pathname.startsWith('/ListsEditPage/') || location.pathname.startsWith('/Followers/') || location.pathname.startsWith('/Following/') || location.pathname === '/MobileTVShows' || location.pathname === '/MobileMovies');
     
     const showCalendarHeader = !detailModalOpen && location.pathname === '/Upcoming' && currentMonth && navigateMonth && canGoBack;

@@ -9,10 +9,13 @@ const Home: React.FC = () => {
         <main className="main">
             <section className="hero">
                 <div className="container text-center">
-                    <h1 className="hero__title">Track what you watch</h1>
+                    <h1 className="hero__title">Track1st</h1>
                     <hr className="hero-divider" />
-                    <p className="hero__subtitle">Movies. TV shows. All in one place.</p>
-                    <Link to="/Register" className="btn btn-primary btn-lg">Get Started</Link>
+                    <p className="hero__subtitle">Your personal media tracker. Sign in to get started.</p>
+                    <div className="hero__auth-links">
+                        <Link to="/login" className="btn btn-primary btn-lg">Login</Link>
+                        <Link to="/register" className="btn btn-outline-primary btn-lg">Register</Link>
+                    </div>
                 </div>
             </section>
         </main>

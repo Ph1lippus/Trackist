@@ -5459,6 +5459,13 @@ html.native-app *::-webkit-scrollbar {
     text-align: center;
 }
 
+.hero__auth-links {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
 .btn:focus,
 .btn:focus-visible,
 .form-control:focus,
@@ -8155,6 +8162,8 @@ html.native-app .detail-overlay .detail-page__right {
     padding: 0.25rem;
     width: fit-content;
     margin: 0 auto;
+    max-width: 100%;
+    overflow-x: auto;
 }
 
 .admin-tab {
@@ -8242,6 +8251,18 @@ html.native-app .detail-overlay .detail-page__right {
     background: rgba(255, 255, 255, 0.05);
     color: rgba(255, 255, 255, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.admin-role-badge--pending {
+    background: rgba(255, 194, 92, 0.1);
+    color: #ffc25c;
+    border: 1px solid rgba(255, 194, 92, 0.2);
+}
+
+.approval-pending-card {
+    text-align: center;
+    max-width: 28rem;
+    margin: 0 auto;
 }
 
 .admin-action-btn {
