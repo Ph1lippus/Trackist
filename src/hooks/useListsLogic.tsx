@@ -499,7 +499,7 @@ export const useListsLogic = (): UseListsLogicResult => {
     const handleAddToList = useCallback(async (item: TMDBResult) => {
         if (!selectedList) return
         const { error } = await addToList(selectedList.id, {
-            media_type: item.media_type as 'movie' | 'tv' | 'anime',
+            media_type: item.media_type as 'movie' | 'tv',
             tmdb_id: item.id,
             title: item.title || item.name || 'Untitled',
             poster_path: item.poster_path || undefined,
@@ -537,7 +537,7 @@ export const useListsLogic = (): UseListsLogicResult => {
             // Mark as watched
             if (watchlistIds.has(pendingWatchItem.id)) {
                 // Update existing watchlist item
-                const isTv = pendingWatchItem.media_type === 'tv' || pendingWatchItem.media_type === 'anime'
+                const isTv = pendingWatchItem.media_type === 'tv'
                 let showEnded = true
                 if (isTv) {
                     const details = await getTVDetails(pendingWatchItem.id)
@@ -553,7 +553,7 @@ export const useListsLogic = (): UseListsLogicResult => {
                     .eq('user_id', user.id).eq('tmdb_id', pendingWatchItem.id)
 
                 // If it's a TV show, mark all episodes as watched
-                if (pendingWatchItem.media_type === 'tv' || pendingWatchItem.media_type === 'anime') {
+                if (pendingWatchItem.media_type === 'tv') {
                     const { data: watchlistItem } = await supabase
                         .from('watchlist')
                         .select('id, tmdb_id')
@@ -595,7 +595,7 @@ export const useListsLogic = (): UseListsLogicResult => {
                     completed_at: new Date().toISOString()
                 }
 
-                if (mediaType === 'tv' || mediaType === 'anime') {
+                if (mediaType === 'tv') {
                     // For TV shows, include season/episode info
                     Object.assign(watchlistData, {
                         total_seasons: pendingWatchItem.number_of_seasons || 1,
@@ -610,7 +610,7 @@ export const useListsLogic = (): UseListsLogicResult => {
                 setWatchlistIds(prev => new Set([...prev, pendingWatchItem.id]))
 
                 // If it's a TV show, fetch and mark all episodes as watched
-                if ((mediaType === 'tv' || mediaType === 'anime') && newWatchlistItem) {
+                if ((mediaType === 'tv') && newWatchlistItem) {
                     // Fetch all episodes from TMDB
                     try {
                         const showDetails = await getTVDetails(pendingWatchItem.id)
@@ -684,7 +684,7 @@ export const useListsLogic = (): UseListsLogicResult => {
                 .eq('user_id', user.id).eq('tmdb_id', pendingWatchItem.id)
 
             // If it's a TV show, unmark all episodes as watched
-            if (pendingWatchItem.media_type === 'tv' || pendingWatchItem.media_type === 'anime') {
+            if (pendingWatchItem.media_type === 'tv') {
                 const { data: watchlistItem } = await supabase
                     .from('watchlist')
                     .select('id')
@@ -842,7 +842,7 @@ export const useListsLogic = (): UseListsLogicResult => {
         if (activeTab === 'movie') {
             items = listItems.filter(item => item.media_type === 'movie')
         } else if (activeTab === 'tv') {
-            items = listItems.filter(item => item.media_type === 'tv' || item.media_type === 'anime')
+            items = listItems.filter(item => item.media_type === 'tv')
         }
         // Exclude watched items while preserving the saved list position.
         return items.filter(item => !watchedListItems.has(item.tmdb_id))
@@ -854,7 +854,7 @@ export const useListsLogic = (): UseListsLogicResult => {
         if (activeTab === 'movie') {
             items = items.filter(item => item.media_type === 'movie')
         } else if (activeTab === 'tv') {
-            items = items.filter(item => item.media_type === 'tv' || item.media_type === 'anime')
+            items = items.filter(item => item.media_type === 'tv')
         }
         return items
     }, [listItems, activeTab, watchedListItems])

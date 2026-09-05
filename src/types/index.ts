@@ -2,7 +2,7 @@ export interface TMDBResult {
     id: number
     title?: string
     name?: string
-    media_type?: 'movie' | 'tv' | 'person' | 'anime'
+    media_type?: 'movie' | 'tv' | 'person'
     poster_path?: string | null
     backdrop_path?: string | null
     profile_path?: string | null
@@ -78,7 +78,7 @@ export interface TMDBResult {
 export interface WatchlistItem {
     id: string
     user_id: string
-    media_type: 'movie' | 'tv' | 'anime'
+    media_type: 'movie' | 'tv'
     tmdb_id?: number
     anilist_id?: number
     title: string
@@ -153,7 +153,7 @@ export interface UserList {
 export interface ListItem {
     id: string
     list_id: string
-    media_type: 'movie' | 'tv' | 'anime'
+    media_type: 'movie' | 'tv'
     tmdb_id: number
     anilist_id?: number
     title: string

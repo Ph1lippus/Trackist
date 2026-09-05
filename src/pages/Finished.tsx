@@ -47,7 +47,7 @@ const Finished: React.FC = () => {
         const dateB = new Date(b.completed_at || b.updated_at || 0)
         return dateB.getTime() - dateA.getTime()
     }), [filteredItems])
-    const finishedTVShows = useMemo(() => filteredItems.filter(item => (item.media_type === 'tv' || item.media_type === 'anime') && item.status !== 'dropped').sort((a, b) => {
+    const finishedTVShows = useMemo(() => filteredItems.filter(item => item.media_type === 'tv' && item.status !== 'dropped').sort((a, b) => {
         const dateA = new Date(a.completed_at || a.updated_at || 0)
         const dateB = new Date(b.completed_at || b.updated_at || 0)
         return dateB.getTime() - dateA.getTime()
@@ -67,7 +67,7 @@ const Finished: React.FC = () => {
         id: item.tmdb_id as number,
         title: item.title,
         poster_path: item.poster_path,
-        media_type: item.media_type === 'anime' ? 'tv' : item.media_type
+        media_type: item.media_type
     })
 
     const handleUnwatchMovie = async (item: WatchlistItem) => {
@@ -177,7 +177,7 @@ const Finished: React.FC = () => {
                                             onSelect={() => toggleSelection(item.id)}
                                             isInWatchlist={true}
                                             onAdd={selectionMode ? undefined : () => {}}
-                                            onMarkUnwatched={selectionMode ? undefined : () => setUnwatchModal({ isOpen: true, item, isTV: item.media_type === 'tv' || item.media_type === 'anime' })}
+                                            onMarkUnwatched={selectionMode ? undefined : () => setUnwatchModal({ isOpen: true, item, isTV: item.media_type === 'tv' })}
                                             showIcons={showIcons}
                                         />
                                     </div>
@@ -206,7 +206,7 @@ const Finished: React.FC = () => {
                                             onSelect={() => toggleSelection(item.id)}
                                             isInWatchlist={true}
                                             onAdd={selectionMode ? undefined : () => {}}
-                                            onMarkUnwatched={selectionMode ? undefined : () => setUnwatchModal({ isOpen: true, item, isTV: item.media_type === 'tv' || item.media_type === 'anime' })}
+                                            onMarkUnwatched={selectionMode ? undefined : () => setUnwatchModal({ isOpen: true, item, isTV: item.media_type === 'tv' })}
                                             showIcons={showIcons}
                                         />
                                     </div>

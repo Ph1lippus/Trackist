@@ -433,7 +433,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
 
                 await Promise.all(refreshedIds.map(id => useLibraryStore.getState().refreshItem(id)));
             } else if (isFinishedPage) {
-                const selectedTVShows = finished.filter(item => (item.media_type === 'tv' || item.media_type === 'anime') && finishedSelectedIds.has(item.id));
+                const selectedTVShows = finished.filter(item => item.media_type === 'tv' && finishedSelectedIds.has(item.id));
                 const selectedMovies = finished.filter(item => item.media_type === 'movie' && finishedSelectedIds.has(item.id));
 
                 for (const item of selectedTVShows) {

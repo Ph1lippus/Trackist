@@ -1415,7 +1415,7 @@ export const fixAllProgress = async (
         for (const item of allItems) {
             // For TV shows: check ALL shows - recalculateProgress will detect
             // if current_season, current_episode, or status needs fixing
-            if (item.media_type === 'tv' || item.media_type === 'anime') {
+            if (item.media_type === 'tv') {
                 itemsToFix.push(item)
             } 
             // For movies: fix if status is 'watching' (should be 'planning' or 'completed')
@@ -1444,7 +1444,7 @@ export const fixAllProgress = async (
             onProgress?.({ ...progress })
 
             try {
-                if (item.media_type === 'tv' || item.media_type === 'anime') {
+                if (item.media_type === 'tv') {
                     // For TV shows, recalculate progress
                     await cleanupDuplicateEpisodes(item.id)
                     const result = await recalculateProgress(item.id)

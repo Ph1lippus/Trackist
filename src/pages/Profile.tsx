@@ -308,7 +308,7 @@ const ProfilePage: React.FC = () => {
             const newItem: WatchlistItem = {
                 id: crypto.randomUUID(),
                 user_id: currentUser.id,
-                media_type: tmdbItem.media_type === 'person' ? 'movie' : (tmdbItem.media_type as 'movie' | 'tv' | 'anime'),
+                media_type: tmdbItem.media_type === 'person' ? 'movie' : (tmdbItem.media_type as 'movie' | 'tv'),
                 tmdb_id: tmdbId,
                 title: tmdbItem.title || tmdbItem.name || '',
                 poster_path: tmdbItem.poster_path || undefined,
@@ -326,7 +326,7 @@ const ProfilePage: React.FC = () => {
     }
 
     const watchingTVShows = useMemo(() => watchlistItems.filter(item =>
-        (item.media_type === 'tv' || item.media_type === 'anime') && item.status === 'watching'
+        item.media_type === 'tv' && item.status === 'watching'
     ), [watchlistItems])
 
     const moviesToWatch = useMemo(() => watchlistItems.filter(item =>
@@ -510,7 +510,7 @@ const ProfilePage: React.FC = () => {
                                                 id: item.tmdb_id as number,
                                                 title: item.title,
                                                 poster_path: item.poster_path,
-                                                media_type: item.media_type === 'anime' ? 'tv' : item.media_type
+                                                media_type: item.media_type
                                             }
                                             return (
                                                 <MediaCard
@@ -598,7 +598,7 @@ const ProfilePage: React.FC = () => {
                                                 id: item.tmdb_id as number,
                                                 title: item.title,
                                                 poster_path: item.poster_path,
-                                                media_type: item.media_type === 'anime' ? 'tv' : item.media_type
+                                                media_type: item.media_type
                                             }
                                             return (
                                                 <MediaCard
@@ -640,7 +640,7 @@ const ProfilePage: React.FC = () => {
                                                 id: item.tmdb_id as number,
                                                 title: item.title,
                                                 poster_path: item.poster_path,
-                                                media_type: item.media_type === 'anime' ? 'tv' : item.media_type
+                                                media_type: item.media_type
                                             }
                                             return (
                                                 <MediaCard

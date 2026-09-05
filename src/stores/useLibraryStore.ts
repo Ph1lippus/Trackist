@@ -109,7 +109,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                             if (currentIds.size !== newIds.size || !Array.from(currentIds).every(id => newIds.has(id))) {
                                 set({
                                     allItems: freshItems,
-                                    tvShows: freshItems.filter(i => i.media_type === 'tv' || i.media_type === 'anime').map(i => ({ ...i, total_episodes_watched: i.watched_episodes_count ?? 0 } as TVShowWithProgress)),
+                                    tvShows: freshItems.filter(i => i.media_type === 'tv').map(i => ({ ...i, total_episodes_watched: i.watched_episodes_count ?? 0 } as TVShowWithProgress)),
                                     movies: freshItems.filter(i => i.media_type === 'movie'),
                                     finished: freshItems.filter(i => i.status === 'completed' || i.status === 'caught_up' || i.status === 'dropped'),
                                     watchlistIds: computeWatchlistIds(freshItems),
@@ -173,7 +173,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
                 }
                 
                 // Categorize by media type
-                if (item.media_type === 'tv' || item.media_type === 'anime') {
+                if (item.media_type === 'tv') {
                     tvShows.push({
                         ...item,
                         total_episodes_watched: item.watched_episodes_count ?? 0
@@ -581,7 +581,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
 
         // For TV shows, fetch total episodes and seasons from TMDB
         let enhancedItem = { ...item }
-        if ((item.media_type === 'tv' || item.media_type === 'anime') && item.tmdb_id) {
+        if ((item.media_type === 'tv') && item.tmdb_id) {
             try {
                 const { getTVDetails } = await import('../services/tmdbService')
                 const { countReleasedEpisodesAcrossSeasons } = await import('../services/watchlistService')
@@ -623,7 +623,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
         let newMovies = state.movies
         let newFinished = state.finished
 
-        if (enhancedItem.media_type === 'tv' || enhancedItem.media_type === 'anime') {
+        if (enhancedItem.media_type === 'tv') {
             newTvShows = [{
                 ...enhancedItem,
                 total_episodes_watched: enhancedItem.watched_episodes_count ?? 0
@@ -717,7 +717,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             // For TV shows, fetch total episodes and seasons from TMDB if missing
             let enhancedData = { ...data }
             let needsDbUpdate = false
-            if ((data.media_type === 'tv' || data.media_type === 'anime') && data.tmdb_id && (!data.total_episodes || !data.total_seasons)) {
+            if ((data.media_type === 'tv') && data.tmdb_id && (!data.total_episodes || !data.total_seasons)) {
                 try {
                     const { getTVDetails } = await import('../services/tmdbService')
                     const { countReleasedEpisodesAcrossSeasons } = await import('../services/watchlistService')
@@ -763,7 +763,7 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             // Re-categorize based on new status
             const newAllItems = state.allItems.map(item => item.id === id ? enhancedData : item)
 
-            const newTvShows = newAllItems.filter(item => item.media_type === 'tv' || item.media_type === 'anime').map(item => ({
+            const newTvShows = newAllItems.filter(item => item.media_type === 'tv').map(item => ({
                 ...item,
                 total_episodes_watched: (item as TVShowWithProgress).watched_episodes_count ?? 0
             })) as TVShowWithProgress[]

@@ -145,7 +145,7 @@ serve(async (req: Request) => {
 
     const todayStr = getUTCDateString(new Date())
 
-    // Fetch the complete user watchlist in pages. Anime is intentionally not included.
+    // Fetch the complete user watchlist in pages.
     const [tvShows, movies] = await Promise.all([
       fetchAllRows<TVShowRow>(
         supabase

@@ -14,7 +14,7 @@ export default defineConfig({
       manifest: {
         name: 'Track1st',
         short_name: 'Track1st',
-        description: 'Track your movies, TV shows, and anime — all in one place.',
+        description: 'Track your movies and TV shows — all in one place.',
         theme_color: '#12121c',
         background_color: '#050505',
         display: 'standalone',

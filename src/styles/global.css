@@ -6415,7 +6415,7 @@ html.native-app .detail-overlay .detail-page__right {
     }
 }
 
-/* ===== Media Detail View (TV/Anime episode tracking modal) ===== */
+/* ===== Media Detail View (TV episode tracking modal) ===== */
 .media-detail-view {
     background: rgba(15, 15, 20, 0.98);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -7441,10 +7441,6 @@ html.native-app .detail-overlay .detail-page__right {
     background: linear-gradient(90deg, #0096ff, #4db8ff);
 }
 
-.breakdown-bar__fill--anime {
-    background: linear-gradient(90deg, #ff6b6b, #ff9a9a);
-}
-
 .breakdown-bar__fill--completed {
     background: linear-gradient(90deg, var(--color-mint), #8bffc4);
 }
@@ -7799,11 +7795,6 @@ html.native-app .detail-overlay .detail-page__right {
 .stats-media__fill--tv {
     background: linear-gradient(90deg, #0096ff, #4db8ff);
     box-shadow: 0 0 10px rgba(0, 150, 255, 0.3);
-}
-
-.stats-media__fill--anime {
-    background: linear-gradient(90deg, #ff6b6b, #ff9a9a);
-    box-shadow: 0 0 10px rgba(255, 107, 107, 0.3);
 }
 
 .stats-media__sub {

@@ -69,7 +69,7 @@ const ProgressFixModal: React.FC<ProgressFixModalProps> = ({ isOpen, onClose, on
                             This may take a few moments. The operation cannot be undone once started.
                         </p>
                         <p className="progress-fix-modal-submessage">
-                            <strong>For TV Shows & Anime:</strong>
+                            <strong>For TV Shows:</strong>
                             <br />
                             • Shows with <strong>incorrect current season</strong> will be recalculated from watched episodes.
                             <br />

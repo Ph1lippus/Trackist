@@ -1,15 +1,15 @@
 # Trackist
 
-Track your movies, TV shows, and anime — all in one place. A modern, privacy-focused watchlist app built with React, TypeScript, and Supabase.
+Track your movies and TV shows — all in one place. A modern, privacy-focused watchlist app built with React, TypeScript, and Supabase.
 
 **This product uses the TMDB API but is not endorsed or certified by TMDB.**
 
 ## Features
 
 - **User Authentication** — Secure sign-up, login, and password recovery via Supabase Auth.
-- **Search** — Discover movies, TV shows, and anime by title, plus browse cast and crew details.
+- **Search** — Discover movies and TV shows by title, plus browse cast and crew details.
 - **Watchlists** — Personal lists with public/private sharing. Mark shows/movies as planning, watching, completed, or caught up.
-- **Episode Tracking** — For TV shows and anime, mark individual episodes as watched, unwatch them, and see your progress at a glance.
+- **Episode Tracking** — For TV shows, mark individual episodes as watched, unwatch them, and see your progress at a glance.
 - **Statistics** — Visual insights into your watch history, including runtime totals, status breakdowns, and genre trends.
 - **Responsive Design** — Dedicated mobile UI for on-the-go tracking, with a native-app-like experience.
 - **PWA Support** — Install as a Progressive Web App and use it offline (data syncs on reconnect).
@@ -46,7 +46,7 @@ Track your movies, TV shows, and anime — all in one place. A modern, privacy-f
 | **Frontend** | React 19, TypeScript, Vite, React Router v7, Zustand (state management) |
 | **UI** | Bootstrap 5, Font Awesome, custom CSS (9,500+ lines) |
 | **Backend & Database** | Supabase (PostgreSQL, Auth, Realtime) |
-| **APIs** | [TMDB](https://www.themoviedb.org/documentation/api) (movies/TV/anime data) |
+| **APIs** | [TMDB](https://www.themoviedb.org/documentation/api) (movies/TV data) |
 | **Performance** | React Virtuoso (virtualized lists), SWR-style caching with 6-hour TTL |
 | **Deployment** | Vercel (with Speed Insights & Analytics) |
 | **PWA** | vite-plugin-pwa (offline support, install prompt) |
@@ -103,8 +103,8 @@ npm run dev
 
 The project uses three main tables in Supabase:
 
-- **`watchlist`** — Main table storing movies, TV shows, and anime entries with status, progress, and metadata.
-- **`watchlist_episodes`** — Stores individual watched episodes for TV shows and anime, enabling per-episode tracking.
+- **`watchlist`** — Main table storing movies and TV shows with status, progress, and metadata.
+- **`watchlist_episodes`** — Stores individual watched episodes for TV shows, enabling per-episode tracking.
 - **`profiles`** — User profile data (avatar, bio, preferences).
 
 The full schema is in [`sql.sql`](sql.sql).

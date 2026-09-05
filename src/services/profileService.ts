@@ -322,7 +322,7 @@ export const updateList = async (listId: string, updates: { title?: string; desc
 }
 
 export const addToList = async (listId: string, item: {
-    media_type: 'movie' | 'tv' | 'anime'
+    media_type: 'movie' | 'tv'
     tmdb_id: number
     title: string
     poster_path?: string

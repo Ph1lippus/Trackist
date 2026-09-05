@@ -123,7 +123,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         const newItem: WatchlistItem = {
             id: crypto.randomUUID(),
             user_id: user.id,
-            media_type: (item?.media_type as 'movie' | 'tv' | 'anime') || 'movie',
+            media_type: (item?.media_type as 'movie' | 'tv') || 'movie',
             tmdb_id: id,
             title: item?.title || item?.name || '',
             poster_path: item?.poster_path || undefined,

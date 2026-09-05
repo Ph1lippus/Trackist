@@ -130,7 +130,7 @@ const syncCaughtUpShow = async (show: SyncShow): Promise<void> => {
 }
 
 /**
- * One-time-per-UTC-day background sweep over the user's TV/anime watchlist.
+ * One-time-per-UTC-day background sweep over the user's TV watchlist.
  *
  * - Refreshes the "episodes left" badge for `watching` shows (recalcs the
  *   released-episode count).
@@ -153,7 +153,7 @@ export const useDailyTVSync = (userId: string | null) => {
         running.current = true
 
         const sweep = async () => {
-            // Fetch the user's TV/anime shows once; filter by our scopes on the client.
+            // Fetch the user's TV shows once; filter by our scopes on the client.
             const allShows: SyncShow[] = []
             let hasMore = true
             let page = 0
@@ -163,7 +163,7 @@ export const useDailyTVSync = (userId: string | null) => {
                     .from('watchlist')
                     .select('id, tmdb_id, status, last_season_check')
                     .eq('user_id', userId)
-                    .in('media_type', ['tv', 'anime'])
+                    .in('media_type', ['tv'])
                     .range(page * pageSize, (page + 1) * pageSize - 1)
 
                 if (error) {

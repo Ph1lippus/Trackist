@@ -183,7 +183,7 @@ const ListsEditPage: React.FC = () => {
                                 className={`lists-page__tab ${activeTab === 'tv' ? 'lists-page__tab--active' : ''}`}
                                 onClick={() => setActiveTab('tv')}
                             >
-                                <i className="fa-solid fa-tv"></i> TV Shows ({listItems.filter(i => i.media_type === 'tv' || i.media_type === 'anime').length})
+                                <i className="fa-solid fa-tv"></i> TV Shows ({listItems.filter(i => i.media_type === 'tv').length})
                             </button>
                         </div>
                     </div>

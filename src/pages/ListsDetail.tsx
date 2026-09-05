@@ -108,7 +108,7 @@ const ListsDetail: React.FC = () => {
                                 className={`lists-page__tab ${activeTab === 'tv' ? 'lists-page__tab--active' : ''}`}
                                 onClick={() => setActiveTab('tv')}
                             >
-                                TV Shows ({listItems.filter(i => (i.media_type === 'tv' || i.media_type === 'anime') && !watchedListItems.has(i.tmdb_id)).length})
+                                TV Shows ({listItems.filter(i => i.media_type === 'tv' && !watchedListItems.has(i.tmdb_id)).length})
                             </button>
                         </div>
                     </div>

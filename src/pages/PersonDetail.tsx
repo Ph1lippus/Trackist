@@ -61,7 +61,7 @@ const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId }) => {
             const newItem: WatchlistItem = {
                 id: crypto.randomUUID(),
                 user_id: currentUser.id,
-                media_type: item.media_type === 'person' ? 'movie' : (item.media_type as 'movie' | 'tv' | 'anime'),
+                media_type: item.media_type === 'person' ? 'movie' : (item.media_type as 'movie' | 'tv'),
                 tmdb_id: item.id,
                 title: item.title || item.name || '',
                 poster_path: item.poster_path || undefined,

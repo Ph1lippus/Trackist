@@ -33,7 +33,7 @@ export const useMissingPosters = (items: PosterCandidate[]): Record<number, stri
 
             let resolved: string | null = null
             try {
-                if (mediaType === 'tv' || mediaType === 'anime') {
+                if (mediaType === 'tv') {
                     const details = await getTVShowDetails(id)
                     resolved = getBestPoster(details?.images?.posters) || details?.poster_path || null
                 } else {
