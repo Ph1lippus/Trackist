@@ -123,6 +123,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const isListDetailPage = location.pathname.match(/^\/ListsDetail\/[a-f0-9-]+$/);
     const isListEditPage = location.pathname.match(/^\/ListsEditPage\/(new|[a-f0-9-]+)$/);
     const isSettingsSubPage = ['/MFA', '/Sessions', '/Settings', '/EditProfile', '/Credits', '/AdminSecurity', '/Statistics'].includes(location.pathname) || location.pathname.startsWith('/Settings/');
+    const isCreditsPage = location.pathname === '/Credits';
     const detailModalOpen = useDetailModalStore((s) => s.isOpen);
     const detailModalType = useDetailModalStore((s) => s.type);
     const isSearchPage = location.pathname === '/Search';
@@ -718,6 +719,12 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                 {isMobile && location.pathname.startsWith('/Profile') && (
                     <div className="navbar-mobile-profile-title" aria-live="polite">
                         {mobileProfileTitle}
+                    </div>
+                )}
+                
+                {isCreditsPage && (
+                    <div className="navbar-credits-title" aria-label="Credits">
+                        Credits
                     </div>
                 )}
                 

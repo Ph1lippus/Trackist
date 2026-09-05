@@ -16,6 +16,7 @@ import {
     dismissUpdateVersion,
 } from './services/nativeUpdate'
 import { invalidateCalendarCache } from './services/calendarService'
+import { supabase } from './services/supabaseClient'
 import Navbar from './components/layout/Navbar'
 import Footer from './components/layout/Footer'
 import SecondaryNavbar from './components/layout/SecondaryNavbar'
@@ -121,6 +122,47 @@ const AppContent: React.FC = () => {
             void useLibraryStore.getState().fetchInitialLibrary(user.id)
             // Invalidate calendar cache on login to ensure fresh data
             void invalidateCalendarCache(user.id)
+        }
+    }, [loading, user])
+
+    useEffect(() => {
+        if (loading || !user) return
+
+        const storageKey = `track1st:notification-check:${user.id}`
+        const lastCheck = Number(localStorage.getItem(storageKey) || 0)
+        if (Date.now() - lastCheck < 60 * 60 * 1000) return
+
+        let cancelled = false
+        void (async () => {
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session?.access_token || cancelled) return
+
+            const { data: subscription } = await supabase
+                .from('push_subscriptions')
+                .select('id')
+                .eq('user_id', user.id)
+                .limit(1)
+                .maybeSingle()
+            if (!subscription || cancelled) return
+
+            const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-new-content`, {
+                method: 'POST',
+                headers: {
+                    Authorization: `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ userId: user.id }),
+            })
+
+            if (response.ok && !cancelled) {
+                localStorage.setItem(storageKey, String(Date.now()))
+            }
+        })().catch((error) => {
+            console.error('Automatic notification check failed:', error)
+        })
+
+        return () => {
+            cancelled = true
         }
     }, [loading, user])
 

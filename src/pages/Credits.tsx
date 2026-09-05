@@ -141,16 +141,8 @@ const Credits: React.FC = () => {
     usePageTitle('Track1st - Credits')
     return (
         <main className="main">
-            <div className="container settings-page">
+            <div className="container settings-page credits-page">
                 <div className="settings-panel settings-panel--subpage">
-                    <div className="settings-panel__header">
-                        <div className="settings-panel__title-row">
-                            <span className="settings-panel__title-icon"><img src={tmdbLogo} alt="" style={{ width: '18px', height: '18px' }} /></span>
-                            <h3>Credits</h3>
-                        </div>
-                        <p>Tools and services that helped shape Track1st.</p>
-                    </div>
-
                     <div className="credits-grid">
                         {credits.map((item) => (
                             <article className="credit-card" key={item.title}>

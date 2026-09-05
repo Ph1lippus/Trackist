@@ -15,6 +15,7 @@ const TMDB_BASE_URL = 'https://api.themoviedb.org/3'
 const GMAP_PAGE_SIZE = 1000
 const TMDB_CONCURRENCY = 6
 const SCHEDULE_THROTTLE_MS = 60 * 60 * 1000
+const NOTIFICATION_CHECK_THROTTLE_MS = 15 * 60 * 1000
 
 interface TVShowRow {
   id: string
@@ -261,6 +262,7 @@ serve(async (req: Request) => {
     let targetUserId: string | null = null
     let testMode = false
     let requestBody: Record<string, unknown> | null = null
+    let callerUserId: string | null = null
     if (!isCron) {
       try {
         requestBody = await req.json()
@@ -271,6 +273,28 @@ serve(async (req: Request) => {
       }
     }
 
+    if (!isCron && !isService) {
+      const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
+      if (!bearer || !supabaseAnonKey) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: corsHeaders,
+        })
+      }
+
+      const authClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      })
+      const { data: { user: caller }, error: authError } = await authClient.auth.getUser(bearer)
+      if (authError || !caller) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401,
+          headers: corsHeaders,
+        })
+      }
+      callerUserId = caller.id
+    }
+
     if (!isCron && !isService && !targetUserId) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
@@ -278,16 +302,16 @@ serve(async (req: Request) => {
       })
     }
 
-    const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')
-    const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY')
-    const vapidSubject = Deno.env.get('VAPID_SUBJECT')
-
-    if (!vapidPublicKey || !vapidPrivateKey || !vapidSubject) {
-      return new Response(JSON.stringify({ error: 'VAPID configuration missing' }), {
-        status: 500,
+    if (targetUserId && callerUserId && targetUserId !== callerUserId) {
+      return new Response(JSON.stringify({ error: 'Forbidden' }), {
+        status: 403,
         headers: corsHeaders,
       })
     }
+
+    const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY')
+    const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY')
+    const vapidSubject = Deno.env.get('VAPID_SUBJECT')
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -308,6 +332,9 @@ serve(async (req: Request) => {
         return
       }
       if (!sub.endpoint || !sub.keys?.p256dh || !sub.keys?.auth) return
+      if (!vapidPublicKey || !vapidPrivateKey || !vapidSubject) {
+        throw new Error('Web push is not configured (missing VAPID settings)')
+      }
       await sendPushNotification(
         { endpoint: sub.endpoint, p256dh: sub.keys.p256dh, auth: sub.keys.auth },
         JSON.stringify(payload),
@@ -383,6 +410,15 @@ serve(async (req: Request) => {
       .select('id, timezone, country_code, notify_hour, notify_new_episode, notify_new_season, notify_release_date, movie_notify_on_digital')
       .in('id', userIds)
 
+    const { data: recentRuns } = await supabase
+      .from('notification_check_runs')
+      .select('user_id, last_completed_at')
+      .in('user_id', userIds)
+
+    const recentRunMap = new Map<string, number>(
+      (recentRuns || []).map((run) => [run.user_id as string, new Date(run.last_completed_at as string).getTime()])
+    )
+
     const profileMap = new Map<string, Record<string, unknown>>(
       (profileRows || []).map((p) => [p.id as string, p as Record<string, unknown>])
     )
@@ -395,6 +431,9 @@ serve(async (req: Request) => {
 
     for (const userId of userIds) {
       try {
+        const lastCompletedAt = recentRunMap.get(userId) || 0
+        if (!testMode && Date.now() - lastCompletedAt < NOTIFICATION_CHECK_THROTTLE_MS) continue
+
         const profile = profileMap.get(userId) ?? {}
         const timezone = typeof profile.timezone === 'string' ? profile.timezone : 'UTC'
         const wantEpisode = profile.notify_new_episode !== false
@@ -625,14 +664,24 @@ serve(async (req: Request) => {
           }
         }
 
-        if (notifications.length === 0) continue
+        if (notifications.length === 0) {
+          await supabase
+            .from('notification_check_runs')
+            .upsert({ user_id: userId, last_completed_at: now.toISOString() })
+          continue
+        }
 
         const { data: subscriptions } = await supabase
           .from('push_subscriptions')
           .select('id, endpoint, keys, platform, token')
           .eq('user_id', userId)
 
-        if (!subscriptions || subscriptions.length === 0) continue
+        if (!subscriptions || subscriptions.length === 0) {
+          await supabase
+            .from('notification_check_runs')
+            .upsert({ user_id: userId, last_completed_at: now.toISOString() })
+          continue
+        }
 
         usersProcessed++
 
@@ -665,6 +714,10 @@ serve(async (req: Request) => {
               .eq('id', notification.write.id)
           }
         }
+
+        await supabase
+          .from('notification_check_runs')
+          .upsert({ user_id: userId, last_completed_at: now.toISOString() })
 
         await new Promise((resolve) => setTimeout(resolve, 50))
       } catch (error) {

@@ -434,6 +434,7 @@
         min-height: auto !important;
         padding: 1.25rem !important;
         border-radius: 20px !important;
+        border: none !important;
     }
 
     .credit-card__logo {
@@ -733,6 +734,17 @@ html::before {
 }
 .navbar-brand-row .navbar-brand:hover {
     color: var(--color-primary);
+}
+.navbar-credits-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    font-weight: 600;
+    font-size: 1.15rem;
+    letter-spacing: 1px;
+    color: var(--color-platinum);
+    white-space: nowrap;
 }
 .navbar-back-btn {
     color: rgba(255, 255, 255, 0.65);
@@ -4472,7 +4484,8 @@ html.native-app *::-webkit-scrollbar {
 
     .detail-page__title {
         margin: 0 auto;
-        font-size: 4rem;
+        font-size: 3.5rem;
+        text-align: -webkit-center;
     }
 
     .detail-page__episode-still {
@@ -4829,10 +4842,18 @@ html.native-app *::-webkit-scrollbar {
     overflow: visible;
 }
 
+.credits-page {
+    max-width: 100%;
+}
+
+.credits-page .settings-panel--subpage {
+    max-width: 1400px;
+}
+
 .credits-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
     margin-top: 1.5rem;
 }
 
