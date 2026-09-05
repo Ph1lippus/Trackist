@@ -3171,8 +3171,8 @@ html.native-app *::-webkit-scrollbar {
     transform: translateY(-1px);
 }
 .detail-page__cast-photo {
-    width: 40px;
-    height: 40px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;

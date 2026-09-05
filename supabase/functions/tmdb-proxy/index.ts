@@ -3,6 +3,12 @@ import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 const TMDB_API_KEY = Deno.env.get('TMDB_API_KEY')
 const BASE = 'https://api.themoviedb.org/3'
 
+const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 const ALLOWED_PREFIXES = ['/movie/', '/tv/', '/person/', '/search/', '/discover/', '/genre/', '/configuration', '/trending/', '/find/']
 const BLOCKED_HOSTS = ['169.254.169.254', 'metadata.google.internal', 'cloudmetadata', 'metadata']
 
@@ -47,32 +53,42 @@ function sanitizePayload(path: string, data: Record<string, unknown>): Record<st
 
 serve(async (req) => {
     const url = new URL(req.url)
-    if (req.method !== 'GET') return Response.json({ error: 'method_not_allowed' }, { status: 405 })
+    if (req.method === 'OPTIONS') {
+        return new Response('ok', { headers: corsHeaders })
+    }
+    if (req.method !== 'GET') {
+        return Response.json({ error: 'method_not_allowed' }, { status: 405, headers: corsHeaders })
+    }
 
     const target = url.searchParams.get('path')
-    if (!target || !target.startsWith('/')) return Response.json({ error: 'invalid_path' }, { status: 400 })
-    if (!isAllowed(target) || BLOCKED_HOSTS.includes(url.hostname)) {
-        return Response.json({ error: 'path_not_allowed' }, { status: 403 })
+    if (!target || !target.startsWith('/')) {
+        return Response.json({ error: 'invalid_path' }, { status: 400, headers: corsHeaders })
     }
-    if (!TMDB_API_KEY) return Response.json({ error: 'server_misconfigured' }, { status: 500 })
+    if (!isAllowed(target) || BLOCKED_HOSTS.includes(url.hostname)) {
+        return Response.json({ error: 'path_not_allowed' }, { status: 403, headers: corsHeaders })
+    }
+    if (!TMDB_API_KEY) {
+        return Response.json({ error: 'server_misconfigured' }, { status: 500, headers: corsHeaders })
+    }
 
     const up = new URL(BASE + target)
     up.searchParams.set('api_key', TMDB_API_KEY)
 
     const resp = await fetch(up)
     if (!resp.ok) {
-        return Response.json({ error: `upstream_${resp.status}` }, { status: resp.status < 500 ? 404 : 502 })
+        return Response.json({ error: `upstream_${resp.status}` }, { status: resp.status < 500 ? 404 : 502, headers: corsHeaders })
     }
 
     let body: Record<string, unknown>
     try {
         body = await resp.json()
     } catch {
-        return Response.json({ error: 'bad_upstream_body' }, { status: 502 })
+        return Response.json({ error: 'bad_upstream_body' }, { status: 502, headers: corsHeaders })
     }
 
     return Response.json(sanitizePayload(target, body), {
         headers: {
+            ...corsHeaders,
             'cache-control': 'public, max-age=3600, stale-while-revalidate=86400',
         },
     })
