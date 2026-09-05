@@ -189,16 +189,9 @@ const MobileTVShows: React.FC = () => {
             return
         }
 
-        const success = await markEpisodesWatched(show.id, [{
-            ...nextEp,
-            still_path: nextEp.still_path ?? undefined
-        }], followingNext)
-
-        if (!success) {
-            return
-        }
-
         const nextEpisodeNumber = nextEp.episode_number + 1
+
+        // Optimistic update first for instant UI feedback
         void useLibraryStore.getState().updateItem(show.id, {
             current_season: nextEp.season_number,
             current_episode: nextEp.episode_number,
@@ -209,18 +202,37 @@ const MobileTVShows: React.FC = () => {
         })
         setCompletedEpisode(show.id)
 
-        setTimeout(async () => {
-            // Update data behind the sweep
-            if (show.tmdb_id) {
-                await checkAndUpdateCompleted(show.id, show.tmdb_id)
-            }
-            await useLibraryStore.getState().refreshItem(show.id)
-        }, 200)
+        const success = await markEpisodesWatched(show.id, [{
+            ...nextEp,
+            still_path: nextEp.still_path ?? undefined
+        }], followingNext)
+
+        if (!success) {
+            void useLibraryStore.getState().updateItem(show.id, {
+                current_season: show.current_season,
+                current_episode: show.current_episode,
+                watched_episodes_count: show.watched_episodes_count,
+                next_season_number: show.next_season_number,
+                next_episode_number: show.next_episode_number,
+                status: show.status
+            })
+            setCompletedEpisode(null)
+        } else {
+            setTimeout(async () => {
+                // Update data behind the sweep
+                if (show.tmdb_id) {
+                    await checkAndUpdateCompleted(show.id, show.tmdb_id)
+                }
+                await useLibraryStore.getState().refreshItem(show.id)
+            }, 200)
+        }
     }
 
     const handleConfirmResume = async () => {
         if (!confirmModal?.item?.id) return
 
+        // Close modal immediately so the UI feels snappy
+        setConfirmModal(null)
         setAddingEpisode(confirmModal.item.id)
         try {
             // First update status to watching
@@ -266,33 +278,47 @@ const MobileTVShows: React.FC = () => {
                 return
             }
 
+            const nextEpisodeNumber = nextEp.episode_number + 1
+
+            // Optimistic update first for instant UI feedback
+            void useLibraryStore.getState().updateItem(show.id, {
+                current_season: nextEp.season_number,
+                current_episode: nextEp.episode_number,
+                watched_episodes_count: (show.watched_episodes_count ?? 0) + 1,
+                next_season_number: nextEp.season_number,
+                next_episode_number: nextEpisodeNumber,
+                status: 'watching'
+            })
+            setCompletedEpisode(show.id)
+
             const success = await markEpisodesWatched(show.id, [{
                 ...nextEp,
                 still_path: nextEp.still_path ?? undefined
             }], followingNext)
 
-            if (success) {
-                    void useLibraryStore.getState().updateItem(show.id, {
-                    current_season: nextEp.season_number,
-                    current_episode: nextEp.episode_number,
-                    watched_episodes_count: (show.watched_episodes_count ?? 0) + 1,
-                    next_season_number: nextEp.season_number,
-                    next_episode_number: nextEp.episode_number + 1,
-                    status: 'watching'
+            if (!success) {
+                void useLibraryStore.getState().updateItem(show.id, {
+                    current_season: show.current_season,
+                    current_episode: show.current_episode,
+                    watched_episodes_count: show.watched_episodes_count,
+                    next_season_number: show.next_season_number,
+                    next_episode_number: show.next_episode_number,
+                    status: show.status
                 })
-                setCompletedEpisode(show.id)
-                setTimeout(async () => {
-                    if (show.tmdb_id) {
-                        await checkAndUpdateCompleted(show.id, show.tmdb_id)
-                    }
-                    await useLibraryStore.getState().refreshItem(show.id)
-                }, 200)
+                setCompletedEpisode(null)
             }
+
+            setTimeout(async () => {
+                // Update data behind the sweep
+                if (show.tmdb_id) {
+                    await checkAndUpdateCompleted(show.id, show.tmdb_id)
+                }
+                await useLibraryStore.getState().refreshItem(show.id)
+            }, 200)
         } catch (err) {
             console.error('Failed to resume show:', err)
         } finally {
             setAddingEpisode(null)
-            setConfirmModal(null)
         }
     }
 

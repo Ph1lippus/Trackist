@@ -6337,6 +6337,14 @@ html.native-app .detail-overlay .detail-page__right {
     padding: 1rem;
 }
 
+.confirm-modal-overlay--enter {
+    animation: confirmOverlayIn 0.15s ease;
+}
+
+.confirm-modal-overlay--leave {
+    animation: confirmOverlayOut 0.1s ease forwards;
+}
+
 .confirm-modal-content {
     background: rgba(18, 18, 28, 1);
     border: none;
@@ -6345,6 +6353,14 @@ html.native-app .detail-overlay .detail-page__right {
     max-width: 360px;
     width: 100%;
     text-align: center;
+}
+
+.confirm-modal-content--enter {
+    animation: confirmModalIn 0.15s ease;
+}
+
+.confirm-modal-content--leave {
+    animation: confirmModalOut 0.1s ease forwards;
 }
 
 .confirm-modal-title {

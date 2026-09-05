@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 
 interface ConfirmModalProps {
@@ -51,17 +51,41 @@ const ConfirmModal = React.memo<ConfirmModalProps>(({
         }
     }, [confirmColor])
 
-    if (!isOpen) return null
+    const [visible, setVisible] = useState(false)
+    const [isEntering, setIsEntering] = useState(false)
+
+    useEffect(() => {
+        if (isOpen) {
+            setVisible(true)
+            setIsEntering(true)
+        } else if (visible) {
+            setIsEntering(false)
+            const timer = setTimeout(() => setVisible(false), 100)
+            return () => clearTimeout(timer)
+        }
+    }, [isOpen, visible])
+
+    if (!visible) return null
 
     const isDisabled = disabled || confirmLoading
 
+    const handleCancel = () => {
+        if (!isEntering) return
+        onCancel()
+    }
+
+    const handleConfirm = () => {
+        if (!isEntering) return
+        onConfirm()
+    }
+
     return (
-        <div 
-            className="confirm-modal-overlay" 
-            onClick={confirmLoading ? undefined : onCancel}
+        <div
+            className={`confirm-modal-overlay ${isEntering ? 'confirm-modal-overlay--enter' : 'confirm-modal-overlay--leave'}`}
+            onClick={isEntering ? (confirmLoading ? undefined : handleCancel) : undefined}
         >
-            <div 
-                className="confirm-modal-content" 
+            <div
+                className={`confirm-modal-content ${isEntering ? 'confirm-modal-content--enter' : 'confirm-modal-content--leave'}`}
                 onClick={(e) => e.stopPropagation()}
             >
                 <h3 className="confirm-modal-title">{title}</h3>
@@ -74,7 +98,7 @@ const ConfirmModal = React.memo<ConfirmModalProps>(({
                 {!customContent && (
                     <div className="confirm-modal-actions">
                         <button
-                            onClick={onCancel}
+                            onClick={handleCancel}
                             className="confirm-modal-btn confirm-modal-btn--cancel"
                             disabled={isDisabled}
                             style={{ opacity: isDisabled ? 0.5 : 1, cursor: isDisabled ? 'not-allowed' : 'pointer' }}
@@ -82,7 +106,7 @@ const ConfirmModal = React.memo<ConfirmModalProps>(({
                             {cancelText}
                         </button>
                         <button
-                            onClick={onConfirm}
+                            onClick={handleConfirm}
                             className="confirm-modal-btn confirm-modal-btn--confirm"
                             disabled={isDisabled}
                             style={{

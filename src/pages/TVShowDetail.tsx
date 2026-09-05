@@ -873,6 +873,10 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                 ep.id === episode.id ? { ...ep, watched: false } : ep
             ))
 
+            // Close modal immediately so the user can continue
+            setRemoveEpisodeModal(null)
+            setModalLoading(false)
+
             const key = `${episode.season_number}-${episode.episode_number}`
             const maxWatched = computeMaxWatchedExcluding(key)
             const nextEp = maxWatched
@@ -894,11 +898,6 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                 return
             }
 
-            // The row is removed, so finish the modal immediately. Progress/status
-            // synchronization can continue without blocking the user's next action.
-            setRemoveEpisodeModal(null)
-            setModalLoading(false)
-
             void (async () => {
                 try {
                     await checkAndUpdateCompleted(watchlistId, details.id)
@@ -916,7 +915,6 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
             console.error('Failed to remove episode:', err)
         } finally {
             setModalLoading(false)
-            setRemoveEpisodeModal(null)
         }
     }
 
