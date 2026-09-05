@@ -105,7 +105,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
     const isInWatchlist = !!watchlistItem
     const watchlistId = watchlistItem?.id ?? null
     const watchlistStatus = watchlistItem?.status ?? null
-    const hasStarted = ((watchlistItem as unknown as { watched_episodes_count?: number }).watched_episodes_count ?? 0) > 0
+    const hasStarted = (watchlistItem?.watched_episodes_count ?? 0) > 0
     const hasUserSelectedSeason = useRef(false)
     const episodeToScrollRef = useRef<string | null>(null)
     const episodeRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})

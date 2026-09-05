@@ -37,6 +37,21 @@ const isDueForSync = (lastCheck?: string | null): boolean => {
  * single `watching` show. Also serves as the daily status check.
  */
 const syncWatchingShow = async (show: SyncShow): Promise<void> => {
+    const details = await getTVDetails(show.tmdb_id)
+
+    if (details.status === 'Ended' || details.status === 'Canceled') {
+        const { error } = await supabase
+            .from('watchlist')
+            .update({ last_season_check: new Date().toISOString() })
+            .eq('id', show.id)
+            .eq('status', 'watching')
+
+        if (error) {
+            console.error(`Failed to mark ended show ${show.id} as checked:`, error)
+        }
+        return
+    }
+
     const totalReleasedEpisodes = await countReleasedEpisodesAcrossSeasons(show.tmdb_id)
 
     const { error } = await supabase
@@ -63,6 +78,9 @@ const syncWatchingShow = async (show: SyncShow): Promise<void> => {
  */
 const syncCaughtUpShow = async (show: SyncShow): Promise<void> => {
     const details = await getTVDetails(show.tmdb_id)
+
+    if (details.status === 'Ended' || details.status === 'Canceled') return
+
     const latestSeasonNumber = details.number_of_seasons || 1
 
     // Skip non-started / future seasons entirely.
@@ -116,7 +134,7 @@ const syncCaughtUpShow = async (show: SyncShow): Promise<void> => {
  *
  * - Refreshes the "episodes left" badge for `watching` shows (recalcs the
  *   released-episode count).
- * - Moves `caught_up`/`completed` shows back to `watching` when a new released
+ * - Moves `caught_up` shows back to `watching` when a new released
  *   episode is available.
  *
  * Runs on the first open of the app each UTC day, plus when the tab becomes
@@ -166,7 +184,7 @@ export const useDailyTVSync = (userId: string | null) => {
             // Split into scopes and only process shows that are due (not yet checked today or a previous UTC day).
             const watching = allShows.filter(s => s.status === 'watching' && isDueForSync(s.last_season_check))
             const caughtUp = allShows.filter(
-                s => (s.status === 'caught_up' || s.status === 'completed') && isDueForSync(s.last_season_check)
+                s => s.status === 'caught_up' && isDueForSync(s.last_season_check)
             )
 
             // Process batches with small concurrency to stay TMDB-friendly.
