@@ -1,6 +1,6 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react'
+import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getTVDetails, getTVSeasonDetails, imageUrl, imageUrlOriginal, getBestBackdropPath, getBestPoster, isNoLanguageCode } from '../services/tmdbService'
+import { getTVDetails, getTVSeasonDetails, getTVSeasonCredits, imageUrl, imageUrlOriginal, getBestBackdropPath, getBestPoster, isNoLanguageCode } from '../services/tmdbService'
 import { formatStatus } from '../utils/statusUtils'
 import { markEpisodeWatched, unmarkEpisodeWatched, markEpisodesWatched, unmarkEpisodesWatched, recomputeDenormalizedFields, getWatchedEpisodes, checkAndUpdateCompleted, markShowAsFullyWatched, removeAllWatchedEpisodes } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
@@ -19,6 +19,7 @@ import { AlignLeft, Bookmark, Check, ChevronDown, ChevronLeft, ChevronRight, Cla
 import stremioIcon from '../assets/stremio-logo-icon-only-fullcolor.svg'
 import tmdbLogo from '../assets/CompactTMDB.svg'
 import ShareButton from '../components/media/ShareButton'
+import CastList, { type CastMember } from '../components/CastList'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
 import useDetailModalStore from '../stores/detailModalStore'
 
@@ -84,11 +85,8 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
     } | null>(null)
     const [showCast, setShowCast] = useState(false)
     const [showDescription, setShowDescription] = useState(false)
-    const [showAllCast, setShowAllCast] = useState(false)
+    const [error, setError] = useState<string | null>(null)
 
-    useEffect(() => {
-        if (!showCast) setShowAllCast(false)
-    }, [showCast])
     const [modalLoading, setModalLoading] = useState(false)
     const [episodeModalLoading, setEpisodeModalLoading] = useState<'all' | 'one' | null>(null)
 
@@ -187,42 +185,44 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
         }
     }, [selectedSeason, episodes, isMobile])
 
-    useEffect(() => {
-        const fetchDetails = async () => {
-            setLoading(true)
-            if (!id) {
-                setLoading(false)
-                return
-            }
-            const numericId = Number(id)
-            if (!Number.isFinite(numericId) || numericId <= 0) {
-                console.warn('[TVShowDetail] invalid id from route:', id)
-                setLoading(false)
-                return
-            }
-            try {
-                const data = await getCachedOrFetch(
-                    'tv-details-v2',
-                    numericId,
-                    () => getTVDetails(numericId),
-                    { ttl: 30 * 60 * 1000, staleWhileRevalidate: true }
-                )
-                setDetails(data)
-
-                if (data.videos?.results) {
-                    const trailer = data.videos.results.find(
-                        (v: { type: string; site: string; key: string }) => v.type === 'Trailer' && v.site === 'YouTube'
-                    )
-                    if (trailer) setTrailerKey(trailer.key)
-                }
-            } catch (err) {
-                console.error('[TVShowDetail] failed to load TV show details:', id, err)
-            } finally {
-                setLoading(false)
-            }
+    const fetchDetails = useCallback(async () => {
+        setLoading(true)
+        setError(null)
+        if (!id) {
+            setLoading(false)
+            return
         }
-        fetchDetails()
+        const numericId = Number(id)
+        if (!Number.isFinite(numericId) || numericId <= 0) {
+            console.warn('[TVShowDetail] invalid id from route:', id)
+            setLoading(false)
+            return
+        }
+        try {
+            const data = await getCachedOrFetch(
+                'tv-details-v3',
+                numericId,
+                () => getTVDetails(numericId),
+                { ttl: 30 * 60 * 1000, staleWhileRevalidate: true }
+            )
+            setDetails(data)
+
+            const videos = (data.videos?.results || []).filter((v: { type?: string; site?: string; key?: string }) => v && typeof v === 'object')
+            const trailer = videos.find(
+                (v: { type: string; site: string; key: string }) => v.type === 'Trailer' && v.site === 'YouTube'
+            )
+            if (trailer) setTrailerKey(trailer.key)
+        } catch (err) {
+            console.error('[TVShowDetail] failed to load TV show details:', id, err)
+            setError('Failed to load TV show details. Please try again.')
+        } finally {
+            setLoading(false)
+        }
     }, [id])
+
+    useEffect(() => {
+        void fetchDetails()
+    }, [fetchDetails])
 
     // Push backdrop URL to the overlay store when in modal so it renders outside the scroll container
     useEffect(() => {
@@ -520,7 +520,8 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
             if (english) return imageUrlOriginal(english.file_path)
             const noLang = sorted.find(l => isNoLanguageCode(l.iso_639_1))
             if (noLang) return imageUrlOriginal(noLang.file_path)
-            return imageUrlOriginal(sorted[0].file_path)
+            if (sorted[0]) return imageUrlOriginal(sorted[0].file_path)
+            return null
         }
         return null
     }  
@@ -881,16 +882,99 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
     }
 
     const filteredEpisodes = useMemo(() => episodes.filter(ep => ep.season_number === selectedSeason && !!ep.air_date), [episodes, selectedSeason])
-    const cast = useMemo(() => (details?.credits?.cast || [])
-        .slice(0, 10)
-        .sort((a: { profile_path?: string | null }, b: { profile_path?: string | null }) => {
+    // TMDB's series-level cast only reflects the most recent season's billing.
+    // Fetch and merge every season's cast so anthology shows (e.g. The Terror)
+    // still show the actors from earlier seasons. Each season's list is cached.
+    const [seasonCastState, setSeasonCastState] = useState<{ showId: number; cast: CastMember[] } | null>(null)
+
+    useEffect(() => {
+        let active = true
+        const showId = details?.id
+        const seasons = details?.seasons
+        const seasonNumbers = (Array.isArray(seasons) ? seasons : [])
+            .map((s) => (s && typeof s === 'object' ? (s as { season_number?: number }).season_number : undefined))
+            .filter((n): n is number => typeof n === 'number' && n > 0)
+        if (!showId || seasonNumbers.length === 0) return
+
+        const load = async () => {
+            try {
+                const entries = await Promise.all(
+                    seasonNumbers.map((n) =>
+                        getCachedOrFetch(
+                            'tv-season-cast-v3',
+                            `${showId}-${n}`,
+                            () => getTVSeasonCredits(showId, n),
+                            { ttl: 7 * 24 * 60 * 60 * 1000, staleWhileRevalidate: true }
+                        )
+                    )
+                )
+                if (!active) return
+                const seen = new Set<number>()
+                const merged: CastMember[] = []
+                for (const entry of entries) {
+                    const list = (entry as { cast?: unknown }).cast
+                    if (!Array.isArray(list)) continue
+                    for (const c of list) {
+                        if (!c || typeof c !== 'object') continue
+                        const member = c as { id?: number; name?: string; character?: string | null; profile_path?: string | null }
+                        const numId = Number(member.id)
+                        if (!Number.isFinite(numId) || seen.has(numId)) continue
+                        seen.add(numId)
+                        merged.push({
+                            id: numId,
+                            name: member.name ?? 'Unknown',
+                            character: member.character ?? null,
+                            profile_path: member.profile_path ?? null,
+                        })
+                    }
+                }
+                setSeasonCastState({ showId, cast: merged })
+            } catch (err) {
+                console.error('Failed to load season cast:', err)
+            }
+        }
+        void load()
+        return () => { active = false }
+    }, [details])
+
+    const cast = useMemo<CastMember[]>(() => {
+        const base = (details?.credits?.cast || [])
+            .filter((c: unknown): c is CastMember => !!c && typeof c === 'object')
+        const seasonSource = seasonCastState && seasonCastState.showId === details?.id ? seasonCastState.cast : []
+        const seen = new Set<number>()
+        const merged: CastMember[] = []
+        for (const c of base) {
+            if (typeof c.id !== 'number' || seen.has(c.id)) continue
+            seen.add(c.id)
+            merged.push(c)
+        }
+        for (const c of seasonSource) {
+            if (seen.has(c.id)) continue
+            seen.add(c.id)
+            merged.push(c)
+        }
+        return merged.sort((a, b) => {
             if (a.profile_path && !b.profile_path) return -1
             if (!a.profile_path && b.profile_path) return 1
             return 0
-        }), [details])
+        })
+    }, [details, seasonCastState])
 
     if (loading) {
         return <div className="detail-page-loading" aria-live="polite">Loading TV show...</div>
+    }
+
+    if (error && !details) {
+        return (
+            <div className="detail-page-error" role="alert">
+                <div className="error-boundary__card">
+                    <p>{error}</p>
+                    <button className="detail-page__retry-btn" onClick={() => void fetchDetails()}>
+                        Try again
+                    </button>
+                </div>
+            </div>
+        )
     }
 
     if (!details) {
@@ -1252,47 +1336,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
                         </div>
 
                         {showCast && cast.length > 0 && (
-                            <div className="detail-page__cast-section">
-                                <div className="detail-page__cast-list">
-                                        {cast.slice(0, isMobile && !showAllCast ? 12 : undefined).map((c: { id: number; name: string; profile_path?: string | null; character: string; order: number }) => (
-                                            <a
-                                                key={c.id}
-                                                className="detail-page__cast-item"
-                                                href={`/person/${c.id}`}
-                                                onClick={(e) => {
-                                                    e.preventDefault()
-                                                    if (isInModal) {
-                                                        useDetailModalStore.getState().open('person', c.id)
-                                                    } else {
-                                                        navigate(`/person/${c.id}`)
-                                                    }
-                                                }}
-                                            >
-                                                {c.profile_path && (
-                                                    <img
-                                                        className="detail-page__cast-photo"
-                                                        src={imageUrl(c.profile_path, 'w185') ?? ''}
-                                                        alt={c.name ?? ''}
-                                                        loading="lazy"
-                                                        width="90"
-                                                        height="90"
-                                                    />
-                                                )}
-                                                <div className="detail-page__cast-info">
-                                                    <span className="detail-page__cast-name">{c.name}</span>
-                                                    {c.character && (
-                                                        <span className="detail-page__cast-character">{c.character}</span>
-                                                    )}
-                                                </div>
-                                            </a>
-                                        ))}
-                                </div>
-                                {isMobile && !showAllCast && cast.length > 12 && (
-                                    <button className="detail-page__cast-more" onClick={() => setShowAllCast(true)}>
-                                        Show all cast
-                                    </button>
-                                )}
-                            </div>
+                            <CastList cast={cast} isInModal={isInModal} />
                         )}
                     </div>
 

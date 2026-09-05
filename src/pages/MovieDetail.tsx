@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { getMovieDetails, imageUrl, imageUrlOriginal, getBestBackdropPath, getBestPoster, isNoLanguageCode } from '../services/tmdbService'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useParams } from 'react-router-dom'
+import { getMovieDetails, imageUrlOriginal, getBestBackdropPath, getBestPoster, isNoLanguageCode } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { invalidateUserCache, getCachedOrFetch } from '../services/cacheService'
 import ConfirmModal from '../components/modals/ConfirmModal'
@@ -17,6 +17,7 @@ import stremioIcon from '../assets/stremio-logo-icon-only-fullcolor.svg'
 import letterboxdIcon from '../assets/letterboxd-decal-dots-pos-rgb-500px.png'
 import tmdbLogo from '../assets/CompactTMDB.svg'
 import ShareButton from '../components/media/ShareButton'
+import CastList from '../components/CastList'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
 import useDetailModalStore from '../stores/detailModalStore'
 import { AlignLeft, Bookmark, Clapperboard, Eye, EyeOff, Users, X } from 'lucide-react'
@@ -28,7 +29,6 @@ interface MovieDetailProps {
 const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
     const { id: paramId } = useParams<{ id: string }>()
     const id = propId?.toString() ?? paramId
-    const navigate = useNavigate()
     const isInModal = useDetailModalStore((s) => s.isOpen)
     const { showStremioButton, loading: stremioLoading } = useShowStremioButton()
     const { showLetterboxButton, loading: letterboxLoading } = useShowLetterboxButton()
@@ -45,11 +45,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
     const [trailerKey, setTrailerKey] = useState<string | null>(null)
     const [showCast, setShowCast] = useState(false)
     const [showDescription, setShowDescription] = useState(false)
-    const [showAllCast, setShowAllCast] = useState(false)
-
-    useEffect(() => {
-        if (!showCast) setShowAllCast(false)
-    }, [showCast])
+    const [error, setError] = useState<string | null>(null)
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean } | null>(null)
     const [markWatchedModal, setMarkWatchedModal] = useState<{ isOpen: boolean; markAsWatched: boolean } | null>(null)
     const [modalLoading, setModalLoading] = useState(false)
@@ -71,37 +67,39 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
 
     
 
-    useEffect(() => {
-        const fetchDetails = async () => {
-            setLoading(true)
-            if (!id) {
-                setLoading(false)
-                return
-            }
-            try {
-                const data = await getCachedOrFetch(
-                    'movie-details-v2',
-                    Number(id),
-                    () => getMovieDetails(Number(id)),
-                    { ttl: 30 * 60 * 1000, staleWhileRevalidate: true }
-                )
-                setDetails(data)
-                
-                // Find trailer from videos
-                if (data.videos?.results) {
-                    const trailer = data.videos.results.find(
-                        (v: { type: string; site: string; key: string }) => v.type === 'Trailer' && v.site === 'YouTube'
-                    )
-                    if (trailer) setTrailerKey(trailer.key)
-                }
-            } catch (err) {
-                console.error('Failed to load movie details:', err)
-            } finally {
-                setLoading(false)
-            }
+    const fetchDetails = useCallback(async () => {
+        setLoading(true)
+        setError(null)
+        if (!id) {
+            setLoading(false)
+            return
         }
-        fetchDetails()
+        try {
+            const data = await getCachedOrFetch(
+                'movie-details-v3',
+                Number(id),
+                () => getMovieDetails(Number(id)),
+                { ttl: 30 * 60 * 1000, staleWhileRevalidate: true }
+            )
+            setDetails(data)
+            
+            // Find trailer from videos
+            const videos = (data.videos?.results || []).filter((v: { type?: string; site?: string; key?: string }) => v && typeof v === 'object')
+            const trailer = videos.find(
+                (v: { type: string; site: string; key: string }) => v.type === 'Trailer' && v.site === 'YouTube'
+            )
+            if (trailer) setTrailerKey(trailer.key)
+        } catch (err) {
+            console.error('Failed to load movie details:', err)
+            setError('Failed to load movie details. Please try again.')
+        } finally {
+            setLoading(false)
+        }
     }, [id])
+
+    useEffect(() => {
+        void fetchDetails()
+    }, [fetchDetails])
 
     // Push backdrop URL to the overlay store when in modal so it renders outside the scroll container
     useEffect(() => {
@@ -172,7 +170,8 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
             if (english) return imageUrlOriginal(english.file_path)
             const noLang = sorted.find(l => isNoLanguageCode(l.iso_639_1))
             if (noLang) return imageUrlOriginal(noLang.file_path)
-            return imageUrlOriginal(sorted[0].file_path)
+            if (sorted[0]) return imageUrlOriginal(sorted[0].file_path)
+            return null
         }
         return null
     }
@@ -226,8 +225,9 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
     }
 
     const cast = useMemo(() => (details?.credits?.cast || [])
-        .slice(0, 10)
-        .sort((a: { profile_path?: string | null }, b: { profile_path?: string | null }) => {
+        .filter((c: unknown): c is { id: number; name: string; profile_path?: string | null; character?: string | null; order?: number } =>
+            !!c && typeof c === 'object')
+        .sort((a, b) => {
             if (a.profile_path && !b.profile_path) return -1
             if (!a.profile_path && b.profile_path) return 1
             return 0
@@ -235,6 +235,19 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
 
     if (loading) {
         return <div className="detail-page-loading" aria-live="polite">Loading movie...</div>
+    }
+
+    if (error && !details) {
+        return (
+            <div className="detail-page-error" role="alert">
+                <div className="error-boundary__card">
+                    <p>{error}</p>
+                    <button className="detail-page__retry-btn" onClick={() => void fetchDetails()}>
+                        Try again
+                    </button>
+                </div>
+            </div>
+        )
     }
 
     if (!details) {
@@ -605,47 +618,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
                     </div>
                     {showCast && cast.length > 0 && (
                         <div className="detail-page__episodes-container">
-                            <div className="detail-page__cast-section">
-                                <div className="detail-page__cast-list">
-                                    {cast.slice(0, isMobile && !showAllCast ? 12 : undefined).map((c: { id: number; name: string; profile_path?: string | null; character: string; order: number }) => (
-                                        <a
-                                            key={c.id}
-                                            className="detail-page__cast-item"
-                                            href={`/person/${c.id}`}
-                                            onClick={(e) => {
-                                                e.preventDefault()
-                                                if (isInModal) {
-                                                    useDetailModalStore.getState().open('person', c.id)
-                                                } else {
-                                                    navigate(`/person/${c.id}`)
-                                                }
-                                            }}
-                                        >
-                                            {c.profile_path && (
-                                                <img
-                                                    className="detail-page__cast-photo"
-                                                    src={imageUrl(c.profile_path, 'w185') ?? ''}
-                                                    alt={c.name ?? ''}
-                                                    loading="lazy"
-                                                    width="90"
-                                                    height="90"
-                                                />
-                                            )}
-                                            <div className="detail-page__cast-info">
-                                                <span className="detail-page__cast-name">{c.name}</span>
-                                                {c.character && (
-                                                    <span className="detail-page__cast-character">{c.character}</span>
-                                                )}
-                                            </div>
-                                        </a>
-                                    ))}
-                                </div>
-                                {isMobile && !showAllCast && cast.length > 12 && (
-                                    <button className="detail-page__cast-more" onClick={() => setShowAllCast(true)}>
-                                        Show all cast
-                                    </button>
-                                )}
-                            </div>
+                            <CastList cast={cast} isInModal={isInModal} />
                         </div>
                     )}
                     <div className="detail-page__right" style={{ display: 'none' }}>

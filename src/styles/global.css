@@ -2643,6 +2643,11 @@ html.native-app *::-webkit-scrollbar {
     .detail-page__content--split {
         height: 100%;
     }
+    /* Mirror the 4rem left offset on the right so content (e.g. the cast
+       grid) ends a bit in from the screen edge on desktop. */
+    .detail-page__content {
+        padding-right: 4rem;
+    }
 }
 .detail-page__back {
     background: rgba(255, 255, 255, 0.1);
@@ -2927,6 +2932,11 @@ html.native-app *::-webkit-scrollbar {
     overflow-y: auto;
     min-height: 0;
     padding-right: 1rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.detail-page__left::-webkit-scrollbar {
+    display: none;
 }
 .detail-page__right {
     display: flex;
@@ -3136,52 +3146,33 @@ html.native-app *::-webkit-scrollbar {
     font-size: 1rem;
     padding: 0.8rem 0;
 }
-.detail-page__cast-toggle {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: var(--color-platinum);
-    padding: 0.6rem 1.2rem;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    width: 100%;
-}
-.detail-page__cast-toggle:hover {
-    background: rgba(133, 138, 227, 0.15);
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-}
 .detail-page__cast-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 0.5rem;
+    width: 100%;
 }
 .detail-page__cast-item {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.75rem;
+    gap: 0.75rem;
+    padding: 0.45rem 0.7rem;
     background: rgba(255, 255, 255, 0.04);
-    border-radius: 25px;
+    border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s ease;
-    height: 100%;
-    text-align: center;
+    min-width: 0;
     text-decoration: none;
     color: inherit;
 }
 .detail-page__cast-item:hover {
     background: rgba(133, 138, 227, 0.15);
     border-color: rgba(133, 138, 227, 0.3);
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 .detail-page__cast-photo {
-    width: 90px;
-    height: 90px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
     object-fit: cover;
     flex-shrink: 0;
@@ -3189,15 +3180,32 @@ html.native-app *::-webkit-scrollbar {
 .detail-page__cast-info {
     display: flex;
     flex-direction: column;
+    min-width: 0;
+    gap: 0.05rem;
 }
 .detail-page__cast-name {
-    font-size: 0.8rem;
+    font-size: 0.82rem;
     font-weight: 600;
     color: var(--color-platinum);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 .detail-page__cast-character {
-    font-size: 0.7rem;
+    font-size: 0.72rem;
     color: rgba(255, 255, 255, 0.5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.detail-page__cast-section {
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    min-width: 0;
+}
+.detail-page__cast-section::-webkit-scrollbar {
+    display: none;
 }
 
 /* Episodes Section */
@@ -3461,28 +3469,6 @@ html.native-app *::-webkit-scrollbar {
         display: none;
     }
 }
-.detail-page__cast-more {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    height: 36px;
-    padding: 0 1.3rem;
-    background: rgba(255, 255, 255, 0.07);
-    border: none;
-    border-radius: 25px;
-    color: rgba(255, 255, 255, 0.75);
-    font-size: 0.85rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    margin: 1rem auto 0;
-}
-@media (hover: hover) {
-    .detail-page__cast-more:hover {
-        background: rgba(133, 138, 227, 0.18);
-        color: var(--color-primary);
-    }
-}
 .detail-page__episodes-more-btn {
     background: rgba(133, 138, 227, 0.1);
     border: 1px solid rgba(133, 138, 227, 0.3);
@@ -3587,10 +3573,19 @@ html.native-app *::-webkit-scrollbar {
 }
 
 @media (min-width: 769px) {
-    .detail-overlay .detail-page--person {
-        height: 100%;
-        overflow-y: auto;
-        overflow-x: hidden;
+    .detail-overlay .detail-page--person.detail-page--no-scroll {
+        height: auto;
+        overflow: visible;
+    }
+    .detail-overlay .detail-page--person .detail-page__content--split {
+        height: auto;
+        min-height: 100%;
+        overflow: visible;
+    }
+    .detail-overlay .detail-page--person .detail-page__main--person,
+    .detail-overlay .detail-page--person .detail-page__left {
+        height: auto;
+        overflow: visible;
     }
     .detail-overlay .detail-page--person .dashboard-shell {
         height: auto;
@@ -3613,6 +3608,30 @@ html.native-app *::-webkit-scrollbar {
     gap: 2rem;
     height: auto;
     min-height: 0;
+}
+
+/* Desktop Person Detail: let the whole page scroll naturally instead of an
+   inner left-column scroll region (which put the scrollbar on the LEFT edge
+   and ignored the mouse wheel). */
+@media (min-width: 769px) {
+    .detail-page--person.detail-page--no-scroll {
+        height: auto;
+        overflow: visible;
+    }
+    .detail-page--person.detail-page--no-scroll > .detail-page__content {
+        position: relative;
+        z-index: 1;
+    }
+    .detail-page--person .detail-page__content--split {
+        height: auto;
+        min-height: calc(100vh - var(--navbar-height));
+        overflow: visible;
+    }
+    .detail-page--person .detail-page__main--person,
+    .detail-page--person .detail-page__left {
+        height: auto;
+        overflow: visible;
+    }
 }
 .detail-page__main--episode {
     display: flex;
@@ -3714,6 +3733,11 @@ html.native-app *::-webkit-scrollbar {
     overflow-y: auto;
     min-height: 0;
     padding-top: 1rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.detail-page__episodes-container::-webkit-scrollbar {
+    display: none;
 }
 
 /* Loading and error states */
@@ -3733,6 +3757,43 @@ html.native-app *::-webkit-scrollbar {
     min-height: 50vh;
     color: rgba(255, 255, 255, 0.5);
     font-size: 1.1rem;
+}
+.error-boundary__card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    text-align: center;
+    padding: 2rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    max-width: 380px;
+    margin: 1rem;
+}
+.error-boundary__card h2 {
+    font-size: 1.3rem;
+    color: var(--color-platinum);
+    margin: 0;
+}
+.error-boundary__card p {
+    margin: 0;
+    font-size: 0.95rem;
+}
+.detail-page__retry-btn {
+    background: var(--color-primary);
+    border: none;
+    color: var(--color-black);
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 0.6rem 1.5rem;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: filter 0.2s ease, transform 0.2s ease;
+}
+.detail-page__retry-btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
 }
 /* Responsive */
 @media (max-width: 992px) {
@@ -4401,7 +4462,7 @@ html.native-app *::-webkit-scrollbar {
         text-align: center;
     }
     .detail-page__cast-list {
-        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(135px, 1fr));
     }
 }
 
@@ -6245,6 +6306,18 @@ html.native-app .detail-overlay .detail-page__right {
     }
     .detail-overlay__content {
         height: 100%;
+    }
+
+    /* Person overlay: let the overlay container itself scroll so the mouse
+       wheel works; hide the scrollbar to match the pinned detail pages. */
+    .detail-overlay__scroll--person {
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+    }
+    .detail-overlay__scroll--person::-webkit-scrollbar {
+        display: none;
     }
 }
 

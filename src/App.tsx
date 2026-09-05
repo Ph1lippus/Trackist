@@ -59,6 +59,7 @@ import Sessions from './pages/Sessions'
 import AdminSecurity from './pages/AdminSecurity'
 import { useSessionSecurity } from './hooks/useSessionSecurity'
 import { useDailyTVSync } from './hooks/useDailyTVSync'
+import ErrorBoundary from './components/ErrorBoundary'
 import mfaService from './services/mfaService'
 import useDetailModalStore from './stores/detailModalStore'
 
@@ -83,6 +84,9 @@ const AppContent: React.FC = () => {
     const user = useAuthStore((state) => state.user)
     const loading = useAuthStore((state) => state.loading)
     const isModalOpen = useDetailModalStore((state) => state.isOpen)
+    const modalResetKey = useDetailModalStore((state) =>
+        state.isOpen ? `${state.type ?? ''}-${state.id ?? ''}` : 'closed'
+    )
     const [currentMonth, setCurrentMonth] = useState(new Date())
     const hasUpdatedLastActive = useRef(false)
     const [showUpdateModal, setShowUpdateModal] = useState(false)
@@ -407,7 +411,8 @@ const AppContent: React.FC = () => {
                 goToToday={goToToday}
             />
             <main className={`page-main flex-grow-1 ${hideFooter ? 'page-main--no-footer' : ''}${isModalOpen ? ' is-modal-backdrop-hidden' : ''}`} inert={isModalOpen || undefined}>
-                <Routes>
+                <ErrorBoundary resetKey={location.pathname}>
+                    <Routes>
                     <Route path="/" element={user ? <Navigate to={defaultRoute} replace /> : <Home />} />
                     <Route path="/Discover" element={user ? <Discover key="discover" /> : <Navigate to="/login" replace />} />
                     <Route path="/Search" element={user ? <Search /> : <Navigate to="/login" replace />} />
@@ -451,12 +456,15 @@ const AppContent: React.FC = () => {
                     <Route path="/Lists/:id" element={<LegacyListRedirect />} />
                     <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />
                 </Routes>
+                </ErrorBoundary>
                 <ScrollToTop />
             </main>
             <SecondaryNavbar />
             <MobileBottomNavbar />
             <DetailSidebarToggle />
-            <DetailOverlay />
+            <ErrorBoundary resetKey={modalResetKey}>
+                <DetailOverlay />
+            </ErrorBoundary>
             {!hideFooter && !isDetailPage && <Footer loggedIn={Boolean(user)} />}
             <PWAUpdateModal
                 isOpen={showUpdateModal}

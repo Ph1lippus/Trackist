@@ -129,9 +129,9 @@ class CacheService {
         fetcher: () => Promise<T>,
         ttl: number
     ): Promise<T> {
-        // Return cached data immediately if available
+        // Return cached data immediately if available (and structurally usable)
         const cached = await this.get<T>(type, identifier)
-        if (cached) {
+        if (this.isUsableData(cached)) {
             // Revalidate in background
             this.revalidate(type, identifier, fetcher, ttl).catch(() => {})
             return cached
@@ -165,6 +165,12 @@ class CacheService {
 
     private isValid<T>(entry: CacheEntry<T>): boolean {
         return Date.now() - entry.timestamp < entry.ttl
+    }
+
+    // Guard against stale/corrupt cached payloads (null, primitives, or arrays
+    // with broken members would otherwise crash render code that trusts the shape).
+    private isUsableData<T>(entry: T | null | undefined): entry is T {
+        return entry != null && typeof entry === 'object'
     }
 
     private async idbGet<T>(db: IDBDatabase, key: string): Promise<CacheEntry<T> | null> {
@@ -296,7 +302,7 @@ export async function getCachedOrFetch<T>(
     }
 
     const cached = await cacheService.get<T>(type, identifier)
-    if (cached) return cached
+    if (cached != null && typeof cached === 'object') return cached
 
     const fresh = await fetcher()
     await cacheService.set(type, identifier, fresh, options.ttl)

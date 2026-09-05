@@ -103,7 +103,7 @@ export const getPersonDetails = async (id: number): Promise<{
     if (!res.ok) {
         throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
     }
-    return res.json()
+    return sanitizePersonDetails(await res.json())
 }
 
 export const getPopularMovies = async (page: number = 1, vote_count_gte?: number): Promise<{ results: TMDBResult[] }> => {
@@ -183,7 +183,7 @@ export const getMovieDetails = async (id: number): Promise<{
     if (!res.ok) {
         throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
     }
-    return res.json()
+    return sanitizeMovieDetails(await res.json())
 }
 
 export const getTVShowDetails = async (id: number): Promise<{
@@ -228,10 +228,17 @@ export const getTVShowDetails = async (id: number): Promise<{
     if (!res.ok) {
         throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
     }
-    return res.json()
+    return sanitizeTVShowDetails(await res.json())
 }
 
 export const getTVDetails = getTVShowDetails
+export const getTVSeasonCredits = async (tvId: number, seasonNumber: number): Promise<{ cast: { id: number; name: string; character?: string; profile_path?: string | null; order?: number }[] }> => {
+    const res = await tmdbProxy(`/tv/${tvId}/season/${seasonNumber}/credits`)
+    if (!res.ok) {
+        throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
+    }
+    return sanitizeCredits(await res.json()) as unknown as { cast: { id: number; name: string; character?: string; profile_path?: string | null; order?: number }[] }
+}
 export const getTVSeasonDetails = async (tvId: number, seasonNumber: number): Promise<{
     id: number
     season_number: number
@@ -429,6 +436,70 @@ export const getBestPoster = (posters: any[] | undefined | null): string | null 
     return candidates[0]?.file_path ?? null
 }
 
+// --- Payload sanitization ---------------------------------------------------
+// Guarantees the shapes stored in the cache (and rendered) can never crash on a
+// malformed TMDB response. Arrays are coerced to arrays of plain objects, null
+// entries are dropped, and missing sections become safe defaults.
+
+const safeArray = <T extends object>(value: unknown): T[] => {
+    if (!Array.isArray(value)) return []
+    return value.filter((item): item is T => item !== null && typeof item === 'object')
+}
+
+const safeObject = <T extends object>(value: unknown): T | undefined => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined
+    return value as T
+}
+
+const sanitizeImages = (images: unknown): { logos: object[]; backdrops: object[]; posters: object[] } => {
+    const img = safeObject<{ logos?: unknown; backdrops?: unknown; posters?: unknown }>(images) ?? {}
+    return {
+        logos: safeArray<object>(img.logos),
+        backdrops: safeArray<object>(img.backdrops),
+        posters: safeArray<object>(img.posters),
+    }
+}
+
+export const sanitizeMovieDetails = <T extends Record<string, unknown>>(data: T): T => {
+    const d = (safeObject<Record<string, unknown>>(data) ?? {}) as Record<string, unknown>
+    return {
+        ...d,
+        genres: safeArray<object>(d.genres),
+        credits: { cast: safeArray<object>((d.credits as { cast?: unknown } | undefined)?.cast) },
+        images: sanitizeImages(d.images),
+        videos: { results: safeArray<object>((d.videos as { results?: unknown } | undefined)?.results) },
+        release_dates: { results: safeArray<object>((d.release_dates as { results?: unknown } | undefined)?.results) },
+        external_ids: safeObject<object>(d.external_ids),
+    } as unknown as T
+}
+
+export const sanitizeTVShowDetails = <T extends Record<string, unknown>>(data: T): T => {
+    const d = (safeObject<Record<string, unknown>>(data) ?? {}) as Record<string, unknown>
+    return {
+        ...d,
+        genres: safeArray<object>(d.genres),
+        seasons: safeArray<object>(d.seasons),
+        credits: { cast: safeArray<object>((d.credits as { cast?: unknown } | undefined)?.cast) },
+        images: sanitizeImages(d.images),
+        videos: { results: safeArray<object>((d.videos as { results?: unknown } | undefined)?.results) },
+        content_ratings: { results: safeArray<object>((d.content_ratings as { results?: unknown } | undefined)?.results) },
+        external_ids: safeObject<object>(d.external_ids),
+    } as unknown as T
+}
+
+export const sanitizePersonDetails = <T extends Record<string, unknown>>(data: T): T => {
+    const d = (safeObject<Record<string, unknown>>(data) ?? {}) as Record<string, unknown>
+    return {
+        ...d,
+        known_for: safeArray<object>(d.known_for),
+    } as unknown as T
+}
+
+const sanitizeCredits = (data: unknown): { cast: object[] } => {
+    const d = safeObject<{ cast?: unknown }>(data) ?? {}
+    return { cast: safeArray<object>(d.cast) }
+}
+
 
 
 
@@ -439,7 +510,7 @@ export const getPersonMovies = async (id: number): Promise<{ results: TMDBResult
     if (!res.ok) {
         throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
     }
-    return res.json()
+    return sanitizeCredits(await res.json()) as unknown as { results: TMDBResult[] }
 }
 
 
@@ -448,7 +519,7 @@ export const getPersonTV = async (id: number): Promise<{ results: TMDBResult[] }
     if (!res.ok) {
         throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
     }
-    return res.json()
+    return sanitizeCredits(await res.json()) as unknown as { results: TMDBResult[] }
 }
 
 

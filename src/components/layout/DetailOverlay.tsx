@@ -114,7 +114,10 @@ const DetailOverlay: React.FC = () => {
           <div className="detail-page__backdrop-overlay" />
         </div>
       )}
-      <div className="detail-overlay__scroll" ref={scrollRef}>
+      <div
+        className={`detail-overlay__scroll${type === 'person' ? ' detail-overlay__scroll--person' : ''}`}
+        ref={scrollRef}
+      >
         <div className="detail-overlay__content">
           {type === 'movie' && <MovieDetail itemId={id} />}
           {type === 'tv' && <TVShowDetail itemId={id} />}

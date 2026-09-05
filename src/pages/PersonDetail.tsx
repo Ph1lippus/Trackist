@@ -37,6 +37,8 @@ const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId }) => {
     const [details, setDetails] = useState<PersonDetails | null>(null)
     usePageTitle(details?.name ? `${details.name} - Track1st` : 'Track1st - Person Detail')
     const [detailsLoading, setDetailsLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+    const [reloadKey, setReloadKey] = useState(0)
     const [movies, setMovies] = useState<FilmographyItem[]>([])
     const [tvShows, setTVShows] = useState<FilmographyItem[]>([])
     const [activeTab, setActiveTab] = useState<'movies' | 'tv'>('movies')
@@ -90,6 +92,7 @@ const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId }) => {
         let active = true
         const fetchDetails = async () => {
             setDetails(null)
+            setError(null)
             setDetailsLoading(true)
             if (!id) {
                 setDetailsLoading(false)
@@ -97,7 +100,7 @@ const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId }) => {
             }
             try {
                 const data = await getCachedOrFetch(
-                    'person-details',
+                    'person-details-v2',
                     Number(id),
                     () => getPersonDetails(Number(id)),
                     { ttl: 24 * 60 * 60 * 1000, staleWhileRevalidate: true }
@@ -105,6 +108,7 @@ const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId }) => {
                 if (active) setDetails(data)
             } catch (err) {
                 console.error('Failed to load person details:', err)
+                if (active) setError('Failed to load person details. Please try again.')
             } finally {
                 if (active) setDetailsLoading(false)
             }
@@ -113,7 +117,7 @@ const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId }) => {
         return () => {
             active = false
         }
-    }, [id])
+    }, [id, reloadKey])
 
     useEffect(() => {
         const fetchCredits = async () => {
@@ -160,6 +164,19 @@ const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId }) => {
 
     if (detailsLoading) {
         return <div className="detail-page-loading" aria-live="polite">Loading person...</div>
+    }
+
+    if (error && !details) {
+        return (
+            <div className="detail-page-error" role="alert">
+                <div className="error-boundary__card">
+                    <p>{error}</p>
+                    <button className="detail-page__retry-btn" onClick={() => setReloadKey((k) => k + 1)}>
+                        Try again
+                    </button>
+                </div>
+            </div>
+        )
     }
 
     if (!details) {
