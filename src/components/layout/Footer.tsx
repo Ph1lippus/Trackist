@@ -36,10 +36,10 @@ const Footer: React.FC<FooterProps> = ({ loggedIn = false }) => {
                     </div>
                     <div className="footer__links-group">
                         <span className="footer__links-title">About</span>
-                        <a href="#">About Track1st</a>
-                        <a href="#">Contact</a>
+                        <Link to="/about">About Track1st</Link>
+                        <Link to="/contact">Contact</Link>
                     </div>
-<div className="footer__links-group">
+                    <div className="footer__links-group">
                         <span className="footer__links-title">Legal</span>
                         <Link to="/privacy-policy">Privacy Policy</Link>
                         <Link to="/terms-of-service">Terms of Service</Link>

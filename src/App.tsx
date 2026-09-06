@@ -57,6 +57,10 @@ import DetailLayout from './components/layout/DetailLayout'
 import MFA from './pages/MFA'
 import Sessions from './pages/Sessions'
 import AdminSecurity from './pages/AdminSecurity'
+import PrivacyPolicy from './pages/PrivacyPolicy'
+import TermsOfService from './pages/TermsOfService'
+import About from './pages/About'
+import Contact from './pages/Contact'
 import { useSessionSecurity } from './hooks/useSessionSecurity'
 import { useDailyTVSync } from './hooks/useDailyTVSync'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -391,7 +395,7 @@ const AppContent: React.FC = () => {
         setNativeUpdateVersion(null)
     }
 
-    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Lists', '/Profile', '/Admin', '/MobileTVShows', '/MobileMovies', '/Followers', '/Following', '/Credits', '/Search', '/Statistics']
+    const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Lists', '/Profile', '/Admin', '/MobileTVShows', '/MobileMovies', '/Followers', '/Following', '/Search', '/Statistics']
     const settingsPages = ['/Settings', '/MFA', '/Sessions', '/AdminSecurity', '/EditProfile',
         '/Settings/account', '/Settings/profile', '/Settings/security', '/Settings/notifications',
         '/Settings/app', '/Settings/data', '/Settings/additions', '/Settings/danger']
@@ -487,7 +491,11 @@ const AppContent: React.FC = () => {
                     <Route path="/EditProfile" element={user ? <EditProfile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile/:username" element={user ? <Profile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile" element={user ? <Profile /> : <Navigate to="/login" replace />} />
-                    <Route path="/Credits" element={<Credits />} />
+                    <Route path="/credits" element={<Credits />} />
+                    <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                    <Route path="/terms-of-service" element={<TermsOfService />} />
+                    <Route path="/about" element={<About />} />
+                    <Route path="/contact" element={<Contact />} />
                     <Route element={<DetailLayout />}>
                         <Route path="/movie/:id" element={<MovieDetail />} />
                         <Route path="/tv/:id" element={<TVShowDetail />} />

@@ -12,7 +12,7 @@ Track your movies and TV shows — all in one place. A modern, privacy-focused w
 - **Episode Tracking** — For TV shows, mark individual episodes as watched, unwatch them, and see your progress at a glance.
 - **Statistics** — Visual insights into your watch history, including runtime totals, status breakdowns, and genre trends.
 - **Responsive Design** — Dedicated mobile UI for on-the-go tracking, with a native-app-like experience.
-- **PWA Support** — Install as a Progressive Web App and use it offline (data syncs on reconnect).
+- **Native App** — Built with Capacitor for iOS and Android.
 - **Addon Integration** — Open episodes directly in Stremio or other media players via deep links.
 - **Progressive Episode Discovery** — Automatically detects when shows have new episodes and marks them as "watching" so you always know what to continue next.
 - **Push Notifications** — Native and web push notifications for new episodes, seasons, and movie releases (theatrical and digital).
@@ -50,7 +50,7 @@ Track your movies and TV shows — all in one place. A modern, privacy-focused w
 | **APIs** | [TMDB](https://www.themoviedb.org/documentation/api) (movies/TV data) |
 | **Performance** | React Virtuoso (virtualized lists), SWR-style caching with 6-hour TTL |
 | **Deployment** | Vercel (with Speed Insights & Analytics) |
-| **PWA** | vite-plugin-pwa (offline support, install prompt) |
+| **Native** | Capacitor (iOS and Android builds) |
 
 ## Getting Started
 

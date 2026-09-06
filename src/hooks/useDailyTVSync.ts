@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
 import { countReleasedEpisodesAcrossSeasons } from '../services/watchlistService'
@@ -10,6 +10,17 @@ interface SyncShow {
     tmdb_id: number
     status: string
     last_season_check?: string | null
+}
+
+// Lightweight result of a single show's sync — the fields the sweep computed
+// that need to be reflected back in the in-memory store. Passed to the store's
+// `applySyncUpdates` in one batched call at the end of the sweep.
+interface SyncResult {
+    id: string
+    status: 'watching' | 'caught_up' | 'completed' | 'dropped' | 'planning'
+    total_episodes?: number
+    last_season_check?: string
+    updated_at?: string
 }
 
 const SYNC_BATCH_SIZE = 5
@@ -34,9 +45,11 @@ const isDueForSync = (lastCheck?: string | null): boolean => {
 
 /**
  * Refresh the released-episode count (and thus the "episodes left" badge) for a
- * single `watching` show. Also serves as the daily status check.
+ * single `watching` show. Also serves as the daily status check. Returns the
+ * lightweight in-memory update (or null for ended shows) rather than going
+ * through the full store refresh pipeline.
  */
-const syncWatchingShow = async (show: SyncShow): Promise<void> => {
+const syncWatchingShow = async (show: SyncShow): Promise<SyncResult | null> => {
     const details = await getTVDetails(show.tmdb_id)
 
     if (details.status === 'Ended' || details.status === 'Canceled') {
@@ -48,38 +61,49 @@ const syncWatchingShow = async (show: SyncShow): Promise<void> => {
 
         if (error) {
             console.error(`Failed to mark ended show ${show.id} as checked:`, error)
+            return null
         }
-        return
+        return {
+            id: show.id,
+            status: 'watching',
+            last_season_check: new Date().toISOString(),
+        }
     }
 
     const totalReleasedEpisodes = await countReleasedEpisodesAcrossSeasons(show.tmdb_id)
+    const lastSeasonCheck = new Date().toISOString()
 
     const { error } = await supabase
         .from('watchlist')
         .update({
             total_episodes: totalReleasedEpisodes,
-            last_season_check: new Date().toISOString()
+            last_season_check: lastSeasonCheck
         })
         .eq('id', show.id)
         .eq('status', 'watching')
 
     if (error) {
         console.error(`Failed to sync watching show ${show.id}:`, error)
-        return
+        return null
     }
 
-    await useLibraryStore.getState().refreshItem(show.id)
+    return {
+        id: show.id,
+        status: 'watching',
+        total_episodes: totalReleasedEpisodes,
+        last_season_check: lastSeasonCheck,
+    }
 }
 
 /**
  * Check whether a caught_up/completed show now has a newly released episode in
  * its latest season that the user hasn't watched. If so, move it back to
- * `watching` so it reappears in the active list.
+ * `watching` so it reappears in the active list. Returns the lightweight update.
  */
-const syncCaughtUpShow = async (show: SyncShow): Promise<void> => {
+const syncCaughtUpShow = async (show: SyncShow): Promise<SyncResult | null> => {
     const details = await getTVDetails(show.tmdb_id)
 
-    if (details.status === 'Ended' || details.status === 'Canceled') return
+    if (details.status === 'Ended' || details.status === 'Canceled') return null
 
     const latestSeasonNumber = details.number_of_seasons || 1
 
@@ -87,7 +111,7 @@ const syncCaughtUpShow = async (show: SyncShow): Promise<void> => {
     const seasonMeta = (details.seasons || []).find(
         (s: { season_number: number }) => s.season_number === latestSeasonNumber
     )
-    if (seasonMeta?.air_date && new Date(seasonMeta.air_date) > new Date()) return
+    if (seasonMeta?.air_date && new Date(seasonMeta.air_date) > new Date()) return null
 
     const seasonData = await getTVSeasonDetails(show.tmdb_id, latestSeasonNumber)
     const today = new Date()
@@ -98,7 +122,7 @@ const syncCaughtUpShow = async (show: SyncShow): Promise<void> => {
         return new Date(ep.air_date) <= today
     }).length
 
-    if (releasedInSeason === 0) return
+    if (releasedInSeason === 0) return null
 
     // Count how many of those latest-season episodes the user has watched.
     const { count: watchedCount } = await supabase
@@ -111,22 +135,30 @@ const syncCaughtUpShow = async (show: SyncShow): Promise<void> => {
 
     // If there are released episodes the user hasn't watched, move back to watching.
     if (releasedInSeason > watched) {
+        const nowIso = new Date().toISOString()
         const { error } = await supabase
             .from('watchlist')
             .update({
                 status: 'watching',
-                last_season_check: new Date().toISOString(),
-                updated_at: new Date().toISOString()
+                last_season_check: nowIso,
+                updated_at: nowIso
             })
             .eq('id', show.id)
 
         if (error) {
             console.error(`Failed to move caught_up show ${show.id} back to watching:`, error)
-            return
+            return null
         }
 
-        await useLibraryStore.getState().refreshItem(show.id)
+        return {
+            id: show.id,
+            status: 'watching',
+            last_season_check: nowIso,
+            updated_at: nowIso,
+        }
     }
+
+    return null
 }
 
 /**
@@ -137,20 +169,22 @@ const syncCaughtUpShow = async (show: SyncShow): Promise<void> => {
  * - Moves `caught_up` shows back to `watching` when a new released
  *   episode is available.
  *
- * Runs on the first open of the app each UTC day, plus when the tab becomes
- * visible again, to reflect newly-airing episodes. Bounded to ~once per show per
+ * Runs on the first open of the app each UTC day, bounded to ~once per show per
  * day via the `last_season_check` UTC-date gate, and rate-limited across batched
  * concurrency to avoid hammering the TMDB proxy.
+ *
+ * Deliberately NOT re-run on tab focus/visibility: returning to a tab should
+ * never trigger a re-verify of the whole library. The once-per-UTC-day mount
+ * sweep — plus the per-show `last_season_check` gate — is enough to catch
+ * newly-airing episodes when the app is actually opened on a new day.
  */
 export const useDailyTVSync = (userId: string | null) => {
-    const running = useRef(false)
     const isInitialized = useLibraryStore((state) => state.isInitialized)
 
     useEffect(() => {
         if (!userId || !isInitialized) return
-        if (running.current) return
 
-        running.current = true
+        let cancelled = false
 
         const sweep = async () => {
             // Fetch the user's TV shows once; filter by our scopes on the client.
@@ -187,21 +221,43 @@ export const useDailyTVSync = (userId: string | null) => {
                 s => s.status === 'caught_up' && isDueForSync(s.last_season_check)
             )
 
-            // Process batches with small concurrency to stay TMDB-friendly.
+            // Process batches with small concurrency to stay TMDB-friendly,
+            // collecting lightweight updates to apply to the store in one pass at
+            // the end (instead of a heavy cache-invalidating refresh per show).
+            const collected: (SyncResult | null)[] = []
             for (const group of [watching, caughtUp]) {
                 for (let i = 0; i < group.length; i += SYNC_BATCH_SIZE) {
                     const batch = group.slice(i, i + SYNC_BATCH_SIZE)
-                    await Promise.allSettled(
+                    const results = await Promise.allSettled(
                         batch.map(show =>
                             show.status === 'watching'
                                 ? syncWatchingShow(show)
                                 : syncCaughtUpShow(show)
                         )
                     )
+                    for (const r of results) {
+                        if (r.status === 'fulfilled') collected.push(r.value)
+                    }
                     if (i + SYNC_BATCH_SIZE < group.length) {
                         await delay(SYNC_BATCH_DELAY_MS)
                     }
                 }
+            }
+
+            if (cancelled) return
+
+            const updates = collected.filter(
+                (u): u is SyncResult => u != null
+            ).map((u) => ({
+                id: u.id,
+                status: u.status,
+                ...(u.total_episodes != null ? { total_episodes: u.total_episodes } : {}),
+                ...(u.last_season_check != null ? { last_season_check: u.last_season_check } : {}),
+                ...(u.updated_at != null ? { updated_at: u.updated_at } : {}),
+            }))
+
+            if (updates.length > 0) {
+                useLibraryStore.getState().applySyncUpdates(updates)
             }
         }
 
@@ -209,21 +265,8 @@ export const useDailyTVSync = (userId: string | null) => {
             console.error('useDailyTVSync: sweep failed:', err)
         })
 
-        // Re-run when the tab becomes visible again (covers staying open past midnight).
-        const handleVisibility = () => {
-            if (document.visibilityState === 'visible' && running.current === false) {
-                running.current = true
-                void sweep().catch(err => {
-                    console.error('useDailyTVSync: visibility sweep failed:', err)
-                })
-            }
-        }
-        document.addEventListener('visibilitychange', handleVisibility)
-
         return () => {
-            document.removeEventListener('visibilitychange', handleVisibility)
-            // running flag intentionally left: once the hook mounts we allow repeats via visibility.
-            running.current = false
+            cancelled = true
         }
     }, [userId, isInitialized])
 }

@@ -37,8 +37,21 @@ interface LibraryState {
     removeItem: (id: string) => Promise<void>
     addItem: (item: WatchlistItem) => Promise<void>
     refreshItem: (id: string) => Promise<void>
+    applySyncUpdates: (updates: SyncItemUpdate[]) => void
     syncWatchlistIds: () => void
     reset: () => void
+}
+
+// A lightweight field patch produced by the background daily TV sync. Unlike the
+// full `refreshItem` pipeline (which invalidates the whole cache and refetches
+// TV details for each show), these only touch fields that the sync already has
+// in hand, without touching the cache or reshuffling arrays.
+interface SyncItemUpdate {
+    id: string
+    status: WatchlistItem['status']
+    total_episodes?: number
+    last_season_check?: string
+    updated_at?: string
 }
 
 const selectColumns = '*'
@@ -811,6 +824,48 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             const state = get()
             await cacheService.set('library', user.id, state.allItems, 5 * 60 * 1000)
         }
+    },
+
+    // Apply lightweight in-memory patches from the background daily TV sync.
+    // These only touch fields the sync already computed (episode counts, status
+    // flips, last-seen timestamps) and deliberately skip the cache invalidation,
+    // per-item TMDB refetch and array reshuffling that `refreshItem` triggers —
+    // keeping the once-per-day sweep cheap and non-destructive.
+    applySyncUpdates: (updates: SyncItemUpdate[]) => {
+        if (!updates || updates.length === 0) return
+
+        const applyTo = <T extends WatchlistItem | TVShowWithProgress>(list: T[]): T[] =>
+            list.map((item) => {
+                const u = updates.find((x) => x.id === item.id)
+                if (!u) return item
+                return {
+                    ...item,
+                    status: u.status,
+                    ...(u.total_episodes != null ? { total_episodes: u.total_episodes } : {}),
+                    ...(u.last_season_check != null ? { last_season_check: u.last_season_check } : {}),
+                    ...(u.updated_at != null ? { updated_at: u.updated_at } : {}),
+                } as T
+            })
+
+        const state = get()
+        const newAllItems = applyTo(state.allItems)
+        const newTvShows = applyTo(state.tvShows)
+        const newFinished = applyTo(state.finished)
+
+        // Keep `finished` membership in sync when a caught_up show flips back to
+        // `watching` (it should leave the finished list).
+        const flippedToActive = new Set(
+            updates.filter((u) => u.status === 'watching').map((u) => u.id)
+        )
+        const filteredFinished = newFinished.filter(
+            (f) => !flippedToActive.has(f.id)
+        )
+
+        set({
+            allItems: newAllItems,
+            tvShows: newTvShows,
+            finished: filteredFinished,
+        })
     },
 
     // Recompute watchlistIds from allItems (useful after external updates)

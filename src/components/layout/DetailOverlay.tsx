@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import useDetailModalStore, {
   getDetailBaseTitle,
@@ -8,6 +8,11 @@ import MovieDetail from '../../pages/MovieDetail'
 import TVShowDetail from '../../pages/TVShowDetail'
 import PersonDetail from '../../pages/PersonDetail'
 import EpisodeDetail from '../../pages/EpisodeDetail'
+
+// Duration (ms) of the exit fade. Must match the CSS `detailOverlayOut`
+// animation so the overlay stays mounted for exactly the fade-out length
+// before being removed from the DOM. Kept short for a snappy feel.
+const EXIT_MS = 180
 
 const entryKey = (type: string, id: number, season?: number, episode?: number): string =>
   `${type}:${id}:${season ?? ''}:${episode ?? ''}`
@@ -35,6 +40,52 @@ const DetailOverlay: React.FC = () => {
   const previouslyFocused = useRef<HTMLElement | null>(null)
   const lastRouterPath = useRef(location.pathname)
 
+  // Exit-phase state: when `isOpen` flips false we keep the overlay mounted for
+  // EXIT_MS to play the fade-out (CSS `detailOverlayOut`), then remove it. We
+  // snapshot the last open values so the outgoing layer stays visible while
+  // fading instead of disappearing in a hard cut.
+  //
+  // The open->closing transition is derived in the render body via the guarded
+  // "adjust state when a value changes" pattern (setState during render is
+  // legal React; we avoid reading refs during render to satisfy the linter and
+  // keep updates predictable).
+  const [closing, setClosing] = useState(false)
+  const [prevOpen, setPrevOpen] = useState(isOpen)
+  const [snapshot, setSnapshot] = useState({ type, id, stack, backdropUrl })
+
+  if (prevOpen !== isOpen) {
+    setPrevOpen(isOpen)
+    if (isOpen) {
+      setClosing(false)
+    } else {
+      setClosing(true)
+    }
+  }
+
+  // Keep a snapshot of the last open values so the exit fade can render the
+  // outgoing layer after the store resets to closed. Updated via the guarded
+  // "adjust state during render" pattern (legal setState-in-render, no refs),
+  // only when the live values actually change to avoid extra renders.
+  if (
+    isOpen &&
+    (snapshot.type !== type ||
+      snapshot.id !== id ||
+      snapshot.stack !== stack ||
+      snapshot.backdropUrl !== backdropUrl)
+  ) {
+    setSnapshot({ type, id, stack, backdropUrl })
+  }
+
+  const mount = isOpen || closing
+
+  // After the exit fade completes, remove the overlay from the DOM.
+  useEffect(() => {
+    if (!closing) return
+    const t = window.setTimeout(() => setClosing(false), EXIT_MS)
+    return () => window.clearTimeout(t)
+  }, [closing])
+
+
   // Close the modal when a real navigation happens underneath it (navbar/tab).
   // The modal never changes the URL (it stays pinned), so any router pathname
   // change while the modal is open is a genuine navigation to a new page —
@@ -46,7 +97,6 @@ const DetailOverlay: React.FC = () => {
       // The new page has already rendered and set its own document title, so
       // capture it as the new base so the close cleanup restores the right one.
       setDetailBaseTitle(document.title)
-      console.debug('[DBG-modal] forced close: pathname changed to', location.pathname)
       useDetailModalStore.getState().close()
     }
   }, [location.pathname, isOpen])
@@ -66,8 +116,6 @@ const DetailOverlay: React.FC = () => {
       const s = useDetailModalStore.getState()
       if (!s.isOpen) return
       const path = window.location.pathname + window.location.search + window.location.hash
-      const histState = window.history.state as { idx?: number | null } | null
-      console.debug('[DBG-modal] popstate:', 'path=', path, 'pinHref=', s.pinHref, 'stackLen=', s.stack.length, 'histIdx=', histState?.idx ?? null)
       if (path !== s.pinHref) {
         s.close()
         return
@@ -99,9 +147,9 @@ const DetailOverlay: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [isOpen])
 
-  // Lock page scroll while open
+  // Lock page scroll while open (and through the brief exit fade).
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen || closing) {
       document.body.classList.add('no-scroll')
     } else {
       document.body.classList.remove('no-scroll')
@@ -109,7 +157,7 @@ const DetailOverlay: React.FC = () => {
     return () => {
       document.body.classList.remove('no-scroll')
     }
-  }, [isOpen])
+  }, [isOpen, closing])
 
   // Focus management: remember the opener, take focus into the modal, and hand
   // it back when it closes.
@@ -148,23 +196,32 @@ const DetailOverlay: React.FC = () => {
     }
   }, [backdropUrl, isOpen])
 
-  if (!isOpen || !type || id == null || stack.length === 0) return null
+  const view = mount
+    ? { type: snapshot.type, id: snapshot.id, stack: snapshot.stack, backdropUrl: snapshot.backdropUrl }
+    : null
+  if (!mount || !view?.type || view.id == null || view.stack.length === 0) return null
 
+  const overlayClass = `detail-overlay${closing ? ' detail-overlay--exiting' : ''}`
+
+  // The top layer fades in over the previously-shown (now hidden) layer via
+  // `detailLayerIn`; deeper layers stay hidden underneath.
   return (
-    <div className="detail-overlay" role="dialog" aria-modal="true" aria-label={`${type} details`}>
-      {backdropUrl && type !== 'person' && (
+    <div className={overlayClass} role="dialog" aria-modal="true" aria-label={`${view.type} details`}>
+      {view.backdropUrl && view.type !== 'person' && (
         <div className="detail-page__backdrop">
-          <img src={backdropUrl} alt="" loading="lazy" />
+          <img src={view.backdropUrl} alt="" loading="lazy" />
           <div className="detail-page__backdrop-overlay" />
         </div>
       )}
-      {stack.map((entry, index) => {
+      {view.stack.map((entry, index) => {
         const key = entryKey(entry.type, entry.id, entry.season, entry.episode)
-        const isTop = index === stack.length - 1
+        const isTop = index === view.stack.length - 1
+        // The new top layer animates in; deeper layers stay hidden underneath.
+        const layerClass = `detail-overlay__scroll${entry.type === 'person' ? ' detail-overlay__scroll--person' : ''}${isTop ? ' detail-overlay__scroll--top' : ''}`
         return (
           <div
             key={key}
-            className={`detail-overlay__scroll${entry.type === 'person' ? ' detail-overlay__scroll--person' : ''}`}
+            className={layerClass}
             style={isTop ? undefined : { visibility: 'hidden' }}
           >
             <div className="detail-overlay__content">

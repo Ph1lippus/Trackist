@@ -3756,13 +3756,29 @@ html.native-app *::-webkit-scrollbar {
 
 /* Loading and error states */
 .detail-page-loading {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 50vh;
+    min-height: 55vh;
     gap: 1rem;
     color: rgba(255, 255, 255, 0.5);
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+    animation: fadeIn 0.25s ease;
+}
+/* Spinner rendered as a pseudo-element so every detail page's plain-text
+   "Loading..." gets a gold-standard loader without touching each component. */
+.detail-page-loading::before {
+    content: "";
+    width: 36px;
+    height: 36px;
+    border: 3px solid rgba(133, 138, 227, 0.18);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: discoverSpin 0.7s linear infinite;
+    flex: 0 0 auto;
 }
 .detail-page-error {
     display: flex;
@@ -6259,6 +6275,74 @@ i.fa-solid.fa-trash:hover {
     background-attachment: fixed;
 }
 
+/* Exit: fade the overlay out before it is removed from the DOM (kept mounted
+   for EXIT_MS in DetailOverlay). animation-fill-mode keeps it opaque until the
+   animation starts, then fades to transparent under the incoming page. */
+.detail-overlay--exiting {
+    animation: detailOverlayOut 0.18s ease forwards;
+    pointer-events: none;
+}
+
+@keyframes detailOverlayIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes detailOverlayOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* The topmost stack layer crossfades in over the (hidden) previous layer when
+   the user drills from one detail to another (e.g. movie -> person -> movie).
+   transform+opacity only; `backface-visibility` avoids flicker on mobile. */
+.detail-overlay__scroll--top {
+    animation: detailLayerIn 0.24s ease;
+    backface-visibility: hidden;
+    transform: translateZ(0);
+}
+
+@keyframes detailLayerIn {
+    from {
+        opacity: 0;
+        transform: translateY(6px) scale(0.995);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Mobile-only: the entering top layer is backed by an opaque cover that
+   dissolves in sync with the layer's fade-in, so the starfield / mobile
+   background never shows through the semi-transparent fade. On desktop the
+   overlay's own gradient is already opaque (nothing can bleed through), which
+   is why the container no longer fades as a whole. Gating on `--top` means the
+   pseudo-element is freshly generated (animation restarts) on both push and pop
+   and disappears once the transition settles. */
+@keyframes layerCoverOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+/* Shared overlay backdrop eases in when a movie/TV layer's backdrop resolves
+   (avoids the hard "background pops in" feel between stacked layers). */
+.detail-overlay .detail-page__backdrop {
+    animation: detailBackdropIn 0.35s ease;
+}
+
+@keyframes detailBackdropIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* After the layer/overlay animations settle, release the compositor layers we
+   promoted so they don't stay resident on lower-end / mobile devices. */
+.detail-overlay__scroll--top,
+.detail-overlay:not(.detail-overlay--exiting) {
+    will-change: auto;
+}
+
 .detail-overlay__scroll {
     position: absolute;
     top: var(--navbar-height);
@@ -6285,6 +6369,28 @@ i.fa-solid.fa-trash:hover {
     /* Show stars background through the overlay on mobile */
     .detail-overlay {
         background: transparent !important;
+    }
+
+    /* Lighter, transform-free layer entry on mobile/native: the whole overlay
+       scrolls as one block, so a translateY on the scroll layer would fight the
+       scroll position. Pure opacity keeps it buttery and avoids any visual jump
+       when the content area scrolls. */
+    .detail-overlay__scroll--top {
+        animation-name: detailOverlayIn;
+        animation-duration: 0.2s;
+    }
+
+    /* Opaque scrim behind the entering layer during its fade so the transparent
+       overlay never reveals the starfield/background mid-transition. Dissolves
+       slightly after the layer fade completes (0.22s vs 0.2s) to guarantee no
+       trailing gap, then stays gone to keep the see-through native aesthetic. */
+    .detail-overlay__scroll--top::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        z-index: -1;
+        background: #2c2b55;
+        animation: layerCoverOut 0.22s ease forwards;
     }
 
     /* Whole overlay scrolls: the scroll area spans the full viewport (behind
@@ -11504,6 +11610,52 @@ html.native-app .detail-overlay .detail-page__right {
     margin: 0;
 }
 
+/* ===== UPCOMING LOADING STATES (calendar + list) =====
+   Gold-standard loaders: a centered, layered, animated state with the app's
+   spinner + a soft shimmering label. transform/opacity only for cheap
+   compositing. */
+.upcoming-new-loading,
+.upcoming-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1.25rem;
+    min-height: 45vh;
+    padding: 3rem 1.5rem;
+    text-align: center;
+    animation: fadeIn 0.25s ease;
+}
+
+/* Emphasis: the calendar loader should fill the full viewport it occupies. */
+.upcoming-loading {
+    min-height: 100%;
+}
+
+.upcoming-new-loading .discover-spinner,
+.upcoming-loading .discover-spinner {
+    width: 38px;
+    height: 38px;
+    border-width: 3px;
+    border-color: rgba(133, 138, 227, 0.18);
+    border-top-color: var(--color-primary);
+    animation: discoverSpin 0.7s linear infinite;
+}
+
+.upcoming-new-loading p,
+.upcoming-loading p {
+    margin: 0;
+    font-size: 0.95rem;
+    letter-spacing: 0.01em;
+    color: rgba(255, 255, 255, 0.45);
+    animation: upcomingPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes upcomingPulse {
+    0%, 100% { opacity: 0.55; }
+    50% { opacity: 1; }
+}
+
 .upcoming-new-list {
     display: flex;
     flex-direction: column;
@@ -13228,5 +13380,46 @@ html.native-app .detail-overlay .detail-page__right {
     color: var(--color-primary);
     font-size: 0.75rem;
     line-height: 1.4;
+}
+
+.about-hero {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.legal-page section {
+    margin-bottom: 1.5rem;
+}
+
+.legal-page h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--color-text);
+}
+
+.legal-page p,
+.legal-page li {
+    color: rgba(255, 255, 255, 0.75);
+    line-height: 1.6;
+}
+
+.legal-page ul {
+    padding-left: 1.25rem;
+    list-style: none;
+}
+
+.legal-page a {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.legal-page a:hover {
+    text-decoration: underline;
+}
+
+.contact-form {
+    max-width: 600px;
+    margin: 0 auto;
 }
 
