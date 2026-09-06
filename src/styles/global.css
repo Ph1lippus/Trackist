@@ -539,6 +539,27 @@ html {
     -webkit-backdrop-filter: none;
 }
 
+.detail-page__navbar-scrim {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--navbar-height, 72px);
+    background: rgba(15, 16, 27, 0.85);
+    z-index: 99;
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+}
+.detail-page__navbar-scrim--hidden {
+    opacity: 0;
+}
+
+/* Smooth transition as the scrim lifts */
+.navbar-brand-row .navbar-inner.navbar-transparent {
+    transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
+}
+
 .container.navbar-inner.no-back-btn {
     backdrop-filter: blur(8px);
 }
@@ -2707,8 +2728,8 @@ html.native-app *::-webkit-scrollbar {
         height: 100%;
     }
     /* Mirror the 4rem left offset on the right so content (e.g. the cast
-       grid) ends a bit in from the screen edge on desktop. */
-    .detail-page__content {
+       grid) ends a bit in from the screen edge on desktop for movie detail only. */
+    .detail-page__main--movie > .detail-page__content {
         padding-right: 4rem;
     }
 }
@@ -5946,6 +5967,14 @@ button:focus-visible {
     padding: 1rem;
     word-break: break-word;
 }
+.media-card__no-poster-title {
+    display: none;
+}
+@media (max-width: 768px) {
+    .media-card__no-poster-title {
+        display: block;
+    }
+}
 .media-card__poster {
     border-radius: 25px;
     position: relative;
@@ -6418,12 +6447,12 @@ i.fa-solid.fa-trash:hover {
         background: transparent !important;
     }
 
-    /* Mobile curtain uses the mobile html background tone so it paints
-       seamlessly over the transparent overlay / starfield until the layer's
-       content reports ready. */
-    .detail-overlay__scroll--top::after {
-        background: #2c2b55;
-    }
+     /* Mobile curtain uses the mobile html background tone so it paints
+        seamlessly over the transparent overlay / starfield until the layer's
+        content reports ready. */
+     .detail-overlay__scroll--top::after {
+         background: #2c2b55;
+     }
 
     /* Whole overlay scrolls: the scroll area spans the full viewport (behind
        the fixed transparent navbar) so content moves up under the navbar on
@@ -6535,6 +6564,20 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
     .detail-overlay__scroll--person::-webkit-scrollbar {
         display: none;
     }
+}
+
+#confirm-modal-root {
+    position: fixed;
+    inset: 0;
+    z-index: 4000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+#confirm-modal-root > * {
+    pointer-events: auto;
 }
 
 /* ===== CONFIRM MODAL ===== */
@@ -12623,6 +12666,7 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
     }
     .detail-page__title-section {
         flex-shrink: 0;
+        padding-top: var(--navbar-height);
     }
     .detail-page__overview-section {
         flex: 1;

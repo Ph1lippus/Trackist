@@ -1,5 +1,6 @@
 import React, { useMemo, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 interface ConfirmModalProps {
     isOpen: boolean
@@ -79,7 +80,8 @@ const ConfirmModal = React.memo<ConfirmModalProps>(({
         onConfirm()
     }
 
-    return (
+    const container = typeof document !== 'undefined' ? document.getElementById('confirm-modal-root') : null
+    const modal = (
         <div
             className={`confirm-modal-overlay ${isEntering ? 'confirm-modal-overlay--enter' : 'confirm-modal-overlay--leave'}`}
             onClick={isEntering ? (confirmLoading ? undefined : handleCancel) : undefined}
@@ -139,6 +141,8 @@ const ConfirmModal = React.memo<ConfirmModalProps>(({
             </div>
         </div>
     )
+
+    return container ? createPortal(modal, container) : modal
 })
 
 export default ConfirmModal

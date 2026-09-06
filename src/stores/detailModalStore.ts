@@ -193,7 +193,12 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
       season: top.season,
       episode: top.episode,
       stack: nextStack,
-      backdropUrl: null,
+      // Keep the current backdropUrl visible during the layer transition instead of
+      // clearing it to null. The new layer's Detail* page will push its own
+      // backdropUrl via setBackdropUrl() in its useEffect. Without this, there's a
+      // brief flash where no backdrop renders and the starfield (35% opacity)
+      // bleeds through the transparent navbar — making it appear darker mid-transition.
+      backdropUrl: current.backdropUrl,
     })
     persistModal(get())
   },

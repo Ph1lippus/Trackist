@@ -126,9 +126,9 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const detailModalType = useDetailModalStore((s) => s.type);
     const isSearchPage = location.pathname === '/Search';
     const isRoutedPersonDetail = Boolean(location.pathname.match(/^\/person\/\d+$/));
-    // Navbar is transparent (see-through over content) on person detail pages
+    // Navbar is transparent (see-through over content) on detail pages
     // and while the detail modal is open, per the detail-page design.
-    const isTransparentNavbar = isRoutedPersonDetail ||
+    const isTransparentNavbar = isDetailPage ||
         Boolean(detailModalOpen && detailModalType === 'person');
     const showBackButton = Boolean(isDetailPage || isListDetailPage || isListEditPage || isSettingsSubPage || detailModalOpen || isSearchPage);
     

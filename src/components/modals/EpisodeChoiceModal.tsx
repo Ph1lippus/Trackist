@@ -1,4 +1,5 @@
 import React from 'react'
+import { createPortal } from 'react-dom'
 
 interface EpisodeChoiceModalProps {
     isOpen: boolean
@@ -23,7 +24,9 @@ const EpisodeChoiceModal: React.FC<EpisodeChoiceModalProps> = ({
 
     const isLoading = loadingAction !== null
 
-    return (
+    const container = typeof document !== 'undefined' ? document.getElementById('confirm-modal-root') : null
+
+    const modal = (
         <div className="confirm-modal-overlay" onClick={isLoading ? undefined : onCancel}>
             <div className="confirm-modal-content" onClick={(e) => e.stopPropagation()}>
                 <h3 className="confirm-modal-title">{title}</h3>
@@ -95,6 +98,8 @@ const EpisodeChoiceModal: React.FC<EpisodeChoiceModalProps> = ({
             </div>
         </div>
     )
+
+    return container ? createPortal(modal, container) : modal
 }
 
 export default React.memo(EpisodeChoiceModal)
