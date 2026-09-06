@@ -65,7 +65,7 @@ import { useSessionSecurity } from './hooks/useSessionSecurity'
 import { useDailyTVSync } from './hooks/useDailyTVSync'
 import ErrorBoundary from './components/ErrorBoundary'
 import mfaService from './services/mfaService'
-import useDetailModalStore from './stores/detailModalStore'
+import useDetailModalStore, { restoreDetailModal } from './stores/detailModalStore'
 
 const LegacyListRedirect: React.FC = () => {
     const { id } = useParams<{ id: string }>()
@@ -74,6 +74,7 @@ const LegacyListRedirect: React.FC = () => {
 
 const AppContent: React.FC = () => {
     const location = useLocation()
+    const isPersonPage = Boolean(location.pathname.match(/^\/person\/\d+$/))
     const navigate = useNavigate()
     const user = useAuthStore((state) => state.user)
     const loading = useAuthStore((state) => state.loading)
@@ -85,6 +86,7 @@ const AppContent: React.FC = () => {
     )
     const [currentMonth, setCurrentMonth] = useState(new Date())
     const hasUpdatedLastActive = useRef(false)
+    const hasRestoredModal = useRef(false)
     const [showUpdateModal, setShowUpdateModal] = useState(false)
     const [updateLoading, setUpdateLoading] = useState(false)
     const [updateError, setUpdateError] = useState<string | null>(null)
@@ -128,6 +130,16 @@ const AppContent: React.FC = () => {
             void invalidateCalendarCache(user.id)
         }
     }, [loading, user])
+
+    // Restore the detail modal that was open before a refresh. The modal never
+    // changes the URL (it pins the underlying page), so a refresh lands back on
+    // that page; this re-opens the saved modal stack on top of it.
+    useEffect(() => {
+        if (loading || !user || approved !== true) return
+        if (hasRestoredModal.current) return
+        hasRestoredModal.current = true
+        restoreDetailModal()
+    }, [loading, user, approved])
 
     useEffect(() => {
         if (loading || !user) return
@@ -467,7 +479,7 @@ const AppContent: React.FC = () => {
                 canGoBack={canGoBack}
                 goToToday={goToToday}
             />
-            <main className={`page-main flex-grow-1 ${hideFooter ? 'page-main--no-footer' : ''}${isModalOpen ? ' is-modal-backdrop-hidden' : ''}`} inert={isModalOpen || undefined}>
+            <main className={`page-main flex-grow-1 ${hideFooter ? 'page-main--no-footer' : ''}${isPersonPage ? ' person-page' : ''}${isModalOpen ? ' is-modal-backdrop-hidden' : ''}`} inert={isModalOpen || undefined}>
                 <ErrorBoundary resetKey={location.pathname}>
                     <Routes>
                     <Route path="/" element={user ? <Navigate to={defaultRoute} replace /> : <Login />} />

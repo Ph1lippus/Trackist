@@ -529,6 +529,16 @@ html {
     }
 }  
 
+/* Transparent navbar — person detail page and open detail modal: truly
+   transparent (no fill, no scrim, no blur) so everything behind it is visible
+   fully. Scoped under the row for specificity over the `.no-back-btn` fill. */
+.navbar-brand-row.is-modal-open .container.navbar-inner,
+.navbar-brand-row .navbar-inner.navbar-transparent {
+    background: transparent !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
 .container.navbar-inner.no-back-btn {
     backdrop-filter: blur(8px);
 }
@@ -660,6 +670,44 @@ html::before {
 /* When the detail modal is open, ensure navbar stays on top */
 .navbar-brand-row.is-modal-open {
     z-index: 110;
+}
+
+/* Native (Capacitor): the primary navbar is NOT fixed — it sits in normal
+   document flow at the top and scrolls away with the page, the classic mobile
+   pattern. It stays transparent so detail backdrops / page bg show through.
+   Content offsets that assumed a fixed navbar strip (page-main padding, detail
+   height math) are neutralized below; page-main is already pushed below the
+   in-flow navbar by the column flex. */
+html.native-app .navbar-brand-row {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    background: transparent;
+}
+html.native-app .navbar-brand-row .container,
+html.native-app .navbar-brand-row .navbar-inner,
+html.native-app .container.navbar-inner.no-back-btn:not(.is-modal-open),
+html.native-app .container.navbar-inner.no-back-btn {
+    background: transparent !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+/* The in-flow navbar already reserves its height, so page-main must not add a
+   fixed-navbar offset on top (would double the gap). */
+html.native-app .page-main {
+    padding-top: 0 !important;
+}
+
+/* Native modal: the navbar reverts to fixed while the modal is open so the back
+   button stays reachable even if the page underneath was scrolled (the in-flow
+   navbar would be off-screen). It remains transparent, so the modal's backdrop
+   shows through behind the back button / brand row. */
+html.native-app .navbar-brand-row.is-modal-open {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
 }
 
 /* While the detail modal is open the routed page stays mounted (to preserve its
@@ -3582,7 +3630,7 @@ html.native-app *::-webkit-scrollbar {
 
 @media (max-width: 768px) {
     .detail-overlay .detail-page--person {
-        padding-top: calc(var(--navbar-height) + env(safe-area-inset-top, 0px));
+        padding-top: env(safe-area-inset-top, 0px);
     }
 }
 
@@ -4871,9 +4919,15 @@ html.native-app *::-webkit-scrollbar {
 
 .credits-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(5, 1fr);
     gap: 1.25rem;
     margin-top: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .credits-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 
 .credit-card {
@@ -6271,8 +6325,11 @@ i.fa-solid.fa-trash:hover {
     position: fixed;
     inset: 0;
     z-index: 80;
-    background: linear-gradient(41deg, #0c0b11 0%, #2c2b55 55%, #5a5a9e 100%);
-    background-attachment: fixed;
+    /* Transparent so the app's gradient + starfield show through behind the
+       navbar strip and below detail content (a person has no backdrop, so an
+       opaque fill here read as a colored band behind the transparent navbar).
+       Movie/TV backdrops still cover the full viewport with their own image. */
+    background: transparent;
 }
 
 /* Exit: fade the overlay out before it is removed from the DOM (kept mounted
@@ -6283,46 +6340,36 @@ i.fa-solid.fa-trash:hover {
     pointer-events: none;
 }
 
-@keyframes detailOverlayIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
 @keyframes detailOverlayOut {
     from { opacity: 1; }
     to { opacity: 0; }
 }
 
-/* The topmost stack layer crossfades in over the (hidden) previous layer when
-   the user drills from one detail to another (e.g. movie -> person -> movie).
-   transform+opacity only; `backface-visibility` avoids flicker on mobile. */
+/* The topmost layer is revealed only once its content has finished loading.
+   An opaque curtain (matching the app background) covers the layer until a
+   Detail* page reports loaded via `onLoaded` (flips `--ready`), then the curtain
+   fades away with a CSS transition. Nothing below — previous layer (now
+   `display:none`), background (readied instantly), starfield, or the layer's own
+   as-yet-async content — is ever visible mid-transition. Back-navigating to an
+   already-loaded layer is an instant reveal (curtain settled transparent). */
 .detail-overlay__scroll--top {
-    animation: detailLayerIn 0.24s ease;
     backface-visibility: hidden;
     transform: translateZ(0);
 }
 
-@keyframes detailLayerIn {
-    from {
-        opacity: 0;
-        transform: translateY(6px) scale(0.995);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0) scale(1);
-    }
+.detail-overlay__scroll--top::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: linear-gradient(41deg, #0c0b11 0%, #2c2b55 55%, #5a5a9e 100%);
+    opacity: 1;
+    transition: opacity 0.35s ease;
 }
 
-/* Mobile-only: the entering top layer is backed by an opaque cover that
-   dissolves in sync with the layer's fade-in, so the starfield / mobile
-   background never shows through the semi-transparent fade. On desktop the
-   overlay's own gradient is already opaque (nothing can bleed through), which
-   is why the container no longer fades as a whole. Gating on `--top` means the
-   pseudo-element is freshly generated (animation restarts) on both push and pop
-   and disappears once the transition settles. */
-@keyframes layerCoverOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
+.detail-overlay__scroll--top.detail-overlay__scroll--ready::after {
+    opacity: 0;
 }
 
 /* Shared overlay backdrop eases in when a movie/TV layer's backdrop resolves
@@ -6371,26 +6418,11 @@ i.fa-solid.fa-trash:hover {
         background: transparent !important;
     }
 
-    /* Lighter, transform-free layer entry on mobile/native: the whole overlay
-       scrolls as one block, so a translateY on the scroll layer would fight the
-       scroll position. Pure opacity keeps it buttery and avoids any visual jump
-       when the content area scrolls. */
-    .detail-overlay__scroll--top {
-        animation-name: detailOverlayIn;
-        animation-duration: 0.2s;
-    }
-
-    /* Opaque scrim behind the entering layer during its fade so the transparent
-       overlay never reveals the starfield/background mid-transition. Dissolves
-       slightly after the layer fade completes (0.22s vs 0.2s) to guarantee no
-       trailing gap, then stays gone to keep the see-through native aesthetic. */
-    .detail-overlay__scroll--top::before {
-        content: "";
-        position: absolute;
-        inset: 0;
-        z-index: -1;
+    /* Mobile curtain uses the mobile html background tone so it paints
+       seamlessly over the transparent overlay / starfield until the layer's
+       content reports ready. */
+    .detail-overlay__scroll--top::after {
         background: #2c2b55;
-        animation: layerCoverOut 0.22s ease forwards;
     }
 
     /* Whole overlay scrolls: the scroll area spans the full viewport (behind
@@ -6408,7 +6440,7 @@ i.fa-solid.fa-trash:hover {
         height: auto;
         overflow: visible;
         display: block;
-        padding-top: calc(var(--navbar-height) + env(safe-area-inset-top, 0px));
+        padding-top: env(safe-area-inset-top, 0px);
     }
     .detail-overlay .detail-page__content--split,
     .detail-overlay .detail-page__main,
@@ -6441,6 +6473,46 @@ html.native-app .detail-overlay .detail-page__right {
     background: transparent !important;
 }
 
+/* Native: the modal covers the whole viewport (the underlying navbar is in
+   flow and hidden behind it), so the scroll area must start at the very top
+   and detail pages must not pad for a fixed navbar strip above them. */
+html.native-app .detail-overlay__scroll {
+    top: 0;
+}
+html.native-app .detail-overlay .detail-page--no-scroll {
+    padding-top: env(safe-area-inset-top, 0px);
+}
+html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
+    padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Person overlay (page + modal must look identical): the navbar is fixed and
+   truly transparent, and content starts below it — exactly like the routed
+   person page. A person has no full-bleed backdrop, so the scroll area spans
+   the full viewport (top: 0) and the detail content is padded down to
+   --navbar-height: at rest the profile sits below the bar, and on scroll the
+   content moves up under the transparent bar where it stays fully visible
+   (see-through), matching the page. Mobile/native otherwise span top:0 for the
+   full-bleed backdrop movie/TV overlays; person is pinned to the same model. */
+.detail-overlay__scroll--person,
+html.native-app .detail-overlay__scroll--person {
+    top: 0;
+}
+.detail-overlay .detail-page--person.detail-page--no-scroll,
+html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
+    padding-top: var(--navbar-height);
+}
+
+/* A person layer has no backdrop image, so the loading curtain's flat dark
+   fill (which lacks the app's starfield texture) made the strip behind the
+   transparent navbar read as "a darker background than the rest of the page".
+   Drop the curtain entirely for person layers: the app gradient + starfield
+   show through identically above and below the content, and there is no
+   backdrop to keep under cover. */
+.detail-overlay__scroll--top.detail-overlay__scroll--person::after {
+    background: transparent;
+}
+
 @media (min-width: 769px) {
     .detail-overlay__scroll {
         overflow: hidden;
@@ -6450,7 +6522,10 @@ html.native-app .detail-overlay .detail-page__right {
     }
 
     /* Person overlay: let the overlay container itself scroll so the mouse
-       wheel works; hide the scrollbar to match the pinned detail pages. */
+       wheel works; hide the scrollbar to match the pinned detail pages. The
+       content starts below the fixed transparent navbar (same 72px offset as a
+       routed detail page), so the navbar keeps its normal position and just
+       shows the page background through it. */
     .detail-overlay__scroll--person {
         overflow-y: auto;
         overflow-x: hidden;
@@ -12504,6 +12579,13 @@ html.native-app .detail-overlay .detail-page__right {
 
     .page-main {
         padding-top: calc(var(--navbar-height) + 0.5rem) !important;
+    }
+
+    /* Person page matches the person modal exactly: content starts flush below
+       the fixed transparent navbar (no extra +0.5rem), like the modal's own
+       padding-top, so page and modal render identically. */
+    .page-main.person-page {
+        padding-top: var(--navbar-height) !important;
     }
 
     .navbar-auth-link {

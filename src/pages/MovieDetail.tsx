@@ -25,9 +25,10 @@ import { AlignLeft, Bookmark, Clapperboard, Eye, EyeOff, Users, X } from 'lucide
 
 interface MovieDetailProps {
     itemId?: number
+    onLoaded?: () => void
 }
 
-const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
+const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId, onLoaded }) => {
     const { id: paramId } = useParams<{ id: string }>()
     const id = propId?.toString() ?? paramId
     const isInModal = useDetailModalStore((s) => s.isOpen)
@@ -101,6 +102,12 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId }) => {
     useEffect(() => {
         void fetchDetails()
     }, [fetchDetails])
+
+    // Signal the overlay that the page content is ready so its reveal curtain
+    // can lift (only fires after the initial load completes).
+    useEffect(() => {
+        if (!loading) onLoaded?.()
+    }, [loading, onLoaded])
 
     // Push backdrop URL to the overlay store when in modal so it renders outside the scroll container
     useEffect(() => {

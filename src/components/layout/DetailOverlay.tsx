@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import useDetailModalStore, {
   getDetailBaseTitle,
@@ -17,17 +17,28 @@ const EXIT_MS = 180
 const entryKey = (type: string, id: number, season?: number, episode?: number): string =>
   `${type}:${id}:${season ?? ''}:${episode ?? ''}`
 
-const renderDetail = (type: string, id: number, season?: number, episode?: number) => {
+const renderDetail = (
+  type: string,
+  id: number,
+  season: number | undefined,
+  episode: number | undefined,
+  onLoaded: () => void
+) => {
   switch (type) {
     case 'movie':
-      return <MovieDetail itemId={id} />
+      return <MovieDetail itemId={id} onLoaded={onLoaded} />
     case 'tv':
-      return <TVShowDetail itemId={id} />
+      return <TVShowDetail itemId={id} onLoaded={onLoaded} />
     case 'person':
-      return <PersonDetail itemId={id} />
+      return <PersonDetail itemId={id} onLoaded={onLoaded} />
     case 'episode':
       return season != null && episode != null ? (
-        <EpisodeDetail itemId={id} seasonNumber={season} episodeNumber={episode} />
+        <EpisodeDetail
+          itemId={id}
+          seasonNumber={season}
+          episodeNumber={episode}
+          onLoaded={onLoaded}
+        />
       ) : null
     default:
       return null
@@ -75,6 +86,15 @@ const DetailOverlay: React.FC = () => {
   ) {
     setSnapshot({ type, id, stack, backdropUrl })
   }
+
+  // Layers reveal under an opaque curtain only once their content is loaded.
+  // Each Detail* page reports readiness via `onLoaded`; the safety timer below
+  // lifts the curtain even if a page never reports (e.g. a hung request).
+  const [readyKeys, setReadyKeys] = useState<ReadonlySet<string>>(() => new Set<string>())
+
+  const handleLayerLoaded = useCallback((key: string) => {
+    setReadyKeys((prev) => (prev.has(key) ? prev : new Set(prev).add(key)))
+  }, [])
 
   const mount = isOpen || closing
 
@@ -196,6 +216,21 @@ const DetailOverlay: React.FC = () => {
     }
   }, [backdropUrl, isOpen])
 
+  // Safety net: lift the curtain for the current top layer if it never reports
+  // loaded, so a hung request can't leave an opaque screen forever.
+  useEffect(() => {
+    if (!isOpen) return
+    const s = useDetailModalStore.getState()
+    if (!s.isOpen || s.stack.length === 0) return
+    const top = s.stack[s.stack.length - 1]
+    const topKey = entryKey(top.type, top.id, top.season, top.episode)
+    if (readyKeys.has(topKey)) return
+    const t = window.setTimeout(() => {
+      setReadyKeys((prev) => (prev.has(topKey) ? prev : new Set(prev).add(topKey)))
+    }, 2500)
+    return () => window.clearTimeout(t)
+  }, [isOpen, readyKeys])
+
   const view = mount
     ? { type: snapshot.type, id: snapshot.id, stack: snapshot.stack, backdropUrl: snapshot.backdropUrl }
     : null
@@ -203,8 +238,9 @@ const DetailOverlay: React.FC = () => {
 
   const overlayClass = `detail-overlay${closing ? ' detail-overlay--exiting' : ''}`
 
-  // The top layer fades in over the previously-shown (now hidden) layer via
-  // `detailLayerIn`; deeper layers stay hidden underneath.
+  // The top layer is revealed under an opaque curtain only once its content
+  // reports loaded (see CSS `.detail-overlay__scroll--top::after`); all deeper
+  // layers are `display:none`, so nothing can bleed through mid-transition.
   return (
     <div className={overlayClass} role="dialog" aria-modal="true" aria-label={`${view.type} details`}>
       {view.backdropUrl && view.type !== 'person' && (
@@ -216,16 +252,16 @@ const DetailOverlay: React.FC = () => {
       {view.stack.map((entry, index) => {
         const key = entryKey(entry.type, entry.id, entry.season, entry.episode)
         const isTop = index === view.stack.length - 1
-        // The new top layer animates in; deeper layers stay hidden underneath.
-        const layerClass = `detail-overlay__scroll${entry.type === 'person' ? ' detail-overlay__scroll--person' : ''}${isTop ? ' detail-overlay__scroll--top' : ''}`
+        const isReady = isTop && readyKeys.has(key)
+        const layerClass = `detail-overlay__scroll${entry.type === 'person' ? ' detail-overlay__scroll--person' : ''}${isTop ? ' detail-overlay__scroll--top' : ''}${isReady ? ' detail-overlay__scroll--ready' : ''}`
         return (
           <div
             key={key}
             className={layerClass}
-            style={isTop ? undefined : { visibility: 'hidden' }}
+            style={isTop ? undefined : { display: 'none' }}
           >
             <div className="detail-overlay__content">
-              {renderDetail(entry.type, entry.id, entry.season, entry.episode)}
+              {renderDetail(entry.type, entry.id, entry.season, entry.episode, () => handleLayerLoaded(key))}
             </div>
           </div>
         )

@@ -28,6 +28,7 @@ interface EpisodeDetailProps {
     itemId?: number
     seasonNumber?: number
     episodeNumber?: number
+    onLoaded?: () => void
 }
 
 const normalizeEpisodeScore = (value?: number | null): number | undefined => {
@@ -35,7 +36,7 @@ const normalizeEpisodeScore = (value?: number | null): number | undefined => {
     return value
 }
 
-const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, episodeNumber }) => {
+const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, episodeNumber, onLoaded }) => {
     const { id: paramId, season: paramSeason, episode: paramEpisode } = useParams<{ id: string; season: string; episode: string }>()
     const id = itemId?.toString() ?? paramId
     const season = seasonNumber?.toString() ?? paramSeason
@@ -111,6 +112,12 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
         }
         fetchData()
     }, [id, season, episode])
+
+    // Signal the overlay that the episode content is ready so its reveal
+    // curtain can lift (fires after the initial load completes).
+    useEffect(() => {
+        if (!loading) onLoaded?.()
+    }, [loading, onLoaded])
 
     const logoUrl = useMemo(() => {
         if (tvDetails?.images?.logos) {

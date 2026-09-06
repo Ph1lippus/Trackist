@@ -40,6 +40,7 @@ interface LocalEpisode {
 
 interface TVShowDetailProps {
     itemId?: number
+    onLoaded?: () => void
 }
 
 const normalizeEpisodeScore = (value?: number | null): number | undefined => {
@@ -47,7 +48,7 @@ const normalizeEpisodeScore = (value?: number | null): number | undefined => {
     return value
 }
 
-const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
+const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded }) => {
     const { id: paramId } = useParams<{ id: string }>()
     const id = propId?.toString() ?? paramId
     const navigate = useNavigate()
@@ -235,6 +236,12 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId }) => {
     useEffect(() => {
         void fetchDetails()
     }, [fetchDetails])
+
+    // Signal the overlay that the page content is ready so its reveal curtain
+    // can lift (only fires after the initial load completes).
+    useEffect(() => {
+        if (!loading) onLoaded?.()
+    }, [loading, onLoaded])
 
     // Push backdrop URL to the overlay store when in modal so it renders outside the scroll container
     useEffect(() => {

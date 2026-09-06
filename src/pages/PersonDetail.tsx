@@ -29,9 +29,10 @@ interface FilmographyItem extends TMDBResult {
 
 interface PersonDetailProps {
     itemId?: number
+    onLoaded?: () => void
 }
 
-const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId }) => {
+const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId, onLoaded }) => {
     const { id: paramId } = useParams<{ id: string }>()
     const id = propId?.toString() ?? paramId
     const [details, setDetails] = useState<PersonDetails | null>(null)
@@ -118,6 +119,12 @@ const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId }) => {
             active = false
         }
     }, [id, reloadKey])
+
+    // Signal the overlay that the main person content is ready so its reveal
+    // curtain can lift (fires after the details load; credits load in parallel).
+    useEffect(() => {
+        if (!detailsLoading) onLoaded?.()
+    }, [detailsLoading, onLoaded])
 
     useEffect(() => {
         const fetchCredits = async () => {

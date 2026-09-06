@@ -40,6 +40,41 @@ interface DetailModalState {
 
 const OPEN_PIN_STATE = { detailModalPin: true }
 
+// Persist the open modal across a refresh: the modal never changes the URL (it
+// pins the page it opened over), so a refresh reloads that page from scratch.
+// We save the stack to sessionStorage on every open/navigate/close and restore
+// it shortly after auth init, re-opening the modal over the reloaded page.
+const MODAL_STORAGE_KEY = 'track1st:detail-modal'
+
+interface StoredModalState {
+  type: DetailType | null
+  id: number | null
+  season?: number
+  episode?: number
+  stack: DetailEntry[]
+  backdropUrl: string | null
+}
+
+const persistModal = (s: DetailModalState): void => {
+  try {
+    if (!s.isOpen || s.stack.length === 0) {
+      sessionStorage.removeItem(MODAL_STORAGE_KEY)
+      return
+    }
+    const data: StoredModalState = {
+      type: s.type,
+      id: s.id,
+      season: s.season,
+      episode: s.episode,
+      stack: s.stack,
+      backdropUrl: s.backdropUrl,
+    }
+    sessionStorage.setItem(MODAL_STORAGE_KEY, JSON.stringify(data))
+  } catch {
+    // storage unavailable (e.g. private mode) — the modal simply won't survive refresh
+  }
+}
+
 // TODO(debug): temporary instrumentation to diagnose one-back-closes-everything.
 const dbg = (...a: unknown[]) => console.debug('[DBG-modal]', ...a)
 
@@ -52,6 +87,48 @@ export const getDetailBaseTitle = (): string => baseTitle
 
 export const setDetailBaseTitle = (title: string): void => {
     baseTitle = title
+}
+
+// Re-open the last-open modal from sessionStorage, if any. Called once after
+// auth init so a user hitting refresh on a page (the pinned URL) returns with
+// the exact same modal stack on top. Mirrors open(): pins one keep-alive
+// history entry so Back/device-back pops layers via the popstate handler.
+export const restoreDetailModal = (): void => {
+  let raw: string | null
+  try {
+    raw = sessionStorage.getItem(MODAL_STORAGE_KEY)
+  } catch {
+    return
+  }
+  if (!raw) return
+
+  let data: StoredModalState
+  try {
+    data = JSON.parse(raw) as StoredModalState
+  } catch {
+    return
+  }
+
+  const stack = Array.isArray(data.stack) && data.stack.length > 0 ? data.stack : null
+  if (!stack) return
+
+  const top = stack[stack.length - 1]
+  try {
+    const href = window.location.href
+    window.history.pushState(OPEN_PIN_STATE, '', href)
+  } catch {
+    return
+  }
+  useDetailModalStore.setState({
+    isOpen: true,
+    type: top.type,
+    id: top.id,
+    season: top.season,
+    episode: top.episode,
+    stack,
+    backdropUrl: top.backdropUrl ?? null,
+    pinHref: window.location.pathname + window.location.search + window.location.hash,
+  })
 }
 
 // Remembered season per TV show id, kept for the current SPA session. Written
@@ -118,6 +195,7 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
       stack: nextStack,
       backdropUrl: null,
     })
+    persistModal(get())
   },
 
   // Deterministic one-step-back for the app's own controls (navbar back button,
@@ -157,6 +235,7 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
         stack,
         backdropUrl: prev.backdropUrl ?? null,
       })
+      persistModal(get())
     } else {
       dbg('goBack: last layer -> close')
       s.close()
@@ -181,6 +260,7 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
       backdropUrl: null,
       pinHref: null,
     })
+    persistModal(get())
   },
 }))
 

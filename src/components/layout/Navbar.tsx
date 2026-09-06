@@ -118,8 +118,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
 
     const isDetailPage = location.pathname.match(/^\/(movie|tv|person)\/\d+$/) || 
                           location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/);
-    const isMediaDetailPage = location.pathname.match(/^\/(movie|tv)\/\d+$/) ||
-                             location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/);
     const isListDetailPage = location.pathname.match(/^\/ListsDetail\/[a-f0-9-]+$/);
     const isListEditPage = location.pathname.match(/^\/ListsEditPage\/(new|[a-f0-9-]+)$/);
     const isSettingsSubPage = ['/MFA', '/Sessions', '/Settings', '/EditProfile', '/Credits', '/AdminSecurity', '/Statistics'].includes(location.pathname) || location.pathname.startsWith('/Settings/');
@@ -127,6 +125,11 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const detailModalOpen = useDetailModalStore((s) => s.isOpen);
     const detailModalType = useDetailModalStore((s) => s.type);
     const isSearchPage = location.pathname === '/Search';
+    const isRoutedPersonDetail = Boolean(location.pathname.match(/^\/person\/\d+$/));
+    // Navbar is transparent (see-through over content) on person detail pages
+    // and while the detail modal is open, per the detail-page design.
+    const isTransparentNavbar = isRoutedPersonDetail ||
+        Boolean(detailModalOpen && detailModalType === 'person');
     const showBackButton = Boolean(isDetailPage || isListDetailPage || isListEditPage || isSettingsSubPage || detailModalOpen || isSearchPage);
     
     const showSearchBar = !detailModalOpen && user && !['/login', '/register'].includes(location.pathname) && 
@@ -474,25 +477,15 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
 
     const { isMobile } = useMobile();
 
+    // Native status bar is always transparent so the page/detail backdrop shows
+    // through behind it. The CSS plugin config + this init keep overlay=true and
+    // a light style (light icons) for contrast across the whole app.
     useEffect(() => {
         if (!isMobile || !isNativePlatform()) return;
 
-        const isMediaDetail = isMediaDetailPage ||
-            (detailModalOpen &&
-                detailModalType !== null &&
-                detailModalType !== 'person');
-
-        if (isMediaDetail) {
-            void StatusBar.setBackgroundColor({ color: '#00000000' }).catch(() => {});
-            void StatusBar.setStyle({ style: Style.Light }).catch(() => {});
-            return;
-        }
-
-        const color = '#2c2b55';
-
-        void StatusBar.setBackgroundColor({ color }).catch(() => {});
+        void StatusBar.setBackgroundColor({ color: '#00000000' }).catch(() => {});
         void StatusBar.setStyle({ style: Style.Light }).catch(() => {});
-    }, [isMobile, showBackButton, isMediaDetailPage, detailModalOpen, detailModalType, isSearchPage]);
+    }, [isMobile]);
 
     useEffect(() => {
         if (!location.pathname.startsWith('/Profile')) {
@@ -658,7 +651,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
 
     return (
         <nav className={`navbar-brand-row${detailModalOpen ? ' is-modal-open' : ''}`} aria-label="Main navigation">
-            <div className={`container navbar-inner${showBackButton ? '' : ' no-back-btn'}${isSearchPage ? ' is-search' : ''}${detailModalOpen ? ' is-modal-open' : ''}`}>
+            <div className={`container navbar-inner${showBackButton ? '' : ' no-back-btn'}${isSearchPage ? ' is-search' : ''}${detailModalOpen ? ' is-modal-open' : ''}${isTransparentNavbar ? ' navbar-transparent' : ''}`}>
                 <div className="navbar-left">
                     {showBackButton && (
                         <button

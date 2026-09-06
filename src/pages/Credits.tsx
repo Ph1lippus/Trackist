@@ -18,6 +18,7 @@ import zxcvbnLogo from '../assets/zxcvbn-icon.svg'
 import virtuosoLogo from '../assets/bi-list.svg'
 import confettiLogo from '../assets/bi-stars.svg'
 import cropLogo from '../assets/bi-crop.svg'
+import lucideLogo from '../assets/lucide-logo.svg'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 const credits = [
@@ -134,6 +135,12 @@ const credits = [
         text: 'Avatar image cropping',
         logo: cropLogo,
         link: 'https://github.com/ValentinH/react-easy-crop'
+    },
+    {
+        title: 'Lucide',
+        text: 'Icons',
+        logo: lucideLogo,
+        link: 'https://lucide.dev/'
     }
 ]
 
