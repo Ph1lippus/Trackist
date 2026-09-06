@@ -569,8 +569,8 @@ const NotificationsSection: React.FC<Pick<SettingsProps, 'notificationsProps'>> 
 
             <div className="settings-data-card">
                 <div className="settings-data-card__info">
-                    <span className="settings-data-card__label">Digital-Only Movie Alerts</span>
-                    <span className="settings-data-card__desc">Only notify when movies are available to stream/rent (not theatrical releases)</span>
+                    <span className="settings-data-card__label">Digital Movie Alerts</span>
+                    <span className="settings-data-card__desc">Also notify when movies are available to stream/rent (in addition to theatrical releases)</span>
                 </div>
                 <label className="settings-switch">
                     <input

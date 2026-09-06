@@ -66,7 +66,7 @@ interface PendingWrite {
 }
 
 interface NotifyItem extends PushPayload {
-  write: PendingWrite
+  write?: PendingWrite
 }
 
 interface TMDBEpisode {
@@ -234,6 +234,18 @@ function formatProviders(providers: Record<string, unknown> | null | undefined):
   }
   const unique = [...new Set(names)]
   return unique.length > 0 ? ` on ${unique.join(', ')}` : ''
+}
+
+function getMovieNotifiedRefs(lastRef: string | null | undefined): string[] {
+  if (!lastRef) return []
+  if (lastRef.startsWith('[')) {
+    try {
+      return JSON.parse(lastRef)
+    } catch {
+      return []
+    }
+  }
+  return [lastRef]
 }
 
 serve(async (req: Request) => {
@@ -478,6 +490,8 @@ serve(async (req: Request) => {
           return item
         }
 
+        const movieRefUpdates = new Map<string, { refs: string[]; existingRefs: string }>()
+
         if (tvShows.length > 0) {
           const seasonResults = await mapWithConcurrency(
             tvShows,
@@ -637,41 +651,73 @@ serve(async (req: Request) => {
 
             const digitalDate = movie.digital_release_date
             const theatricalDate = movie.release_date
-            const notifyDate = movieDigitalOnly ? digitalDate : (digitalDate || theatricalDate)
 
-            if (!notifyDate) continue
+            const releases = [
+              { date: theatricalDate, type: 'theatrical' as const, label: 'In theaters' },
+              { date: digitalDate, type: 'digital' as const, label: 'Digital' },
+            ]
 
-            const notificationStage = notifyDate === todayStr ? 'today' : 'tomorrow'
-            const newRef = `${notifyDate}:${notificationStage}`
-            const alreadyNotified = movie.last_movie_notified_ref === newRef ||
-              (notificationStage === 'tomorrow' && movie.last_movie_notified_ref === notifyDate)
-            const due = isDueForUserDate(notifyDate, timezone, now, notifyHourSetting)
+            if (!movieDigitalOnly) {
+              releases.splice(1, 1)
+            }
 
-            if (due && !alreadyNotified) {
-              const providerStr = formatProviders(movie.watch_providers)
-              const bucketLabel = notifyDate === todayStr ? 'Released today' : 'Coming tomorrow'
-              addNotification({
-                title: movie.title,
-                body: `${bucketLabel}${providerStr}`,
-                url: `/movie/${movie.tmdb_id}`,
-                tag: `movie:${movie.id}:${newRef}`,
-                icon: movie.poster_path ? `https://image.tmdb.org/t/p/w92${movie.poster_path}` : undefined,
-                image: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined,
-                write: { id: movie.id, patch: { last_movie_notified_ref: newRef } },
+            const pendingRefs: string[] = []
+
+            for (const { date, type, label } of releases) {
+              if (!date) continue
+
+              const notificationStage = date === todayStr ? 'today' : 'tomorrow'
+              const newRef = `${type}:${date}:${notificationStage}`
+              const existingRefs = getMovieNotifiedRefs(movie.last_movie_notified_ref)
+              const alreadyNotified = existingRefs.includes(newRef) ||
+                (notificationStage === 'tomorrow' && existingRefs.some(ref => ref.startsWith(`${type}:${date}`)))
+              const due = isDueForUserDate(date, timezone, now, notifyHourSetting)
+
+              if (due && !alreadyNotified) {
+                const providerStr = formatProviders(movie.watch_providers)
+                const bucketLabel = date === todayStr ? `${label} today` : `${label} tomorrow`
+                addNotification({
+                  title: movie.title,
+                  body: `${bucketLabel}${providerStr}`,
+                  url: `/movie/${movie.tmdb_id}`,
+                  tag: `movie:${movie.id}:${newRef}`,
+                  icon: movie.poster_path ? `https://image.tmdb.org/t/p/w92${movie.poster_path}` : undefined,
+                  image: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : undefined,
+                })
+                pendingRefs.push(newRef)
+              }
+            }
+
+            if (pendingRefs.length > 0) {
+              movieRefUpdates.set(movie.id, {
+                refs: pendingRefs,
+                existingRefs: movie.last_movie_notified_ref || '[]',
               })
             }
 
-            if (!movie.next_air_at && notifyDate > todayStr) {
+            const futureDates = releases
+              .map(r => r.date)
+              .filter((d): d is string => !!d && d > todayStr)
+              .sort()
+
+            if (!movie.next_air_at && futureDates.length > 0) {
               await supabase
                 .from('watchlist')
-                .update({ next_air_at: notifyDate })
+                .update({ next_air_at: futureDates[0] })
                 .eq('id', movie.id)
               itemsScheduled++
-            } else if (movie.last_movie_notified_ref === notifyDate && movie.next_air_at) {
-              await supabase
-                .from('watchlist')
-                .update({ next_air_at: null })
-                .eq('id', movie.id)
+            } else if (movie.next_air_at) {
+              const existingRefs = getMovieNotifiedRefs(movie.last_movie_notified_ref)
+              const notifiedDates = existingRefs
+                .map(ref => ref.match(/^(theatrical|digital):([^:]+):/)?.[2])
+                .filter((d): d is string => !!d)
+              const allFutureNotified = futureDates.every(d => notifiedDates.includes(d))
+              if (allFutureNotified && futureDates.length > 0) {
+                await supabase
+                  .from('watchlist')
+                  .update({ next_air_at: null })
+                  .eq('id', movie.id)
+              }
             }
           }
         }
@@ -719,12 +765,21 @@ serve(async (req: Request) => {
             }
           }
 
-          if (delivered) {
+          if (delivered && notification.write) {
             await supabase
               .from('watchlist')
               .update(notification.write.patch)
               .eq('id', notification.write.id)
           }
+        }
+
+        for (const [movieId, { refs, existingRefs }] of movieRefUpdates) {
+          const prev = existingRefs.startsWith('[') ? JSON.parse(existingRefs) : (existingRefs ? [existingRefs] : [])
+          const combined = [...new Set([...prev, ...refs])]
+          await supabase
+            .from('watchlist')
+            .update({ last_movie_notified_ref: JSON.stringify(combined) })
+            .eq('id', movieId)
         }
 
         await supabase

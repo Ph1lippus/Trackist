@@ -190,15 +190,18 @@ serve(async (req: Request) => {
         )
 
         for (const { id, digitalDate } of results) {
+          const update: Record<string, unknown> = { last_provider_sync: new Date().toISOString() }
           if (digitalDate) {
-            const { error } = await supabase
-              .from('watchlist')
-              .update({ digital_release_date: digitalDate })
-              .eq('id', id)
-
-            if (!error) totalUpdated++
-            else totalErrors++
+            update.digital_release_date = digitalDate
           }
+
+          const { error } = await supabase
+            .from('watchlist')
+            .update(update)
+            .eq('id', id)
+
+          if (!error) totalUpdated++
+          else totalErrors++
         }
 
         await new Promise(resolve => setTimeout(resolve, 100))
