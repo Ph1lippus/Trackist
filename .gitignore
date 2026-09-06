@@ -25,3 +25,10 @@ dist-ssr
 .env
 .aider*
 .kilo/plans
+
+# Supabase deployment-specific files
+supabase/migrations/
+supabase/config.toml
+
+# Local setup scripts
+scripts/
