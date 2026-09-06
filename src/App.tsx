@@ -121,6 +121,10 @@ const AppContent: React.FC = () => {
     }, [isMobile, isPWA])
 
     useEffect(() => {
+        document.documentElement.classList.add('hide-scrollbar')
+    }, [])
+
+    useEffect(() => {
         if (!loading && user && !hasUpdatedLastActive.current) {
             hasUpdatedLastActive.current = true
             void updateLastActive(user.id)

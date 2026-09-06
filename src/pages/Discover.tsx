@@ -87,14 +87,13 @@ const Discover: React.FC = () => {
             actions.fetchData(1)
         }
     }, [committedQuery, filters.query, actions])
-    
+
     const handleAddToWatchlist = useCallback(
     (item: TMDBResult) => {
         if (watchlistIds.has(item.id)) {
             setRemoveConfirmItem(item);
         } else {
             actions.addToWatchlist(item.id, item);
-            // Add to session added IDs to keep it visible
             const currentSessionIds = useDiscoverStore.getState().sessionAddedIds
             actions.setSessionAddedIds(new Set(currentSessionIds).add(item.id));
 
