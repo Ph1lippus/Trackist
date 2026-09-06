@@ -165,6 +165,10 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
         return null
     }, [tvDetails?.images?.logos])
 
+    const title = tvDetails?.name || 'Untitled'
+    const episodeTitle = episodeData?.name || 'Episode ' + (episode ?? '')
+    const episodeScore = useMemo(() => (episodeData ? normalizeEpisodeScore(episodeData.vote_average) : undefined), [episodeData])
+
     const handleToggleWatched = async () => {
         if (!watchlistId || !id || !season || !episode || !episodeData) return
 
