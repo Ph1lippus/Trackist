@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails, imageUrlOriginal } from '../services/tmdbService'
 import { markEpisodeWatched, unmarkEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
@@ -228,6 +229,25 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
         }
     }
 
+    const episodeActions = (
+        <>
+            <ShareButton
+                url={window.location.href}
+                title={`${title} S${season}E${episode} on Track1st`}
+                text={`I am watching ${title}, season ${season}, episode ${episode}: ${episodeTitle}. Join me on Track1st.`}
+            />
+            {isInWatchlist && (
+                <button
+                    className="detail-page__icon-btn"
+                    onClick={handleToggleWatched}
+                    title={watched ? 'Mark as Unwatched' : 'Mark as Watched'}
+                >
+                    {watched ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+            )}
+        </>
+    )
+
     return (
         <div className="detail-page detail-page--no-scroll">
             {/*
@@ -334,22 +354,16 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
                                 <p className="detail-page__overview">{episodeData.overview || 'No description available.'}</p>
                             </>}
                             
-                            <div className={isMobile ? `detail-page__actions-mobile${isSidebarOpen ? ' detail-page__actions-mobile--open' : ''}` : 'detail-page__actions'}>
-                                <ShareButton
-                                    url={window.location.href}
-                                    title={`${title} S${season}E${episode} on Track1st`}
-                                    text={`I am watching ${title}, season ${season}, episode ${episode}: ${episodeTitle}. Join me on Track1st.`}
-                                />
-                                {isInWatchlist && (
-                                    <button 
-                                        className="detail-page__icon-btn"
-                                        onClick={handleToggleWatched}
-                                        title={watched ? 'Mark as Unwatched' : 'Mark as Watched'}
-                                    >
-                                        {watched ? <EyeOff size={18} /> : <Eye size={18} />}
-                                    </button>
-                                )}
-                            </div>
+                            {isMobile ? createPortal(
+                                <div className={`detail-page__actions-mobile${isSidebarOpen ? ' detail-page__actions-mobile--open' : ''}`}>
+                                    {episodeActions}
+                                </div>,
+                                document.body
+                            ) : (
+                                <div className="detail-page__actions">
+                                    {episodeActions}
+                                </div>
+                            )}
                         </div>
                     </div>
                     <div className="detail-page__right" style={{ display: 'none' }}>

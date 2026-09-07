@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails, getTVSeasonCredits, imageUrl, imageUrlOriginal, getBestBackdropPath, getBestPoster, isNoLanguageCode } from '../services/tmdbService'
 import { formatStatus } from '../utils/statusUtils'
@@ -1241,6 +1242,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                 )}
                             </div>
                             ) : (
+                            createPortal(
                             <div className={`detail-page__actions-mobile${isSidebarOpen ? ' detail-page__actions-mobile--open' : ''}`}>
                                 <button className="detail-page__icon-btn" onClick={() => setShowDescription(!showDescription)} title={showDescription ? 'Hide Description' : 'Show Description'} aria-label={showDescription ? 'Hide Description' : 'Show Description'}>
                                     <AlignLeft size={18} />
@@ -1358,8 +1360,9 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                         </button>
                                     </>
                                 )}
-                            </div>
-                            )}
+                            </div>,
+                            document.body
+                            ))}
 
                             {/* Action buttons (desktop inline / mobile fixed sidebar) */}
                             {!isMobile && showTrailer && trailerKey && (

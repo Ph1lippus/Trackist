@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useParams } from 'react-router-dom'
 import { getMovieDetails, imageUrlOriginal, getBestBackdropPath, getBestPoster, isNoLanguageCode } from '../services/tmdbService'
 import { useLibraryStore } from '../stores/useLibraryStore'
@@ -467,7 +468,8 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId, onLoaded }) =
                             )}
                         </div>
 
-                        {/* Mobile fixed action container */}
+                        {/* Mobile fixed action container: portaled to <body> so no transformed overlay ancestor can trap position:fixed */}
+                        {createPortal(
                         <div className={`detail-page__actions-mobile${isSidebarOpen ? ' detail-page__actions-mobile--open' : ''}`}>
                             <button className="detail-page__icon-btn" onClick={() => setShowDescription(!showDescription)} title={showDescription ? 'Hide Description' : 'Show Description'} aria-label={showDescription ? 'Hide Description' : 'Show Description'}>
                                 <AlignLeft size={18} />
@@ -594,7 +596,9 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId, onLoaded }) =
                                     </button>
                                 </>
                             )}
-                        </div>
+                        </div>,
+                        document.body
+                        )}
 
                         {!isMobile && showTrailer && trailerKey && (
                             <div className="detail-page__trailer-overlay" onClick={() => setShowTrailer(false)}>

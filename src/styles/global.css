@@ -1,4 +1,4 @@
-﻿@media (max-width: 768px) {
+@media (max-width: 768px) {
     .auth-card {
         background: none!important;
     }
@@ -6417,6 +6417,19 @@ i.fa-solid.fa-trash:hover {
 .detail-overlay__scroll--top,
 .detail-overlay:not(.detail-overlay--exiting) {
     will-change: auto;
+}
+
+/* Once a top layer's content is ready (curtain lifted), drop the GPU promotion:
+   the leftover translateZ transform makes this scroll area the containing block
+   for position:fixed descendants, which pins the mobile action sidebar (and any
+   other fixed UI rendered inside the layer, e.g. trailer overlays) to the top
+   of the scrollable content instead of the viewport. isolation: isolate keeps
+   the reveal curtain (::after, z-index 2) stacked above the layer content now
+   that the transform no longer creates the stacking context. */
+.detail-overlay__scroll--top.detail-overlay__scroll--ready {
+    transform: none;
+    backface-visibility: auto;
+    isolation: isolate;
 }
 
 .detail-overlay__scroll {
