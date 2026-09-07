@@ -531,12 +531,15 @@ html {
 
 /* Transparent navbar — person detail page and open detail modal: truly
    transparent (no fill, no scrim, no blur) so everything behind it is visible
-   fully. Scoped under the row for specificity over the `.no-back-btn` fill. */
+   fully. Scoped under the row for specificity over the `.no-back-btn` fill.
+   The transition lets the navbar fill/blur fade in synch with the overlay's
+   entry/exit instead of popping the instant the modal opens. */
 .navbar-brand-row.is-modal-open .container.navbar-inner,
 .navbar-brand-row .navbar-inner.navbar-transparent {
     background: transparent !important;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
+    transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
 }
 
 .detail-page__navbar-scrim {
@@ -557,6 +560,15 @@ html {
 
 /* Smooth transition as the scrim lifts */
 .navbar-brand-row .navbar-inner.navbar-transparent {
+    transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
+}
+
+/* Always let the navbar fill/blur ease between its filled and transparent
+   states (detail pages, modal open/close). Declared on the base state too so
+   the transition runs in both directions — a transition only animates when it
+   exists in the before-change style, so scoping it to just `.is-modal-open`
+   would leave the opening direction a hard pop. */
+.navbar-brand-row .container.navbar-inner {
     transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
 }
 
@@ -2405,6 +2417,12 @@ select.navbar-filter-field option {
     background: rgba(133, 138, 227, 0.2);
     transform: scale(1.05);
 }
+@media (hover: none) {
+    .modal-cast-item:hover {
+        background: rgba(255, 255, 255, 0.04);
+        transform: none;
+    }
+}
 .modal-cast-item img {
     width: 28px;
     height: 28px;
@@ -3253,6 +3271,13 @@ html.native-app *::-webkit-scrollbar {
     border-color: rgba(133, 138, 227, 0.3);
     transform: translateY(-1px);
 }
+@media (hover: none) {
+    .detail-page__cast-item:hover {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: transparent;
+        transform: none;
+    }
+}
 .detail-page__cast-photo {
     width: 60px;
     height: 60px;
@@ -3442,11 +3467,21 @@ html.native-app *::-webkit-scrollbar {
 .detail-page__episode-card:not(.unreleased) {
     cursor: pointer;
 }
-.detail-page__episode-card:hover:not(.unreleased):not(.watched) {
-    background: rgba(255, 255, 255, 0.08);
+@media (hover: hover) {
+    .detail-page__episode-card:hover:not(.unreleased):not(.watched) {
+        background: rgba(255, 255, 255, 0.08);
+    }
+    .detail-page__episode-card.watched:hover {
+        background: rgba(255, 255, 255, 0.05);
+    }
 }
-.detail-page__episode-card.watched:hover {
-    background: rgba(255, 255, 255, 0.05);
+@media (hover: none) {
+    .detail-page__episode-card:hover:not(.unreleased):not(.watched) {
+        background: transparent;
+    }
+    .detail-page__episode-card.watched:hover {
+        background: rgba(255, 255, 255, 0.045);
+    }
 }
 .detail-page__episode-card.watched {
     background: rgba(255, 255, 255, 0.045);
@@ -5961,18 +5996,32 @@ button:focus-visible {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgb(18, 18, 28);
+    background:
+        linear-gradient(135deg, rgba(133, 138, 227, 0.12), rgba(255, 255, 255, 0.02)),
+        rgb(18, 18, 28);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     font-size: 0.9rem;
     text-align: center;
     padding: 1rem;
     word-break: break-word;
+    box-sizing: border-box;
 }
 .media-card__no-poster-title {
     display: none;
+    color: rgba(255, 255, 255, 0.55);
+    font-weight: 500;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    max-width: 100%;
+    text-decoration: none;
 }
 @media (max-width: 768px) {
     .media-card__no-poster-title {
-        display: block;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
     }
 }
 .media-card__poster {
@@ -5985,6 +6034,7 @@ button:focus-visible {
     flex-shrink: 0 !important;
     border: 3px solid transparent;
     box-sizing: border-box;
+    text-decoration: none;
 }
 
 .media-card__body {
@@ -6361,6 +6411,37 @@ i.fa-solid.fa-trash:hover {
     background: transparent;
 }
 
+/* Entry: fade the overlay in as it mounts so it opens together with the navbar
+   above it (which fades its fill to transparent at the same 0.3s, see
+   `.navbar-brand-row.is-modal-open`). Skipped during exit so only the fade-out
+   runs in reverse. */
+.detail-overlay:not(.detail-overlay--exiting) {
+    animation: detailOverlayIn 0.3s ease;
+}
+
+@keyframes detailOverlayIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* While a movie/TV layer's backdrop is still loading, the transparent navbar
+   strip would otherwise expose the app's starfield band above the flat reveal
+   curtain below it — the "navbar changes before the page" pop. Cover the full
+   viewport with the same gradient so the navbar area matches the curtain, then
+   fade it out together with the curtain + backdrop once the layer is ready. */
+.detail-overlay__media-cover {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    background: linear-gradient(41deg, #0c0b11 0%, #2c2b55 55%, #5a5a9e 100%);
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.35s ease;
+}
+.detail-overlay__media-cover--hidden {
+    opacity: 0;
+}
+
 /* Exit: fade the overlay out before it is removed from the DOM (kept mounted
    for EXIT_MS in DetailOverlay). animation-fill-mode keeps it opaque until the
    animation starts, then fades to transparent under the incoming page. */
@@ -6466,6 +6547,10 @@ i.fa-solid.fa-trash:hover {
      .detail-overlay__scroll--top::after {
          background: #2c2b55;
      }
+     /* Match the full-viewport loading cover (incl. the navbar strip) to it too. */
+     .detail-overlay__media-cover {
+         background: #2c2b55;
+     }
 
     /* Whole overlay scrolls: the scroll area spans the full viewport (behind
        the fixed transparent navbar) so content moves up under the navbar on
@@ -6552,6 +6637,14 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
    show through identically above and below the content, and there is no
    backdrop to keep under cover. */
 .detail-overlay__scroll--top.detail-overlay__scroll--person::after {
+    background: transparent;
+}
+
+/* Episode layers have no backdrop image (the app gradient + starfield show
+   through), so drop the loading curtain for them too, for the same reason as
+   person layers: the flat dark fill read as a mismatched band behind the
+   transparent navbar and over the starfield. */
+.detail-overlay__scroll--top.detail-overlay__scroll--episode::after {
     background: transparent;
 }
 
@@ -7470,6 +7563,25 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
     gap: 0.9rem;
     padding: 0.55rem 0 0.85rem;
     align-self: center;
+}
+
+.settings-avatar-picker--stacked {
+    flex-direction: column;
+    gap: 0.75rem;
+    text-align: center;
+    cursor: pointer;
+}
+
+.settings-avatar-picker--stacked .settings-avatar-picker__preview {
+    width: 96px;
+    height: 96px;
+    font-size: 0.85rem;
+}
+
+.settings-avatar-block {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 1.25rem;
 }
 
 .settings-avatar-picker__preview {
@@ -12369,12 +12481,29 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(255, 255, 255, 0.03);
-    color: rgba(255, 255, 255, 0.4);
-    font-size: 0.5rem;
-    font-weight: 600;
+    background:
+        linear-gradient(135deg, rgba(133, 138, 227, 0.12), rgba(255, 255, 255, 0.02)),
+        rgb(18, 18, 28);
+    border-radius: 0px 25px 25px 0px;
+    color: rgba(255, 255, 255, 0.6);
     text-align: center;
-    padding: 0.25rem;
+    padding: 0.5rem;
+    box-sizing: border-box;
+}
+
+.mobile-tvshow-card-no-poster span {
+    font-size: 0.78rem;
+    font-weight: 600;
+    line-height: 1.3;
+    color: rgba(255, 255, 255, 0.6);
+    text-decoration: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+    max-width: 100%;
 }
 
 .mobile-tvshow-card-body {

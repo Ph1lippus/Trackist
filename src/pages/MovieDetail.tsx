@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams } from 'react-router-dom'
 import { getMovieDetails, imageUrlOriginal, getBestBackdropPath, getBestPoster, isNoLanguageCode } from '../services/tmdbService'
@@ -21,6 +21,7 @@ import tmdbLogo from '../assets/CompactTMDB.svg'
 import ShareButton from '../components/media/ShareButton'
 import CastList from '../components/CastList'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
+import { useIsActiveDetail } from '../hooks/useActiveDetail'
 import useDetailModalStore from '../stores/detailModalStore'
 import { AlignLeft, Bookmark, Clapperboard, Eye, EyeOff, Users, X } from 'lucide-react'
 
@@ -38,6 +39,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId, onLoaded }) =
     const { showTmdbButton, loading: tmdbLoading } = useShowTmdbButton()
     const { isMobile } = useMobile()
     const { isOpen: isSidebarOpen } = useDetailSidebar()
+    const isActiveDetail = useIsActiveDetail('movie', id)
     const [details, setDetails] = useState<TMDBResult | null>(null)
     const movieTitle = details?.title || details?.name
     usePageTitle(movieTitle ? `${movieTitle} - Track1st` : 'Track1st - Movie Detail')
@@ -57,6 +59,8 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId, onLoaded }) =
     const isInWatchlist = !!watchlistItem
     const watchlistId = watchlistItem?.id ?? null
     const watchlistStatus = watchlistItem?.status ?? null
+
+    const fetchActiveRef = useRef(true)
 
     const openExternal = (url: string) => {
         const a = document.createElement('a')
@@ -84,6 +88,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId, onLoaded }) =
                 () => getMovieDetails(Number(id)),
                 { ttl: 30 * 60 * 1000, staleWhileRevalidate: true }
             )
+            if (!fetchActiveRef.current) return
             setDetails(data)
             
             // Find trailer from videos
@@ -93,15 +98,20 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId, onLoaded }) =
             )
             if (trailer) setTrailerKey(trailer.key)
         } catch (err) {
+            if (!fetchActiveRef.current) return
             console.error('Failed to load movie details:', err)
             setError('Failed to load movie details. Please try again.')
         } finally {
-            setLoading(false)
+            if (fetchActiveRef.current) setLoading(false)
         }
     }, [id])
 
     useEffect(() => {
+        fetchActiveRef.current = true
         void fetchDetails()
+        return () => {
+            fetchActiveRef.current = false
+        }
     }, [fetchDetails])
 
     // Signal the overlay that the page content is ready so its reveal curtain
@@ -469,7 +479,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId, onLoaded }) =
                         </div>
 
                         {/* Mobile fixed action container: portaled to <body> so no transformed overlay ancestor can trap position:fixed */}
-                        {createPortal(
+                        {isActiveDetail && createPortal(
                         <div className={`detail-page__actions-mobile${isSidebarOpen ? ' detail-page__actions-mobile--open' : ''}`}>
                             <button className="detail-page__icon-btn" onClick={() => setShowDescription(!showDescription)} title={showDescription ? 'Hide Description' : 'Show Description'} aria-label={showDescription ? 'Hide Description' : 'Show Description'}>
                                 <AlignLeft size={18} />

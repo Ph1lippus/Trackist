@@ -425,7 +425,7 @@ const ProfilePage: React.FC = () => {
                                     )}
                                 </button>
                             ) : isOwnProfile ? (
-                                <Link to="/EditProfile" className="profile-btn">
+                                <Link to="/Settings/profile" className="profile-btn">
                                     Edit Profile
                                 </Link>
                             ) : null}

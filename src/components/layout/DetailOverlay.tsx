@@ -241,19 +241,25 @@ const DetailOverlay: React.FC = () => {
   // The top layer is revealed under an opaque curtain only once its content
   // reports loaded (see CSS `.detail-overlay__scroll--top::after`); all deeper
   // layers are `display:none`, so nothing can bleed through mid-transition.
+  const topEntry = view.stack[view.stack.length - 1]
+  const topKey = entryKey(topEntry.type, topEntry.id, topEntry.season, topEntry.episode)
+  const topReady = readyKeys.has(topKey)
   return (
     <div className={overlayClass} role="dialog" aria-modal="true" aria-label={`${view.type} details`}>
-      {view.backdropUrl && view.type !== 'person' && (
+      {view.backdropUrl && view.type !== 'person' && view.type !== 'episode' && (
         <div className="detail-page__backdrop">
           <img src={view.backdropUrl} alt="" loading="lazy" />
           <div className="detail-page__backdrop-overlay" />
         </div>
       )}
+      {(view.type === 'movie' || view.type === 'tv') && (
+        <div className={`detail-overlay__media-cover${topReady ? ' detail-overlay__media-cover--hidden' : ''}`} aria-hidden="true" />
+      )}
       {view.stack.map((entry, index) => {
         const key = entryKey(entry.type, entry.id, entry.season, entry.episode)
         const isTop = index === view.stack.length - 1
         const isReady = isTop && readyKeys.has(key)
-        const layerClass = `detail-overlay__scroll${entry.type === 'person' ? ' detail-overlay__scroll--person' : ''}${isTop ? ' detail-overlay__scroll--top' : ''}${isReady ? ' detail-overlay__scroll--ready' : ''}`
+        const layerClass = `detail-overlay__scroll${entry.type === 'person' ? ' detail-overlay__scroll--person' : ''}${entry.type === 'episode' ? ' detail-overlay__scroll--episode' : ''}${isTop ? ' detail-overlay__scroll--top' : ''}${isReady ? ' detail-overlay__scroll--ready' : ''}`
         return (
           <div
             key={key}

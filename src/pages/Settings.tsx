@@ -17,6 +17,7 @@ import { getUTCTodayString } from '../utils/dateUtils'
 import { useAuthStore } from '../stores/useAuthStore'
 import { TimezonePicker } from '../components/settings/TimezonePicker'
 import { CountryPicker } from '../components/settings/CountryPicker'
+import AvatarUploader from '../components/settings/AvatarUploader'
 import { isNativePlatform } from '../services/nativePush'
 import { getInstalledVersion, getLatestVersionManifest, isNewerVersion } from '../services/nativeUpdate'
 import { useMobile } from '../contexts/useMobile'
@@ -33,7 +34,6 @@ import {
     Mail,
     KeyRound,
     Save,
-    Image as ImageIcon,
     Fingerprint,
     Monitor,
     Bell as BellIcon,
@@ -112,17 +112,6 @@ const sectionLabel: Record<SettingsSection, string> = {
     danger: 'Danger Zone'
 }
 
-const sectionDesc: Record<SettingsSection, string> = {
-    account: 'Manage your email and password',
-    profile: 'Update your display name and bio',
-    security: 'Protect your account and manage your active sessions',
-    notifications: 'Get notified when new episodes, seasons, and releases are out',
-    app: 'Manage your Track1st app and updates',
-    data: 'Manage your data and cache settings',
-    additions: 'Manage optional features and integrations',
-    danger: 'Irreversible and destructive actions'
-}
-
 // Grouping for the mobile Instagram-style menu list.
 const sectionGroups: { title: string; sections: SettingsSection[] }[] = [
     { title: 'Account', sections: ['account', 'profile', 'security'] },
@@ -146,23 +135,6 @@ const InlineFeedback: React.FC<InlineFeedbackProps> = ({ text, isError }) => (
     </span>
 )
 
-interface SettingsPanelHeaderProps {
-    section: SettingsSection
-}
-
-const SettingsPanelHeader: React.FC<SettingsPanelHeaderProps> = ({ section }) => {
-    const Icon = sectionIcon[section]
-    return (
-        <div className="settings-panel__header">
-            <div className="settings-panel__title-row">
-                <span className="settings-panel__title-icon"><Icon size={18} strokeWidth={2.2} /></span>
-                <h3>{sectionLabel[section]}</h3>
-            </div>
-            <p>{sectionDesc[section]}</p>
-        </div>
-    )
-}
-
 /* ===== Section components ===== */
 
 interface SettingsProps {
@@ -182,6 +154,9 @@ interface SettingsProps {
         profileMessage: string
         profileError: string
         handleProfileUpdate: (e: React.FormEvent) => void
+        avatarUrl: string | null
+        onAvatarChange: (url: string | null) => void
+        user: User | null
     }
     securityProps: { navigate: (to: string) => void }
     notificationsProps: {
@@ -268,7 +243,6 @@ const AccountSection: React.FC<Pick<SettingsProps, 'user' | 'email' | 'setEmail'
     email, setEmail, emailLoading, resetLoading, accountMessage, accountError, handleEmailUpdate, handlePasswordReset
 }) => (
     <div className="settings-panel">
-        <SettingsPanelHeader section="account" />
 
         <form className="settings-form" onSubmit={handleEmailUpdate}>
             <div className="settings-field">
@@ -305,11 +279,15 @@ const AccountSection: React.FC<Pick<SettingsProps, 'user' | 'email' | 'setEmail'
     </div>
 )
 
-const ProfileSection: React.FC<{ profileProps: SettingsProps['profileProps']; navigate: (to: string) => void }> = ({ profileProps, navigate }) => {
-    const { displayName, bio, profileLoading, profileMessage, profileError, handleProfileUpdate } = profileProps
+const ProfileSection: React.FC<{ profileProps: SettingsProps['profileProps'] }> = ({ profileProps }) => {
+    const { displayName, bio, profileLoading, profileMessage, profileError, handleProfileUpdate, avatarUrl, onAvatarChange, user } = profileProps
     return (
         <div className="settings-panel">
-            <SettingsPanelHeader section="profile" />
+            {user && (
+                <div className="settings-avatar-block">
+                    <AvatarUploader avatarUrl={avatarUrl} user={user} onAvatarChange={onAvatarChange} />
+                </div>
+            )}
 
             <form className="settings-form" onSubmit={handleProfileUpdate}>
                 <div className="settings-field">
@@ -345,22 +323,6 @@ const ProfileSection: React.FC<{ profileProps: SettingsProps['profileProps']; na
                     {profileLoading ? <><Loader2 className="lucide-spin" size={16} strokeWidth={2.2} /> Saving...</> : <><Save size={16} strokeWidth={2.2} /> Save Changes</>}
                 </button>
             </form>
-
-            <div className="settings-divider"></div>
-
-            <div className="settings-form">
-                <div className="settings-field">
-                    <label className="settings-field__label">Avatar</label>
-                    <span className="settings-field__hint">Update your profile picture</span>
-                </div>
-                <button
-                    className="settings-btn settings-btn--secondary"
-                    type="button"
-                    onClick={() => navigate('/EditProfile')}
-                >
-                    <ImageIcon size={16} strokeWidth={2.2} /> Edit Avatar
-                </button>
-            </div>
         </div>
     )
 }
@@ -388,8 +350,6 @@ const SecuritySection: React.FC<Pick<SettingsProps, 'securityProps'>> = ({ secur
     const { navigate } = securityProps
     return (
         <div className="settings-panel">
-            <SettingsPanelHeader section="security" />
-
             <div className="settings-link-card settings-link-card--clickable" onClick={() => navigate('/MFA')}>
                 <div className="settings-link-card__icon"><Fingerprint size={20} strokeWidth={2} /></div>
                 <div className="settings-link-card__info">
@@ -421,8 +381,6 @@ const NotificationsSection: React.FC<Pick<SettingsProps, 'notificationsProps'>> 
 
     return (
         <div className="settings-panel">
-            <SettingsPanelHeader section="notifications" />
-
             <div className="settings-data-card">
                 <div className="settings-data-card__icon"><Bell size={20} strokeWidth={2} /></div>
                 <div className="settings-data-card__info">
@@ -609,7 +567,6 @@ const AppSection: React.FC<Pick<SettingsProps, 'appProps'>> = ({ appProps }) => 
     const { isNative, installedAppVersion, appVersionLoading, appVersionMessage, handleCheckAppUpdates, navigate } = appProps
     return (
         <div className="settings-panel">
-            <SettingsPanelHeader section="app" />
 
             {isNative && (
                 <>
@@ -689,8 +646,6 @@ const DataSection: React.FC<Pick<SettingsProps, 'dataProps'>> = ({ dataProps }) 
     const { cacheStats, clearCache, isClearing, isPWA, canInstall, install, exportLoading, exportCsvLoading, dataMessage, handleExportData, handleExportCSV } = dataProps
     return (
         <div className="settings-panel">
-            <SettingsPanelHeader section="data" />
-
             <div className="settings-data-card">
                 <div className="settings-data-card__icon"><Database size={20} strokeWidth={2} /></div>
                 <div className="settings-data-card__info">
@@ -793,8 +748,6 @@ const AdditionsSection: React.FC<Pick<SettingsProps, 'additionsProps'>> = ({ add
 
     return (
         <div className="settings-panel">
-            <SettingsPanelHeader section="additions" />
-
             <AdditionsToggleRow
                 label="Stremio Button"
                 desc={'Show an "Open in Stremio" button on movie and TV show detail pages'}
@@ -865,8 +818,6 @@ const DangerSection: React.FC<Pick<SettingsProps, 'dangerProps'>> = ({ dangerPro
     const { deleteConfirm, setDeleteConfirm, deleteLoading, deleteError, handleDeleteAccount } = dangerProps
     return (
         <div className="settings-panel settings-panel--danger">
-            <SettingsPanelHeader section="danger" />
-
             <div className="settings-danger-card">
                 <div className="settings-danger-card__info">
                     <span className="settings-danger-card__label"><TriangleAlert size={18} strokeWidth={2.2} /> Delete Account</span>
@@ -909,7 +860,7 @@ const renderSection = (section: SettingsSection | undefined, p: SettingsProps, n
         case 'account':
             return <AccountSection {...p} />
         case 'profile':
-            return <ProfileSection profileProps={p.profileProps} navigate={navigate} />
+            return <ProfileSection profileProps={p.profileProps} />
         case 'security':
             return <SecuritySection securityProps={{ navigate }} />
         case 'notifications':
@@ -971,6 +922,7 @@ const Settings: React.FC = () => {
     // Profile states
     const [displayName, setDisplayName] = useState('')
     const [bio, setBio] = useState('')
+    const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
     const [profileLoading, setProfileLoading] = useState(false)
     const [profileMessage, setProfileMessage] = useState('')
     const [profileError, setProfileError] = useState('')
@@ -1056,6 +1008,7 @@ const Settings: React.FC = () => {
                 if (profileData) {
                     setDisplayName(profileData.display_name || '')
                     setBio(profileData.bio || '')
+                    setAvatarUrl(profileData.avatar_url || null)
                     setShowStremioButton(profileData.show_stremio_button === true)
                     setShowLetterboxButton(profileData.show_letterbox_button === true)
                     setShowTmdbButton(profileData.show_tmdb_button === true)
@@ -1561,7 +1514,8 @@ const Settings: React.FC = () => {
     const profileProps = {
         displayName, bio, setDisplayName, setBio,
         profileLoading, profileMessage, profileError,
-        handleProfileUpdate
+        handleProfileUpdate,
+        avatarUrl, onAvatarChange: setAvatarUrl, user: currentUser
     }
 
     const notificationsProps = {

@@ -38,7 +38,6 @@ import Profile from './pages/Profile'
 import Followers from './pages/Followers'
 import Following from './pages/Following'
 import Statistics from './pages/Statistics'
-import EditProfile from './pages/EditProfile'
 import Credits from './pages/Credits'
 import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
@@ -70,6 +69,24 @@ import useDetailModalStore, { restoreDetailModal } from './stores/detailModalSto
 const LegacyListRedirect: React.FC = () => {
     const { id } = useParams<{ id: string }>()
     return <Navigate to={`/ListsDetail/${id}`} replace />
+}
+
+// Keyed route wrappers: forcing a fresh mount whenever the route params change
+// so the previous show/movie's state, episodes and caches never leak into the
+// newly opened share while its data is being fetched.
+const MovieDetailRoute: React.FC = () => {
+    const { id } = useParams<{ id: string }>()
+    return <MovieDetail key={id} />
+}
+
+const TVShowDetailRoute: React.FC = () => {
+    const { id } = useParams<{ id: string }>()
+    return <TVShowDetail key={id} />
+}
+
+const EpisodeDetailRoute: React.FC = () => {
+    const { id, season, episode } = useParams<{ id: string; season: string; episode: string }>()
+    return <EpisodeDetail key={`${id}-${season}-${episode}`} />
 }
 
 const AppContent: React.FC = () => {
@@ -412,7 +429,7 @@ const AppContent: React.FC = () => {
     }
 
     const mediaPages = ['/Discover', '/Movies', '/Tvshows', '/', '/Upcoming', '/UpcomingNew', '/Lists', '/Profile', '/Admin', '/MobileTVShows', '/MobileMovies', '/Followers', '/Following', '/Search', '/Statistics']
-    const settingsPages = ['/Settings', '/MFA', '/Sessions', '/AdminSecurity', '/EditProfile',
+    const settingsPages = ['/Settings', '/MFA', '/Sessions', '/AdminSecurity',
         '/Settings/account', '/Settings/profile', '/Settings/security', '/Settings/notifications',
         '/Settings/app', '/Settings/data', '/Settings/additions', '/Settings/danger']
     const isSubpage = (path: string) => (
@@ -504,7 +521,6 @@ const AppContent: React.FC = () => {
                     <Route path="/register" element={user ? <Navigate to={defaultRoute} replace /> : <Register />} />
                     <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/reset-password" element={<ResetPassword />} />
-                    <Route path="/EditProfile" element={user ? <EditProfile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile/:username" element={user ? <Profile /> : <Navigate to="/login" replace />} />
                     <Route path="/Profile" element={user ? <Profile /> : <Navigate to="/login" replace />} />
                     <Route path="/credits" element={<Credits />} />
@@ -513,9 +529,9 @@ const AppContent: React.FC = () => {
                     <Route path="/about" element={<About />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route element={<DetailLayout />}>
-                        <Route path="/movie/:id" element={<MovieDetail />} />
-                        <Route path="/tv/:id" element={<TVShowDetail />} />
-                        <Route path="/tv/:id/season/:season/episode/:episode" element={<EpisodeDetail />} />
+                        <Route path="/movie/:id" element={<MovieDetailRoute />} />
+                        <Route path="/tv/:id" element={<TVShowDetailRoute />} />
+                        <Route path="/tv/:id/season/:season/episode/:episode" element={<EpisodeDetailRoute />} />
                         <Route path="/Upcoming" element={user ? <Upcoming currentMonth={currentMonth} /> : <Navigate to="/login" replace />} />
                         <Route path="/UpcomingNew" element={user ? <UpcomingNew /> : <Navigate to="/login" replace />} />
                     </Route>

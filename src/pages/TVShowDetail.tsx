@@ -23,6 +23,7 @@ import tmdbLogo from '../assets/CompactTMDB.svg'
 import ShareButton from '../components/media/ShareButton'
 import CastList, { type CastMember } from '../components/CastList'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
+import { useIsActiveDetail } from '../hooks/useActiveDetail'
 import useDetailModalStore from '../stores/detailModalStore'
 
 interface LocalEpisode {
@@ -58,6 +59,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
     const { showTmdbButton, loading: tmdbLoading } = useShowTmdbButton()
     const { isMobile } = useMobile()
     const { isOpen: isSidebarOpen } = useDetailSidebar()
+    const isActiveDetail = useIsActiveDetail('tv', id)
     const [details, setDetails] = useState<TMDBResult | null>(null)
     usePageTitle(details?.name ? `${details.name} - Track1st` : 'Track1st - TV Show Detail')
     const [loading, setLoading] = useState(true)
@@ -125,6 +127,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
     const episodeListRef = useRef<HTMLDivElement>(null)
     const seasonDropdownRef = useRef<HTMLDivElement>(null)
     const [seasonDropdownOpen, setSeasonDropdownOpen] = useState(false)
+    const fetchActiveRef = useRef(true)
 
     useEffect(() => {
         const handleClickOutside = (e: MouseEvent) => {
@@ -219,6 +222,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                 () => getTVDetails(numericId),
                 { ttl: 30 * 60 * 1000, staleWhileRevalidate: true }
             )
+            if (!fetchActiveRef.current) return
             setDetails(data)
 
             const videos = (data.videos?.results || []).filter((v: { type?: string; site?: string; key?: string }) => v && typeof v === 'object')
@@ -227,15 +231,20 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
             )
             if (trailer) setTrailerKey(trailer.key)
         } catch (err) {
+            if (!fetchActiveRef.current) return
             console.error('[TVShowDetail] failed to load TV show details:', id, err)
             setError('Failed to load TV show details. Please try again.')
         } finally {
-            setLoading(false)
+            if (fetchActiveRef.current) setLoading(false)
         }
     }, [id])
 
     useEffect(() => {
+        fetchActiveRef.current = true
         void fetchDetails()
+        return () => {
+            fetchActiveRef.current = false
+        }
     }, [fetchDetails])
 
     // Signal the overlay that the page content is ready so its reveal curtain
@@ -1242,7 +1251,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                 )}
                             </div>
                             ) : (
-                            createPortal(
+                            isActiveDetail && createPortal(
                             <div className={`detail-page__actions-mobile${isSidebarOpen ? ' detail-page__actions-mobile--open' : ''}`}>
                                 <button className="detail-page__icon-btn" onClick={() => setShowDescription(!showDescription)} title={showDescription ? 'Hide Description' : 'Show Description'} aria-label={showDescription ? 'Hide Description' : 'Show Description'}>
                                     <AlignLeft size={18} />

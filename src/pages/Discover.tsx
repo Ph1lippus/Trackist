@@ -48,11 +48,22 @@ const Discover: React.FC = () => {
 
     // Compute visible results locally to ensure it is always in sync with results and filters
     const visibleResults = React.useMemo(() => {
-        if (showAdded || filters.mediaType === 'person') {
-            return [...results]
+        const base = showAdded || filters.mediaType === 'person'
+            ? [...results]
+            : results.filter(item => !watchlistIds.has(item.id))
+        // During search, keep titles without a poster (or profile image for
+        // people) at the end so the grid looks intentional instead of showing
+        // no-poster placeholders scattered among real posters.
+        if (filters.query) {
+            return base.sort((a, b) => {
+                const aNoPoster = !a.poster_path && !a.profile_path
+                const bNoPoster = !b.poster_path && !b.profile_path
+                if (aNoPoster === bNoPoster) return 0
+                return aNoPoster ? 1 : -1
+            })
         }
-        return results.filter(item => !watchlistIds.has(item.id))
-    }, [results, watchlistIds, showAdded, filters.mediaType])
+        return base
+    }, [results, watchlistIds, showAdded, filters.mediaType, filters.query])
     const { committedQuery } = useSearch()
     const { isMobile } = useMobile()
     const { showIcons } = useMediaCardIcons()

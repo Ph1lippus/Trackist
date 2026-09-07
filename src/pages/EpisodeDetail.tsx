@@ -12,7 +12,7 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import { useMobile } from '../contexts/useMobile'
 import ShareButton from '../components/media/ShareButton'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
-import useDetailModalStore from '../stores/detailModalStore'
+import { useIsActiveDetail } from '../hooks/useActiveDetail'
 import { Eye, EyeOff } from 'lucide-react'
 
 interface EpisodeData {
@@ -45,7 +45,7 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
     const episode = episodeNumber?.toString() ?? paramEpisode
     const { isMobile } = useMobile()
     const { isOpen: isSidebarOpen } = useDetailSidebar()
-    const isInModal = useDetailModalStore((s) => s.isOpen)
+    const isActiveDetail = useIsActiveDetail('episode', id, season, episode)
     const [tvDetails, setTvDetails] = useState<TMDBResult | null>(null)
     const [episodeData, setEpisodeData] = useState<EpisodeData | null>(null)
     const episodeSlug = season && episode ? `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}` : ''
@@ -57,11 +57,11 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
     const [watched, setWatched] = useState(false)
     const [showDescription] = useState(true)
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean } | null>(null)
-    const [isLowResolutionStill, setIsLowResolutionStill] = useState(false)
 
     
 
     useEffect(() => {
+        let active = true
         const fetchData = async () => {
             setLoading(true)
             if (!id || !season || !episode) {
@@ -83,6 +83,7 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
                         { ttl: 24 * 60 * 60 * 1000, staleWhileRevalidate: true }
                     )
                 ])
+                if (!active) return
                 setTvDetails(tvData)
 
                 const ep = seasonData.episodes?.find((e) => e.episode_number === Number(episode)) ?? null
@@ -103,17 +104,22 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
                         .eq('season_number', Number(season))
                         .eq('episode_number', Number(episode))
                         .maybeSingle()
+                    if (!active) return
                     if (episodeWatchData) {
                         setWatched(true)
                     }
                 }
             } catch (err) {
+                if (!active) return
                 console.error('Failed to load episode details:', err)
             } finally {
-                setLoading(false)
+                if (active) setLoading(false)
             }
         }
-        fetchData()
+        void fetchData()
+        return () => {
+            active = false
+        }
     }, [id, season, episode])
 
     // Signal the overlay that the episode content is ready so its reveal
@@ -122,28 +128,8 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
         if (!loading) onLoaded?.()
     }, [loading, onLoaded])
 
-    // Backdrop URL computed early so the navbar scrim can be shown/hidden in
-    // all states (loading, error, and main render) without a flash of the
-    // transparent navbar before the backdrop image has loaded.
+    // Episode still used as the in-content hero image only.
     const stillUrl = episodeData?.still_path ? imageUrlOriginal(episodeData.still_path) : null
-    const fallbackBackdropUrl = tvDetails?.backdrop_path ? imageUrlOriginal(tvDetails.backdrop_path) : null
-    const backdropUrl = stillUrl || fallbackBackdropUrl
-
-    // Push backdrop URL to the overlay store when in modal so it renders outside
-    // the scroll container (which has transform:translateZ(0) that would create a
-    // containing block for the fixed backdrop, causing it to start at
-    // --navbar-height instead of the viewport top). The store's open()/goBack()
-    // already snapshot and restore the previous layer's backdrop URL, so we must
-    // NOT clear it on cleanup — going back to the previous (e.g. TV show) layer
-    // relies on that restored value surviving (store close()/goBack() manages the
-    // full backdrop lifecycle).
-    useEffect(() => {
-        if (!isInModal || !tvDetails || !episodeData) return
-        const url = backdropUrl
-        if (url) {
-            useDetailModalStore.getState().setBackdropUrl(url)
-        }
-    }, [isInModal, backdropUrl, tvDetails, episodeData])
 
     const logoUrl = useMemo(() => {
         if (tvDetails?.images?.logos) {
@@ -248,38 +234,8 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
         </>
     )
 
-    return (
+return (
         <div className="detail-page detail-page--no-scroll">
-            {/*
-                Navbar scrim: a fixed dark element over the starfield that the
-                transparent navbar would otherwise bleed into. It renders in the
-                initial commit (before backdropUrl / episodeData resolve) so there
-                is never a "transparent navbar over starfield" flash. The
-                --hidden class fades it out once the real backdrop appears.
-            */}
-            {!isInModal && (
-                <div
-                    className={`detail-page__navbar-scrim${backdropUrl ? ' detail-page__navbar-scrim--hidden' : ''}`}
-                    aria-hidden="true"
-                />
-            )}
-            {!isInModal && backdropUrl && (
-                <div
-                    className="detail-page__backdrop"
-                    aria-hidden="true"
-                >
-                    <img
-                        src={backdropUrl}
-                        alt=""
-                        className={isLowResolutionStill ? 'detail-page__backdrop-image--low-resolution' : ''}
-                        onLoad={(event) => {
-                            const image = event.currentTarget
-                            setIsLowResolutionStill(image.naturalWidth < 1920 || image.naturalHeight < 1080)
-                        }}
-                    />
-                    <div className="detail-page__backdrop-overlay" />
-                </div>
-            )}
             {loading && (
                 <div className="detail-page__loading-skeleton">
                     <div className="detail-page__content detail-page__content--split">
@@ -354,7 +310,7 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
                                 <p className="detail-page__overview">{episodeData.overview || 'No description available.'}</p>
                             </>}
                             
-                            {isMobile ? createPortal(
+                            {isMobile && isActiveDetail ? createPortal(
                                 <div className={`detail-page__actions-mobile${isSidebarOpen ? ' detail-page__actions-mobile--open' : ''}`}>
                                     {episodeActions}
                                 </div>,

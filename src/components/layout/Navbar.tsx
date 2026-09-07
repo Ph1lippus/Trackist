@@ -34,6 +34,17 @@ const NAVBAR_SORT_OPTIONS = [
     { value: 'release_date.asc', label: 'Oldest' },
 ] as const;
 
+const SETTINGS_SECTION_TITLES: Record<string, string> = {
+    account: 'Account',
+    profile: 'Profile',
+    security: 'Security',
+    notifications: 'Notifications',
+    app: 'App',
+    data: 'Data & Cache',
+    additions: 'Additions',
+    danger: 'Danger Zone',
+};
+
 interface NavbarProps {
     currentMonth?: Date;
     navigateMonth?: (direction: number) => void;
@@ -120,8 +131,12 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                           location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/);
     const isListDetailPage = location.pathname.match(/^\/ListsDetail\/[a-f0-9-]+$/);
     const isListEditPage = location.pathname.match(/^\/ListsEditPage\/(new|[a-f0-9-]+)$/);
-    const isSettingsSubPage = ['/MFA', '/Sessions', '/Settings', '/EditProfile', '/Credits', '/AdminSecurity', '/Statistics'].includes(location.pathname) || location.pathname.startsWith('/Settings/');
+    const isSettingsSubPage = ['/MFA', '/Sessions', '/Settings', '/Credits', '/AdminSecurity', '/Statistics'].includes(location.pathname) || location.pathname.startsWith('/Settings/');
     const isCreditsPage = location.pathname === '/Credits';
+    const isSettingsPage = location.pathname === '/Settings' || location.pathname.startsWith('/Settings/');
+    const settingsTitle = location.pathname.startsWith('/Settings/')
+        ? SETTINGS_SECTION_TITLES[location.pathname.split('/')[2]] || 'Settings'
+        : 'Settings';
     const detailModalOpen = useDetailModalStore((s) => s.isOpen);
     const detailModalType = useDetailModalStore((s) => s.type);
     const isSearchPage = location.pathname === '/Search';
@@ -711,6 +726,12 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                 {isMobile && location.pathname.startsWith('/Profile') && (
                     <div className="navbar-mobile-profile-title" aria-live="polite">
                         {mobileProfileTitle}
+                    </div>
+                )}
+
+                {isMobile && isSettingsPage && (
+                    <div className="navbar-mobile-profile-title" aria-live="polite">
+                        {settingsTitle}
                     </div>
                 )}
                 
