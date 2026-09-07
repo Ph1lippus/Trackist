@@ -416,7 +416,21 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                 if (rememberedSeason != null && seasonList.includes(rememberedSeason)) {
                     setSelectedSeason(rememberedSeason)
                     await loadSeason(rememberedSeason)
-                    setScrollTarget(null)
+
+                    // Compute scroll target for the remembered season: last watched
+                    // released episode, or first unwatched released episode.
+                    const seasonEps = seasonCache.current.get(rememberedSeason) || []
+                    const lastWatchedInSeason = [...seasonEps]
+                        .filter(ep => ep.watched && isEpisodeReleased(ep))
+                        .sort((a, b) => b.episode_number - a.episode_number)[0]
+                    const firstUnwatchedReleased = seasonEps
+                        .filter(ep => !ep.watched && isEpisodeReleased(ep))
+                        .sort((a, b) => a.episode_number - b.episode_number)[0]
+                    const targetEp = lastWatchedInSeason || firstUnwatchedReleased
+                    if (targetEp) {
+                        setScrollTarget(`${id}-${rememberedSeason}-${targetEp.episode_number}`)
+                    }
+
                     return
                 }
 
