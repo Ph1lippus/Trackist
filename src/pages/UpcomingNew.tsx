@@ -4,7 +4,7 @@ import { imageUrl } from '../services/tmdbService'
 import { loadCalendar, type CalendarItem } from '../services/calendarService'
 import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { formatDateString, isToday } from '../utils/dateUtils'
+import { formatDateString, isTodayLocal } from '../utils/dateUtils'
 import useDetailModalStore from '../stores/detailModalStore'
 
 interface UpcomingItem {
@@ -170,7 +170,7 @@ const UpcomingNew: React.FC = () => {
                     <div className="upcoming-new-list">
                         {sortedGroupedItems.map(({ date, cards }) => (
                             <div key={date} className="upcoming-new-date-group">
-                                <div className={`upcoming-new-date-label ${isToday(date) ? 'today' : ''}`}>
+                                <div className={`upcoming-new-date-label ${isTodayLocal(date) ? 'today' : ''}`}>
                                     <span className="upcoming-new-date-main">
                                         {formatDateString(date, {
                                             weekday: 'short',

@@ -272,7 +272,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId, onLoaded }) =
     const ageRating = getAgeRating()
     const overview = details?.overview || 'No description available.'
     const genres = details?.genres || []
-    const shareUrl = window.location.href
+    const shareUrl = id ? new URL(`/movie/${id}`, window.location.origin).toString() : window.location.href
     return (
         <div className="detail-page detail-page--no-scroll">
             {!isInModal && backdropUrl && (

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useSearchParams } from 'react-router-dom'
 import { runSearch } from '../services/searchService'
 import { DEFAULT_SEARCH_CONFIG } from '../types/search'
 import type {
@@ -70,7 +70,9 @@ export interface UseUnifiedSearchReturn {
  */
 export function useUnifiedSearch(): UseUnifiedSearchReturn {
     const location = useLocation()
+    const [searchParams, setSearchParams] = useSearchParams()
     const context = deriveSearchContext(location.pathname)
+    const isSearchPage = location.pathname === '/Search'
 
     const [inputValue, setInputValue] = useState('')
     const [query, setQuery] = useState('')
@@ -99,6 +101,8 @@ export function useUnifiedSearch(): UseUnifiedSearchReturn {
         setIsDropdownOpen(false)
         setCommittedQuery('')
     }
+
+    const seededSearchContextRef = useRef<SearchContextType | null>(null)
 
     // Side-effect cleanup when the page context changes (cancel in-flight requests)
     useEffect(() => {
@@ -167,6 +171,24 @@ export function useUnifiedSearch(): UseUnifiedSearchReturn {
         []
     )
 
+    // Seed the /Search page from a shared/reloaded ?q= URL param so search
+    // links open straight to results instead of a blank page. Guarded per
+    // context so typing-driven URL changes don't re-seed and re-run search.
+    useEffect(() => {
+        if (!isSearchPage) return
+        if (seededSearchContextRef.current === context) return
+        seededSearchContextRef.current = context
+        const urlQuery = new URLSearchParams(searchParams).get('q')?.trim() ?? ''
+        if (!urlQuery) return
+        // Seeding state from an externally-provided URL (shared link / reload)
+        // is a legitimate one-time external-system sync, not cascading.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setInputValue(urlQuery)
+        setQuery(urlQuery)
+        setCommittedQuery(urlQuery)
+        void executeSearch(urlQuery, context)
+    }, [isSearchPage, searchParams, context, executeSearch])
+
     // Debounced input handler — 250ms strict, min 3 chars
     const setInputValueDebounced = useCallback(
         (value: string) => {
@@ -193,16 +215,30 @@ export function useUnifiedSearch(): UseUnifiedSearchReturn {
                 setQuery('')
                 setResults([])
                 setIsDropdownOpen(false)
+                if (isSearchPage && searchParams.has('q')) {
+                    const next = new URLSearchParams(searchParams)
+                    next.delete('q')
+                    setSearchParams(next, { replace: true })
+                }
                 return
             }
 
             // Debounce 250ms
             debounceTimer.current = setTimeout(() => {
                 setQuery(trimmed)
+                // Reflect the executed query in the URL so real-time results are
+                // shareable / survive a reload, without spamming history.
+                if (isSearchPage) {
+                    const next = new URLSearchParams(searchParams)
+                    if (next.get('q') !== trimmed) {
+                        next.set('q', trimmed)
+                        setSearchParams(next, { replace: true })
+                    }
+                }
                 void executeSearch(trimmed, context)
             }, DEFAULT_SEARCH_CONFIG.debounceMs)
         },
-        [context, executeSearch]
+        [context, executeSearch, isSearchPage, searchParams, setSearchParams]
     )
 
     const clear = useCallback(() => {
@@ -220,7 +256,12 @@ export function useUnifiedSearch(): UseUnifiedSearchReturn {
             abortController.current.abort()
             abortController.current = null
         }
-    }, [])
+        if (isSearchPage && searchParams.has('q')) {
+            const next = new URLSearchParams(searchParams)
+            next.delete('q')
+            setSearchParams(next, { replace: true })
+        }
+    }, [isSearchPage, searchParams, setSearchParams])
 
     // Search is a separate native screen, so returning to Discover must start
     // with Discover's unfiltered state rather than restoring the search term.
@@ -248,7 +289,18 @@ export function useUnifiedSearch(): UseUnifiedSearchReturn {
             currentRequestId.current++
             setIsLoading(false)
         }
-    }, [inputValue])
+        // Reflect the committed query in the URL so search is shareable and
+        // survives a reload on the /Search page.
+        if (isSearchPage) {
+            const next = new URLSearchParams(searchParams)
+            if (trimmed) {
+                next.set('q', trimmed)
+            } else {
+                next.delete('q')
+            }
+            setSearchParams(next, { replace: true })
+        }
+    }, [inputValue, isSearchPage, searchParams, setSearchParams])
 
     const groupedResults = groupResultsByKind(results)
 

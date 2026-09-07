@@ -232,7 +232,7 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
     const episodeActions = (
         <>
             <ShareButton
-                url={window.location.href}
+                url={id && season && episode ? new URL(`/tv/${id}/season/${season}/episode/${episode}`, window.location.origin).toString() : window.location.href}
                 title={`${title} S${season}E${episode} on Track1st`}
                 text={`I am watching ${title}, season ${season}, episode ${episode}: ${episodeTitle}. Join me on Track1st.`}
             />

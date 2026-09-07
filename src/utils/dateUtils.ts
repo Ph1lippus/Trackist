@@ -59,6 +59,53 @@ export function getDateFromISO(isoString: string): string {
 }
 
 /**
+ * Get the user's local calendar date as a YYYY-MM-DD string.
+ * Unlike getUTCTodayString, this rolls over at the user's local midnight,
+ * which is what "today" means to the end user.
+ *
+ * @example
+ * // Returns the local calendar day, e.g. "2024-01-15"
+ * const today = getLocalTodayString()
+ */
+export function getLocalTodayString(): string {
+    const now = new Date()
+    const year = now.getFullYear()
+    const month = String(now.getMonth() + 1).padStart(2, '0')
+    const day = String(now.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+}
+
+/**
+ * Check if a date string is today in the user's local timezone.
+ *
+ * @param dateString - Date in YYYY-MM-DD format
+ * @returns true if the date is today locally
+ */
+export function isTodayLocal(dateString: string): boolean {
+    return dateString === getLocalTodayString()
+}
+
+/**
+ * Check if a date string is in the past (before the user's local today).
+ *
+ * @param dateString - Date in YYYY-MM-DD format
+ * @returns true if the date is before today locally
+ */
+export function isPastLocal(dateString: string): boolean {
+    return dateString < getLocalTodayString()
+}
+
+/**
+ * Check if a date string is in the future (after the user's local today).
+ *
+ * @param dateString - Date in YYYY-MM-DD format
+ * @returns true if the date is after today locally
+ */
+export function isFutureLocal(dateString: string): boolean {
+    return dateString > getLocalTodayString()
+}
+
+/**
  * Check if a date string is today (UTC).
  * 
  * @param dateString - Date in YYYY-MM-DD format

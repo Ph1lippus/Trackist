@@ -1048,7 +1048,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
     const genres = details?.genres || []
     // Count seasons that actually have episodes for display
     const displaySeasonCount = seasons.length
-    const shareUrl = window.location.href
+    const shareUrl = id ? new URL(`/tv/${id}`, window.location.origin).toString() : window.location.href
 
     return (
         <div className="detail-page detail-page--no-scroll">

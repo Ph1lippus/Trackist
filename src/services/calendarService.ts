@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient'
-import { shouldRevalidateByDate, getUTCTodayString } from '../utils/dateUtils'
+import { shouldRevalidateByDate, getLocalTodayString } from '../utils/dateUtils'
 
 // Invalidate calendar cache on auth state change
 let currentUserId: string | null = null
@@ -102,7 +102,9 @@ const isCacheStale = (cache: CalendarCache | null): boolean => {
 }
 
 const filterPastItems = (items: CalendarItem[]): CalendarItem[] => {
-    const today = getUTCTodayString()
+    // Roll over at the user's local midnight so yesterday's items drop
+    // immediately once the local day changes.
+    const today = getLocalTodayString()
     return items.filter(item => {
         const date = item.media_type === 'tv' ? item.air_date : item.release_date
         return date && date >= today
