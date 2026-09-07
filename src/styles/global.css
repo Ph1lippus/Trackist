@@ -531,15 +531,20 @@ html {
 
 /* Transparent navbar — person detail page and open detail modal: truly
    transparent (no fill, no scrim, no blur) so everything behind it is visible
-   fully. Scoped under the row for specificity over the `.no-back-btn` fill.
-   The transition lets the navbar fill/blur fade in synch with the overlay's
-   entry/exit instead of popping the instant the modal opens. */
-.navbar-brand-row.is-modal-open .container.navbar-inner,
-.navbar-brand-row .navbar-inner.navbar-transparent {
+   fully. Scoped under the row for specificity over the `.no-back-btn` fill. */
+.navbar-brand-row.is-modal-open .container.navbar-inner {
     background: transparent !important;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
+}
+
+/* Routed detail pages: instant switch so the navbar never bleeds the starfield
+   mid-transition on navigation. */
+.navbar-brand-row .navbar-inner.navbar-transparent {
+    background: transparent !important;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
 }
 
 .detail-page__navbar-scrim {
@@ -558,19 +563,7 @@ html {
     opacity: 0;
 }
 
-/* Smooth transition as the scrim lifts */
-.navbar-brand-row .navbar-inner.navbar-transparent {
-    transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
-}
 
-/* Always let the navbar fill/blur ease between its filled and transparent
-   states (detail pages, modal open/close). Declared on the base state too so
-   the transition runs in both directions — a transition only animates when it
-   exists in the before-change style, so scoping it to just `.is-modal-open`
-   would leave the opening direction a hard pop. */
-.navbar-brand-row .container.navbar-inner {
-    transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
-}
 
 .container.navbar-inner.no-back-btn {
     backdrop-filter: blur(8px);
