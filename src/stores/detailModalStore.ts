@@ -12,16 +12,24 @@ interface DetailEntry {
   season?: number
   episode?: number
   backdropUrl?: string | null
+  backdropClassName?: string | null
 }
 
 interface DetailModalState {
   isOpen: boolean
+  // True only during the overlay's exit fade (the ~EXIT_MS after isOpen flips
+  // false). Lets App.tsx / the Navbar keep the underlying page hidden and the
+  // navbar transparent for the full fade-out so the close doesn't pop the page
+  // and navbar back in before the overlay has finished fading. Transient and
+  // never persisted.
+  isExiting: boolean
   type: DetailType | null
   id: number | null
   season?: number
   episode?: number
   stack: DetailEntry[]
   backdropUrl: string | null
+  backdropClassName: string | null
   // The URL the modal is pinned to. While the modal is open the address bar
   // never changes, so React Router never navigates and the page underneath
   // stays mounted (scroll/state intact). A single synthetic history entry
@@ -29,10 +37,12 @@ interface DetailModalState {
   // intercept to pop the modal stack; it is re-pushed on every back until the
   // stack empties, at which point the browser settles back on the pinned URL.
   pinHref: string | null
+  setIsExiting: (value: boolean) => void
   open: (type: DetailType, id: number, season?: number, episode?: number) => void
   back: () => void
   goBack: () => void
   setBackdropUrl: (url: string | null) => void
+  setBackdropClassName: (className: string | null) => void
   setRememberedSeason: (showId: number, season: number) => void
   getRememberedSeason: (showId: number) => number | null
   close: () => void
@@ -53,6 +63,7 @@ interface StoredModalState {
   episode?: number
   stack: DetailEntry[]
   backdropUrl: string | null
+  backdropClassName: string | null
 }
 
 const persistModal = (s: DetailModalState): void => {
@@ -68,6 +79,7 @@ const persistModal = (s: DetailModalState): void => {
       episode: s.episode,
       stack: s.stack,
       backdropUrl: s.backdropUrl,
+      backdropClassName: s.backdropClassName,
     }
     sessionStorage.setItem(MODAL_STORAGE_KEY, JSON.stringify(data))
   } catch {
@@ -127,6 +139,7 @@ export const restoreDetailModal = (): void => {
     episode: top.episode,
     stack,
     backdropUrl: top.backdropUrl ?? null,
+    backdropClassName: top.backdropClassName ?? null,
     pinHref: window.location.pathname + window.location.search + window.location.hash,
   })
 }
@@ -143,15 +156,32 @@ const sameEntry = (a: DetailEntry | undefined, type: DetailType, id: number, sea
 
 const useDetailModalStore = create<DetailModalState>((set, get) => ({
   isOpen: false,
+  isExiting: false,
   type: null,
   id: null,
   season: undefined,
   episode: undefined,
   stack: [],
   backdropUrl: null,
+  backdropClassName: null,
   pinHref: null,
 
-  setBackdropUrl: (url) => set({ backdropUrl: url }),
+  setBackdropUrl: (url) => set((state) => {
+    const stack = state.stack.length > 0
+      ? state.stack.map((entry, idx) =>
+          idx === state.stack.length - 1 ? { ...entry, backdropUrl: url } : entry
+        )
+      : state.stack
+    return { backdropUrl: url, stack }
+  }),
+  setBackdropClassName: (className) => set((state) => {
+    const stack = state.stack.length > 0
+      ? state.stack.map((entry, idx) =>
+          idx === state.stack.length - 1 ? { ...entry, backdropClassName: className } : entry
+        )
+      : state.stack
+    return { backdropClassName: className, stack }
+  }),
 
   open: (type, id, season, episode) => {
     const current = get()
@@ -175,7 +205,7 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
     const stack = current.stack
     const stackWithBackdrop = stack.length > 0
       ? stack.map((entry, idx) =>
-          idx === stack.length - 1 ? { ...entry, backdropUrl: current.backdropUrl } : entry
+          idx === stack.length - 1 ? { ...entry, backdropUrl: current.backdropUrl, backdropClassName: current.backdropClassName } : entry
         )
       : stack
     // Re-opening a detail already somewhere in the stack rewinds to it (avoids
@@ -231,6 +261,11 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
       const stack = s.stack.slice(0, -1)
       const prev = stack[stack.length - 1]
       dbg('goBack: layer ->', prev.type, prev.id, 'remaining=', stack.length)
+      const prevBackdrop = prev.backdropUrl ?? null
+      if (prevBackdrop && prev.type !== 'person') {
+        const img = new window.Image()
+        img.src = prevBackdrop
+      }
       set({
         isOpen: true,
         type: prev.type,
@@ -238,7 +273,8 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
         season: prev.season,
         episode: prev.episode,
         stack,
-        backdropUrl: prev.backdropUrl ?? null,
+        backdropUrl: prevBackdrop,
+        backdropClassName: prev.backdropClassName ?? null,
       })
       persistModal(get())
     } else {
@@ -253,6 +289,8 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
 
   getRememberedSeason: (showId) => rememberedSeasons.get(showId) ?? null,
 
+  setIsExiting: (value) => set({ isExiting: value }),
+
   close: () => {
     dbg('close called. histIdx=', (window.history.state as { idx?: number | null } | null)?.idx ?? null, 'location=', window.location.pathname + window.location.search + window.location.hash)
     set({
@@ -263,6 +301,7 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
       episode: undefined,
       stack: [],
       backdropUrl: null,
+      backdropClassName: null,
       pinHref: null,
     })
     persistModal(get())

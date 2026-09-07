@@ -137,8 +137,8 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
     const settingsTitle = location.pathname.startsWith('/Settings/')
         ? SETTINGS_SECTION_TITLES[location.pathname.split('/')[2]] || 'Settings'
         : 'Settings';
-    const detailModalOpen = useDetailModalStore((s) => s.isOpen);
-    const detailModalType = useDetailModalStore((s) => s.type);
+    const detailModalOpen = useDetailModalStore((s) => s.isOpen || s.isExiting);
+    const detailModalType = useDetailModalStore((s) => (s.isOpen || s.isExiting) ? s.type : null);
     const isSearchPage = location.pathname === '/Search';
     // Navbar is transparent (see-through over content) on detail pages
     // and while the detail modal is open, per the detail-page design.

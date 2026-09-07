@@ -53,6 +53,14 @@ export interface TMDBResult {
         vote_average?: number
         vote_count?: number
         }>
+        stills?: Array<{
+        file_path: string
+        width: number
+        height: number
+        iso_639_1?: string | null
+        vote_average?: number
+        vote_count?: number
+        }>
     }
     release_dates?: {
         results?: Array<{ iso_3166_1: string; release_dates: Array<{ certification: string }> }>

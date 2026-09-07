@@ -166,7 +166,7 @@ export const getMovieDetails = async (id: number): Promise<{
     status?: string
     tagline?: string
     production_companies?: { id: number; name: string; logo_path?: string | null; origin_country?: string }[]
-    images?: { logos?: { file_path: string; language?: string }[]; backdrops?: any[]; posters?: any[] }
+    images?: { logos?: { file_path: string; language?: string }[]; backdrops?: any[]; posters?: any[]; stills?: any[] }
     external_ids?: { imdb_id?: string }
     videos?: {
         results: {
@@ -202,7 +202,7 @@ export const getTVShowDetails = async (id: number): Promise<{
     status?: string
     episode_run_time?: number[]
     production_companies?: { id: number; name: string; logo_path?: string | null; origin_country?: string }[]
-    images?: { logos?: { file_path: string; language?: string }[]; backdrops?: any[]; posters?: any[] }
+    images?: { logos?: { file_path: string; language?: string }[]; backdrops?: any[]; posters?: any[]; stills?: any[] }
     external_ids?: { imdb_id?: string }
     videos?: {
         results: {
@@ -451,12 +451,13 @@ const safeObject = <T extends object>(value: unknown): T | undefined => {
     return value as T
 }
 
-const sanitizeImages = (images: unknown): { logos: object[]; backdrops: object[]; posters: object[] } => {
-    const img = safeObject<{ logos?: unknown; backdrops?: unknown; posters?: unknown }>(images) ?? {}
+const sanitizeImages = (images: unknown): { logos: object[]; backdrops: object[]; posters: object[]; stills: object[] } => {
+    const img = safeObject<{ logos?: unknown; backdrops?: unknown; posters?: unknown; stills?: unknown }>(images) ?? {}
     return {
         logos: safeArray<object>(img.logos),
         backdrops: safeArray<object>(img.backdrops),
         posters: safeArray<object>(img.posters),
+        stills: safeArray<object>(img.stills),
     }
 }
 

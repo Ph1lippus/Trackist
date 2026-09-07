@@ -46,7 +46,7 @@ const renderDetail = (
 }
 
 const DetailOverlay: React.FC = () => {
-  const { isOpen, type, id, stack, backdropUrl } = useDetailModalStore()
+  const { isOpen, type, id, stack, backdropUrl, backdropClassName } = useDetailModalStore()
   const location = useLocation()
   const previouslyFocused = useRef<HTMLElement | null>(null)
   const lastRouterPath = useRef(location.pathname)
@@ -62,7 +62,7 @@ const DetailOverlay: React.FC = () => {
   // keep updates predictable).
   const [closing, setClosing] = useState(false)
   const [prevOpen, setPrevOpen] = useState(isOpen)
-  const [snapshot, setSnapshot] = useState({ type, id, stack, backdropUrl })
+  const [snapshot, setSnapshot] = useState({ type, id, stack, backdropUrl, backdropClassName })
 
   if (prevOpen !== isOpen) {
     setPrevOpen(isOpen)
@@ -82,9 +82,10 @@ const DetailOverlay: React.FC = () => {
     (snapshot.type !== type ||
       snapshot.id !== id ||
       snapshot.stack !== stack ||
-      snapshot.backdropUrl !== backdropUrl)
+      snapshot.backdropUrl !== backdropUrl ||
+      snapshot.backdropClassName !== backdropClassName)
   ) {
-    setSnapshot({ type, id, stack, backdropUrl })
+    setSnapshot({ type, id, stack, backdropUrl, backdropClassName })
   }
 
   // Layers reveal under an opaque curtain only once their content is loaded.
@@ -98,11 +99,33 @@ const DetailOverlay: React.FC = () => {
 
   const mount = isOpen || closing
 
+  // The overlay stays mounted across modal sessions (it is a permanent child of
+  // App). `readyKeys` only ever accumulates, so reopening a detail that was
+  // opened before would replay as instantly "ready" — skipping the curtain-reveal
+  // transition. Reset the keys whenever the overlay fully leaves the DOM (exit
+  // finished) so each new open replays the reveal. Keys still persist for the
+  // whole of a single open session so back-navigating to an already-loaded layer
+  // stays instant.
+  const wasMounted = useRef(mount)
+  useEffect(() => {
+    if (wasMounted.current && !mount) {
+      setReadyKeys(new Set())
+    }
+    wasMounted.current = mount
+  }, [mount])
+
   // After the exit fade completes, remove the overlay from the DOM.
   useEffect(() => {
     if (!closing) return
     const t = window.setTimeout(() => setClosing(false), EXIT_MS)
     return () => window.clearTimeout(t)
+  }, [closing])
+
+  // Keep the store's transient exit flag in sync so App.tsx / the Navbar hold
+  // the underlying page hidden and their transparent state for the full exit
+  // fade (instead of popping them back the instant isOpen flips false).
+  useEffect(() => {
+    useDetailModalStore.getState().setIsExiting(closing)
   }, [closing])
 
 
@@ -232,7 +255,7 @@ const DetailOverlay: React.FC = () => {
   }, [isOpen, readyKeys])
 
   const view = mount
-    ? { type: snapshot.type, id: snapshot.id, stack: snapshot.stack, backdropUrl: snapshot.backdropUrl }
+    ? { type: snapshot.type, id: snapshot.id, stack: snapshot.stack, backdropUrl: snapshot.backdropUrl, backdropClassName: snapshot.backdropClassName }
     : null
   if (!mount || !view?.type || view.id == null || view.stack.length === 0) return null
 
@@ -246,13 +269,13 @@ const DetailOverlay: React.FC = () => {
   const topReady = readyKeys.has(topKey)
   return (
     <div className={overlayClass} role="dialog" aria-modal="true" aria-label={`${view.type} details`}>
-      {view.backdropUrl && view.type !== 'person' && view.type !== 'episode' && (
+      {view.backdropUrl && view.type !== 'person' && (
         <div className="detail-page__backdrop">
-          <img src={view.backdropUrl} alt="" loading="lazy" />
+          <img src={view.backdropUrl} alt="" className={view.backdropClassName || undefined} />
           <div className="detail-page__backdrop-overlay" />
         </div>
       )}
-      {(view.type === 'movie' || view.type === 'tv') && (
+      {(view.type === 'movie' || view.type === 'tv' || view.type === 'episode') && (
         <div className={`detail-overlay__media-cover${topReady ? ' detail-overlay__media-cover--hidden' : ''}`} aria-hidden="true" />
       )}
       {view.stack.map((entry, index) => {

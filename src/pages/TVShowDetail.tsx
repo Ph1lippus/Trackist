@@ -122,7 +122,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
     const watchlistStatus = watchlistItem?.status ?? null
     const hasStarted = (watchlistItem?.watched_episodes_count ?? 0) > 0
     const hasUserSelectedSeason = useRef(false)
-    const episodeToScrollRef = useRef<string | null>(null)
+    const [scrollTarget, setScrollTarget] = useState<string | null>(null)
     const episodeRefs = useRef<{ [key: string]: HTMLDivElement | null }>({})
     const episodeListRef = useRef<HTMLDivElement>(null)
     const seasonDropdownRef = useRef<HTMLDivElement>(null)
@@ -188,19 +188,46 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
     
 
     useEffect(() => {
-        if (episodeToScrollRef.current && episodeRefs.current[episodeToScrollRef.current] && !isMobile) {
-            const targetElement = episodeRefs.current[episodeToScrollRef.current]
-            if (targetElement && episodeListRef.current) {
-                const container = episodeListRef.current
-                const targetTop = targetElement.offsetTop
-                container.scrollTo({
-                    top: targetTop - container.offsetTop,
-                    behavior: 'smooth'
-                })
-            }
-            episodeToScrollRef.current = null
+        if (!scrollTarget || isMobile) return
+        const parts = scrollTarget.split('-')
+        const scrollSeason = parts[1] ? Number(parts[1]) : NaN
+        if (Number.isNaN(scrollSeason) || scrollSeason !== selectedSeason) {
+            setScrollTarget(null)
+            return
         }
-    }, [selectedSeason, episodes, isMobile])
+
+        // The target season's episodes may not be in the DOM yet on the very
+        // first pass (they load async and the refs attach in a later commit),
+        // so retry across frames until the target row exists instead of letting
+        // the attempt silently drop. Bound it so a never-matching target can't
+        // spin forever.
+        let attempts = 0
+        let rafId = 0
+
+        const tryScroll = () => {
+            const targetElement = episodeRefs.current[scrollTarget]
+            const container = episodeListRef.current
+            if (targetElement && container) {
+                const containerRect = container.getBoundingClientRect()
+                const targetRect = targetElement.getBoundingClientRect()
+                container.scrollTo({
+                    top: container.scrollTop + (targetRect.top - containerRect.top),
+                    behavior: 'auto'
+                })
+                setScrollTarget(null)
+                return
+            }
+            attempts += 1
+            if (attempts >= 30) {
+                setScrollTarget(null)
+                return
+            }
+            rafId = requestAnimationFrame(tryScroll)
+        }
+
+        rafId = requestAnimationFrame(tryScroll)
+        return () => cancelAnimationFrame(rafId)
+    }, [scrollTarget, selectedSeason, episodes, isMobile])
 
     const fetchDetails = useCallback(async () => {
         setLoading(true)
@@ -389,7 +416,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                 if (rememberedSeason != null && seasonList.includes(rememberedSeason)) {
                     setSelectedSeason(rememberedSeason)
                     await loadSeason(rememberedSeason)
-                    episodeToScrollRef.current = null
+                    setScrollTarget(null)
                     return
                 }
 
@@ -452,7 +479,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
 
                 setSelectedSeason(targetSeason)
                 useDetailModalStore.getState().setRememberedSeason(Number(id), targetSeason)
-                episodeToScrollRef.current = scrollTarget
+                setScrollTarget(scrollTarget)
             } catch (err) {
                 console.error('Failed to load episodes:', err)
             }

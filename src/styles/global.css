@@ -1,4 +1,4 @@
-@media (max-width: 768px) {
+﻿@media (max-width: 768px) {
     .auth-card {
         background: none!important;
     }
@@ -536,7 +536,6 @@ html {
     background: transparent !important;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
-    transition: background-color 0.3s ease, backdrop-filter 0.3s ease;
 }
 
 /* Routed detail pages: instant switch so the navbar never bleeds the starfield
@@ -565,7 +564,7 @@ html {
 
 
 
-.container.navbar-inner.no-back-btn {
+.container.navbar-inner.no-back-btn:not(.is-modal-open) {
     backdrop-filter: blur(8px);
 }
 
@@ -615,6 +614,10 @@ html::before {
 }
 .page-main--no-footer {
     padding-bottom: 6rem;
+}
+.page-transition-wrapper {
+    width: 100%;
+    animation: fadeIn 0.25s ease;
 }
 .main {
     flex: 1;
@@ -5992,7 +5995,6 @@ button:focus-visible {
     background:
         linear-gradient(135deg, rgba(133, 138, 227, 0.12), rgba(255, 255, 255, 0.02)),
         rgb(18, 18, 28);
-    border: 1px solid rgba(255, 255, 255, 0.06);
     font-size: 0.9rem;
     text-align: center;
     padding: 1rem;
@@ -6475,16 +6477,10 @@ i.fa-solid.fa-trash:hover {
     opacity: 0;
 }
 
-/* Shared overlay backdrop eases in when a movie/TV layer's backdrop resolves
-   (avoids the hard "background pops in" feel between stacked layers). */
-.detail-overlay .detail-page__backdrop {
-    animation: detailBackdropIn 0.35s ease;
-}
-
-@keyframes detailBackdropIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
+/* The top layer's curtain lifts once its content is ready (see
+   `.detail-overlay__scroll--ready::after`). Behind it, the shared backdrop
+   is already fully rendered so there is no "background pops in" timing
+   mismatch between stacked layers. */
 
 /* After the layer/overlay animations settle, release the compositor layers we
    promoted so they don't stay resident on lower-end / mobile devices. */

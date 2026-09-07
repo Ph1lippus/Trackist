@@ -98,6 +98,10 @@ const AppContent: React.FC = () => {
     const approved = useAuthStore((state) => state.approved)
     const approvalLoading = useAuthStore((state) => state.approvalLoading)
     const isModalOpen = useDetailModalStore((state) => state.isOpen)
+    // Keep the routed page hidden while the overlay is fading out too, so it
+    // doesn't reappear before the modal has finished closing.
+    const isModalExiting = useDetailModalStore((state) => state.isExiting)
+    const isModalVisible = isModalOpen || isModalExiting
     const modalResetKey = useDetailModalStore((state) =>
         state.isOpen ? `${state.type ?? ''}-${state.id ?? ''}` : 'closed'
     )
@@ -500,8 +504,9 @@ const AppContent: React.FC = () => {
                 canGoBack={canGoBack}
                 goToToday={goToToday}
             />
-            <main className={`page-main flex-grow-1 ${hideFooter ? 'page-main--no-footer' : ''}${isPersonPage ? ' person-page' : ''}${isModalOpen ? ' is-modal-backdrop-hidden' : ''}`} inert={isModalOpen || undefined}>
+            <main className={`page-main flex-grow-1 ${hideFooter ? 'page-main--no-footer' : ''}${isPersonPage ? ' person-page' : ''}${isModalVisible ? ' is-modal-backdrop-hidden' : ''}`} inert={isModalVisible || undefined}>
                 <ErrorBoundary resetKey={location.pathname}>
+                    <div key={location.pathname} className="page-transition-wrapper">
                     <Routes>
                     <Route path="/" element={user ? <Navigate to={defaultRoute} replace /> : <Login />} />
                     <Route path="/Discover" element={user ? <Discover key="discover" /> : <Navigate to="/login" replace />} />
@@ -547,6 +552,7 @@ const AppContent: React.FC = () => {
                     <Route path="/Sessions" element={user ? <Sessions /> : <Navigate to="/login" replace />} />
                     <Route path="*" element={<Navigate to={user ? '/' : '/login'} replace />} />
                 </Routes>
+                </div>
                 </ErrorBoundary>
                 <ScrollToTop />
             </main>

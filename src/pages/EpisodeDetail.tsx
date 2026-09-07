@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useParams } from 'react-router-dom'
-import { getTVDetails, getTVSeasonDetails, imageUrlOriginal } from '../services/tmdbService'
+import { getTVDetails, getTVSeasonDetails, imageUrlOriginal, getBestBackdropPath } from '../services/tmdbService'
 import { markEpisodeWatched, unmarkEpisodeWatched, checkAndUpdateCompleted } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { supabase } from '../services/supabaseClient'
@@ -13,6 +13,7 @@ import { useMobile } from '../contexts/useMobile'
 import ShareButton from '../components/media/ShareButton'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
 import { useIsActiveDetail } from '../hooks/useActiveDetail'
+import useDetailModalStore from '../stores/detailModalStore'
 import { Eye, EyeOff } from 'lucide-react'
 
 interface EpisodeData {
@@ -45,6 +46,7 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
     const episode = episodeNumber?.toString() ?? paramEpisode
     const { isMobile } = useMobile()
     const { isOpen: isSidebarOpen } = useDetailSidebar()
+    const isInModal = useDetailModalStore((s) => s.isOpen)
     const isActiveDetail = useIsActiveDetail('episode', id, season, episode)
     const [tvDetails, setTvDetails] = useState<TMDBResult | null>(null)
     const [episodeData, setEpisodeData] = useState<EpisodeData | null>(null)
@@ -122,14 +124,48 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
         }
     }, [id, season, episode])
 
-    // Signal the overlay that the episode content is ready so its reveal
+    // Signal the overlay that the page content is ready so its reveal
     // curtain can lift (fires after the initial load completes).
     useEffect(() => {
         if (!loading) onLoaded?.()
     }, [loading, onLoaded])
 
-    // Episode still used as the in-content hero image only.
     const stillUrl = episodeData?.still_path ? imageUrlOriginal(episodeData.still_path) : null
+
+    const useStillAsBackdrop = !isMobile && !!episodeData?.still_path
+    const backdropUrl = useStillAsBackdrop
+        ? imageUrlOriginal(episodeData.still_path)
+        : !isMobile
+            ? imageUrlOriginal(getBestBackdropPath(tvDetails?.images?.backdrops) ?? tvDetails?.backdrop_path ?? null)
+            : null
+
+    // Blur the backdrop only when the source image is actually below 1080p. An
+    // episode still carries no resolution metadata (and is served as `original`),
+    // so we can't verify it is low-res — only the show's regular backdrops have
+    // a `height` we can check. Still backdrops therefore aren't blurred.
+    const isLowResBackdrop = useStillAsBackdrop
+        ? false
+        : (() => {
+            if (!backdropUrl || !tvDetails?.images?.backdrops) return false
+            const bestPath = getBestBackdropPath(tvDetails.images.backdrops) ?? tvDetails.backdrop_path
+            if (!bestPath) return false
+            const matched = tvDetails.images.backdrops.find(b => b.file_path === bestPath)
+            return typeof matched?.height === 'number' && matched.height < 1080
+        })()
+
+    // Push episode backdrop URL to the overlay store so it renders outside the scroll container.
+    useEffect(() => {
+        if (!isInModal) return
+        useDetailModalStore.getState().setBackdropUrl(backdropUrl)
+        useDetailModalStore.getState().setBackdropClassName(isLowResBackdrop ? 'detail-page__backdrop-image--low-resolution' : null)
+        return () => {
+            const modalOpen = useDetailModalStore.getState().isOpen
+            if (!modalOpen) {
+                useDetailModalStore.getState().setBackdropUrl(null)
+                useDetailModalStore.getState().setBackdropClassName(null)
+            }
+        }
+    }, [isInModal, backdropUrl, isLowResBackdrop])
 
     const logoUrl = useMemo(() => {
         if (tvDetails?.images?.logos) {
@@ -236,6 +272,12 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
 
 return (
         <div className="detail-page detail-page--no-scroll">
+            {!isInModal && backdropUrl && (
+                <div className="detail-page__backdrop">
+                    <img src={backdropUrl} alt={title} loading="lazy" className={isLowResBackdrop ? 'detail-page__backdrop-image--low-resolution' : ''} />
+                    <div className="detail-page__backdrop-overlay" />
+                </div>
+            )}
             {loading && (
                 <div className="detail-page__loading-skeleton">
                     <div className="detail-page__content detail-page__content--split">
