@@ -13,7 +13,8 @@ const corsHeaders = {
 const TMDB_API_KEY = Deno.env.get('TMDB_API_KEY')
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3'
 const GMAP_PAGE_SIZE = 1000
-const TMDB_CONCURRENCY = 6
+const TMDB_CONCURRENCY = 3
+const FETCH_TIMEOUT_MS = 8000
 const SCHEDULE_THROTTLE_MS = 60 * 60 * 1000
 const NOTIFICATION_CHECK_THROTTLE_MS = 15 * 60 * 1000
 
@@ -89,11 +90,21 @@ const getUTCDateString = (date: Date): string =>
   `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`
 
 async function fetchJSON<T>(url: string): Promise<T> {
-  const response = await fetch(url)
+  const response = await fetchWithTimeout(url)
   if (!response.ok) {
-    throw new Error(`TMDB request failed with status ${response.status}`)
+    throw new Error(`Request failed with status ${response.status}`)
   }
   return response.json() as Promise<T>
+}
+
+async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+  try {
+    return await fetch(url, { ...init, signal: controller.signal })
+  } finally {
+    clearTimeout(id)
+  }
 }
 
 interface PagedQuery<T> extends PromiseLike<{ data: T[] | null; error: unknown }> {
@@ -142,6 +153,7 @@ async function mapWithConcurrency<T, R>(
 }
 
 const TVMAZE_BASE_URL = 'https://api.tvmaze.com'
+const tvmazeMemoryCache = new Map<number, TVMazeEpisode[]>()
 
 interface TVMazeEpisode {
   season: number
@@ -162,10 +174,13 @@ async function getTMDBExternalIds(tmdbId: number): Promise<{ imdb_id?: string } 
 }
 
 async function fetchTVMazeSchedule(tmdbId: number): Promise<TVMazeEpisode[]> {
+  const cached = tvmazeMemoryCache.get(tmdbId)
+  if (cached) return cached
+
   const external = await getTMDBExternalIds(tmdbId)
   if (!external?.imdb_id) return []
 
-  const look = await fetch(`${TVMAZE_BASE_URL}/lookup/shows?imdb=${external.imdb_id}`)
+  const look = await fetchWithTimeout(`${TVMAZE_BASE_URL}/lookup/shows?imdb=${external.imdb_id}`)
   if (!look.ok) {
     console.warn('[TVMaze] lookup failed', look.status, tmdbId)
     return []
@@ -173,7 +188,7 @@ async function fetchTVMazeSchedule(tmdbId: number): Promise<TVMazeEpisode[]> {
   const show = (await look.json()) as { id?: number }
   if (!show.id) return []
 
-  const res = await fetch(`${TVMAZE_BASE_URL}/shows/${show.id}/episodes`)
+  const res = await fetchWithTimeout(`${TVMAZE_BASE_URL}/shows/${show.id}/episodes`)
   if (!res.ok) {
     console.warn('[TVMaze] episodes fetch failed', res.status, tmdbId)
     return []
@@ -185,12 +200,15 @@ async function fetchTVMazeSchedule(tmdbId: number): Promise<TVMazeEpisode[]> {
     airstamp?: string | null
   }[]
 
-  return entries.map(entry => ({
+  const episodes = entries.map(entry => ({
     season: entry.season ?? 0,
     episode: entry.number ?? 0,
     name: entry.name ?? undefined,
     airstamp: entry.airstamp ?? null,
   }))
+
+  tvmazeMemoryCache.set(tmdbId, episodes)
+  return episodes
 }
 
 function getLocalDateFromAirstamp(airstamp: string, timezone: string): string {
