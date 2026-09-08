@@ -201,31 +201,40 @@ export const saveAllEpisodesForShow = async (tmdbId: number, watchlistId: string
         .filter((s: { season_number: number }) => s.season_number > 0)
         .map((s: { season_number: number }) => s.season_number)
 
-    for (const season of seasonNumbers) {
-        try {
-            const seasonData = await getTVSeasonDetails(tmdbId, season)
-            const episodes = seasonData.episodes || []
-            const episodeInserts = episodes.map((ep: { episode_number: number; id?: number; name?: string; still_path?: string | null; overview?: string; air_date?: string; runtime?: number }) => ({
-                watchlist_id: watchlistId,
-                season_number: season,
-                episode_number: ep.episode_number,
-                tmdb_episode_id: ep.id,
-                title: ep.name,
-                still_path: ep.still_path ?? undefined,
-                overview: ep.overview,
-                air_date: ep.air_date,
-                runtime: ep.runtime
-            }))
-
-            const batchSize = 100
-            for (let i = 0; i < episodeInserts.length; i += batchSize) {
-                const batch = episodeInserts.slice(i, i + batchSize)
-                await supabase.from('watchlist_episodes').upsert(batch, {
-                    onConflict: 'watchlist_id,season_number,episode_number'
-                })
+    // Fetch every season's episode list concurrently so the TMDB requests
+    // don't serialize into N sequential round-trips. A failed season is logged
+    // and skipped (empty episodes), matching the previous per-season behavior.
+    const seasons = await Promise.all(
+        seasonNumbers.map(async (season) => {
+            try {
+                const seasonData = await getTVSeasonDetails(tmdbId, season)
+                return { season, episodes: seasonData.episodes || [] }
+            } catch (err) {
+                console.error(`Failed to save episodes for season ${season} of show ${tmdbId}:`, err)
+                return { season, episodes: [] }
             }
-        } catch (err) {
-            console.error(`Failed to save episodes for season ${season} of show ${tmdbId}:`, err)
+        })
+    )
+
+    const batchSize = 100
+    for (const { season, episodes } of seasons) {
+        const episodeInserts = episodes.map((ep: { episode_number: number; id?: number; name?: string; still_path?: string | null; overview?: string; air_date?: string; runtime?: number }) => ({
+            watchlist_id: watchlistId,
+            season_number: season,
+            episode_number: ep.episode_number,
+            tmdb_episode_id: ep.id,
+            title: ep.name,
+            still_path: ep.still_path ?? undefined,
+            overview: ep.overview,
+            air_date: ep.air_date,
+            runtime: ep.runtime
+        }))
+
+        for (let i = 0; i < episodeInserts.length; i += batchSize) {
+            const batch = episodeInserts.slice(i, i + batchSize)
+            await supabase.from('watchlist_episodes').upsert(batch, {
+                onConflict: 'watchlist_id,season_number,episode_number'
+            })
         }
     }
 }
@@ -275,23 +284,25 @@ export const countReleasedEpisodesAcrossSeasons = async (tmdbId: number): Promis
         })
         .map((s: { season_number: number }) => s.season_number)
 
-    let releasedCount = 0
-    for (const seasonNum of seasonNumbers) {
-        try {
-            const seasonData = await getTVSeasonDetails(tmdbId, seasonNum)
-            const releasedInSeason = seasonData.episodes?.filter((ep: { air_date?: string }) => {
-                if (!ep.air_date) return false
-                return new Date(ep.air_date) <= today
-            }).length || 0
-            releasedCount += releasedInSeason
-        } catch {
-            // If we fail to fetch a season, fall back to its episode_count estimate.
-            const seasonMeta = details.seasons?.find((s: { season_number: number }) => s.season_number === seasonNum)
-            releasedCount += (seasonMeta as { episode_count?: number })?.episode_count || 0
-        }
-    }
+    // Fetch every qualifying season concurrently so the TMDB requests don't
+    // serialize. A failed season falls back to its episode_count estimate.
+    const releasedCounts = await Promise.all(
+        seasonNumbers.map(async (seasonNum) => {
+            try {
+                const seasonData = await getTVSeasonDetails(tmdbId, seasonNum)
+                return seasonData.episodes?.filter((ep: { air_date?: string }) => {
+                    if (!ep.air_date) return false
+                    return new Date(ep.air_date) <= today
+                }).length || 0
+            } catch {
+                // If we fail to fetch a season, fall back to its episode_count estimate.
+                const seasonMeta = details.seasons?.find((s: { season_number: number }) => s.season_number === seasonNum)
+                return (seasonMeta as { episode_count?: number })?.episode_count || 0
+            }
+        })
+    )
 
-    return releasedCount
+    return releasedCounts.reduce((sum, count) => sum + count, 0)
 }
 
 /**
@@ -683,9 +694,11 @@ export const updateStatusToWatching = async (watchlistId: string): Promise<void>
 
 /**
  * Mark a TV show as fully watched by directly setting the status.
- * This is the gold standard approach - status changes instantly so the
- * show moves to Finished immediately, then all episodes are saved in
- * the background so individual episode tracking still works.
+ * The status row is persisted immediately (so the show moves to Finished and
+ * callers can celebrate right away), then the rest of the work — computing the
+ * accurate released-episode count, invalidating the cache, and saving every
+ * episode row — continues in the background so individual episode tracking
+ * still works.
  * If the show has ended on TMDB, sets status to 'completed'.
  * If still airing, sets status to 'caught_up'.
  */
@@ -695,29 +708,9 @@ export const markShowAsFullyWatched = async (watchlistId: string, tmdbId: number
         const showEnded = details.status === 'Ended' || details.status === 'Canceled'
         const newStatus = showEnded ? 'completed' : 'caught_up'
 
-        // Count released episodes across all seasons
-        let totalReleasedEpisodes = 0
-        const seasonNumbers = (details.seasons || [])
-            .filter((s: { season_number: number }) => s.season_number > 0)
-            .map((s: { season_number: number }) => s.season_number)
-
-        for (const seasonNum of seasonNumbers) {
-            try {
-                const seasonData = await getTVSeasonDetails(tmdbId, seasonNum)
-                const releasedInSeason = seasonData.episodes?.filter((ep: { air_date?: string }) => {
-                    if (!ep.air_date) return false
-                    return new Date(ep.air_date) <= new Date()
-                }).length || 0
-                totalReleasedEpisodes += releasedInSeason
-            } catch {
-                // If we can't fetch a season, fall back to episode_count estimate
-                const seasonMeta = details.seasons?.find((s: { season_number: number; episode_count?: number }) => s.season_number === seasonNum)
-                totalReleasedEpisodes += (seasonMeta as { episode_count?: number })?.episode_count || 0
-            }
-        }
-
-        // Use released count (fallback to TMDB total if zero)
-        const episodeCount = totalReleasedEpisodes > 0 ? totalReleasedEpisodes : (details.number_of_episodes || 0)
+        // Provisional episode count so the UI is coherent immediately; the
+        // background step patches it with the accurate released-episode count.
+        const provisionalCount = details.number_of_episodes || 0
 
         // 1. Set status immediately - instant response
         const { error } = await supabase
@@ -725,11 +718,11 @@ export const markShowAsFullyWatched = async (watchlistId: string, tmdbId: number
             .update({
                 status: newStatus,
                 completed_at: showEnded ? new Date().toISOString() : null,
-                current_episode: details.number_of_episodes || 0,
+                current_episode: provisionalCount,
                 current_season: details.number_of_seasons || 1,
-                total_episodes: episodeCount,
+                total_episodes: provisionalCount,
                 total_seasons: details.number_of_seasons || 1,
-                watched_episodes_count: episodeCount,
+                watched_episodes_count: provisionalCount,
                 next_season_number: null,
                 next_episode_number: null,
                 updated_at: new Date().toISOString()
@@ -741,18 +734,57 @@ export const markShowAsFullyWatched = async (watchlistId: string, tmdbId: number
             return 'planning'
         }
 
-        // Invalidate cache so Finished page shows updated data immediately
-        await invalidateUserCache()
-
-        // 2. Save all episodes - await to ensure completion and propagate errors
-        // This ensures individual episode tracking still works
-        // Note: watchlist_episodes only stores watched episodes, so all inserted rows are watched by default
-        await saveAllEpisodesForShow(tmdbId, watchlistId)
+        // 2. Continue the heavy work in the background so the caller isn't
+        // blocked on TMDB season fetches or episode inserts before celebrating.
+        void completeShowInBackground(watchlistId, tmdbId, newStatus, provisionalCount)
 
         return newStatus
     } catch (err) {
         console.error('Failed to mark show as fully watched:', err)
         return 'planning'
+    }
+}
+
+/**
+ * Background continuation of `markShowAsFullyWatched`: patch the accurate
+ * released-episode count, invalidate the cache so the Finished page reflects
+ * the change, and save every episode row for individual episode tracking.
+ * The status itself is already committed by the caller-facing fast path, so
+ * errors here are logged and swallowed.
+ */
+const completeShowInBackground = async (
+    watchlistId: string,
+    tmdbId: number,
+    newStatus: string,
+    fallbackCount: number
+): Promise<void> => {
+    try {
+        const releasedCount = await countReleasedEpisodesAcrossSeasons(tmdbId)
+        const episodeCount = releasedCount > 0 ? releasedCount : fallbackCount
+
+        const { error } = await supabase
+            .from('watchlist')
+            .update({
+                total_episodes: episodeCount,
+                watched_episodes_count: episodeCount,
+                current_episode: episodeCount,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', watchlistId)
+
+        if (error) {
+            console.error(`Failed to patch released-episode count for show ${watchlistId}:`, error)
+        }
+
+        // Invalidate cache so the Finished page shows updated data
+        await invalidateUserCache()
+
+        // Save all episodes - ensures individual episode tracking still works.
+        // Note: watchlist_episodes only stores watched episodes, so all
+        // inserted rows are watched by default.
+        await saveAllEpisodesForShow(tmdbId, watchlistId)
+    } catch (err) {
+        console.error(`Failed to finalize fully-watched show ${watchlistId}:`, err)
     }
 }
 
@@ -857,20 +889,22 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
         const details = await getTVDetails(tmdbId)
         
         // Count only released episodes across all seasons
-        let totalReleasedEpisodes = 0
         const seasonNumbers = (details.seasons || [])
             .filter((s: { season_number: number }) => s.season_number > 0)
             .map((s: { season_number: number }) => s.season_number)
 
-        for (const seasonNum of seasonNumbers) {
-            const seasonData = await getTVSeasonDetails(tmdbId, seasonNum)
-            const unreleasedInSeason = seasonData.episodes?.filter((ep: { air_date?: string }) => {
-                if (!ep.air_date) return true
-                return new Date(ep.air_date) > new Date()
-            }).length || 0
-            
-            totalReleasedEpisodes += (seasonData.episodes?.length || 0) - unreleasedInSeason
-        }
+        const releasedPerSeason = await Promise.all(
+            seasonNumbers.map(async (seasonNum) => {
+                const seasonData = await getTVSeasonDetails(tmdbId, seasonNum)
+                const unreleasedInSeason = seasonData.episodes?.filter((ep: { air_date?: string }) => {
+                    if (!ep.air_date) return true
+                    return new Date(ep.air_date) > new Date()
+                }).length || 0
+                return (seasonData.episodes?.length || 0) - unreleasedInSeason
+            })
+        )
+
+        const totalReleasedEpisodes = releasedPerSeason.reduce((sum, count) => sum + count, 0)
 
         if (totalReleasedEpisodes === 0) return
 

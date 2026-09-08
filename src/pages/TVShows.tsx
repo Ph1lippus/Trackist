@@ -103,6 +103,14 @@ const TVShows: React.FC = () => {
     const handleMarkAllWatched = async (item: WatchlistItem) => {
         if (!item.tmdb_id) return
 
+        // Celebrate the intent immediately instead of waiting on the status
+        // persist + background episode-saving. The modal is only ever shown for
+        // shows that aren't already finished, so every confirmation is a
+        // planning/watching/paused -> completed/caught_up transition.
+        if (item.status !== 'completed' && item.status !== 'caught_up') {
+            launchCosmicConfetti()
+        }
+
         setMarkingAllWatched(true)
         try {
             // Gold standard: just set the status directly - no need to insert every episode
@@ -111,20 +119,6 @@ const TVShows: React.FC = () => {
             setMarkAllModal(null)
             // Refresh the store
             await useLibraryStore.getState().refreshItem(item.id)
-            
-            // Check for milestone and celebrate
-            // Use getState() to read the FRESH store state (the `store`
-            // variable is a stale closure snapshot from the last render)
-            const updatedItem = useLibraryStore.getState().allItems.find(i => i.id === item.id)
-            if (updatedItem) {
-                const newStatus = updatedItem.status
-                if (
-                    (newStatus === 'completed' || newStatus === 'caught_up') &&
-                    item.status !== 'completed' && item.status !== 'caught_up'
-                ) {
-                    launchCosmicConfetti()
-                }
-            }
         } catch (err) {
             console.error('Failed to mark all episodes as watched:', err)
             alert('Failed to mark all episodes as watched. Please try again.')

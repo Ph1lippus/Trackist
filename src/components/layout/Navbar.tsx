@@ -438,13 +438,16 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
             } else if (isTVShowsPage) {
                 const selectedItems = tvShows.filter(item => tvShowsSelectedIds.has(item.id));
                 const refreshedIds: string[] = [];
-                
+
+                // Celebrate the intent up-front: every selected show that isn't
+                // already finished will transition to completed/caught_up.
+                if (selectedItems.some(item => item.tmdb_id && item.status !== 'completed' && item.status !== 'caught_up')) {
+                    launchCosmicConfetti();
+                }
+
                 for (const item of selectedItems) {
                     if (item.tmdb_id) {
-                        const newStatus = await markShowAsFullyWatched(item.id, item.tmdb_id);
-                        if (newStatus === 'completed' || newStatus === 'caught_up') {
-                            shouldCelebrate = true;
-                        }
+                        await markShowAsFullyWatched(item.id, item.tmdb_id);
                         refreshedIds.push(item.id);
                     }
                 }

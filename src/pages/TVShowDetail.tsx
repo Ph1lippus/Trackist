@@ -1182,12 +1182,12 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                                 setIsUpdatingStatus(true)
                                                 const newWatchlistId = await handleAddToWatchlist()
                                                 if (newWatchlistId && details) {
+                                                    // The show was just added (planning), so this explicit mark-as-watched
+                                                    // action always completes it — celebrate right away instead of waiting
+                                                    // on the status persist + background episode-saving.
+                                                    launchCosmicConfetti()
                                                     // Gold standard: just set the status directly - no need to insert every episode
-                                                    const newStatus = await markShowAsFullyWatched(newWatchlistId, details.id)
-                                                    // Fire confetti if completed/caught_up
-                                                    if (newStatus === 'completed' || newStatus === 'caught_up') {
-                                                        launchCosmicConfetti()
-                                                    }
+                                                    await markShowAsFullyWatched(newWatchlistId, details.id)
                                                     // Refresh episodes
                                                     setEpisodes(prev => prev.map(ep => ({ ...ep, watched: true })))
                                                 }
@@ -1350,12 +1350,12 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                                 setIsUpdatingStatus(true)
                                                 const newWatchlistId = await handleAddToWatchlist()
                                                 if (newWatchlistId && details) {
+                                                    // The show was just added (planning), so this explicit mark-as-watched
+                                                    // action always completes it — celebrate right away instead of waiting
+                                                    // on the status persist + background episode-saving.
+                                                    launchCosmicConfetti()
                                                     // Gold standard: just set the status directly - no need to insert every episode
-                                                    const newStatus = await markShowAsFullyWatched(newWatchlistId, details.id)
-                                                    // Fire confetti if completed/caught_up
-                                                    if (newStatus === 'completed' || newStatus === 'caught_up') {
-                                                        launchCosmicConfetti()
-                                                    }
+                                                    await markShowAsFullyWatched(newWatchlistId, details.id)
                                                     // Refresh episodes
                                                     setEpisodes(prev => prev.map(ep => ({ ...ep, watched: true })))
                                                 }
@@ -1770,14 +1770,15 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                             const newWatchedState = markWatchedModal.markAsWatched
 
                             if (newWatchedState) {
-                                const newStatus = await markShowAsFullyWatched(watchlistId, details.id)
+                                // This modal only opens with markAsWatched=true for shows that aren't
+                                // finished yet, so celebrate the intent immediately instead of waiting
+                                // on the status persist + background episode-saving.
+                                launchCosmicConfetti()
+                                await markShowAsFullyWatched(watchlistId, details.id)
                                 const watchedEps = await getWatchedEpisodes(watchlistId)
                                 watchedKeysCache.current = new Set(
                                     watchedEps.map(ep => `${ep.season_number}-${ep.episode_number}`)
                                 )
-                                if (newStatus === 'completed' || newStatus === 'caught_up') {
-                                    launchCosmicConfetti()
-                                }
                             } else {
                                 const success = await removeAllWatchedEpisodes(watchlistId)
                                 if (!success) throw new Error('Failed to unmark all episodes')
