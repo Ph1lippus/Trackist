@@ -88,7 +88,7 @@ export async function getShowAirSchedule(tmdbId: number): Promise<ShowAirSchedul
     if (pending) return pending
 
     const request = (async () => {
-        const cached = await cacheService.get<ShowAirSchedule>('tvmaze:air-schedule-v1', tmdbId)
+        const cached = await cacheService.get<ShowAirSchedule>('tvmaze:air-schedule-v2', tmdbId)
         if (cached) return cached
 
         const fresh = await fetchSchedule(tmdbId)
@@ -96,7 +96,7 @@ export async function getShowAirSchedule(tmdbId: number): Promise<ShowAirSchedul
         // from TVmaze, or a transient failure) only briefly so the app can
         // recover via the date-only fallback instead of staying broken 12h.
         await cacheService.set(
-            'tvmaze:air-schedule-v1',
+            'tvmaze:air-schedule-v2',
             tmdbId,
             fresh,
             fresh.episodes.length > 0 ? AIRSTAMP_TTL : EMPTY_SCHEDULE_TTL
