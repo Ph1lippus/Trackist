@@ -226,8 +226,10 @@ const UpcomingNew: React.FC = () => {
                 }
             }
         }
-        if (item.type === 'movie') return item.date
-        return null
+        // No client-side airstamp (TVMaze unavailable/blocked): fall back to
+        // the edge function air_date so episodes still appear on the calendar
+        // instead of being silently dropped.
+        return item.date || null
     }
 
     const groupedItems = useMemo(() => {
