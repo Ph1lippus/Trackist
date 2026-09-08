@@ -264,43 +264,6 @@ function tomorrowInTimezone(timezone: string, now: Date = new Date()): string {
   return todayInTimezone(timezone, tomorrow)
 }
 
-function getLocalDateParts(timezone: string, now: Date = new Date()): Record<string, number> {
-  try {
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    }).formatToParts(now)
-    const get = (type: string) => Number(parts.find((part) => part.type === type)?.value ?? '00')
-    return {
-      year: get('year'),
-      month: get('month'),
-      day: get('day'),
-      hour: get('hour'),
-      minute: get('minute'),
-    }
-  } catch {
-    return {
-      year: now.getUTCFullYear(),
-      month: now.getUTCMonth() + 1,
-      day: now.getUTCDate(),
-      hour: now.getUTCHours(),
-      minute: now.getUTCMinutes(),
-    }
-  }
-}
-
-function parseNotifyHour(rawHour?: string | null): number {
-  if (!rawHour || typeof rawHour !== 'string') return 8
-  const match = rawHour.trim().match(/^(\d{1,2}):(\d{2})$/)
-  if (!match) return 8
-  const hour = Number(match[1])
-  return Number.isFinite(hour) && hour >= 0 && hour <= 23 ? hour : 8
-}
 
 function getNextDateString(dateString: string): string {
   const [year, month, day] = dateString.split('-').map(Number)
@@ -309,21 +272,21 @@ function getNextDateString(dateString: string): string {
   return getUTCDateString(date)
 }
 
-function isDueForUserDate(dateString: string, timezone: string, now: Date, notifyHour: string | null | undefined): boolean {
+/**
+ * An episode/movie is due when its local date (profile timezone) is today or
+ * tomorrow. Both stages are always due: the dedup refs (`last_notified_ref` /
+ * `last_movie_notified_ref`) already guarantee exactly one notification per
+ * episode per stage, and this function runs on app opens rather than a server
+ * cron - gating "today" on the notify hour made "Airing today" unreliable:
+ * any day the user's only app open happened before the notify hour, today's
+ * notification was silently skipped while "Coming tomorrow" (which ignored the
+ * hour) still went out.
+ */
+function isDueForUserDate(dateString: string, timezone: string, now: Date, _notifyHour: string | null | undefined): boolean {
   const localToday = todayInTimezone(timezone, now)
   const localTomorrow = tomorrowInTimezone(timezone, now)
-  const currentTime = getLocalDateParts(timezone, now)
-  const hour = parseNotifyHour(notifyHour)
 
-  if (dateString === localToday) {
-    return currentTime.hour > hour || currentTime.hour === hour
-  }
-
-  if (dateString === localTomorrow) {
-    return true
-  }
-
-  return false
+  return dateString === localToday || dateString === localTomorrow
 }
 
 function formatProviders(providers: Record<string, unknown> | null | undefined): string {
