@@ -164,6 +164,19 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
         return !isFutureLocal(episode.air_date)
     }
 
+    const getEpisodeLocalAirDate = (ep: LocalEpisode): string => {
+        if (releaseIndex) {
+            const ts = releaseIndex.get(`${ep.season_number}-${ep.episode_number}`)
+            if (ts !== undefined) {
+                const date = new Date(ts)
+                if (!Number.isNaN(date.getTime())) {
+                    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+                }
+            }
+        }
+        return ep.air_date || ''
+    }
+
     const getResumeEpisodeToWatch = async (): Promise<{ season: number; episode: number } | null> => {
         const watchedKeys = watchedKeysCache.current
 
@@ -1569,24 +1582,24 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                                 </div>
                                             )}
                                             <div className="detail-page__episode-info">
-                                                <div className="detail-page__episode-details">
-                                                    <strong>
-                                                        {!isMobile && <>{ep.episode_number}{ep.title ? '. ' : ''}</>}
-                                                        <span className={ep.watched ? 'detail-page__episode-title watched' : 'detail-page__episode-title'}>
-                                                            {ep.title}
-                                                        </span>
-                                                        {ep.watched && (
-                                                            <span className="detail-page__episode-inline-check" aria-label="Watched episode">
-                                                                <Check size={12} strokeWidth={2.5} />
+                                                    <div className="detail-page__episode-details">
+                                                        <strong>
+                                                            {!isMobile && <>{ep.episode_number}{ep.title ? '. ' : ''}</>}
+                                                            <span className={ep.watched ? 'detail-page__episode-title watched' : 'detail-page__episode-title'}>
+                                                                {ep.title}
                                                             </span>
-                                                        )}
-                                                    </strong>
-                                                    <div className="detail-page__episode-meta">
-                                                        {ep.air_date && <span>{ep.air_date}</span>}
-                                                        {ep.runtime && <span>{ep.runtime} min</span>}
-                                                        {!isMobile && isEpisodeReleased(ep) && typeof ep.vote_average === 'number' && ep.vote_average > 0 && <span>★ {ep.vote_average.toFixed(1)}</span>}
+                                                            {ep.watched && (
+                                                                <span className="detail-page__episode-inline-check" aria-label="Watched episode">
+                                                                    <Check size={12} strokeWidth={2.5} />
+                                                                </span>
+                                                            )}
+                                                        </strong>
+                                                        <div className="detail-page__episode-meta">
+                                                            {getEpisodeLocalAirDate(ep) && <span>{getEpisodeLocalAirDate(ep)}</span>}
+                                                            {ep.runtime && <span>{ep.runtime} min</span>}
+                                                            {!isMobile && isEpisodeReleased(ep) && typeof ep.vote_average === 'number' && ep.vote_average > 0 && <span>★ {ep.vote_average.toFixed(1)}</span>}
+                                                        </div>
                                                     </div>
-                                                </div>
                                             </div>
                                             <button 
                                                 className="detail-page__episode-ellipsis-btn"
@@ -1696,41 +1709,41 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                                     <img src={imageUrl(ep.still_path, 'w300') || ''} alt={ep.title || `Episode ${ep.episode_number}`} loading="lazy" width="160" height="90" />
                                                 </div>
                                             )}
-                                            <div className="detail-page__episode-info">
-                                                <div className="detail-page__episode-details">
-                                                    <strong>
-                                                        {!isMobile && <>{ep.episode_number}{ep.title ? '. ' : ''}</>}
-                                                        <span className={ep.watched ? 'detail-page__episode-title watched' : 'detail-page__episode-title'}>
-                                                            {ep.title}
-                                                        </span>
-                                                        {ep.watched && (
-                                                            <span className="detail-page__episode-inline-check" aria-label="Watched episode">
-                                                                <Check size={12} strokeWidth={2.5} />
+                                                <div className="detail-page__episode-info">
+                                                    <div className="detail-page__episode-details">
+                                                        <strong>
+                                                            {!isMobile && <>{ep.episode_number}{ep.title ? '. ' : ''}</>}
+                                                            <span className={ep.watched ? 'detail-page__episode-title watched' : 'detail-page__episode-title'}>
+                                                                {ep.title}
                                                             </span>
-                                                        )}
-                                                    </strong>
-                                                    <div className="detail-page__episode-meta">
-                                                        {ep.air_date && <span>{ep.air_date}</span>}
-                                                        {ep.runtime && <span>{ep.runtime} min</span>}
-                                                        {!isMobile && isEpisodeReleased(ep) && typeof ep.vote_average === 'number' && ep.vote_average > 0 && <span>★ {ep.vote_average.toFixed(1)}</span>}
+                                                            {ep.watched && (
+                                                                <span className="detail-page__episode-inline-check" aria-label="Watched episode">
+                                                                    <Check size={12} strokeWidth={2.5} />
+                                                                </span>
+                                                            )}
+                                                        </strong>
+                                                        <div className="detail-page__episode-meta">
+                                                            {getEpisodeLocalAirDate(ep) && <span>{getEpisodeLocalAirDate(ep)}</span>}
+                                                            {ep.runtime && <span>{ep.runtime} min</span>}
+                                                            {!isMobile && isEpisodeReleased(ep) && typeof ep.vote_average === 'number' && ep.vote_average > 0 && <span>★ {ep.vote_average.toFixed(1)}</span>}
+                                                        </div>
                                                     </div>
                                                 </div>
+                                                <button 
+                                                    className="detail-page__episode-ellipsis-btn"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation()
+                                                        if (isInModal && id) {
+                                                            openEpisodeModal(ep.season_number, ep.episode_number)
+                                                        } else {
+                                                            navigate(`/tv/${id}/season/${ep.season_number}/episode/${ep.episode_number}`)
+                                                        }
+                                                    }}
+                                                    title="View episode details"
+                                                >
+                                                    <Ellipsis size={18} />
+                                                </button>
                                             </div>
-                                            <button 
-                                                className="detail-page__episode-ellipsis-btn"
-                                                onClick={(e) => {
-                                                    e.stopPropagation()
-                                                    if (isInModal && id) {
-                                                        openEpisodeModal(ep.season_number, ep.episode_number)
-                                                    } else {
-                                                        navigate(`/tv/${id}/season/${ep.season_number}/episode/${ep.episode_number}`)
-                                                    }
-                                                }}
-                                                title="View episode details"
-                                            >
-                                                <Ellipsis size={18} />
-                                            </button>
-                                        </div>
                                     ))}
                                 </div>
                             </div>

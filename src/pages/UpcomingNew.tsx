@@ -2,9 +2,10 @@ import React, { useEffect, useState, useMemo } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
 import { loadCalendar, type CalendarItem } from '../services/calendarService'
+import { getShowAirSchedule } from '../services/tvmazeService'
 import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { formatDateString, isTodayLocal } from '../utils/dateUtils'
+import { formatDateString, isTodayLocal, formatAirstampTime } from '../utils/dateUtils'
 import useDetailModalStore from '../stores/detailModalStore'
 
 interface UpcomingItem {
@@ -82,6 +83,78 @@ const UpcomingNew: React.FC = () => {
     usePageTitle('Track1st - Upcoming')
     const [upcomingItems, setUpcomingItems] = useState<UpcomingItem[]>([])
     const [hasLoaded, setHasLoaded] = useState(false)
+    const [airstampTimes, setAirstampTimes] = useState<Record<string, string>>({})
+    const [airstamps, setAirstamps] = useState<Record<string, string>>({})
+
+    const getEpisodeTime = (item: UpcomingItem): string | null => {
+        if (item.type !== 'episode' || !item.item.tmdb_id || !item.episode) return null
+        const key = `${item.item.tmdb_id}-${item.episode.season_number}-${item.episode.episode_number}`
+        return airstampTimes[key] || null
+    }
+
+    const getEpisodeDateTime = (item: UpcomingItem): string | null => {
+        if (item.type !== 'episode' || !item.item.tmdb_id || !item.episode) return null
+        const key = `${item.item.tmdb_id}-${item.episode.season_number}-${item.episode.episode_number}`
+        const stamp = airstamps[key]
+        if (!stamp) return getEpisodeTime(item)
+        const date = new Date(stamp)
+        if (Number.isNaN(date.getTime())) return getEpisodeTime(item)
+        const dateStr = formatDateString(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`, {
+            month: 'short',
+            day: 'numeric',
+            year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+        })
+        const timeStr = airstampTimes[key] || ''
+        return timeStr ? `${dateStr} · ${timeStr}` : dateStr
+    }
+
+    const getEpisodeTooltip = (item: UpcomingItem): string | undefined => {
+        if (item.type === 'movie') {
+            return item.title || undefined
+        }
+        if (item.type !== 'episode' || !item.episode) return undefined
+        const parts = [`S${item.episode.season_number} E${item.episode.episode_number}`]
+        const time = getEpisodeTime(item)
+        if (time) parts.push(time)
+        return parts.join('\n')
+    }
+
+    useEffect(() => {
+        const fetchAirstamps = async () => {
+            const uniqueShowIds = new Set<number>()
+            for (const item of upcomingItems) {
+                if (item.type === 'episode' && item.item.tmdb_id) {
+                    uniqueShowIds.add(item.item.tmdb_id)
+                }
+            }
+
+            const times: Record<string, string> = {}
+            const stamps: Record<string, string> = {}
+            await Promise.all(
+                Array.from(uniqueShowIds).map(async tmdbId => {
+                    try {
+                        const schedule = await getShowAirSchedule(tmdbId)
+                        for (const ep of schedule.episodes) {
+                            if (ep.airstamp) {
+                                const key = `${tmdbId}-${ep.season}-${ep.episode}`
+                                times[key] = formatAirstampTime(ep.airstamp)
+                                stamps[key] = ep.airstamp
+                            }
+                        }
+                    } catch {
+                        // ignore
+                    }
+                })
+            )
+
+            setAirstampTimes(times)
+            setAirstamps(stamps)
+        }
+
+        if (upcomingItems.length > 0) {
+            fetchAirstamps()
+        }
+    }, [upcomingItems])
 
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -140,16 +213,31 @@ const UpcomingNew: React.FC = () => {
         })
     }, [])
 
+    const getLocalDate = (item: UpcomingItem): string => {
+        if (item.type === 'episode' && item.item.tmdb_id && item.episode) {
+            const key = `${item.item.tmdb_id}-${item.episode.season_number}-${item.episode.episode_number}`
+            const stamp = airstamps[key]
+            if (stamp) {
+                const d = new Date(stamp)
+                if (!Number.isNaN(d.getTime())) {
+                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+                }
+            }
+        }
+        return item.date
+    }
+
     const groupedItems = useMemo(() => {
         return upcomingItems.reduce((groups, upcoming) => {
             if (!upcoming.date) return groups
-            if (!groups[upcoming.date]) {
-                groups[upcoming.date] = []
+            const localDate = getLocalDate(upcoming)
+            if (!groups[localDate]) {
+                groups[localDate] = []
             }
-            groups[upcoming.date].push(upcoming)
+            groups[localDate].push(upcoming)
             return groups
         }, {} as Record<string, UpcomingItem[]>)
-    }, [upcomingItems])
+    }, [upcomingItems, airstamps])
 
     const sortedGroupedItems = useMemo(() => {
         return Object.keys(groupedItems).sort().map(date => {
@@ -188,6 +276,7 @@ const UpcomingNew: React.FC = () => {
                                             <div
                                                 key={item.id}
                                                 className="upcoming-new-card"
+                                                data-tooltip={getEpisodeTooltip(item)}
                                                 onClick={() => {
                                                     if (item.type === 'movie' && showTmdbId) {
                                                         useDetailModalStore.getState().open('movie', showTmdbId)
@@ -221,6 +310,9 @@ const UpcomingNew: React.FC = () => {
                                                                     <span> - {item.episode.title}</span>
                                                                 )}
                                                             </span>
+                                                            {getEpisodeDateTime(item) && (
+                                                                <span className="upcoming-new-card-time">{getEpisodeDateTime(item)}</span>
+                                                            )}
                                                         </div>
                                                     )}
 

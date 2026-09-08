@@ -136,6 +136,26 @@ export function isFutureDate(dateString: string): boolean {
 }
 
 /**
+ * Format a TVMaze airstamp into a local-time string.
+ *
+ * TVMaze publishes airstamps as ISO timestamps with the show's original
+ * timezone offset (e.g. "2024-01-15T20:00:00-05:00"). `new Date(airstamp)`
+ * preserves that instant, and `toLocaleTimeString('en-US')` converts it to
+ * the user's browser-local clock, so the displayed time always reflects the
+ * viewer's local wall-clock time, not UTC.
+ */
+export function formatAirstampTime(airstamp: string | number | null | undefined): string {
+    if (airstamp == null) return ''
+    const date = typeof airstamp === 'number' ? new Date(airstamp) : new Date(airstamp)
+    if (Number.isNaN(date.getTime())) return ''
+    return date.toLocaleTimeString('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+    })
+}
+
+/**
  * Format a YYYY-MM-DD date string for display.
  * Uses UTC methods to avoid timezone shifts.
  * 

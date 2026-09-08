@@ -42,12 +42,18 @@ async function fetchSchedule(tmdbId: number): Promise<ShowAirSchedule> {
         if (!external?.imdb_id) return { episodes: [] }
 
         const look = await fetch(`https://api.tvmaze.com/lookup/shows?imdb=${external.imdb_id}`)
-        if (!look.ok) return { episodes: [] }
+        if (!look.ok) {
+            console.warn('[TVMaze] lookup failed', look.status, look.statusText)
+            return { episodes: [] }
+        }
         const show = (await look.json()) as { id?: number }
         if (!show.id) return { episodes: [] }
 
         const res = await fetch(`https://api.tvmaze.com/shows/${show.id}/episodes`)
-        if (!res.ok) return { episodes: [] }
+        if (!res.ok) {
+            console.warn('[TVMaze] episodes fetch failed', res.status, res.statusText)
+            return { episodes: [] }
+        }
         const entries = (await res.json()) as {
             season?: number
             number?: number | null
