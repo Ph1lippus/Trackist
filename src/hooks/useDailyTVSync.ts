@@ -136,10 +136,13 @@ const syncCaughtUpShow = async (show: SyncShow): Promise<SyncResult | null> => {
     // If there are released episodes the user hasn't watched, move back to watching.
     if (releasedInSeason > watched) {
         const nowIso = new Date().toISOString()
+        const totalReleasedEpisodes = await countReleasedEpisodesAcrossSeasons(show.tmdb_id)
+
         const { error } = await supabase
             .from('watchlist')
             .update({
                 status: 'watching',
+                total_episodes: totalReleasedEpisodes,
                 last_season_check: nowIso,
                 updated_at: nowIso
             })
@@ -153,6 +156,7 @@ const syncCaughtUpShow = async (show: SyncShow): Promise<SyncResult | null> => {
         return {
             id: show.id,
             status: 'watching',
+            total_episodes: totalReleasedEpisodes,
             last_season_check: nowIso,
             updated_at: nowIso,
         }
