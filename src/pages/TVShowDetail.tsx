@@ -380,8 +380,15 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                 ? seasonEpisodes.some(ep => isEpisodeAired(releaseIndex, seasonNumber, ep.episode_number, ep.air_date))
                 : seasonEpisodes.some(ep => !!ep.air_date && ep.air_date <= getUTCTodayString())
             if (!hasReleased && seasonEpisodes.length > 0) {
-                // Remove this season from the list since it has no viewable episodes
+                // Hide not-yet-started seasons (resume UX), but never leave the
+                // page empty: a brand-new show whose first episode airs soon must
+                // keep its season so the unreleased episode list is visible.
+                let keepSeason = false
                 setSeasons(prev => {
+                    if (prev.length <= 1) {
+                        keepSeason = true
+                        return prev
+                    }
                     const updated = prev.filter(s => s !== seasonNumber)
                     // Auto-select another season if the removed one was selected
                     if (updated.length > 0 && selectedSeason === seasonNumber) {
@@ -393,7 +400,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                     }
                     return updated
                 })
-                return
+                if (!keepSeason) return
             }
             
             seasonCache.current.set(seasonNumber, seasonEpisodes)
