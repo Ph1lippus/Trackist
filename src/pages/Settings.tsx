@@ -1071,10 +1071,10 @@ const Settings: React.FC = () => {
         setAccountMessage('')
         setResetLoading(true)
 
-        // Record attempt BEFORE calling API to prevent hitting Supabase rate limits
-        recordResetAttempt()
-
         const { error } = await requestPasswordReset(email.trim().toLowerCase())
+
+        // Record attempt after API response to avoid wasting slots on failed requests
+        recordResetAttempt()
 
         setResetLoading(false)
 

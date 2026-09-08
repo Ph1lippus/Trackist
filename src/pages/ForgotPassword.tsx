@@ -39,13 +39,13 @@ const ForgotPassword: React.FC = () => {
 
         const trimmedEmail = email.trim().toLowerCase()
 
-        // Record attempt BEFORE calling API to prevent hitting Supabase rate limits
-        recordAttempt()
-
         // Small random delay for constant-time response (50-150ms)
         await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100))
 
         const { error } = await requestPasswordReset(trimmedEmail)
+
+        // Record attempt after API response to avoid wasting slots on failed requests
+        recordAttempt()
 
         setLoading(false)
         pendingSubmitRef.current = false
