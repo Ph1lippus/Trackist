@@ -1,4 +1,7 @@
 ﻿@media (max-width: 768px) {
+    .detail-overlay__scroll { 
+        padding-top: 0;
+    }
     .auth-card {
         background: none!important;
     }

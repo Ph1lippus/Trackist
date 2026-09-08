@@ -6,26 +6,32 @@ const ScrollToTop: React.FC = () => {
 
     useLayoutEffect(() => {
         const scrollToTop = () => {
-            window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-            document.documentElement.scrollTop = 0;
-            document.body.scrollTop = 0;
+            const overlayScroll = document.querySelector('.detail-overlay__scroll--top') as HTMLElement | null
+            if (overlayScroll) {
+                overlayScroll.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+                overlayScroll.scrollTop = 0
+                return
+            }
+            window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+            document.documentElement.scrollTop = 0
+            document.body.scrollTop = 0
         };
 
         if (hash) {
-            const el = document.getElementById(hash.slice(1));
+            const el = document.getElementById(hash.slice(1))
             if (el) {
-                el.scrollIntoView({ behavior: 'instant' });
+                el.scrollIntoView({ behavior: 'instant' })
             }
         } else {
-            scrollToTop();
+            scrollToTop()
         }
 
-        const id1 = setTimeout(scrollToTop, 0);
-        const id2 = setTimeout(scrollToTop, 50);
+        const id1 = setTimeout(scrollToTop, 0)
+        const id2 = setTimeout(scrollToTop, 50)
 
         return () => {
-            clearTimeout(id1);
-            clearTimeout(id2);
+            clearTimeout(id1)
+            clearTimeout(id2)
         };
     }, [pathname, hash]);
 

@@ -87,6 +87,12 @@ const SecondaryNavbar: React.FC = () => {
     }, [getActiveTabIndex, isActivePage]);
 
     const scrollToTop = useCallback(() => {
+        const overlayScroll = document.querySelector('.detail-overlay__scroll--top') as HTMLElement | null
+        if (overlayScroll && overlayScroll.scrollTop > 0) {
+            overlayScroll.scrollTo({ top: 0, behavior: 'smooth' })
+            setTimeout(() => overlayScroll.scrollTo(0, 0), 400)
+            return
+        }
         window.scrollTo({ top: 0, behavior: 'smooth' })
         setTimeout(() => window.scrollTo(0, 0), 400)
     }, [])
