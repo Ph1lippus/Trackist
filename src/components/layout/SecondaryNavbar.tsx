@@ -171,6 +171,21 @@ const SecondaryNavbar: React.FC = () => {
         };
     }, [user]);
 
+    // When the detail modal opens, always reveal the secondary navbar even if
+    // it was scrolled-hidden beforehand. The modal locks body scroll (so no
+    // window scroll events fire to re-show it) and never changes the pathname
+    // (so the route-change reset below doesn't run). Subscribe to the modal's
+    // open state and reset the hidden flag on open.
+    const modalIsOpen = useDetailModalStore((s) => s.isOpen)
+    useEffect(() => {
+        if (!modalIsOpen) return
+        const el = navRef.current
+        if (!el) return
+        el.classList.remove('secondary-navbar--hidden')
+        scrollStateRef.current.isHidden = false
+        scrollStateRef.current.lastScrollY = window.scrollY
+    }, [modalIsOpen])
+
     // Reset scroll tracking on route change so the navbar is never seen moving
     // when switching pages.
     useEffect(() => {

@@ -362,16 +362,6 @@
         scale: 1.20;
     }
 
-    /* Reduce motion on mobile for slower devices */
-    @media (prefers-reduced-motion: reduce) {
-        .mobile-tvshow-card-sweep {
-            animation-duration: 0.01ms !important;
-        }
-        .detail-page__episode-card {
-            transition-duration: 0.01ms !important;
-        }
-    }
-
     /* Solid backgrounds instead of translucent overlays */
 
 
@@ -562,6 +552,42 @@ html {
     opacity: 0;
 }
 
+/* Routed detail pages (movie/tv/episode): a full-screen reveal cover held over
+   the page until its content loads. It paints the exact site background
+   (gradient + starfield) so the transparent navbar strip and the page below
+   move as one unit — the backdrop is never revealed in the navbar before the
+   page. Fades out via --hidden once the page reports ready. */
+.detail-page-cover {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    pointer-events: none;
+    background: linear-gradient(41deg, #0c0b11 0%, #2c2b55 55%, #5a5a9e 100%);
+    opacity: 1;
+    transition: opacity 250ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.detail-page-cover::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("/starfield-tile.svg");
+    background-size: 400px 400px;
+    background-repeat: repeat;
+    opacity: 0.35 !important;
+}
+.detail-page-cover--hidden {
+    opacity: 0;
+}
+@media (max-width: 768px) {
+    .detail-page-cover {
+        background: #2c2b55;
+    }
+    .detail-page-cover::before {
+        background-image: url("/starfield-tile-mobile.svg");
+        background-size: 350px 350px;
+    }
+}
+
 
 
 .container.navbar-inner.no-back-btn:not(.is-modal-open) {
@@ -617,7 +643,12 @@ html::before {
 }
 .page-transition-wrapper {
     width: 100%;
-    animation: fadeIn 0.25s ease;
+    animation: fadeIn 250ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Backdrop detail pages (movie/tv/episode) reveal via .detail-page-cover,
+   so suppress the wrapper fade to avoid a stacked double transition. */
+.page-transition-wrapper--no-anim {
+    animation: none;
 }
 .main {
     flex: 1;
@@ -1145,14 +1176,14 @@ html.native-app .navbar-brand-row.is-modal-open {
     opacity: 0;
     visibility: hidden;
     transform: translateY(-6px) scale(0.98);
-    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0s linear 0.18s;
+    transition: opacity 250ms ease, transform 250ms ease, visibility 0s linear 250ms;
     z-index: 100;
 }
 .discover-filter-menu.is-open {
     opacity: 1;
     visibility: visible;
     transform: translateY(0) scale(1);
-    transition: opacity 0.18s ease, transform 0.18s ease;
+    transition: opacity 250ms ease, transform 250ms ease;
 }
 .discover-filter-menu.is-closing {
     opacity: 0;
@@ -1527,7 +1558,7 @@ select.navbar-filter-field option {
     align-items: center;
     justify-content: center;
     background: #000;
-    animation: loaderFadeIn 0.2s ease-out forwards;
+    animation: loaderFadeIn 250ms ease-out forwards;
     pointer-events: none;
 }
 .dashboard-page {
@@ -2220,12 +2251,7 @@ select.navbar-filter-field option {
     border: 3px solid rgba(133, 138, 227, 0.15);
     border-top-color: var(--color-primary);
     border-radius: 50%;
-    animation: discoverSpin 0.7s linear infinite;
-}
-@keyframes discoverSpin {
-    to {
-        transform: rotate(360deg);
-    }
+    animation: spin 0.7s linear infinite;
 }
 .discover-empty {
     text-align: center;
@@ -2243,6 +2269,7 @@ select.navbar-filter-field option {
     max-width: 360px;
     width: 90%;
     position: relative;
+    animation: confirmModalIn 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .add-modal__preview {
     display: flex;
@@ -2307,6 +2334,7 @@ select.navbar-filter-field option {
     align-items: center;
     justify-content: center;
     padding: 1rem;
+    animation: confirmOverlayIn 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .modal-content {
     background: rgba(15, 15, 20, 0.98);
@@ -2318,6 +2346,7 @@ select.navbar-filter-field option {
     overflow-y: auto;
     position: relative;
     padding: 3rem;
+    animation: confirmModalIn 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .modal-close {
     position: absolute;
@@ -3408,7 +3437,7 @@ html.native-app *::-webkit-scrollbar {
     overflow: hidden;
     max-height: 300px;
     overflow-y: auto;
-    animation: seasonDropdownIn 0.15s ease;
+    animation: seasonDropdownIn 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 @keyframes seasonDropdownIn {
     from { opacity: 0; transform: translateX(-50%) translateY(-4px); }
@@ -3866,7 +3895,7 @@ html.native-app *::-webkit-scrollbar {
     color: rgba(255, 255, 255, 0.5);
     font-size: 0.95rem;
     letter-spacing: 0.01em;
-    animation: fadeIn 0.25s ease;
+    animation: fadeIn 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 /* Spinner rendered as a pseudo-element so every detail page's plain-text
    "Loading..." gets a gold-standard loader without touching each component. */
@@ -3877,7 +3906,7 @@ html.native-app *::-webkit-scrollbar {
     border: 3px solid rgba(133, 138, 227, 0.18);
     border-top-color: var(--color-primary);
     border-radius: 50%;
-    animation: discoverSpin 0.7s linear infinite;
+    animation: spin 0.7s linear infinite;
     flex: 0 0 auto;
 }
 .detail-page-error {
@@ -4898,7 +4927,7 @@ html.native-app *::-webkit-scrollbar {
     color: var(--color-black);
 }
 .page-loader--initial {
-    animation: loaderFadeIn 0.25s ease-out forwards;
+    animation: loaderFadeIn 250ms ease-out forwards;
 }
 
 .page-loader__content {
@@ -4924,7 +4953,7 @@ html.native-app *::-webkit-scrollbar {
 }
 
 .page-loader--exit {
-    animation: loaderFadeOut 0.2s ease-in-out forwards;
+    animation: loaderFadeOut 200ms ease forwards;
 }
 
 .page-loader--hidden {
@@ -5864,7 +5893,7 @@ button:focus-visible {
     padding: 1rem 0;
     display: flex;
     justify-content: center;
-    transition: transform 0.22s ease-out;
+    transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .secondary-navbar--hidden {
@@ -6411,7 +6440,7 @@ i.fa-solid.fa-trash:hover {
    `.navbar-brand-row.is-modal-open`). Skipped during exit so only the fade-out
    runs in reverse. */
 .detail-overlay:not(.detail-overlay--exiting) {
-    animation: detailOverlayIn 0.3s ease;
+    animation: detailOverlayIn 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes detailOverlayIn {
@@ -6431,7 +6460,7 @@ i.fa-solid.fa-trash:hover {
     background: linear-gradient(41deg, #0c0b11 0%, #2c2b55 55%, #5a5a9e 100%);
     pointer-events: none;
     opacity: 1;
-    transition: opacity 0.35s ease;
+    transition: opacity 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .detail-overlay__media-cover--hidden {
     opacity: 0;
@@ -6441,7 +6470,7 @@ i.fa-solid.fa-trash:hover {
    for EXIT_MS in DetailOverlay). animation-fill-mode keeps it opaque until the
    animation starts, then fades to transparent under the incoming page. */
 .detail-overlay--exiting {
-    animation: detailOverlayOut 0.18s ease forwards;
+    animation: detailOverlayOut 200ms ease forwards;
     pointer-events: none;
 }
 
@@ -6470,7 +6499,7 @@ i.fa-solid.fa-trash:hover {
     pointer-events: none;
     background: linear-gradient(41deg, #0c0b11 0%, #2c2b55 55%, #5a5a9e 100%);
     opacity: 1;
-    transition: opacity 0.35s ease;
+    transition: opacity 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .detail-overlay__scroll--top.detail-overlay__scroll--ready::after {
@@ -6504,7 +6533,8 @@ i.fa-solid.fa-trash:hover {
 
 .detail-overlay__scroll {
     position: absolute;
-    top: var(--navbar-height);
+    padding-top: var(--navbar-height);
+    top: 0;
     left: 0;
     right: 0;
     bottom: 0;
@@ -6687,11 +6717,17 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
 }
 
 .confirm-modal-overlay--enter {
-    animation: confirmOverlayIn 0.15s ease;
+    animation: confirmOverlayIn 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .confirm-modal-overlay--leave {
-    animation: confirmOverlayOut 0.1s ease forwards;
+    animation: confirmOverlayOut 200ms ease forwards;
+}
+
+/* Plain confirm-modal usage (no enter/leave modifier, e.g. EpisodeChoiceModal)
+   still gets the standard entry fade. */
+.confirm-modal-overlay:not(.confirm-modal-overlay--enter):not(.confirm-modal-overlay--leave) {
+    animation: confirmOverlayIn 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .confirm-modal-content {
@@ -6705,11 +6741,16 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
 }
 
 .confirm-modal-content--enter {
-    animation: confirmModalIn 0.15s ease;
+    animation: confirmModalIn 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .confirm-modal-content--leave {
-    animation: confirmModalOut 0.1s ease forwards;
+    animation: confirmModalOut 200ms ease forwards;
+}
+
+/* Plain confirm-modal usage (no enter/leave modifier) still gets entry animation. */
+.confirm-modal-content:not(.confirm-modal-content--enter):not(.confirm-modal-content--leave) {
+    animation: confirmModalIn 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .confirm-modal-title {
@@ -6776,14 +6817,8 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
     border: 2px solid rgba(255, 255, 255, 0.2);
     border-top-color: inherit;
     border-radius: 50%;
-    animation: modal-spin 0.8s linear infinite;
+    animation: spin 0.7s linear infinite;
     vertical-align: middle;
-}
-
-@keyframes modal-spin {
-    to {
-        transform: rotate(360deg);
-    }
 }
 
 /* ===== Media Detail View (TV episode tracking modal) ===== */
@@ -8845,7 +8880,7 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
     align-items: center;
     justify-content: center;
     z-index: 10000;
-    animation: confirmOverlayIn 0.2s ease;
+    animation: confirmOverlayIn 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .progress-fix-modal-content {
@@ -8857,7 +8892,7 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
     max-height: 90vh;
     overflow-y: auto;
     padding: 2rem;
-    animation: confirmModalIn 0.25s ease;
+    animation: confirmModalIn 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .progress-fix-modal-icon {
@@ -9033,14 +9068,8 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
     border: 3px solid rgba(133, 138, 227, 0.15);
     border-top-color: var(--color-primary);
     border-radius: 50%;
-    animation: progressFixSpin 0.8s linear infinite;
+    animation: spin 0.7s linear infinite;
     margin: 0 auto;
-}
-
-@keyframes progressFixSpin {
-    to {
-        transform: rotate(360deg);
-    }
 }
 
 /* Episode Detail Page */
@@ -10108,7 +10137,7 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
     font-weight: 500;
     color: var(--color-mint);
     margin-top: 0.1rem;
-    animation: settings-feedback-in 0.2s ease;
+    animation: settings-feedback-in 250ms ease;
 }
 
 .settings-inline-feedback--error {
@@ -10926,7 +10955,7 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
     z-index: 50;
     display: flex;
     flex-direction: column;
-    animation: slideInRight 0.3s ease-out;
+    animation: slideInRight 250ms cubic-bezier(0.22, 1, 0.36, 1);
     border-radius: 25px 0px 0px 25px ;
 }
 
@@ -11183,7 +11212,7 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
     z-index: 1000;
     height: 70vh;
     overflow: hidden;
-    animation: searchDropdownIn 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+    animation: searchDropdownIn 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .search-dropdown__header {
     display: flex;
@@ -11856,7 +11885,7 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
     min-height: 45vh;
     padding: 3rem 1.5rem;
     text-align: center;
-    animation: fadeIn 0.25s ease;
+    animation: fadeIn 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Emphasis: the calendar loader should fill the full viewport it occupies. */
@@ -11871,7 +11900,7 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
     border-width: 3px;
     border-color: rgba(133, 138, 227, 0.18);
     border-top-color: var(--color-primary);
-    animation: discoverSpin 0.7s linear infinite;
+    animation: spin 0.7s linear infinite;
 }
 
 .upcoming-new-loading p,
@@ -12578,7 +12607,7 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
     border: 2px solid rgba(104, 255, 174, 0.2);
     border-top-color: #68ffae;
     border-radius: 50%;
-    animation: spin 0.6s linear infinite;
+    animation: spin 0.7s linear infinite;
 }
 
 @keyframes spin {
@@ -12586,7 +12615,7 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
 }
 
 .lucide-spin {
-    animation: spin 0.8s linear infinite;
+    animation: spin 0.7s linear infinite;
 }
 
 .mobile-tvshow-card-add-btn--done {
@@ -13124,11 +13153,11 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
 
 /* MFA Setup Component */
 .mfa-setup {
-    animation: fadeIn 0.3s ease;
+    animation: fadeIn 250ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
@@ -13349,7 +13378,7 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
 
 /* MFA Challenge Component */
 .mfa-challenge {
-    animation: fadeIn 0.3s ease;
+    animation: fadeIn 250ms cubic-bezier(0.22, 1, 0.36, 1);
     max-width: 360px;
     margin: 0 auto;
 }
@@ -13691,5 +13720,20 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
     display: none;
     width: 0;
     height: 0;
+}
+
+/* ===== REDUCED MOTION =====
+   Users who prefer reduced motion get a near-instant version of every
+   animation/transition across the app (the universal selector catches all
+   keyframe and transition declarations regardless of their specific names). */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }
 

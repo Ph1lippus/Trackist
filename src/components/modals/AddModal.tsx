@@ -1,6 +1,8 @@
 ﻿import React, { useState, useEffect } from 'react'
 import { supabase } from '../../services/supabaseClient'
 import { getTVDetails, getTVSeasonDetails, imageUrl } from '../../services/tmdbService'
+import { getReleaseIndex, getShowAirSchedule, isEpisodeAired } from '../../services/tvmazeService'
+import { isFutureLocal } from '../../utils/dateUtils'
 import type { TMDBResult, WatchlistItem } from '../../types'
 
 interface AddModalProps {
@@ -25,9 +27,22 @@ const AddModal: React.FC<AddModalProps> = ({ item, onClose, onAdd, onAddWatchlis
     const [seasons, setSeasons] = useState<number[]>([])
     const [episodes, setEpisodes] = useState<Episode[]>([])
     const [selectedSeason, setSelectedSeason] = useState(1)
-    const [selectedEpisodes, setSelectedEpisodes] = useState<Set<string>>(new Set())
-
     const isTV = item.media_type === 'tv'
+    const [selectedEpisodes, setSelectedEpisodes] = useState<Set<string>>(new Set())
+    // Exact air-time index so today's episodes can't be pre-marked. Null while
+    // resolving -> isEpisodeReleased falls back to the date-only rule.
+    const [releaseIndex, setReleaseIndex] = useState<Map<string, number> | null>(null)
+
+    useEffect(() => {
+        if (!isTV || !item.id) return
+        let cancelled = false
+        void getShowAirSchedule(item.id)
+            .then(schedule => {
+                if (!cancelled) setReleaseIndex(getReleaseIndex(schedule))
+            })
+            .catch(() => {})
+        return () => { cancelled = true }
+    }, [isTV, item.id])
 
     useEffect(() => {
         const loadEpisodes = async () => {
@@ -68,7 +83,8 @@ const filteredEpisodes = episodes.filter(ep => ep.season_number === selectedSeas
 
     const isEpisodeReleased = (episode: Episode): boolean => {
         if (!episode.air_date) return false
-        return new Date(episode.air_date) <= new Date()
+        if (releaseIndex) return isEpisodeAired(releaseIndex, episode.season_number, episode.episode_number, episode.air_date)
+        return !isFutureLocal(episode.air_date)
     }
 
     const handleEpisodeToggle = (episode: Episode) => {

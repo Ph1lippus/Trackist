@@ -12,7 +12,7 @@ import EpisodeDetail from '../../pages/EpisodeDetail'
 // Duration (ms) of the exit fade. Must match the CSS `detailOverlayOut`
 // animation so the overlay stays mounted for exactly the fade-out length
 // before being removed from the DOM. Kept short for a snappy feel.
-const EXIT_MS = 180
+const EXIT_MS = 200
 
 const entryKey = (type: string, id: number, season?: number, episode?: number): string =>
   `${type}:${id}:${season ?? ''}:${episode ?? ''}`

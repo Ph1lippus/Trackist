@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { updateLastActive } from './services/profileService'
 import { initializeAuth, useAuthStore } from './stores/useAuthStore'
@@ -74,19 +74,19 @@ const LegacyListRedirect: React.FC = () => {
 // Keyed route wrappers: forcing a fresh mount whenever the route params change
 // so the previous show/movie's state, episodes and caches never leak into the
 // newly opened share while its data is being fetched.
-const MovieDetailRoute: React.FC = () => {
+const MovieDetailRoute: React.FC<{ onLoaded?: () => void }> = ({ onLoaded }) => {
     const { id } = useParams<{ id: string }>()
-    return <MovieDetail key={id} />
+    return <MovieDetail key={id} onLoaded={onLoaded} />
 }
 
-const TVShowDetailRoute: React.FC = () => {
+const TVShowDetailRoute: React.FC<{ onLoaded?: () => void }> = ({ onLoaded }) => {
     const { id } = useParams<{ id: string }>()
-    return <TVShowDetail key={id} />
+    return <TVShowDetail key={id} onLoaded={onLoaded} />
 }
 
-const EpisodeDetailRoute: React.FC = () => {
+const EpisodeDetailRoute: React.FC<{ onLoaded?: () => void }> = ({ onLoaded }) => {
     const { id, season, episode } = useParams<{ id: string; season: string; episode: string }>()
-    return <EpisodeDetail key={`${id}-${season}-${episode}`} />
+    return <EpisodeDetail key={`${id}-${season}-${episode}`} onLoaded={onLoaded} />
 }
 
 const AppContent: React.FC = () => {
@@ -129,8 +129,37 @@ const AppContent: React.FC = () => {
 
     const isDetailPage = location.pathname.match(/^\/(movie|tv|person)\/\d+$/) || location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/)
 
+    // Routed detail pages that paint a full-viewport backdrop (movie, TV,
+    // episode). A full-screen cover matching the site background is held over
+    // the page until these report ready, so the reveal happens as one unit
+    // behind the transparent navbar — no color split mid-transition.
+    const isBackdropDetailPage = Boolean(location.pathname.match(/^\/(movie|tv)\/\d+$/) || location.pathname.match(/^\/tv\/\d+\/season\/\d+\/episode\/\d+$/))
+    const [detailCoverRevealed, setDetailCoverRevealed] = useState(false)
+
+    // Collapse the reveal cover back to opaque whenever the route changes
+    // (adjusting state during render, per the React docs). Each new detail-page
+    // navigation starts covered until that page signals readiness via onLoaded.
+    const [coverPath, setCoverPath] = useState(location.pathname)
+    if (coverPath !== location.pathname) {
+        setCoverPath(location.pathname)
+        setDetailCoverRevealed(false)
+    }
+
     useEffect(() => {
         void initializeAuth()
+    }, [])
+
+    // Safety timeout: if a detail page never calls onLoaded (e.g. its backdrop
+    // fails to finish painting) the cover lifts anyway so the UI isn't stuck
+    // behind it. The route change above already reset it to opaque.
+    useEffect(() => {
+        if (!isBackdropDetailPage) return
+        const t = window.setTimeout(() => setDetailCoverRevealed(true), 3500)
+        return () => window.clearTimeout(t)
+    }, [location.pathname, isBackdropDetailPage])
+
+    const handleDetailCoverLoaded = useCallback(() => {
+        setDetailCoverRevealed(true)
     }, [])
 
     useEffect(() => {
@@ -504,9 +533,12 @@ const AppContent: React.FC = () => {
                 canGoBack={canGoBack}
                 goToToday={goToToday}
             />
+            {isBackdropDetailPage && !isModalVisible && (
+                <div className={`detail-page-cover${detailCoverRevealed ? ' detail-page-cover--hidden' : ''}`} aria-hidden="true" />
+            )}
             <main className={`page-main flex-grow-1 ${hideFooter ? 'page-main--no-footer' : ''}${isPersonPage ? ' person-page' : ''}${isModalVisible ? ' is-modal-backdrop-hidden' : ''}`} inert={isModalVisible || undefined}>
                 <ErrorBoundary resetKey={location.pathname}>
-                    <div key={location.pathname} className="page-transition-wrapper">
+                    <div key={location.pathname} className={`page-transition-wrapper${isBackdropDetailPage ? ' page-transition-wrapper--no-anim' : ''}`}>
                     <Routes>
                     <Route path="/" element={user ? <Navigate to={defaultRoute} replace /> : <Login />} />
                     <Route path="/Discover" element={user ? <Discover key="discover" /> : <Navigate to="/login" replace />} />
@@ -534,9 +566,9 @@ const AppContent: React.FC = () => {
                     <Route path="/about" element={<About />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route element={<DetailLayout />}>
-                        <Route path="/movie/:id" element={<MovieDetailRoute />} />
-                        <Route path="/tv/:id" element={<TVShowDetailRoute />} />
-                        <Route path="/tv/:id/season/:season/episode/:episode" element={<EpisodeDetailRoute />} />
+                        <Route path="/movie/:id" element={<MovieDetailRoute onLoaded={handleDetailCoverLoaded} />} />
+                        <Route path="/tv/:id" element={<TVShowDetailRoute onLoaded={handleDetailCoverLoaded} />} />
+                        <Route path="/tv/:id/season/:season/episode/:episode" element={<EpisodeDetailRoute onLoaded={handleDetailCoverLoaded} />} />
                         <Route path="/Upcoming" element={user ? <Upcoming currentMonth={currentMonth} /> : <Navigate to="/login" replace />} />
                         <Route path="/UpcomingNew" element={user ? <UpcomingNew /> : <Navigate to="/login" replace />} />
                     </Route>

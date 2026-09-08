@@ -9,6 +9,8 @@ import { getCachedOrFetch } from '../services/cacheService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { isFutureLocal } from '../utils/dateUtils'
+import { getEpisodeReleaseTimestamp } from '../services/tvmazeService'
 import { useMobile } from '../contexts/useMobile'
 import ShareButton from '../components/media/ShareButton'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
@@ -57,8 +59,42 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
     const [isInWatchlist, setIsInWatchlist] = useState(false)
     const [watchlistId, setWatchlistId] = useState<string | null>(null)
     const [watched, setWatched] = useState(false)
+    const [backdropPainted, setBackdropPainted] = useState(false)
     const [showDescription] = useState(true)
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean } | null>(null)
+
+    // Exact air-time gating: null while resolving (falls back to date-only),
+    // true once the episode's TVmaze airstamp has passed, false while locked.
+    const [preciseReleased, setPreciseReleased] = useState<boolean | null>(null)
+    const [releaseTimestamp, setReleaseTimestamp] = useState<number | null>(null)
+
+    // Resolve the real air time so a user can't mark today's episode watched
+    // before it actually airs. Falls back to the date-only rule while resolving.
+    useEffect(() => {
+        if (!id || !season || !episode) return
+        let cancelled = false
+        void (async () => {
+            const ts = await getEpisodeReleaseTimestamp(Number(id), Number(season), Number(episode))
+            if (cancelled) return
+            if (ts) {
+                setReleaseTimestamp(ts.getTime())
+                setPreciseReleased(Date.now() >= ts.getTime())
+            } else {
+                setReleaseTimestamp(null)
+                setPreciseReleased(null)
+            }
+        })()
+        return () => { cancelled = true }
+    }, [id, season, episode])
+
+    // Unlock the watched button automatically once the airstamp passes while
+    // the modal/page is still open (episode releases mid-viewing).
+    useEffect(() => {
+        if (preciseReleased !== false || releaseTimestamp === null) return
+        const delay = Math.max(releaseTimestamp - Date.now(), 0)
+        const t = window.setTimeout(() => setPreciseReleased(true), Math.min(delay + 1000, 2_147_483_647))
+        return () => window.clearTimeout(t)
+    }, [preciseReleased, releaseTimestamp])
 
     
 
@@ -125,10 +161,23 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
     }, [id, season, episode])
 
     // Signal the overlay that the page content is ready so its reveal
-    // curtain can lift (fires after the initial load completes).
+    // curtain can lift. In modal mode this fires once data is loaded. In routed
+    // mode the full-screen cover also waits for the backdrop image to paint, so
+    // the reveal shows the backdrop across the whole screen at once.
     useEffect(() => {
-        if (!loading) onLoaded?.()
-    }, [loading, onLoaded])
+        if (isInModal) {
+            if (!loading) onLoaded?.()
+            return
+        }
+        if (loading) return
+        const useStill = !isMobile && !!episodeData?.still_path
+        const url = useStill
+            ? imageUrlOriginal(episodeData.still_path)
+            : !isMobile
+                ? imageUrlOriginal(getBestBackdropPath(tvDetails?.images?.backdrops) ?? tvDetails?.backdrop_path ?? null)
+                : null
+        if (!url || backdropPainted) onLoaded?.()
+    }, [loading, isInModal, isMobile, episodeData, tvDetails, backdropPainted, onLoaded])
 
     const stillUrl = episodeData?.still_path ? imageUrlOriginal(episodeData.still_path) : null
 
@@ -191,9 +240,13 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
     const title = tvDetails?.name || 'Untitled'
     const episodeTitle = episodeData?.name || 'Episode ' + (episode ?? '')
     const episodeScore = useMemo(() => (episodeData ? normalizeEpisodeScore(episodeData.vote_average) : undefined), [episodeData])
+    const released = preciseReleased ?? (!!episodeData?.air_date && !isFutureLocal(episodeData.air_date))
 
     const handleToggleWatched = async () => {
         if (!watchlistId || !id || !season || !episode || !episodeData) return
+
+        // Prevent marking unreleased episodes as watched.
+        if (!released) return
 
         // If trying to unwatch, show confirmation modal
         if (watched) {
@@ -258,7 +311,7 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
                 title={`${title} S${season}E${episode} on Track1st`}
                 text={`I am watching ${title}, season ${season}, episode ${episode}: ${episodeTitle}. Join me on Track1st.`}
             />
-            {isInWatchlist && (
+            {isInWatchlist && released && (
                 <button
                     className="detail-page__icon-btn"
                     onClick={handleToggleWatched}
@@ -274,7 +327,7 @@ return (
         <div className="detail-page detail-page--no-scroll">
             {!isInModal && backdropUrl && (
                 <div className="detail-page__backdrop">
-                    <img src={backdropUrl} alt={title} loading="lazy" className={isLowResBackdrop ? 'detail-page__backdrop-image--low-resolution' : ''} />
+                    <img src={backdropUrl} alt={title} loading="eager" fetchPriority="high" onLoad={() => setBackdropPainted(true)} className={isLowResBackdrop ? 'detail-page__backdrop-image--low-resolution' : ''} />
                     <div className="detail-page__backdrop-overlay" />
                 </div>
             )}

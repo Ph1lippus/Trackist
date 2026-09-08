@@ -1,9 +1,10 @@
 import { useEffect } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
+import { getReleaseIndex, getShowAirSchedule, isEpisodeAired } from '../services/tvmazeService'
 import { countReleasedEpisodesAcrossSeasons } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
-import { getUTCTodayString } from '../utils/dateUtils'
+import { getUTCTodayString, isFutureLocal } from '../utils/dateUtils'
 
 interface SyncShow {
     id: string
@@ -111,15 +112,18 @@ const syncCaughtUpShow = async (show: SyncShow): Promise<SyncResult | null> => {
     const seasonMeta = (details.seasons || []).find(
         (s: { season_number: number }) => s.season_number === latestSeasonNumber
     )
-    if (seasonMeta?.air_date && new Date(seasonMeta.air_date) > new Date()) return null
+    if (seasonMeta?.air_date && isFutureLocal(seasonMeta.air_date)) return null
 
     const seasonData = await getTVSeasonDetails(show.tmdb_id, latestSeasonNumber)
-    const today = new Date()
 
-    // Count released episodes in the latest season (must have air_date, today or past).
-    const releasedInSeason = (seasonData.episodes || []).filter((ep: { air_date?: string }) => {
-        if (!ep.air_date) return false
-        return new Date(ep.air_date) <= today
+    // TVmaze air times refine which latest-season episodes are really out yet
+    // (an episode airing tonight would otherwise count from local midnight).
+    const releaseIndex = getReleaseIndex(await getShowAirSchedule(show.tmdb_id))
+
+    // Count released episodes in the latest season (air date today-or-past if no
+    // exact airstamp is known).
+    const releasedInSeason = (seasonData.episodes || []).filter((ep: { air_date?: string; episode_number: number }) => {
+        return isEpisodeAired(releaseIndex, latestSeasonNumber, ep.episode_number, ep.air_date)
     }).length
 
     if (releasedInSeason === 0) return null

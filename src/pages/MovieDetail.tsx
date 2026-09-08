@@ -54,6 +54,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId, onLoaded }) =
     const [confirmModal, setConfirmModal] = useState<{ isOpen: boolean } | null>(null)
     const [markWatchedModal, setMarkWatchedModal] = useState<{ isOpen: boolean; markAsWatched: boolean } | null>(null)
     const [modalLoading, setModalLoading] = useState(false)
+    const [backdropPainted, setBackdropPainted] = useState(false)
 
     const watchlistItem = useLibraryStore((state) => state.allItems.find((item) => item.tmdb_id === Number(id)))
     const isInWatchlist = !!watchlistItem
@@ -115,10 +116,21 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId, onLoaded }) =
     }, [fetchDetails])
 
     // Signal the overlay that the page content is ready so its reveal curtain
-    // can lift (only fires after the initial load completes).
+    // can lift. In modal mode this fires once data is loaded. In routed mode
+    // the full-screen cover also waits for the backdrop image to paint, so the
+    // reveal shows the backdrop across the whole screen (navbar + page) at once.
     useEffect(() => {
-        if (!loading) onLoaded?.()
-    }, [loading, onLoaded])
+        if (isInModal) {
+            if (!loading) onLoaded?.()
+            return
+        }
+        if (loading) return
+        const heroPoster = isMobile ? getBestPoster(details?.images?.posters) : null
+        const url = heroPoster
+            ? imageUrlOriginal(heroPoster)
+            : imageUrlOriginal(getBestBackdropPath(details?.images?.backdrops) ?? details?.backdrop_path ?? null)
+        if (!url || backdropPainted) onLoaded?.()
+    }, [loading, isInModal, isMobile, details, backdropPainted, onLoaded])
 
     // Push backdrop URL to the overlay store when in modal so it renders outside the scroll container
     useEffect(() => {
@@ -287,7 +299,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId, onLoaded }) =
         <div className="detail-page detail-page--no-scroll">
             {!isInModal && backdropUrl && (
                 <div className="detail-page__backdrop">
-                    <img src={backdropUrl} alt={title} loading="lazy" />
+                    <img src={backdropUrl} alt={title} loading="eager" fetchPriority="high" onLoad={() => setBackdropPainted(true)} />
                     <div className="detail-page__backdrop-overlay" />
                 </div>
             )}

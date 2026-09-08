@@ -32,7 +32,7 @@ const PWAUpdateModal: React.FC<PWAUpdateModalProps> = ({
             setIsAnimatingOut(true)
             const timer = setTimeout(() => {
                 setShouldRender(false)
-            }, 150) // Match animation duration
+            }, 200) // Match animation duration
             return () => clearTimeout(timer)
         }
     }, [isOpen])
@@ -50,8 +50,8 @@ const PWAUpdateModal: React.FC<PWAUpdateModalProps> = ({
         hoverShadow: 'rgba(104, 255, 174, 0.3)'
     }
 
-    const overlayAnimation = isAnimatingOut ? 'confirmOverlayOut 0.15s ease-in forwards' : 'confirmOverlayIn 0.15s ease-out'
-    const modalAnimation = isAnimatingOut ? 'confirmModalOut 0.15s ease-in forwards' : 'confirmModalIn 0.15s ease-out'
+    const overlayAnimation = isAnimatingOut ? 'confirmOverlayOut 200ms ease forwards' : 'confirmOverlayIn 250ms cubic-bezier(0.22, 1, 0.36, 1)'
+    const modalAnimation = isAnimatingOut ? 'confirmModalOut 200ms ease forwards' : 'confirmModalIn 250ms cubic-bezier(0.22, 1, 0.36, 1)'
 
     const title = 'Update Available'
     const message = version 

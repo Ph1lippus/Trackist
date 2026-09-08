@@ -12,6 +12,7 @@ import ConfirmModal from '../components/modals/ConfirmModal'
 import ViewToggleButton from '../components/layout/ViewToggleButton'
 import { getCachedOrFetch } from '../services/cacheService'
 import useDetailModalStore from '../stores/detailModalStore'
+import { getReleaseIndex, getShowAirSchedule, isEpisodeAired } from '../services/tvmazeService'
 
 const MobileTVShows: React.FC = () => {
     const { isMobile } = useMobile()
@@ -152,6 +153,8 @@ const MobileTVShows: React.FC = () => {
         let nextEp: { season_number: number; episode_number: number; tmdb_episode_id?: number; title?: string; still_path?: string | null; overview?: string; air_date?: string; runtime?: number } | null = null
         let followingNext: { season_number: number; episode_number: number } | undefined
         if (show.next_season_number && show.next_episode_number && show.tmdb_id) {
+            const tmdbId = show.tmdb_id
+            const nextSeason = show.next_season_number
             const { getTVSeasonDetails } = await import('../services/tmdbService')
             const seasonData = await getTVSeasonDetails(show.tmdb_id, show.next_season_number)
             const ep = seasonData.episodes?.find((e: { episode_number: number; id?: number; name?: string; still_path?: string | null; overview?: string; air_date?: string; runtime?: number }) => e.episode_number === show.next_episode_number)
@@ -169,8 +172,9 @@ const MobileTVShows: React.FC = () => {
                 // Compute the episode after the one we're about to mark from the
                 // season data we already fetched, so the service layer can skip
                 // the TMDB-heavy next-episode lookup (keeps "add episode" fast).
+                const releaseIndex = getReleaseIndex(await getShowAirSchedule(tmdbId))
                 const released = (seasonData.episodes || []).filter(
-                    (e: { air_date?: string }) => e.air_date && new Date(e.air_date) <= new Date()
+                    (e: { air_date?: string; episode_number: number }) => e.air_date && isEpisodeAired(releaseIndex, nextSeason, e.episode_number, e.air_date)
                 )
                 const nextSame = released.find(
                     (e: { episode_number: number }) => e.episode_number === ep.episode_number + 1
@@ -243,6 +247,8 @@ const MobileTVShows: React.FC = () => {
             let nextEp: { season_number: number; episode_number: number; tmdb_episode_id?: number; title?: string; still_path?: string | null; overview?: string; air_date?: string; runtime?: number } | null = null
             let followingNext: { season_number: number; episode_number: number } | undefined
             if (show.next_season_number && show.next_episode_number && show.tmdb_id) {
+                const tmdbId = show.tmdb_id
+                const nextSeason = show.next_season_number
                 const { getTVSeasonDetails } = await import('../services/tmdbService')
                 const seasonData = await getTVSeasonDetails(show.tmdb_id, show.next_season_number)
                 const ep = seasonData.episodes?.find((e: { episode_number: number; id?: number; name?: string; still_path?: string | null; overview?: string; air_date?: string; runtime?: number }) => e.episode_number === show.next_episode_number)
@@ -257,8 +263,9 @@ const MobileTVShows: React.FC = () => {
                         air_date: ep.air_date,
                         runtime: ep.runtime
                     }
+                    const releaseIndex = getReleaseIndex(await getShowAirSchedule(tmdbId))
                     const released = (seasonData.episodes || []).filter(
-                        (e: { air_date?: string }) => e.air_date && new Date(e.air_date) <= new Date()
+                        (e: { air_date?: string; episode_number: number }) => e.air_date && isEpisodeAired(releaseIndex, nextSeason, e.episode_number, e.air_date)
                     )
                     const nextSame = released.find(
                         (e: { episode_number: number }) => e.episode_number === ep.episode_number + 1

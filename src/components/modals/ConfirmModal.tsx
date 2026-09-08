@@ -61,7 +61,7 @@ const ConfirmModal = React.memo<ConfirmModalProps>(({
             setIsEntering(true)
         } else if (visible) {
             setIsEntering(false)
-            const timer = setTimeout(() => setVisible(false), 100)
+            const timer = setTimeout(() => setVisible(false), 200)
             return () => clearTimeout(timer)
         }
     }, [isOpen, visible])

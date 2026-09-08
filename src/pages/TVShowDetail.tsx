@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails, getTVSeasonCredits, imageUrl, imageUrlOriginal, getBestBackdropPath, getBestPoster, isNoLanguageCode } from '../services/tmdbService'
 import { formatStatus } from '../utils/statusUtils'
+import { isFutureLocal } from '../utils/dateUtils'
+import { getReleaseIndex, getShowAirSchedule, isEpisodeAired } from '../services/tvmazeService'
 import { markEpisodeWatched, unmarkEpisodeWatched, markEpisodesWatched, unmarkEpisodesWatched, recomputeDenormalizedFields, getWatchedEpisodes, checkAndUpdateCompleted, markShowAsFullyWatched, removeAllWatchedEpisodes } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { invalidateUserCache, getCachedOrFetch } from '../services/cacheService'
@@ -103,6 +105,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
     const [error, setError] = useState<string | null>(null)
 
     const [modalLoading, setModalLoading] = useState(false)
+    const [backdropPainted, setBackdropPainted] = useState(false)
     const [episodeModalLoading, setEpisodeModalLoading] = useState<'all' | 'one' | null>(null)
 
     const openExternal = (url: string) => {
@@ -139,9 +142,26 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
+    // Exact air-time index ("${season}-${episode}" -> release ms) from TVmaze,
+    // so today's episodes aren't watchable until they really air. Null while
+    // resolving -> isEpisodeReleased falls back to the date-only rule.
+    const [releaseIndex, setReleaseIndex] = useState<Map<string, number> | null>(null)
+
+    useEffect(() => {
+        if (!id) return
+        let cancelled = false
+        void getShowAirSchedule(Number(id))
+            .then(schedule => {
+                if (!cancelled) setReleaseIndex(getReleaseIndex(schedule))
+            })
+            .catch(() => {})
+        return () => { cancelled = true }
+    }, [id])
+
     const isEpisodeReleased = (episode: LocalEpisode): boolean => {
         if (!episode.air_date) return false
-        return new Date(episode.air_date) <= new Date()
+        if (releaseIndex) return isEpisodeAired(releaseIndex, episode.season_number, episode.episode_number, episode.air_date)
+        return !isFutureLocal(episode.air_date)
     }
 
     const getResumeEpisodeToWatch = async (): Promise<{ season: number; episode: number } | null> => {
@@ -275,10 +295,21 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
     }, [fetchDetails])
 
     // Signal the overlay that the page content is ready so its reveal curtain
-    // can lift (only fires after the initial load completes).
+    // can lift. In modal mode this fires once data is loaded. In routed mode
+    // the full-screen cover also waits for the backdrop image to paint, so the
+    // reveal shows the backdrop across the whole screen (navbar + page) at once.
     useEffect(() => {
-        if (!loading) onLoaded?.()
-    }, [loading, onLoaded])
+        if (isInModal) {
+            if (!loading) onLoaded?.()
+            return
+        }
+        if (loading) return
+        const heroPoster = isMobile ? getBestPoster(details?.images?.posters) : null
+        const url = heroPoster
+            ? imageUrlOriginal(heroPoster)
+            : imageUrlOriginal(getBestBackdropPath(details?.images?.backdrops) ?? details?.backdrop_path ?? null)
+        if (!url || backdropPainted) onLoaded?.()
+    }, [loading, isInModal, isMobile, details, backdropPainted, onLoaded])
 
     // Push backdrop URL to the overlay store when in modal so it renders outside the scroll container
     useEffect(() => {
@@ -308,7 +339,6 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
         try {
             const seasonData = await getTVSeasonDetails(Number(id), seasonNumber)
             const sEpisodes = seasonData.episodes || []
-            const today = new Date()
             const seasonEpisodes: LocalEpisode[] = []
             
             for (const ep of sEpisodes) {
@@ -328,8 +358,11 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                 })
             }
             
-            // Check if this season has any released episodes
-            const hasReleased = seasonEpisodes.some(ep => ep.air_date && new Date(ep.air_date) <= today)
+            // Check if this season has any aired episodes (TVmaze refines "today", the
+            // date-only rule is the fallback while the index is still resolving).
+            const hasReleased = releaseIndex
+                ? seasonEpisodes.some(ep => ep.air_date && isEpisodeAired(releaseIndex, seasonNumber, ep.episode_number, ep.air_date))
+                : seasonEpisodes.some(ep => ep.air_date && !isFutureLocal(ep.air_date))
             if (!hasReleased && seasonEpisodes.length > 0) {
                 // Remove this season from the list since it has no viewable episodes
                 setSeasons(prev => {
@@ -387,12 +420,11 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
             
             try {
                 // Filter out seasons with 0 episodes, no air_date, or future air_date
-                const today = new Date()
                 const seasonList = (details.seasons || [])
                     .filter((s: { season_number: number; episode_count?: number; air_date?: string }) => 
                         s.season_number > 0 &&
                         (s.episode_count === undefined || s.episode_count > 0) &&
-                        !!s.air_date && new Date(s.air_date) <= today
+                        !!s.air_date && !isFutureLocal(s.air_date)
                     )
                     .map((s: { season_number: number }) => s.season_number)
                 setSeasons(seasonList)
@@ -1104,7 +1136,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
         <div className="detail-page detail-page--no-scroll">
             {!isInModal && backdropUrl && (
                 <div className="detail-page__backdrop">
-                    <img src={backdropUrl} alt={title} loading="lazy" />
+                    <img src={backdropUrl} alt={title} loading="eager" fetchPriority="high" onLoad={() => setBackdropPainted(true)} />
                     <div className="detail-page__backdrop-overlay" />
                 </div>
             )}
