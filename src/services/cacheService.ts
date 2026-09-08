@@ -318,7 +318,8 @@ export async function clearAllCache(): Promise<void> {
         const keysToRemove: string[] = []
         for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i)
-            if (key && key.startsWith('track1st-calendar:')) {
+            // Match v1 ('track1st-calendar:...') and v2 ('track1st-calendar-v2:...')
+            if (key && key.startsWith('track1st-calendar')) {
                 keysToRemove.push(key)
             }
         }
