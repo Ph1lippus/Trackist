@@ -5,6 +5,7 @@ import { getTVDetails, getTVSeasonDetails, getTVSeasonCredits, imageUrl, imageUr
 import { formatStatus } from '../utils/statusUtils'
 
 import { getReleaseIndex, getShowAirSchedule, isEpisodeAired } from '../services/tvmazeService'
+import { getUTCTodayString } from '../utils/dateUtils'
 import { markEpisodeWatched, unmarkEpisodeWatched, markEpisodesWatched, unmarkEpisodesWatched, recomputeDenormalizedFields, getWatchedEpisodes, checkAndUpdateCompleted, markShowAsFullyWatched, removeAllWatchedEpisodes } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
 import { invalidateUserCache, getCachedOrFetch } from '../services/cacheService'
@@ -159,10 +160,12 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
     }, [id])
 
     const isEpisodeReleased = (episode: LocalEpisode): boolean => {
-        if (!releaseIndex) return false
-        const ts = releaseIndex.get(`${episode.season_number}-${episode.episode_number}`)
-        if (ts !== undefined) return Date.now() >= ts
-        return false
+        if (!releaseIndex) {
+            // TVmaze data still resolving (or unavailable): date-only fallback.
+            if (!episode.air_date) return false
+            return episode.air_date <= getUTCTodayString()
+        }
+        return isEpisodeAired(releaseIndex, episode.season_number, episode.episode_number, episode.air_date)
     }
 
     const getEpisodeLocalAirDate = (ep: LocalEpisode): string => {
@@ -374,8 +377,8 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
             
             // Check if this season has any released episodes using TVmaze airstamps.
             const hasReleased = releaseIndex && releaseIndex.size > 0
-                ? seasonEpisodes.some(ep => isEpisodeAired(releaseIndex, seasonNumber, ep.episode_number))
-                : false
+                ? seasonEpisodes.some(ep => isEpisodeAired(releaseIndex, seasonNumber, ep.episode_number, ep.air_date))
+                : seasonEpisodes.some(ep => !!ep.air_date && ep.air_date <= getUTCTodayString())
             if (!hasReleased && seasonEpisodes.length > 0) {
                 // Remove this season from the list since it has no viewable episodes
                 setSeasons(prev => {

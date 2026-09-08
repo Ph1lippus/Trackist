@@ -114,8 +114,8 @@ const syncCaughtUpShow = async (show: SyncShow): Promise<SyncResult | null> => {
     const releaseIndex = getReleaseIndex(await getShowAirSchedule(show.tmdb_id))
 
     // Count released episodes in the latest season using TVmaze airstamps.
-    const releasedInSeason = (seasonData.episodes || []).filter((ep: { episode_number: number }) => {
-        return isEpisodeAired(releaseIndex, latestSeasonNumber, ep.episode_number)
+    const releasedInSeason = (seasonData.episodes || []).filter((ep: { episode_number: number; air_date?: string }) => {
+        return isEpisodeAired(releaseIndex, latestSeasonNumber, ep.episode_number, ep.air_date)
     }).length
 
     if (releasedInSeason === 0) return null

@@ -174,7 +174,7 @@ const MobileTVShows: React.FC = () => {
                 // the TMDB-heavy next-episode lookup (keeps "add episode" fast).
                 const releaseIndex = getReleaseIndex(await getShowAirSchedule(tmdbId))
                 const released = (seasonData.episodes || []).filter(
-                    (e: { episode_number: number }) => isEpisodeAired(releaseIndex, nextSeason, e.episode_number)
+                    (e: { episode_number: number; air_date?: string }) => isEpisodeAired(releaseIndex, nextSeason, e.episode_number, e.air_date)
                 )
                 const nextSame = released.find(
                     (e: { episode_number: number }) => e.episode_number === ep.episode_number + 1
@@ -265,7 +265,7 @@ const MobileTVShows: React.FC = () => {
                     }
                     const releaseIndex = getReleaseIndex(await getShowAirSchedule(tmdbId))
                     const released = (seasonData.episodes || []).filter(
-                        (e: { episode_number: number }) => isEpisodeAired(releaseIndex, nextSeason, e.episode_number)
+                        (e: { episode_number: number; air_date?: string }) => isEpisodeAired(releaseIndex, nextSeason, e.episode_number, e.air_date)
                     )
                     const nextSame = released.find(
                         (e: { episode_number: number }) => e.episode_number === ep.episode_number + 1

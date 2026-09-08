@@ -146,13 +146,17 @@
      image?: { medium?: string | null; original?: string | null } | null
    }[]
 
-   return entries.map(entry => ({
-     season: entry.season ?? 0,
-     episode: entry.number ?? 0,
-     name: entry.name ?? undefined,
-     airstamp: entry.airstamp ?? null,
-     still_path: entry.image?.original ?? entry.image?.medium ?? null,
-   }))
+   // Skip specials: TVmaze lists them as season 0 with number null, which
+   // would otherwise surface as S0E0 items on the calendar.
+   return entries
+     .filter(entry => (entry.season ?? 0) > 0 && (entry.number ?? 0) > 0)
+     .map(entry => ({
+       season: entry.season ?? 0,
+       episode: entry.number ?? 0,
+       name: entry.name ?? undefined,
+       airstamp: entry.airstamp ?? null,
+       still_path: entry.image?.original ?? entry.image?.medium ?? null,
+     }))
  }
 
  serve(async (req: Request) => {

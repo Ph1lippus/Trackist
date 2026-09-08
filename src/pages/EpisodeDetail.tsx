@@ -11,6 +11,7 @@ import type { TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 
 import { getEpisodeReleaseTimestamp } from '../services/tvmazeService'
+import { getUTCTodayString } from '../utils/dateUtils'
 import { useMobile } from '../contexts/useMobile'
 import ShareButton from '../components/media/ShareButton'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
@@ -91,9 +92,22 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
     // the modal/page is still open (episode releases mid-viewing).
     useEffect(() => {
         if (preciseReleased !== false || releaseTimestamp === null) return
-        const delay = Math.max(releaseTimestamp - Date.now(), 0)
-        const t = window.setTimeout(() => setPreciseReleased(true), Math.min(delay + 1000, 2_147_483_647))
-        return () => window.clearTimeout(t)
+        let timer: number | undefined
+        // setTimeout clamps waits longer than ~24.8 days, so a distant airstamp
+        // would otherwise unlock early; chain timers until it truly passes.
+        const schedule = () => {
+            const wait = releaseTimestamp - Date.now()
+            if (wait <= 0) {
+                setPreciseReleased(true)
+                return
+            }
+            timer = window.setTimeout(() => {
+                if (Date.now() >= releaseTimestamp) setPreciseReleased(true)
+                else schedule()
+            }, Math.min(wait, 2_147_483_647))
+        }
+        schedule()
+        return () => window.clearTimeout(timer)
     }, [preciseReleased, releaseTimestamp])
 
     
@@ -240,7 +254,9 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
     const title = tvDetails?.name || 'Untitled'
     const episodeTitle = episodeData?.name || 'Episode ' + (episode ?? '')
     const episodeScore = useMemo(() => (episodeData ? normalizeEpisodeScore(episodeData.vote_average) : undefined), [episodeData])
-    const released = preciseReleased ?? false
+    // While the airstamp is resolving (null), fall back to TMDBs date-only
+    // rule instead of hard-locking the watch button during the lookup window.
+    const released = preciseReleased ?? (!!episodeData?.air_date && episodeData.air_date <= getUTCTodayString())
 
     const handleToggleWatched = async () => {
         if (!watchlistId || !id || !season || !episode || !episodeData) return

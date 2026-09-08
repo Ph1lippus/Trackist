@@ -291,8 +291,8 @@ export const countReleasedEpisodesAcrossSeasons = async (tmdbId: number): Promis
         seasonNumbers.map(async (seasonNum) => {
             try {
                 const seasonData = await getTVSeasonDetails(tmdbId, seasonNum)
-                return seasonData.episodes?.filter((ep: { episode_number: number }) => {
-                    return isEpisodeAired(releaseIndex, seasonNum, ep.episode_number)
+                return seasonData.episodes?.filter((ep: { episode_number: number; air_date?: string }) => {
+                    return isEpisodeAired(releaseIndex, seasonNum, ep.episode_number, ep.air_date)
                 }).length || 0
             } catch {
                 // If we fail to fetch a season, fall back to its episode_count estimate.

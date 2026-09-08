@@ -153,7 +153,12 @@ async function mapWithConcurrency<T, R>(
 }
 
 const TVMAZE_BASE_URL = 'https://api.tvmaze.com'
-const tvmazeMemoryCache = new Map<number, TVMazeEpisode[]>()
+// Edge isolates can be reused for a long time; an unbounded, TTL-less cache
+// would serve stale schedules forever. 6h matches the client-side cache.
+const TVMAZE_CACHE_TTL_MS = 6 * 60 * 60 * 1000
+// TVmaze rate-limits to ~20 calls / 10s per IP; back off once on 429.
+const TVMAZE_RATE_LIMIT_RETRY_MS = 2500
+const tvmazeMemoryCache = new Map<number, { episodes: TVMazeEpisode[]; expiresAt: number }>()
 
 interface TVMazeEpisode {
   season: number
@@ -173,24 +178,34 @@ async function getTMDBExternalIds(tmdbId: number): Promise<{ imdb_id?: string } 
   }
 }
 
+async function fetchTVMazeJson(url: string): Promise<Response | null> {
+  let res = await fetchWithTimeout(url)
+  if (res.status === 429) {
+    await new Promise(resolve => setTimeout(resolve, TVMAZE_RATE_LIMIT_RETRY_MS))
+    res = await fetchWithTimeout(url)
+  }
+  return res.ok ? res : null
+}
+
 async function fetchTVMazeSchedule(tmdbId: number): Promise<TVMazeEpisode[]> {
   const cached = tvmazeMemoryCache.get(tmdbId)
-  if (cached) return cached
+  if (cached && cached.expiresAt > Date.now()) return cached.episodes
+  if (cached) tvmazeMemoryCache.delete(tmdbId)
 
   const external = await getTMDBExternalIds(tmdbId)
   if (!external?.imdb_id) return []
 
-  const look = await fetchWithTimeout(`${TVMAZE_BASE_URL}/lookup/shows?imdb=${external.imdb_id}`)
-  if (!look.ok) {
-    console.warn('[TVMaze] lookup failed', look.status, tmdbId)
+  const look = await fetchTVMazeJson(`${TVMAZE_BASE_URL}/lookup/shows?imdb=${external.imdb_id}`)
+  if (!look) {
+    console.warn('[TVMaze] lookup failed', tmdbId)
     return []
   }
   const show = (await look.json()) as { id?: number }
   if (!show.id) return []
 
-  const res = await fetchWithTimeout(`${TVMAZE_BASE_URL}/shows/${show.id}/episodes`)
-  if (!res.ok) {
-    console.warn('[TVMaze] episodes fetch failed', res.status, tmdbId)
+  const res = await fetchTVMazeJson(`${TVMAZE_BASE_URL}/shows/${show.id}/episodes`)
+  if (!res) {
+    console.warn('[TVMaze] episodes fetch failed', tmdbId)
     return []
   }
   const entries = (await res.json()) as {
@@ -200,14 +215,17 @@ async function fetchTVMazeSchedule(tmdbId: number): Promise<TVMazeEpisode[]> {
     airstamp?: string | null
   }[]
 
-  const episodes = entries.map(entry => ({
-    season: entry.season ?? 0,
-    episode: entry.number ?? 0,
-    name: entry.name ?? undefined,
-    airstamp: entry.airstamp ?? null,
-  }))
+  // Skip specials: TVmaze lists them as season 0 with number null.
+  const episodes = entries
+    .filter(entry => (entry.season ?? 0) > 0 && (entry.number ?? 0) > 0)
+    .map(entry => ({
+      season: entry.season ?? 0,
+      episode: entry.number ?? 0,
+      name: entry.name ?? undefined,
+      airstamp: entry.airstamp ?? null,
+    }))
 
-  tvmazeMemoryCache.set(tmdbId, episodes)
+  tvmazeMemoryCache.set(tmdbId, { episodes, expiresAt: Date.now() + TVMAZE_CACHE_TTL_MS })
   return episodes
 }
 

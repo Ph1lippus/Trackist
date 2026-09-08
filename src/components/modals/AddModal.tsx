@@ -1,7 +1,8 @@
-﻿import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { supabase } from '../../services/supabaseClient'
 import { getTVDetails, getTVSeasonDetails, imageUrl } from '../../services/tmdbService'
 import { getReleaseIndex, getShowAirSchedule, isEpisodeAired } from '../../services/tvmazeService'
+import { getUTCTodayString } from '../../utils/dateUtils'
 import type { TMDBResult, WatchlistItem } from '../../types'
 
 interface AddModalProps {
@@ -81,8 +82,12 @@ const AddModal: React.FC<AddModalProps> = ({ item, onClose, onAdd, onAddWatchlis
 const filteredEpisodes = episodes.filter(ep => ep.season_number === selectedSeason)
 
     const isEpisodeReleased = (episode: Episode): boolean => {
-        if (!releaseIndex) return false
-        return isEpisodeAired(releaseIndex, episode.season_number, episode.episode_number)
+        if (!releaseIndex) {
+            // TVmaze data still resolving (or unavailable): date-only fallback.
+            if (!episode.air_date) return false
+            return episode.air_date <= getUTCTodayString()
+        }
+        return isEpisodeAired(releaseIndex, episode.season_number, episode.episode_number, episode.air_date)
     }
 
     const handleEpisodeToggle = (episode: Episode) => {

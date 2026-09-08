@@ -10,8 +10,6 @@ const corsHeaders = {
 
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3'
 const TMDB_CONCURRENCY = 5
-const TVMAZE_BASE_URL = 'https://api.tvmaze.com'
-const TVMAZE_TTL_MS = 12 * 60 * 60 * 1000
 
 interface TMDBTVDetails {
   number_of_seasons: number
@@ -35,30 +33,6 @@ async function fetchJSON<T>(url: string): Promise<T> {
   return response.json() as Promise<T>
 }
 
-async function getTMDBExternalIds(tmdbId: number): Promise<{ imdb_id?: string } | null> {
-  try {
-    const data = await fetchJSON<{ imdb_id?: string }>(
-      `${TMDB_BASE_URL}/tv/${tmdbId}/external_ids?api_key=${Deno.env.get('TMDB_API_KEY')}`
-    )
-    return data
-  } catch {
-    return null
-  }
-}
-
-async function fetchTVMazeSchedule(tmdbId: number): Promise<any[]> {
-  const external = await getTMDBExternalIds(tmdbId)
-  if (!external?.imdb_id) return []
-
-  const look = await fetch(`${TVMAZE_BASE_URL}/lookup/shows?imdb=${external.imdb_id}`)
-  if (!look.ok) return []
-  const show = (await look.json()) as { id?: number }
-  if (!show.id) return []
-
-  const res = await fetch(`${TVMAZE_BASE_URL}/shows/${show.id}/episodes`)
-  if (!res.ok) return []
-  return await res.json()
-}
 
 async function mapWithConcurrency<T, R>(
   values: T[],

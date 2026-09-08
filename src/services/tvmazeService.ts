@@ -1,5 +1,6 @@
 import { getExternalIds } from './tmdbService'
-import { getCachedOrFetch } from './cacheService'
+import { cacheService } from './cacheService'
+import { getUTCTodayString } from '../utils/dateUtils'
 
 
 /**
@@ -31,6 +32,10 @@ export interface ShowAirSchedule {
 
 // 12h: aired times are stable, but scheduled times for upcoming episodes shift.
 const AIRSTAMP_TTL = 12 * 60 * 60 * 1000
+
+// Empty schedules (show absent from TVmaze, or a transient failure) are cached
+// only briefly so a hiccup can't freeze every caller into assuming nothing is out.
+const EMPTY_SCHEDULE_TTL = 30 * 60 * 1000
 
 // Dedupe concurrent fetches within the session so a burst of consumers for the
 // same show only triggers a single network round-trip.
@@ -82,12 +87,22 @@ export async function getShowAirSchedule(tmdbId: number): Promise<ShowAirSchedul
     const pending = inflight.get(tmdbId)
     if (pending) return pending
 
-    const request = getCachedOrFetch(
-        'tvmaze:air-schedule-v1',
-        tmdbId,
-        () => fetchSchedule(tmdbId),
-        { ttl: AIRSTAMP_TTL }
-    )
+    const request = (async () => {
+        const cached = await cacheService.get<ShowAirSchedule>('tvmaze:air-schedule-v1', tmdbId)
+        if (cached) return cached
+
+        const fresh = await fetchSchedule(tmdbId)
+        // Cache non-empty schedules for the full TTL; empty ones (show absent
+        // from TVmaze, or a transient failure) only briefly so the app can
+        // recover via the date-only fallback instead of staying broken 12h.
+        await cacheService.set(
+            'tvmaze:air-schedule-v1',
+            tmdbId,
+            fresh,
+            fresh.episodes.length > 0 ? AIRSTAMP_TTL : EMPTY_SCHEDULE_TTL
+        )
+        return fresh
+    })()
     inflight.set(tmdbId, request)
     void request.finally(() => inflight.delete(tmdbId))
     return request
@@ -117,10 +132,13 @@ export function isEpisodeAired(
     releaseIndex: Map<string, number>,
     season: number,
     episode: number,
-    _fallbackAirDate?: string
+    fallbackAirDate?: string
 ): boolean {
     const ts = releaseIndex.get(`${season}-${episode}`)
     if (ts !== undefined) return Date.now() >= ts
+    // No airstamp for this episode (or the show has no TVmaze data at all):
+    // fall back to TMDB's date-only rule when the caller supplied air_date.
+    if (fallbackAirDate) return fallbackAirDate <= getUTCTodayString()
     return false
 }
 
