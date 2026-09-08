@@ -4,7 +4,7 @@ import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
 import { getReleaseIndex, getShowAirSchedule, isEpisodeAired } from '../services/tvmazeService'
 import { countReleasedEpisodesAcrossSeasons } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
-import { getUTCTodayString, isFutureLocal } from '../utils/dateUtils'
+import { getUTCTodayString } from '../utils/dateUtils'
 
 interface SyncShow {
     id: string
@@ -108,22 +108,14 @@ const syncCaughtUpShow = async (show: SyncShow): Promise<SyncResult | null> => {
 
     const latestSeasonNumber = details.number_of_seasons || 1
 
-    // Skip non-started / future seasons entirely.
-    const seasonMeta = (details.seasons || []).find(
-        (s: { season_number: number }) => s.season_number === latestSeasonNumber
-    )
-    if (seasonMeta?.air_date && isFutureLocal(seasonMeta.air_date)) return null
-
     const seasonData = await getTVSeasonDetails(show.tmdb_id, latestSeasonNumber)
 
     // TVmaze air times refine which latest-season episodes are really out yet
-    // (an episode airing tonight would otherwise count from local midnight).
     const releaseIndex = getReleaseIndex(await getShowAirSchedule(show.tmdb_id))
 
-    // Count released episodes in the latest season (air date today-or-past if no
-    // exact airstamp is known).
-    const releasedInSeason = (seasonData.episodes || []).filter((ep: { air_date?: string; episode_number: number }) => {
-        return isEpisodeAired(releaseIndex, latestSeasonNumber, ep.episode_number, ep.air_date)
+    // Count released episodes in the latest season using TVmaze airstamps.
+    const releasedInSeason = (seasonData.episodes || []).filter((ep: { episode_number: number }) => {
+        return isEpisodeAired(releaseIndex, latestSeasonNumber, ep.episode_number)
     }).length
 
     if (releasedInSeason === 0) return null

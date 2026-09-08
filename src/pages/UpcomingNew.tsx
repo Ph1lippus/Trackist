@@ -59,7 +59,9 @@ const mapCalendarItem = (item: CalendarItem): UpcomingItem => ({
     title: item.title,
     poster_path: item.poster_path,
     type: item.media_type === 'tv' ? 'episode' : 'movie',
-    date: item.media_type === 'tv' ? item.air_date : item.release_date,
+    date: item.media_type === 'tv'
+        ? (item.airstamp ? new Date(item.airstamp).toISOString().split('T')[0] : item.air_date)
+        : item.release_date,
     item: {
         id: item.watchlist_id,
         user_id: '',
@@ -213,7 +215,7 @@ const UpcomingNew: React.FC = () => {
         })
     }, [])
 
-    const getLocalDate = (item: UpcomingItem): string => {
+    const getLocalDate = (item: UpcomingItem): string | null => {
         if (item.type === 'episode' && item.item.tmdb_id && item.episode) {
             const key = `${item.item.tmdb_id}-${item.episode.season_number}-${item.episode.episode_number}`
             const stamp = airstamps[key]
@@ -224,13 +226,15 @@ const UpcomingNew: React.FC = () => {
                 }
             }
         }
-        return item.date
+        if (item.type === 'movie') return item.date
+        return null
     }
 
     const groupedItems = useMemo(() => {
         return upcomingItems.reduce((groups, upcoming) => {
             if (!upcoming.date) return groups
             const localDate = getLocalDate(upcoming)
+            if (!localDate) return groups
             if (!groups[localDate]) {
                 groups[localDate] = []
             }

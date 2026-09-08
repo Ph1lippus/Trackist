@@ -12032,6 +12032,7 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
 /* Emphasis: the calendar loader should fill the full viewport it occupies. */
 .upcoming-loading {
     min-height: 100%;
+    grid-column: 1 / -1;
 }
 
 .upcoming-new-loading .discover-spinner,

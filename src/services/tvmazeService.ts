@@ -1,6 +1,6 @@
 import { getExternalIds } from './tmdbService'
 import { getCachedOrFetch } from './cacheService'
-import { isFutureLocal } from '../utils/dateUtils'
+
 
 /**
  * TVmaze air-time lookup for precise "is this episode out yet" gating.
@@ -117,11 +117,11 @@ export function isEpisodeAired(
     releaseIndex: Map<string, number>,
     season: number,
     episode: number,
-    fallbackAirDate?: string
+    _fallbackAirDate?: string
 ): boolean {
     const ts = releaseIndex.get(`${season}-${episode}`)
     if (ts !== undefined) return Date.now() >= ts
-    return !!fallbackAirDate && !isFutureLocal(fallbackAirDate)
+    return false
 }
 
 /**

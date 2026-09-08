@@ -9,7 +9,7 @@ import { getCachedOrFetch } from '../services/cacheService'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { isFutureLocal } from '../utils/dateUtils'
+
 import { getEpisodeReleaseTimestamp } from '../services/tvmazeService'
 import { useMobile } from '../contexts/useMobile'
 import ShareButton from '../components/media/ShareButton'
@@ -240,7 +240,7 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
     const title = tvDetails?.name || 'Untitled'
     const episodeTitle = episodeData?.name || 'Episode ' + (episode ?? '')
     const episodeScore = useMemo(() => (episodeData ? normalizeEpisodeScore(episodeData.vote_average) : undefined), [episodeData])
-    const released = preciseReleased ?? (!!episodeData?.air_date && !isFutureLocal(episodeData.air_date))
+    const released = preciseReleased ?? false
 
     const handleToggleWatched = async () => {
         if (!watchlistId || !id || !season || !episode || !episodeData) return

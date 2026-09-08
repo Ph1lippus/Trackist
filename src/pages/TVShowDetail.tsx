@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getTVDetails, getTVSeasonDetails, getTVSeasonCredits, imageUrl, imageUrlOriginal, getBestBackdropPath, getBestPoster, isNoLanguageCode } from '../services/tmdbService'
 import { formatStatus } from '../utils/statusUtils'
-import { isFutureLocal } from '../utils/dateUtils'
+
 import { getReleaseIndex, getShowAirSchedule, isEpisodeAired } from '../services/tvmazeService'
 import { markEpisodeWatched, unmarkEpisodeWatched, markEpisodesWatched, unmarkEpisodesWatched, recomputeDenormalizedFields, getWatchedEpisodes, checkAndUpdateCompleted, markShowAsFullyWatched, removeAllWatchedEpisodes } from '../services/watchlistService'
 import { useLibraryStore } from '../stores/useLibraryStore'
@@ -159,9 +159,10 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
     }, [id])
 
     const isEpisodeReleased = (episode: LocalEpisode): boolean => {
-        if (!episode.air_date) return false
-        if (releaseIndex) return isEpisodeAired(releaseIndex, episode.season_number, episode.episode_number, episode.air_date)
-        return !isFutureLocal(episode.air_date)
+        if (!releaseIndex) return false
+        const ts = releaseIndex.get(`${episode.season_number}-${episode.episode_number}`)
+        if (ts !== undefined) return Date.now() >= ts
+        return false
     }
 
     const getEpisodeLocalAirDate = (ep: LocalEpisode): string => {
@@ -371,11 +372,10 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                 })
             }
             
-            // Check if this season has any aired episodes (TVmaze refines "today", the
-            // date-only rule is the fallback while the index is still resolving).
-            const hasReleased = releaseIndex
-                ? seasonEpisodes.some(ep => ep.air_date && isEpisodeAired(releaseIndex, seasonNumber, ep.episode_number, ep.air_date))
-                : seasonEpisodes.some(ep => ep.air_date && !isFutureLocal(ep.air_date))
+            // Check if this season has any released episodes using TVmaze airstamps.
+            const hasReleased = releaseIndex && releaseIndex.size > 0
+                ? seasonEpisodes.some(ep => isEpisodeAired(releaseIndex, seasonNumber, ep.episode_number))
+                : false
             if (!hasReleased && seasonEpisodes.length > 0) {
                 // Remove this season from the list since it has no viewable episodes
                 setSeasons(prev => {
@@ -432,12 +432,11 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
             if (!details || !id || !isLibraryInitialized) return
             
             try {
-                // Filter out seasons with 0 episodes, no air_date, or future air_date
+                // Filter out seasons with 0 episodes.
                 const seasonList = (details.seasons || [])
-                    .filter((s: { season_number: number; episode_count?: number; air_date?: string }) => 
+                    .filter((s: { season_number: number; episode_count?: number }) => 
                         s.season_number > 0 &&
-                        (s.episode_count === undefined || s.episode_count > 0) &&
-                        !!s.air_date && !isFutureLocal(s.air_date)
+                        (s.episode_count === undefined || s.episode_count > 0)
                     )
                     .map((s: { season_number: number }) => s.season_number)
                 setSeasons(seasonList)

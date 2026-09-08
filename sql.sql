@@ -495,10 +495,3 @@ UPDATE
 public
 
 
-Users can view own episodes
-SELECT	
-public
-
-
-
-

@@ -97,7 +97,9 @@ const mapCalendarItem = (item: CalendarItem): UpcomingItem => ({
     title: item.title,
     poster_path: item.poster_path,
     type: item.media_type === 'tv' ? 'episode' : 'movie',
-    date: item.media_type === 'tv' ? item.air_date : item.release_date,
+    date: item.media_type === 'tv'
+        ? (item.airstamp ? new Date(item.airstamp).toISOString().split('T')[0] : item.air_date)
+        : item.release_date,
     item: {
         id: item.watchlist_id,
         user_id: '',
@@ -223,15 +225,15 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                 }
             }
         }
-        return item.type === 'movie' ? item.date : null
+        if (item.type === 'movie') return item.date || null
+        return null
     }
 
     const groupedItems = useMemo(() => {
         const source = upcomingItems.filter(item => {
             if (item.type === 'movie') return true
             if (!item.item.tmdb_id || !item.episode) return false
-            const key = `${item.item.tmdb_id}-${item.episode.season_number}-${item.episode.episode_number}`
-            return airstamps[key] !== undefined
+            return true
         })
         return source.reduce((groups, upcoming) => {
             if (!upcoming.date) return groups
@@ -359,16 +361,16 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                 <div className="upcoming-layout" style={{ height: '100%' }}>
                         <main className="upcoming-main" style={{ overflowY: 'auto' }}>
                             <div className="calendar-grid" ref={calendarGridRef}>
-                            {loading && (
-                                <div className="upcoming-loading">
-                                    <div className="discover-spinner" />
-                                    <p>Loading your calendar...</p>
-                                </div>
-                            )}
-                            {weekDays.map(day => (
-                            <div key={day} className="calendar-weekday">{day}</div>
-                        ))}
-                        {calendarDays.map((day, index) => {
+                                {loading && (
+                                    <div className="upcoming-loading">
+                                        <div className="discover-spinner" />
+                                        <p>Loading your calendar...</p>
+                                    </div>
+                                )}
+                                {!loading && weekDays.map(day => (
+                                    <div key={day} className="calendar-weekday">{day}</div>
+                            ))}
+                            {!loading && calendarDays.map((day, index) => {
                             if (!day) return <div key={`empty-${index}`} className="calendar-day calendar-day--empty" />
 
                             const dateKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`

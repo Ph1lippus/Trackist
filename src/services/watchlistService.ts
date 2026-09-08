@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient'
 import { getTVDetails, getTVSeasonDetails } from './tmdbService'
 import { invalidateUserCache } from './cacheService'
 import { getReleaseIndex, getShowAirSchedule, isEpisodeAired } from './tvmazeService'
-import { isFutureLocal } from '../utils/dateUtils'
+
 import type { WatchlistItem } from '../types'
 
 export interface FixProgress {
@@ -142,7 +142,7 @@ export const getNextEpisodeToWatch = async (watchlistId: string, skipCache: bool
                 if (watchedSet.has(`${cachedNextSeason}-${ep.episode_number}`)) continue
 
                 // Skip if not aired yet
-                if (!isEpisodeAired(releaseIndex, cachedNextSeason, ep.episode_number, ep.air_date)) continue
+                if (!isEpisodeAired(releaseIndex, cachedNextSeason, ep.episode_number)) continue
 
                 return {
                     season_number: cachedNextSeason,
@@ -174,7 +174,7 @@ export const getNextEpisodeToWatch = async (watchlistId: string, skipCache: bool
                 if (watchedSet.has(`${seasonNum}-${ep.episode_number}`)) continue
 
                 // Skip if not aired yet
-                if (!isEpisodeAired(releaseIndex, seasonNum, ep.episode_number, ep.air_date)) continue
+                if (!isEpisodeAired(releaseIndex, seasonNum, ep.episode_number)) continue
 
                 return {
                     season_number: seasonNum,
@@ -278,13 +278,9 @@ export const countReleasedEpisodesAcrossSeasons = async (tmdbId: number): Promis
     const releaseIndex = getReleaseIndex(await getShowAirSchedule(tmdbId))
 
     const seasonNumbers = (details.seasons || [])
-        .filter((s: { season_number: number; episode_count?: number; air_date?: string }) => {
+        .filter((s: { season_number: number; episode_count?: number }) => {
             if (s.season_number <= 0) return false
             if (s.episode_count === 0) return false
-            // Skip seasons that haven't started airing yet (season air_date is in the future)
-            if (s.air_date) {
-                if (isFutureLocal(s.air_date)) return false
-            }
             return true
         })
         .map((s: { season_number: number }) => s.season_number)
@@ -295,8 +291,8 @@ export const countReleasedEpisodesAcrossSeasons = async (tmdbId: number): Promis
         seasonNumbers.map(async (seasonNum) => {
             try {
                 const seasonData = await getTVSeasonDetails(tmdbId, seasonNum)
-                return seasonData.episodes?.filter((ep: { air_date?: string; episode_number: number }) => {
-                    return isEpisodeAired(releaseIndex, seasonNum, ep.episode_number, ep.air_date)
+                return seasonData.episodes?.filter((ep: { episode_number: number }) => {
+                    return isEpisodeAired(releaseIndex, seasonNum, ep.episode_number)
                 }).length || 0
             } catch {
                 // If we fail to fetch a season, fall back to its episode_count estimate.
@@ -829,8 +825,8 @@ export const checkAndUpdateCaughtUp = async (watchlistId: string, tmdbId: number
 
         // Check if there are any episodes that haven't aired yet (TMDB only knows
         // their calendar date, so TVmaze air times refine "today" episodes).
-        const unreleasedEpisodes = seasonData.episodes?.filter((ep: { air_date?: string; episode_number: number }) => {
-            return !isEpisodeAired(releaseIndex, latestSeasonNumber, ep.episode_number, ep.air_date)
+        const unreleasedEpisodes = seasonData.episodes?.filter((ep: { episode_number: number }) => {
+            return !isEpisodeAired(releaseIndex, latestSeasonNumber, ep.episode_number)
         }) || []
 
         const releasedEpisodesCount = totalEpisodesInLatestSeason - unreleasedEpisodes.length
@@ -903,8 +899,8 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
         const releasedPerSeason = await Promise.all(
             seasonNumbers.map(async (seasonNum) => {
                 const seasonData = await getTVSeasonDetails(tmdbId, seasonNum)
-                const unreleasedInSeason = seasonData.episodes?.filter((ep: { air_date?: string; episode_number: number }) => {
-                    return !isEpisodeAired(releaseIndex, seasonNum, ep.episode_number, ep.air_date)
+                const unreleasedInSeason = seasonData.episodes?.filter((ep: { episode_number: number }) => {
+                    return !isEpisodeAired(releaseIndex, seasonNum, ep.episode_number)
                 }).length || 0
                 return (seasonData.episodes?.length || 0) - unreleasedInSeason
             })
@@ -1084,8 +1080,8 @@ export const recalculateProgress = async (showId: string): Promise<{ fixed: bool
 
         for (const seasonNum of seasonNumbers) {
             const seasonData = await getTVSeasonDetails(show.tmdb_id, seasonNum)
-            const unreleasedInSeason = seasonData.episodes?.filter((ep: { air_date?: string; episode_number: number }) => {
-                return !isEpisodeAired(releaseIndex, seasonNum, ep.episode_number, ep.air_date)
+            const unreleasedInSeason = seasonData.episodes?.filter((ep: { episode_number: number }) => {
+                return !isEpisodeAired(releaseIndex, seasonNum, ep.episode_number)
             }).length || 0
             
             totalReleasedEpisodes += (seasonData.episodes?.length || 0) - unreleasedInSeason
@@ -1258,8 +1254,8 @@ export const checkForNewSeasons = async (userId: string): Promise<{ updated: num
                     for (const sn of seasonNums) {
                         try {
                             const sd = await getTVSeasonDetails(show.tmdb_id, sn)
-                            totalReleasedEpisodes += sd.episodes?.filter((ep: { air_date?: string; episode_number: number }) => {
-                                return isEpisodeAired(releaseIndex, sn, ep.episode_number, ep.air_date)
+                            totalReleasedEpisodes += sd.episodes?.filter((ep: { episode_number: number }) => {
+                                return isEpisodeAired(releaseIndex, sn, ep.episode_number)
                             }).length || 0
                         } catch { /* skip */ }
                     }

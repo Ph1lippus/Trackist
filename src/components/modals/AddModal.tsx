@@ -2,7 +2,6 @@
 import { supabase } from '../../services/supabaseClient'
 import { getTVDetails, getTVSeasonDetails, imageUrl } from '../../services/tmdbService'
 import { getReleaseIndex, getShowAirSchedule, isEpisodeAired } from '../../services/tvmazeService'
-import { isFutureLocal } from '../../utils/dateUtils'
 import type { TMDBResult, WatchlistItem } from '../../types'
 
 interface AddModalProps {
@@ -79,12 +78,11 @@ const AddModal: React.FC<AddModalProps> = ({ item, onClose, onAdd, onAddWatchlis
         loadEpisodes()
     }, [item.id, isTV])
 
-const filteredEpisodes = episodes.filter(ep => ep.season_number === selectedSeason && !!ep.air_date)
+const filteredEpisodes = episodes.filter(ep => ep.season_number === selectedSeason)
 
     const isEpisodeReleased = (episode: Episode): boolean => {
-        if (!episode.air_date) return false
-        if (releaseIndex) return isEpisodeAired(releaseIndex, episode.season_number, episode.episode_number, episode.air_date)
-        return !isFutureLocal(episode.air_date)
+        if (!releaseIndex) return false
+        return isEpisodeAired(releaseIndex, episode.season_number, episode.episode_number)
     }
 
     const handleEpisodeToggle = (episode: Episode) => {

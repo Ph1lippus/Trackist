@@ -21,6 +21,7 @@ export interface CalendarEpisodeItem {
     title: string
     poster_path: string | null
     air_date: string
+    airstamp?: string
     season_number: number
     episode_number: number
     episode_title?: string
@@ -102,11 +103,10 @@ const isCacheStale = (cache: CalendarCache | null): boolean => {
 }
 
 const filterPastItems = (items: CalendarItem[]): CalendarItem[] => {
-    // Roll over at the user's local midnight so yesterday's items drop
-    // immediately once the local day changes.
     const today = getLocalTodayString()
     return items.filter(item => {
-        const date = item.media_type === 'tv' ? item.air_date : item.release_date
+        if (item.media_type === 'tv') return true
+        const date = item.release_date
         return date && date >= today
     })
 }
