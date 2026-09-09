@@ -167,7 +167,7 @@ const Finished: React.FC = () => {
                         <div className="discover-grid">
                             {pausedItems.map((item) => {
                                 const episodesLeft = item.total_episodes !== undefined
-                                    ? Math.max(0, item.total_episodes - item.total_episodes_watched)
+                                    ? Math.max(0, item.total_episodes - (item.watched_episodes_count ?? 0))
                                     : undefined
                                 const isSelected = selectedIds.has(item.id)
                                 

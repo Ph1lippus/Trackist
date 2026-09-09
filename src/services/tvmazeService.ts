@@ -37,16 +37,39 @@ const AIRSTAMP_TTL = 12 * 60 * 60 * 1000
 // only briefly so a hiccup can't freeze every caller into assuming nothing is out.
 const EMPTY_SCHEDULE_TTL = 30 * 60 * 1000
 
+// External IDs (IMDB etc.) are stable for the lifetime of a show — cache them
+// aggressively to skip the TMDB round-trip on repeat visits.
+const EXTERNAL_ID_TTL = 30 * 24 * 60 * 60 * 1000 // 30 days
+
 // Dedupe concurrent fetches within the session so a burst of consumers for the
 // same show only triggers a single network round-trip.
 const inflight = new Map<number, Promise<ShowAirSchedule>>()
 
-async function fetchSchedule(tmdbId: number): Promise<ShowAirSchedule> {
+/**
+ * Fetch the IMDB ID for a show, caching the result to skip the TMDB
+ * round-trip on subsequent visits. IMDB IDs are stable for released shows.
+ */
+async function getImdbId(tmdbId: number): Promise<string | null> {
+    const cached = await cacheService.get<{ imdb_id?: string }>(
+        'tvmaze:external-ids', tmdbId,
+    )
+    if (cached) return cached.imdb_id ?? null
+
     try {
         const external = await getExternalIds(tmdbId, 'tv')
-        if (!external?.imdb_id) return { episodes: [] }
+        await cacheService.set('tvmaze:external-ids', tmdbId, external, EXTERNAL_ID_TTL)
+        return external.imdb_id ?? null
+    } catch {
+        return null
+    }
+}
 
-        const look = await fetch(`https://api.tvmaze.com/lookup/shows?imdb=${external.imdb_id}`)
+async function fetchSchedule(tmdbId: number): Promise<ShowAirSchedule> {
+    try {
+        const imdbId = await getImdbId(tmdbId)
+        if (!imdbId) return { episodes: [] }
+
+        const look = await fetch(`https://api.tvmaze.com/lookup/shows?imdb=${imdbId}`)
         if (!look.ok) {
             console.warn('[TVMaze] lookup failed', look.status, look.statusText)
             return { episodes: [] }
@@ -81,31 +104,73 @@ async function fetchSchedule(tmdbId: number): Promise<ShowAirSchedule> {
 
 /**
  * Full air-time schedule for a show, cached (memory + IndexedDB) for AIRSTAMP_TTL.
+ *
+ * Uses stale-while-revalidate: when cached data exists but is expired, the stale
+ * data is returned immediately and a background refresh updates the cache. This
+ * keeps Calendar, TVShowDetail, and MobileTVShows fast on every visit — the first
+ * load after cache expiry shows stale data instantly while fresh data arrives
+ * within seconds.
+ *
  * Never throws; returns an empty schedule when the show has no TVmaze data.
  */
 export async function getShowAirSchedule(tmdbId: number): Promise<ShowAirSchedule> {
+    // Dedupe concurrent callers for the same show
     const pending = inflight.get(tmdbId)
     if (pending) return pending
 
     const request = (async () => {
-        const cached = await cacheService.get<ShowAirSchedule>('tvmaze:air-schedule-v2', tmdbId)
-        if (cached) return cached
+        // Check for any cached data (valid or stale)
+        const existing = await cacheService.getAny<ShowAirSchedule>(
+            'tvmaze:air-schedule-v2', tmdbId,
+        )
 
+        if (existing) {
+            const ttl = existing.data.episodes.length > 0 ? AIRSTAMP_TTL : EMPTY_SCHEDULE_TTL
+            const isStale = existing.age >= ttl
+
+            if (!isStale) {
+                // Cache is fresh — no work needed
+                return existing.data
+            }
+
+            // Cache is stale — return it immediately, refresh in background
+            void refreshSchedule(tmdbId)
+            return existing.data
+        }
+
+        // No cache at all — must fetch (first visit)
         const fresh = await fetchSchedule(tmdbId)
-        // Cache non-empty schedules for the full TTL; empty ones (show absent
-        // from TVmaze, or a transient failure) only briefly so the app can
-        // recover via the date-only fallback instead of staying broken 12h.
         await cacheService.set(
             'tvmaze:air-schedule-v2',
             tmdbId,
             fresh,
-            fresh.episodes.length > 0 ? AIRSTAMP_TTL : EMPTY_SCHEDULE_TTL
+            fresh.episodes.length > 0 ? AIRSTAMP_TTL : EMPTY_SCHEDULE_TTL,
         )
         return fresh
     })()
+
     inflight.set(tmdbId, request)
     void request.finally(() => inflight.delete(tmdbId))
     return request
+}
+
+/**
+ * Background refresh — updates the cache without blocking the caller.
+ * Separate from getShowAirSchedule so the inflight dedup map doesn't
+ * interfere with the foreground stale-while-revalidate flow.
+ */
+async function refreshSchedule(tmdbId: number): Promise<void> {
+    try {
+        const fresh = await fetchSchedule(tmdbId)
+        await cacheService.set(
+            'tvmaze:air-schedule-v2',
+            tmdbId,
+            fresh,
+            fresh.episodes.length > 0 ? AIRSTAMP_TTL : EMPTY_SCHEDULE_TTL,
+        )
+    } catch {
+        // Background refresh failed — stale data is already in use, no action needed
+    }
 }
 
 /**

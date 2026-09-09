@@ -96,6 +96,36 @@ class CacheService {
         return null
     }
 
+    /**
+     * Return any cached entry regardless of TTL — used for stale-while-revalidate
+     * patterns where the caller wants to show stale data while refreshing.
+     */
+    async getAny<T>(type: string, identifier: string | number): Promise<{ data: T; age: number } | null> {
+        const key = this.generateKey(type, identifier)
+
+        // 1. Check memory cache first
+        const memoryEntry = this.memoryCache.get(key)
+        if (memoryEntry && this.isUsableData(memoryEntry.data)) {
+            this.recordAccess(key)
+            return { data: memoryEntry.data as T, age: Date.now() - memoryEntry.timestamp }
+        }
+
+        // 2. Check IndexedDB
+        try {
+            const db = await this.ensureDB()
+            const entry = await this.idbGet<T>(db, key)
+            if (entry && this.isUsableData(entry.data)) {
+                this.setMemoryCache(key, entry)
+                this.recordAccess(key)
+                return { data: entry.data, age: Date.now() - entry.timestamp }
+            }
+        } catch (err) {
+            console.error('IndexedDB read error:', err)
+        }
+
+        return null
+    }
+
     async set<T>(type: string, identifier: string | number, data: T, ttl: number): Promise<void> {
         const key = this.generateKey(type, identifier)
         const entry: CacheEntry<T> = {
