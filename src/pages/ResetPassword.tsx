@@ -3,6 +3,21 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import { usePageTitle } from '../hooks/usePageTitle'
 
+// Capture hash synchronously at module load, before Supabase's detectSessionInUrl
+// can consume and clear it via history.replaceState.
+const resetParams = (() => {
+    const hash = window.location.hash
+    if (hash) {
+        const params = new URLSearchParams(hash.substring(1))
+        const accessToken = params.get('access_token')
+        const type = params.get('type')
+        if (accessToken && type === 'recovery') {
+            return { accessToken, type }
+        }
+    }
+    return null
+})()
+
 const ResetPassword: React.FC = () => {
     usePageTitle('Track1st - Reset Password')
     const navigate = useNavigate()
@@ -16,17 +31,8 @@ const ResetPassword: React.FC = () => {
     const [tokenValid, setTokenValid] = useState<boolean | null>(null)
 
     useEffect(() => {
-        const hash = window.location.hash
-        if (hash) {
-            const params = new URLSearchParams(hash.substring(1))
-            const accessToken = params.get('access_token')
-            const type = params.get('type')
-
-            if (accessToken && type === 'recovery') {
-                setTokenValid(true)
-            } else {
-                setTokenValid(false)
-            }
+        if (resetParams) {
+            setTokenValid(true)
         } else {
             setTokenValid(false)
         }
