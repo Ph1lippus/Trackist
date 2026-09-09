@@ -77,6 +77,7 @@ const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify, onError, ac
                 }
             } else {
                 console.warn('hCaptcha not initialized for action:', actionRef.current)
+                onErrorRef.current?.('Captcha is still loading. Please wait a moment and try again.')
             }
         },
         isReady: () => !!widgetIdRef.current && typeof window.hcaptcha?.execute === 'function'
@@ -103,8 +104,14 @@ const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify, onError, ac
 
             if (!hasHcaptcha()) {
                 await new Promise<void>((resolve) => {
+                    const timeout = setTimeout(() => {
+                        clearInterval(check)
+                        console.error('hCaptcha failed to load for action:', actionRef.current)
+                        resolve()
+                    }, 10000)
                     const check = setInterval(() => {
                         if (hasHcaptcha()) {
+                            clearTimeout(timeout)
                             clearInterval(check)
                             resolve()
                         }
@@ -112,7 +119,7 @@ const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify, onError, ac
                 })
             }
 
-            if (!containerRef.current || initializedRef.current) return
+            if (!hasHcaptcha() || !containerRef.current || initializedRef.current) return
 
             widgetIdRef.current = window.hcaptcha!.render(containerRef.current, {
                 sitekey: siteKey,
@@ -157,7 +164,7 @@ const Captcha = forwardRef<CaptchaHandle, CaptchaProps>(({ onVerify, onError, ac
             script.onload = () => {
                 initCaptcha()
             }
-        } else if (hasHcaptcha()) {
+        } else {
             initCaptcha()
         }
 
