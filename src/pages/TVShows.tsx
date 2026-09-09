@@ -206,6 +206,9 @@ const TVShows: React.FC = () => {
                         </div>
                         <div className="discover-grid">
                             {paused.map((item) => {
+                                const episodesLeft = item.total_episodes !== undefined
+                                    ? Math.max(0, item.total_episodes - item.total_episodes_watched)
+                                    : undefined
                                 const isSelected = selectedIds.has(item.id)
                                 
                                 return (
@@ -219,6 +222,7 @@ const TVShows: React.FC = () => {
                                             onAdd={selectionMode ? undefined : () => {}}
                                             onMarkWatched={selectionMode ? undefined : (item.status === 'completed' || item.status === 'caught_up') ? undefined : () => setMarkAllModal(item)}
                                             onMarkUnwatched={selectionMode ? undefined : (item.status === 'completed' || item.status === 'caught_up') ? () => handleMarkUnwatched(item) : undefined}
+                                            episodesLeft={episodesLeft}
                                             showIcons={showIcons}
                                         />
                                     </div>

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useCallback } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
 import { getReleaseIndex, getShowAirSchedule, isEpisodeAired } from '../services/tvmazeService'
@@ -49,11 +49,21 @@ const isDueForSync = (lastCheck?: string | null): boolean => {
  * single `watching` show. Also serves as the daily status check. Returns the
  * lightweight in-memory update (or null for ended shows) rather than going
  * through the full store refresh pipeline.
+ *
+ * When `refreshOnly` is true, only the in-memory episode count is updated —
+ * no DB writes are made, keeping the operation cheap for tab-focus refreshes.
  */
-const syncWatchingShow = async (show: SyncShow): Promise<SyncResult | null> => {
+const syncWatchingShow = async (show: SyncShow, refreshOnly = false): Promise<SyncResult | null> => {
     const details = await getTVDetails(show.tmdb_id)
 
     if (details.status === 'Ended' || details.status === 'Canceled') {
+        if (refreshOnly) {
+            return {
+                id: show.id,
+                status: 'watching',
+            }
+        }
+
         const { error } = await supabase
             .from('watchlist')
             .update({ last_season_check: new Date().toISOString() })
@@ -74,18 +84,20 @@ const syncWatchingShow = async (show: SyncShow): Promise<SyncResult | null> => {
     const totalReleasedEpisodes = await countReleasedEpisodesAcrossSeasons(show.tmdb_id)
     const lastSeasonCheck = new Date().toISOString()
 
-    const { error } = await supabase
-        .from('watchlist')
-        .update({
-            total_episodes: totalReleasedEpisodes,
-            last_season_check: lastSeasonCheck
-        })
-        .eq('id', show.id)
-        .eq('status', 'watching')
+    if (!refreshOnly) {
+        const { error } = await supabase
+            .from('watchlist')
+            .update({
+                total_episodes: totalReleasedEpisodes,
+                last_season_check: lastSeasonCheck
+            })
+            .eq('id', show.id)
+            .eq('status', 'watching')
 
-    if (error) {
-        console.error(`Failed to sync watching show ${show.id}:`, error)
-        return null
+        if (error) {
+            console.error(`Failed to sync watching show ${show.id}:`, error)
+            return null
+        }
     }
 
     return {
@@ -162,111 +174,161 @@ const syncCaughtUpShow = async (show: SyncShow): Promise<SyncResult | null> => {
 }
 
 /**
- * One-time-per-UTC-day background sweep over the user's TV watchlist.
+ * Fetch all TV shows for the user with pagination.
+ */
+const fetchUserTVShows = async (userId: string): Promise<SyncShow[]> => {
+    const allShows: SyncShow[] = []
+    let hasMore = true
+    let page = 0
+    const pageSize = 1000
+    while (hasMore) {
+        const { data, error } = await supabase
+            .from('watchlist')
+            .select('id, tmdb_id, status, last_season_check')
+            .eq('user_id', userId)
+            .in('media_type', ['tv'])
+            .range(page * pageSize, (page + 1) * pageSize - 1)
+
+        if (error) {
+            console.error('useDailyTVSync: failed to fetch watchlist:', error)
+            return []
+        }
+        if (data) {
+            allShows.push(...data)
+            if (data.length < pageSize) hasMore = false
+        } else {
+            hasMore = false
+        }
+        page++
+    }
+    return allShows
+}
+
+/**
+ * Process a group of shows in batches, calling the appropriate sync function
+ * for each. Returns collected results after all batches complete.
+ */
+const processSyncShows = async (
+    shows: SyncShow[],
+    syncFn: (show: SyncShow) => Promise<SyncResult | null>,
+): Promise<SyncResult[]> => {
+    const collected: (SyncResult | null)[] = []
+    for (let i = 0; i < shows.length; i += SYNC_BATCH_SIZE) {
+        const batch = shows.slice(i, i + SYNC_BATCH_SIZE)
+        const results = await Promise.allSettled(batch.map(syncFn))
+        for (const r of results) {
+            if (r.status === 'fulfilled') collected.push(r.value)
+        }
+        if (i + SYNC_BATCH_SIZE < shows.length) {
+            await delay(SYNC_BATCH_DELAY_MS)
+        }
+    }
+    return collected.filter((u): u is SyncResult => u != null)
+}
+
+/**
+ * Apply collected sync results to the Zustand store via `applySyncUpdates`.
+ */
+const applyResults = (results: SyncResult[]) => {
+    if (results.length === 0) return
+    const updates = results.map((u) => ({
+        id: u.id,
+        status: u.status,
+        ...(u.total_episodes != null ? { total_episodes: u.total_episodes } : {}),
+        ...(u.last_season_check != null ? { last_season_check: u.last_season_check } : {}),
+        ...(u.updated_at != null ? { updated_at: u.updated_at } : {}),
+    }))
+    useLibraryStore.getState().applySyncUpdates(updates)
+}
+
+/**
+ * Background TV sync hook.
  *
- * - Refreshes the "episodes left" badge for `watching` shows (recalcs the
- *   released-episode count).
- * - Moves `caught_up` shows back to `watching` when a new released
- *   episode is available.
+ * Performs two complementary syncs:
  *
- * Runs on the first open of the app each UTC day, bounded to ~once per show per
- * day via the `last_season_check` UTC-date gate, and rate-limited across batched
- * concurrency to avoid hammering the TMDB proxy.
+ * 1. **Daily sweep** (once per UTC day on mount): Full sync that refreshes
+ *    episode counts for `watching` shows and moves `caught_up` shows back to
+ *    `watching` when new episodes air. Bounded by the `last_season_check`
+ *    UTC-date gate to avoid re-processing shows already checked today.
  *
- * Deliberately NOT re-run on tab focus/visibility: returning to a tab should
- * never trigger a re-verify of the whole library. The once-per-UTC-day mount
- * sweep — plus the per-show `last_season_check` gate — is enough to catch
- * newly-airing episodes when the app is actually opened on a new day.
+ * 2. **Tab-focus refresh** (on `visibilitychange`): Lightweight sync that only
+ *    recalculates `total_episodes` for `watching` shows. No DB writes, no status
+ *    transitions. Ensures the "episodes left" badge stays accurate when the user
+ *    switches back to the app after an episode airs during the day.
  */
 export const useDailyTVSync = (userId: string | null) => {
     const isInitialized = useLibraryStore((state) => state.isInitialized)
+
+    // Lightweight episode-count refresh for watching shows only.
+    // Runs on tab focus — no DB writes, no status transitions, just updates the
+    // in-memory badge count so the TVShows page shows accurate episode counts.
+    const refreshCounts = useCallback(async () => {
+        if (!userId || !isInitialized) return
+
+        const allShows = await fetchUserTVShows(userId)
+        if (allShows.length === 0) return
+
+        const watching = allShows.filter(s => s.status === 'watching')
+        if (watching.length === 0) return
+
+        const results = await processSyncShows(watching, (show) =>
+            syncWatchingShow(show, true)
+        )
+        applyResults(results)
+    }, [userId, isInitialized])
 
     useEffect(() => {
         if (!userId || !isInitialized) return
 
         let cancelled = false
 
-        const sweep = async () => {
-            // Fetch the user's TV shows once; filter by our scopes on the client.
-            const allShows: SyncShow[] = []
-            let hasMore = true
-            let page = 0
-            const pageSize = 1000
-            while (hasMore) {
-                const { data, error } = await supabase
-                    .from('watchlist')
-                    .select('id, tmdb_id, status, last_season_check')
-                    .eq('user_id', userId)
-                    .in('media_type', ['tv'])
-                    .range(page * pageSize, (page + 1) * pageSize - 1)
+        const sweep = async (scope: 'daily' | 'focus') => {
+            const allShows = await fetchUserTVShows(userId)
+            if (allShows.length === 0 || cancelled) return
 
-                if (error) {
-                    console.error('useDailyTVSync: failed to fetch watchlist:', error)
-                    return
-                }
-                if (data) {
-                    allShows.push(...data)
-                    if (data.length < pageSize) hasMore = false
-                } else {
-                    hasMore = false
-                }
-                page++
-            }
-
-            if (allShows.length === 0) return
-
-            // Split into scopes and only process shows that are due (not yet checked today or a previous UTC day).
-            const watching = allShows.filter(s => s.status === 'watching' && isDueForSync(s.last_season_check))
-            const caughtUp = allShows.filter(
-                s => s.status === 'caught_up' && isDueForSync(s.last_season_check)
+            // Daily: process watching + caught_up, gated by last_season_check.
+            // Focus: watching (no gate) + caught_up (no gate) — always refresh
+            // episode counts and move newly-available caught_up shows back to watching.
+            const watching = allShows.filter(s =>
+                s.status === 'watching' &&
+                (scope === 'focus' || isDueForSync(s.last_season_check))
+            )
+            const caughtUp = allShows.filter(s =>
+                s.status === 'caught_up' &&
+                (scope === 'focus' || isDueForSync(s.last_season_check))
             )
 
-            // Process batches with small concurrency to stay TMDB-friendly,
-            // collecting lightweight updates to apply to the store in one pass at
-            // the end (instead of a heavy cache-invalidating refresh per show).
-            const collected: (SyncResult | null)[] = []
-            for (const group of [watching, caughtUp]) {
-                for (let i = 0; i < group.length; i += SYNC_BATCH_SIZE) {
-                    const batch = group.slice(i, i + SYNC_BATCH_SIZE)
-                    const results = await Promise.allSettled(
-                        batch.map(show =>
-                            show.status === 'watching'
-                                ? syncWatchingShow(show)
-                                : syncCaughtUpShow(show)
-                        )
-                    )
-                    for (const r of results) {
-                        if (r.status === 'fulfilled') collected.push(r.value)
-                    }
-                    if (i + SYNC_BATCH_SIZE < group.length) {
-                        await delay(SYNC_BATCH_DELAY_MS)
-                    }
-                }
-            }
-
+            const watchingResults = await processSyncShows(watching, (show) =>
+                syncWatchingShow(show, scope === 'focus')
+            )
             if (cancelled) return
 
-            const updates = collected.filter(
-                (u): u is SyncResult => u != null
-            ).map((u) => ({
-                id: u.id,
-                status: u.status,
-                ...(u.total_episodes != null ? { total_episodes: u.total_episodes } : {}),
-                ...(u.last_season_check != null ? { last_season_check: u.last_season_check } : {}),
-                ...(u.updated_at != null ? { updated_at: u.updated_at } : {}),
-            }))
+            const caughtUpResults = await processSyncShows(caughtUp, syncCaughtUpShow)
+            if (cancelled) return
 
-            if (updates.length > 0) {
-                useLibraryStore.getState().applySyncUpdates(updates)
-            }
+            applyResults([...watchingResults, ...caughtUpResults])
         }
 
-        void sweep().catch(err => {
+        // Full daily sweep on mount
+        void sweep('daily').catch(err => {
             console.error('useDailyTVSync: sweep failed:', err)
         })
 
+        // Lightweight episode-count refresh when the user returns to the tab.
+        // Only recalculates total_episodes for watching shows — no DB writes,
+        // no status transitions, just in-memory badge updates.
+        const handleVisibility = () => {
+            if (document.visibilityState === 'visible') {
+                void sweep('focus').catch(err => {
+                    console.error('useDailyTVSync: focus refresh failed:', err)
+                })
+            }
+        }
+        document.addEventListener('visibilitychange', handleVisibility)
+
         return () => {
             cancelled = true
+            document.removeEventListener('visibilitychange', handleVisibility)
         }
-    }, [userId, isInitialized])
+    }, [userId, isInitialized, refreshCounts])
 }

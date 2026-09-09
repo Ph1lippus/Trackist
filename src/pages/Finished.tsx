@@ -166,6 +166,9 @@ const Finished: React.FC = () => {
                         </div>
                         <div className="discover-grid">
                             {pausedItems.map((item) => {
+                                const episodesLeft = item.total_episodes !== undefined
+                                    ? Math.max(0, item.total_episodes - item.total_episodes_watched)
+                                    : undefined
                                 const isSelected = selectedIds.has(item.id)
                                 
                                 return (
@@ -178,6 +181,7 @@ const Finished: React.FC = () => {
                                             isInWatchlist={true}
                                             onAdd={selectionMode ? undefined : () => {}}
                                             onMarkUnwatched={selectionMode ? undefined : () => setUnwatchModal({ isOpen: true, item, isTV: item.media_type === 'tv' })}
+                                            episodesLeft={episodesLeft}
                                             showIcons={showIcons}
                                         />
                                     </div>

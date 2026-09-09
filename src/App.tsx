@@ -298,7 +298,7 @@ const AppContent: React.FC = () => {
 
         let cancelled = false
 
-        const check = async (): Promise<void> => {
+        const check = async (opts?: { force?: boolean }): Promise<void> => {
             if (cancelled) return
 
             const [installed, latestManifest] = await Promise.all([
@@ -308,12 +308,12 @@ const AppContent: React.FC = () => {
             if (cancelled) return
             if (!latestManifest) return
             if (!(latestManifest.versionCode > installed)) return
-            if (getUpdateDismissed(latestManifest.versionName)) return
+            if (!opts?.force && getUpdateDismissed(latestManifest.versionName)) return
             setNativeUpdateVersion(latestManifest.versionName)
             setShowUpdateModal(true)
         }
         const onCheckUpdate = (): void => {
-            void check()
+            void check({ force: true })
         }
 
         void check()

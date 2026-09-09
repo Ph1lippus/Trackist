@@ -78,9 +78,15 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
     const [selectedSeason, setSelectedSeason] = useState<number>(() => {
         const numId = Number(id)
         if (!Number.isFinite(numId) || numId <= 0) return 0
+        const item = useLibraryStore.getState().allItems.find((i) => i.tmdb_id === numId)
+        // Paused / dropped shows should always open at the user's last-watched
+        // season (current_season), not wherever they happened to be browsing.
+        if (item && (item.status === 'paused' || item.status === 'dropped')) {
+            return item.current_season ?? 0
+        }
         const remembered = useDetailModalStore.getState().getRememberedSeason(numId)
         if (remembered != null) return remembered
-        return useLibraryStore.getState().allItems.find((item) => item.tmdb_id === numId)?.current_season ?? 0
+        return item?.current_season ?? 0
     })
     const [showTrailer, setShowTrailer] = useState(false)
     const [trailerKey, setTrailerKey] = useState<string | null>(null)
@@ -466,8 +472,11 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                 // Restore the season the user was on (remembered across any navigations
                 // within this session) instead of re-computing from progress. This keeps
                 // them exactly where they were when they left the detail.
+                // Paused / dropped shows skip the remembered season so they always
+                // open at the user's last-watched position (current_season).
                 const rememberedSeason = useDetailModalStore.getState().getRememberedSeason(Number(id))
-                if (rememberedSeason != null && seasonList.includes(rememberedSeason)) {
+                const isPausedOrDropped = watchlistStatus === 'paused' || watchlistStatus === 'dropped'
+                if (!isPausedOrDropped && rememberedSeason != null && seasonList.includes(rememberedSeason)) {
                     setSelectedSeason(rememberedSeason)
                     await loadSeason(rememberedSeason)
 
