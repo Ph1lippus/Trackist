@@ -701,8 +701,18 @@ export const updateStatusToWatching = async (watchlistId: string): Promise<void>
  * still works.
  * If the show has ended on TMDB, sets status to 'completed'.
  * If still airing, sets status to 'caught_up'.
+ *
+ * Pass `{ awaitPersist: true }` when the caller needs every episode row to
+ * already exist in `watchlist_episodes` before this resolves (e.g. so a
+ * follow-up `getWatchedEpisodes()` reflects the full set instead of racing
+ * the background save). The default fast path keeps the background step
+ * fire-and-forget.
  */
-export const markShowAsFullyWatched = async (watchlistId: string, tmdbId: number): Promise<string> => {
+export const markShowAsFullyWatched = async (
+    watchlistId: string,
+    tmdbId: number,
+    options?: { awaitPersist?: boolean }
+): Promise<string> => {
     try {
         const details = await getTVDetails(tmdbId)
         const showEnded = details.status === 'Ended' || details.status === 'Canceled'
@@ -736,7 +746,14 @@ export const markShowAsFullyWatched = async (watchlistId: string, tmdbId: number
 
         // 2. Continue the heavy work in the background so the caller isn't
         // blocked on TMDB season fetches or episode inserts before celebrating.
-        void completeShowInBackground(watchlistId, tmdbId, newStatus, provisionalCount)
+        // With awaitPersist the caller needs the episode rows committed before
+        // proceeding, so await the full completion instead.
+        const persist = completeShowInBackground(watchlistId, tmdbId, newStatus, provisionalCount)
+        if (options?.awaitPersist) {
+            await persist
+        } else {
+            void persist
+        }
 
         return newStatus
     } catch (err) {

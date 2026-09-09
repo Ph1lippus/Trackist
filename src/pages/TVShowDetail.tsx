@@ -769,42 +769,44 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
         if (markAll) {
             const episodesToMark: LocalEpisode[] = []
 
+            // Current (selected) season: mark every released episode up to and
+            // including the clicked one.
             for (const ep of episodes) {
-                if (ep.season_number < episode.season_number && isEpisodeReleased(ep)) {
-                    episodesToMark.push(ep)
-                } else if (ep.season_number === episode.season_number && ep.episode_number <= episode.episode_number && isEpisodeReleased(ep)) {
+                if (ep.episode_number <= episode.episode_number && isEpisodeReleased(ep)) {
                     episodesToMark.push(ep)
                 }
             }
 
-            const uncachedEarlierSeasons = seasons.filter(s => s < episode.season_number && !seasonCache.current.has(s))
-
-            const seasonPromises = uncachedEarlierSeasons.map(s =>
-                getTVSeasonDetails(Number(id), s).then(data => data.episodes || [])
-            )
-            const earlierSeasonEpisodes = await Promise.all(seasonPromises)
-
-            for (let i = 0; i < earlierSeasonEpisodes.length; i++) {
-                const s = uncachedEarlierSeasons[i]
-                for (const ep of earlierSeasonEpisodes[i]) {
-                    const localEp: LocalEpisode = {
-                        id: `${id}-${s}-${ep.episode_number}`,
-                        season_number: s,
-                        episode_number: ep.episode_number,
-                        tmdb_episode_id: ep.id,
-                        title: ep.name,
-                        still_path: ep.still_path ?? undefined,
-                        overview: ep.overview,
-                        vote_average: normalizeEpisodeScore(ep.vote_average),
-                        air_date: ep.air_date,
-                        runtime: ep.runtime,
-                        watched: false
+            // Earlier seasons: mark every released episode, using season data
+            // already in seasonCache when available and fetching the rest from
+            // TMDB. Only iterating the `episodes` state would miss cached
+            // earlier seasons, since that state only holds the selected season.
+            await Promise.all(seasons
+                .filter(s => s < episode.season_number)
+                .map(async s => {
+                    let seasonEps = seasonCache.current.get(s)
+                    if (!seasonEps) {
+                        const data = await getTVSeasonDetails(Number(id), s)
+                        seasonEps = (data.episodes || []).map((ep): LocalEpisode => ({
+                            id: `${id}-${s}-${ep.episode_number}`,
+                            season_number: s,
+                            episode_number: ep.episode_number,
+                            tmdb_episode_id: ep.id,
+                            title: ep.name,
+                            still_path: ep.still_path ?? undefined,
+                            overview: ep.overview,
+                            vote_average: normalizeEpisodeScore(ep.vote_average),
+                            air_date: ep.air_date,
+                            runtime: ep.runtime,
+                            watched: false
+                        }))
                     }
-                    if (isEpisodeReleased(localEp)) {
-                        episodesToMark.push(localEp)
+                    for (const localEp of seasonEps) {
+                        if (isEpisodeReleased(localEp)) {
+                            episodesToMark.push(localEp)
+                        }
                     }
-                }
-            }
+                }))
 
             try {
                 const extraWatched = new Set(
@@ -946,6 +948,30 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                 console.error('Failed to toggle episode:', err)
             }
         }
+    }
+
+    /**
+     * Mark the entire show as fully watched and reflect it in local state.
+     * Awaits the full episode save (awaitPersist) so every episode row exists
+     * in watchlist_episodes before we read them back — otherwise the read
+     * races the background save and episodes can transiently show as unwatched
+     * (and earlier seasons can be left un-marked).
+     */
+    const markWatchlistFullyWatched = async (wlId: string): Promise<void> => {
+        if (!details) return
+        await markShowAsFullyWatched(wlId, details.id, { awaitPersist: true })
+        const watchedEps = await getWatchedEpisodes(wlId)
+        watchedKeysCache.current.clear()
+        for (const ep of watchedEps) {
+            watchedKeysCache.current.add(`${ep.season_number}-${ep.episode_number}`)
+        }
+        Array.from(seasonCache.current.entries()).forEach(([seasonNum, seasonEps]) => {
+            seasonCache.current.set(seasonNum, seasonEps.map(ep => ({
+                ...ep,
+                watched: true,
+            })))
+        })
+        setEpisodes(prev => prev.map(ep => ({ ...ep, watched: true })))
     }
 
     /**
@@ -1241,9 +1267,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                                     // on the status persist + background episode-saving.
                                                     launchCosmicConfetti()
                                                     // Gold standard: just set the status directly - no need to insert every episode
-                                                    await markShowAsFullyWatched(newWatchlistId, details.id)
-                                                    // Refresh episodes
-                                                    setEpisodes(prev => prev.map(ep => ({ ...ep, watched: true })))
+                                                    await markWatchlistFullyWatched(newWatchlistId)
                                                 }
                                                 setIsUpdatingStatus(false)
                                             }}
@@ -1409,9 +1433,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                                     // on the status persist + background episode-saving.
                                                     launchCosmicConfetti()
                                                     // Gold standard: just set the status directly - no need to insert every episode
-                                                    await markShowAsFullyWatched(newWatchlistId, details.id)
-                                                    // Refresh episodes
-                                                    setEpisodes(prev => prev.map(ep => ({ ...ep, watched: true })))
+                                                    await markWatchlistFullyWatched(newWatchlistId)
                                                 }
                                                 setIsUpdatingStatus(false)
                                             }}
@@ -1828,11 +1850,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                 // finished yet, so celebrate the intent immediately instead of waiting
                                 // on the status persist + background episode-saving.
                                 launchCosmicConfetti()
-                                await markShowAsFullyWatched(watchlistId, details.id)
-                                const watchedEps = await getWatchedEpisodes(watchlistId)
-                                watchedKeysCache.current = new Set(
-                                    watchedEps.map(ep => `${ep.season_number}-${ep.episode_number}`)
-                                )
+                                await markWatchlistFullyWatched(watchlistId)
                             } else {
                                 const success = await removeAllWatchedEpisodes(watchlistId)
                                 if (!success) throw new Error('Failed to unmark all episodes')
@@ -1942,7 +1960,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                     {modalLoading ? 'Updating...' : 'Watching'}
                                 </button>
                             )}
-                            {watchlistStatus !== 'paused' && (
+                            {watchlistStatus !== 'paused' && watchlistStatus !== 'completed' && watchlistStatus !== 'caught_up' && (
                             <button
                                 onClick={async () => {
                                     if (!watchlistId) return
@@ -1982,7 +2000,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                 {modalLoading ? 'Updating...' : 'Paused'}
                             </button>
                             )}
-                            {watchlistStatus !== 'dropped' && (
+                            {watchlistStatus !== 'dropped' && watchlistStatus !== 'completed' && watchlistStatus !== 'caught_up' && (
                             <button
                                 onClick={async () => {
                                     if (!watchlistId) return

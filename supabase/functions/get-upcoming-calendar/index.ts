@@ -4,8 +4,10 @@
  const TMDB_API_KEY = Deno.env.get('TMDB_API_KEY')
  const TMDB_BASE_URL = 'https://api.themoviedb.org/3'
  const TVMAZE_BASE_URL = 'https://api.tvmaze.com'
- const WATCHLIST_PAGE_SIZE = 1000
- const TVMAZE_CONCURRENCY = 6
+const WATCHLIST_PAGE_SIZE = 1000
+  const TVMAZE_CONCURRENCY = 6
+  // TVmaze rate-limits to ~20 calls / 10s per IP; back off once on 429.
+  const TVMAZE_RATE_LIMIT_RETRY_MS = 2500
 
  if (!TMDB_API_KEY) {
    throw new Error('TMDB_API_KEY is not set')
@@ -121,23 +123,32 @@
    }
  }
 
- async function fetchTVMazeSchedule(tmdbId: number): Promise<TVMazeEpisode[]> {
-   const external = await getTMDBExternalIds(tmdbId)
-   if (!external?.imdb_id) return []
+async function fetchTVMazeJson(url: string): Promise<Response | null> {
+    let res = await fetch(url)
+    if (res.status === 429) {
+      await new Promise(resolve => setTimeout(resolve, TVMAZE_RATE_LIMIT_RETRY_MS))
+      res = await fetch(url)
+    }
+    return res.ok ? res : null
+  }
 
-   const look = await fetch(`${TVMAZE_BASE_URL}/lookup/shows?imdb=${external.imdb_id}`)
-   if (!look.ok) {
-     console.warn('[TVMaze] lookup failed', look.status, tmdbId)
-     return []
-   }
-   const show = (await look.json()) as { id?: number }
-   if (!show.id) return []
+  async function fetchTVMazeSchedule(tmdbId: number): Promise<TVMazeEpisode[]> {
+    const external = await getTMDBExternalIds(tmdbId)
+    if (!external?.imdb_id) return []
 
-   const res = await fetch(`${TVMAZE_BASE_URL}/shows/${show.id}/episodes`)
-   if (!res.ok) {
-     console.warn('[TVMaze] episodes fetch failed', res.status, tmdbId)
-     return []
-   }
+    const look = await fetchTVMazeJson(`${TVMAZE_BASE_URL}/lookup/shows?imdb=${external.imdb_id}`)
+    if (!look) {
+      console.warn('[TVMaze] lookup failed', tmdbId)
+      return []
+    }
+    const show = (await look.json()) as { id?: number }
+    if (!show.id) return []
+
+    const res = await fetchTVMazeJson(`${TVMAZE_BASE_URL}/shows/${show.id}/episodes`)
+    if (!res) {
+      console.warn('[TVMaze] episodes fetch failed', tmdbId)
+      return []
+    }
    const entries = (await res.json()) as {
      season?: number
      number?: number | null
