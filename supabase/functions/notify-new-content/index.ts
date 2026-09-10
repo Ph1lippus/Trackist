@@ -79,14 +79,6 @@ interface TMDBEpisode {
   still_path?: string | null
 }
 
-interface WatchProviderResponse {
-  results?: Record<string, {
-    flatrate?: { provider_name: string; logo_path: string }[]
-    rent?: { provider_name: string; logo_path: string }[]
-    buy?: { provider_name: string; logo_path: string }[]
-  }>
-}
-
 const getUTCDateString = (date: Date): string =>
   `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`
 
@@ -154,11 +146,9 @@ async function mapWithConcurrency<T, R>(
 }
 
 const TVMAZE_BASE_URL = 'https://api.tvmaze.com'
-// Edge isolates can be reused for a long time; an unbounded, TTL-less cache
-// would serve stale schedules forever. 6h matches the client-side cache.
 const TVMAZE_CACHE_TTL_MS = 6 * 60 * 60 * 1000
-// TVmaze rate-limits to ~20 calls / 10s per IP; back off once on 429.
-const TVMAZE_RATE_LIMIT_RETRY_MS = 2500
+const TVMAZE_MAX_RETRIES = 3
+const TVMAZE_RETRY_DELAYS_MS = [1000, 2500, 5000]
 const tvmazeMemoryCache = new Map<number, { episodes: TVMazeEpisode[]; expiresAt: number }>()
 
 interface TVMazeEpisode {
@@ -180,12 +170,28 @@ async function getTMDBExternalIds(tmdbId: number): Promise<{ imdb_id?: string } 
 }
 
 async function fetchTVMazeJson(url: string): Promise<Response | null> {
-  let res = await fetchWithTimeout(url)
-  if (res.status === 429) {
-    await new Promise(resolve => setTimeout(resolve, TVMAZE_RATE_LIMIT_RETRY_MS))
-    res = await fetchWithTimeout(url)
+  for (let attempt = 0; attempt <= TVMAZE_MAX_RETRIES; attempt++) {
+    try {
+      const res = await fetchWithTimeout(url)
+      if (res.status === 429) {
+        if (attempt < TVMAZE_MAX_RETRIES) {
+          await new Promise(resolve => setTimeout(resolve, TVMAZE_RETRY_DELAYS_MS[attempt]))
+          continue
+        }
+        console.warn('[TVMaze] rate limited after retries', url)
+        return null
+      }
+      return res.ok ? res : null
+    } catch {
+      if (attempt < TVMAZE_MAX_RETRIES) {
+        await new Promise(resolve => setTimeout(resolve, TVMAZE_RETRY_DELAYS_MS[attempt]))
+        continue
+      }
+      console.warn('[TVMaze] request failed after retries', url)
+      return null
+    }
   }
-  return res.ok ? res : null
+  return null
 }
 
 async function fetchTVMazeSchedule(tmdbId: number): Promise<TVMazeEpisode[]> {
@@ -292,13 +298,11 @@ function isDueForUserDate(dateString: string, timezone: string, now: Date, _noti
 
 function formatProviders(providers: Record<string, unknown> | null | undefined): string {
   if (!providers || typeof providers !== 'object') return ''
-  const result = providers as WatchProviderResponse
+  const p = providers as { flatrate?: { name: string }[]; rent?: { name: string }[]; buy?: { name: string }[] }
   const names: string[] = []
-  for (const country of Object.values(result)) {
-    if (country.flatrate) names.push(...country.flatrate.map(p => p.provider_name))
-    if (country.rent) names.push(...country.rent.map(p => p.provider_name))
-    if (country.buy) names.push(...country.buy.map(p => p.provider_name))
-  }
+  if (p.flatrate) names.push(...p.flatrate.map(x => x.name))
+  if (p.rent) names.push(...p.rent.map(x => x.name))
+  if (p.buy) names.push(...p.buy.map(x => x.name))
   const unique = [...new Set(names)]
   return unique.length > 0 ? ` on ${unique.join(', ')}` : ''
 }

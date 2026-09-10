@@ -18,6 +18,7 @@ interface MovieRow {
   id: string
   tmdb_id: number
   country_code: string | null
+  release_date?: string | null
 }
 
 interface TMDBReleaseDate {
@@ -149,19 +150,19 @@ serve(async (req: Request) => {
         const movies: MovieRow[] = await fetchAllRows<MovieRow>(
           supabase
             .from('watchlist')
-            .select('id, tmdb_id')
+            .select('id, tmdb_id, release_date')
             .eq('user_id', userId)
             .eq('media_type', 'movie')
             .not('tmdb_id', 'is', null)
-            .or(`digital_release_date.is.null,last_provider_sync.is.null,last_provider_sync.lt.${new Date(Date.now() - STALE_AFTER_MS).toISOString()}`)
+            .or(`digital_release_date.is.null,release_date.is.null,last_provider_sync.is.null,last_provider_sync.lt.${new Date(Date.now() - STALE_AFTER_MS).toISOString()}`)
         )
 
         if (movies.length === 0) continue
 
         const results = await mapWithConcurrency(
           movies,
-          async (movie): Promise<{ id: string; digitalDate: string | null }> => {
-            if (!movie.tmdb_id) return { id: movie.id, digitalDate: null }
+          async (movie): Promise<{ id: string; digitalDate: string | null; theatricalDate: string | null }> => {
+            if (!movie.tmdb_id) return { id: movie.id, digitalDate: null, theatricalDate: null }
 
             try {
               const data = await fetchJSON<TMDBReleaseDatesResponse>(
@@ -169,10 +170,11 @@ serve(async (req: Request) => {
               )
 
               const countryResults = data.results.filter(r => r.iso_3166_1 === countryCode)
-              if (countryResults.length === 0) return { id: movie.id, digitalDate: null }
+              if (countryResults.length === 0) return { id: movie.id, digitalDate: null, theatricalDate: null }
 
-              const digitalReleases = countryResults
-                .flatMap(r => r.release_dates || [])
+              const allReleases = countryResults.flatMap(r => r.release_dates || [])
+
+              const digitalReleases = allReleases
                 .filter(rd => rd.type === 4 && rd.release_date)
                 .sort((a, b) => new Date(a.release_date).getTime() - new Date(b.release_date).getTime())
 
@@ -180,19 +182,35 @@ serve(async (req: Request) => {
                 ? digitalReleases[0].release_date.split('T')[0]
                 : null
 
-              return { id: movie.id, digitalDate }
+              // Types 1=Premiere, 2=Theatrical limited, 3=Theatrical wide
+              const theatricalReleases = allReleases
+                .filter(rd => (rd.type === 1 || rd.type === 2 || rd.type === 3) && rd.release_date)
+                .sort((a, b) => new Date(a.release_date).getTime() - new Date(b.release_date).getTime())
+
+              const theatricalDate = theatricalReleases[0]?.release_date
+                ? theatricalReleases[0].release_date.split('T')[0]
+                : null
+
+              return { id: movie.id, digitalDate, theatricalDate }
             } catch (error) {
               console.error(`Failed to fetch release dates for movie ${movie.tmdb_id}:`, error)
-              return { id: movie.id, digitalDate: null }
+              return { id: movie.id, digitalDate: null, theatricalDate: null }
             }
           },
           TMDB_CONCURRENCY
         )
 
-        for (const { id, digitalDate } of results) {
+        for (const { id, digitalDate, theatricalDate } of results) {
           const update: Record<string, unknown> = { last_provider_sync: new Date().toISOString() }
           if (digitalDate) {
             update.digital_release_date = digitalDate
+          }
+          if (theatricalDate) {
+            // Only overwrite release_date if it's missing or different from what's stored
+            const movie = movies.find(m => m.id === id)
+            if (!movie?.release_date || movie.release_date !== theatricalDate) {
+              update.release_date = theatricalDate
+            }
           }
 
           const { error } = await supabase

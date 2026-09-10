@@ -6,8 +6,8 @@
  const TVMAZE_BASE_URL = 'https://api.tvmaze.com'
 const WATCHLIST_PAGE_SIZE = 1000
   const TVMAZE_CONCURRENCY = 6
-  // TVmaze rate-limits to ~20 calls / 10s per IP; back off once on 429.
-  const TVMAZE_RATE_LIMIT_RETRY_MS = 2500
+  const TVMAZE_MAX_RETRIES = 3
+  const TVMAZE_RETRY_DELAYS_MS = [1000, 2500, 5000]
 
  if (!TMDB_API_KEY) {
    throw new Error('TMDB_API_KEY is not set')
@@ -125,13 +125,29 @@ const WATCHLIST_PAGE_SIZE = 1000
    }
  }
 
-async function fetchTVMazeJson(url: string): Promise<Response | null> {
-    let res = await fetch(url)
-    if (res.status === 429) {
-      await new Promise(resolve => setTimeout(resolve, TVMAZE_RATE_LIMIT_RETRY_MS))
-      res = await fetch(url)
+  async function fetchTVMazeJson(url: string): Promise<Response | null> {
+    for (let attempt = 0; attempt <= TVMAZE_MAX_RETRIES; attempt++) {
+      try {
+        const res = await fetch(url)
+        if (res.status === 429) {
+          if (attempt < TVMAZE_MAX_RETRIES) {
+            await new Promise(resolve => setTimeout(resolve, TVMAZE_RETRY_DELAYS_MS[attempt]))
+            continue
+          }
+          console.warn('[TVMaze] rate limited after retries', url)
+          return null
+        }
+        return res.ok ? res : null
+      } catch {
+        if (attempt < TVMAZE_MAX_RETRIES) {
+          await new Promise(resolve => setTimeout(resolve, TVMAZE_RETRY_DELAYS_MS[attempt]))
+          continue
+        }
+        console.warn('[TVMaze] request failed after retries', url)
+        return null
+      }
     }
-    return res.ok ? res : null
+    return null
   }
 
   async function fetchTVMazeSchedule(tmdbId: number): Promise<TVMazeEpisode[]> {
