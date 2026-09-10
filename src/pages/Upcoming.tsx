@@ -8,7 +8,7 @@ import { usePageTitle } from '../hooks/usePageTitle'
 import useDetailModalStore from '../stores/detailModalStore'
 import {
     getYearMonth,
-    isToday,
+    isTodayLocal,
     formatDateString,
     formatAirstampTime
 } from '../utils/dateUtils'
@@ -371,7 +371,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                             const dateKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`
 
                             const dayItems = groupedItems[dateKey] || []
-                            const isTodayDate = isToday(dateKey)
+                            const isTodayDate = isTodayLocal(dateKey)
 
                             const cardWidth = 72
                             const minOverlap = 8
