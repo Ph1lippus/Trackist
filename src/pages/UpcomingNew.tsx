@@ -14,6 +14,7 @@ interface UpcomingItem {
     poster_path: string | null
     type: 'episode' | 'movie'
     date: string
+    release_type?: 'theatrical' | 'digital'
     item: WatchlistItem
     episode?: {
         season_number: number
@@ -62,6 +63,7 @@ const mapCalendarItem = (item: CalendarItem): UpcomingItem => ({
     date: item.media_type === 'tv'
         ? (item.airstamp ? new Date(item.airstamp).toISOString().split('T')[0] : item.air_date)
         : item.release_date,
+    release_type: item.media_type === 'movie' ? item.release_type : undefined,
     item: {
         id: item.watchlist_id,
         user_id: '',
@@ -94,25 +96,16 @@ const UpcomingNew: React.FC = () => {
         return airstampTimes[key] || null
     }
 
-    const getEpisodeDateTime = (item: UpcomingItem): string | null => {
+    const getEpisodeTimeOnly = (item: UpcomingItem): string | null => {
         if (item.type !== 'episode' || !item.item.tmdb_id || !item.episode) return null
         const key = `${item.item.tmdb_id}-${item.episode.season_number}-${item.episode.episode_number}`
-        const stamp = airstamps[key]
-        if (!stamp) return getEpisodeTime(item)
-        const date = new Date(stamp)
-        if (Number.isNaN(date.getTime())) return getEpisodeTime(item)
-        const dateStr = formatDateString(`${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`, {
-            month: 'short',
-            day: 'numeric',
-            year: date.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-        })
-        const timeStr = airstampTimes[key] || ''
-        return timeStr ? `${dateStr} · ${timeStr}` : dateStr
+        return airstampTimes[key] || null
     }
 
     const getEpisodeTooltip = (item: UpcomingItem): string | undefined => {
         if (item.type === 'movie') {
-            return item.title || undefined
+            const label = item.release_type === 'digital' ? 'Digital' : 'Cinema'
+            return `${item.title}\n${label}`
         }
         if (item.type !== 'episode' || !item.episode) return undefined
         const parts = [`S${item.episode.season_number} E${item.episode.episode_number}`]
@@ -316,15 +309,15 @@ const UpcomingNew: React.FC = () => {
                                                                     <span> - {item.episode.title}</span>
                                                                 )}
                                                             </span>
-                                                            {getEpisodeDateTime(item) && (
-                                                                <span className="upcoming-new-card-time">{getEpisodeDateTime(item)}</span>
+                                                            {getEpisodeTimeOnly(item) && (
+                                                                <span className="upcoming-new-card-time">{getEpisodeTimeOnly(item)}</span>
                                                             )}
                                                         </div>
                                                     )}
 
                                                     {item.type === 'movie' && (
                                                         <p className="upcoming-new-card-movie-release">
-                                                            Movie Release
+                                                            {item.release_type === 'digital' ? 'Digital' : 'In Theaters'}
                                                         </p>
                                                     )}
                                                 </div>

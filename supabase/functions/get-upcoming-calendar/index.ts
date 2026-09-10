@@ -34,6 +34,7 @@ const WATCHLIST_PAGE_SIZE = 1000
    title: string
    poster_path: string | null
    release_date?: string | null
+   digital_release_date?: string | null
  }
 
  interface TVMazeEpisode {
@@ -53,6 +54,7 @@ const WATCHLIST_PAGE_SIZE = 1000
    poster_path: string | null
    air_date?: string
    release_date?: string
+   release_type?: 'theatrical' | 'digital'
    airstamp?: string
    season_number?: number
    episode_number?: number
@@ -212,15 +214,15 @@ async function fetchTVMazeJson(url: string): Promise<Response | null> {
            .eq('media_type', 'tv')
            .order('updated_at', { ascending: false })
        ),
-       fetchAllRows<MovieRow>(
-         supabase
-           .from('watchlist')
-           .select('id, tmdb_id, title, poster_path, release_date')
-           .eq('user_id', userId)
-           .eq('media_type', 'movie')
-           .gte('release_date', todayStr)
-           .order('release_date', { ascending: true })
-       ),
+        fetchAllRows<MovieRow>(
+          supabase
+            .from('watchlist')
+            .select('id, tmdb_id, title, poster_path, release_date, digital_release_date')
+            .eq('user_id', userId)
+            .eq('media_type', 'movie')
+            .or(`release_date.gte.${todayStr},digital_release_date.gte.${todayStr}`)
+            .order('release_date', { ascending: true })
+        ),
      ])
 
      const scheduleResults = await mapWithConcurrency(
@@ -267,19 +269,38 @@ async function fetchTVMazeJson(url: string): Promise<Response | null> {
        }
      }
 
-     for (const movie of movies) {
-       if (!movie.tmdb_id || !movie.release_date || movie.release_date < todayStr) continue
+      for (const movie of movies) {
+        if (!movie.tmdb_id) continue
 
-       upcoming.push({
-         id: movie.id,
-         media_type: 'movie',
-         tmdb_id: movie.tmdb_id,
-         watchlist_id: movie.id,
-         title: movie.title,
-         poster_path: movie.poster_path,
-         release_date: movie.release_date,
-       })
-     }
+        const theatricalDate = movie.release_date
+        const digitalDate = movie.digital_release_date
+
+        if (theatricalDate && theatricalDate >= todayStr) {
+          upcoming.push({
+            id: `${movie.id}-theatrical`,
+            media_type: 'movie',
+            tmdb_id: movie.tmdb_id,
+            watchlist_id: movie.id,
+            title: movie.title,
+            poster_path: movie.poster_path,
+            release_date: theatricalDate,
+            release_type: 'theatrical',
+          })
+        }
+
+        if (digitalDate && digitalDate >= todayStr && digitalDate !== theatricalDate) {
+          upcoming.push({
+            id: `${movie.id}-digital`,
+            media_type: 'movie',
+            tmdb_id: movie.tmdb_id,
+            watchlist_id: movie.id,
+            title: movie.title,
+            poster_path: movie.poster_path,
+            release_date: digitalDate,
+            release_type: 'digital',
+          })
+        }
+      }
 
      const uniqueUpcoming = Array.from(
        new Map(upcoming.map(item => [item.id, item])).values()

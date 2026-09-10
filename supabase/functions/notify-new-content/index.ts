@@ -13,10 +13,11 @@ const corsHeaders = {
 const TMDB_API_KEY = Deno.env.get('TMDB_API_KEY')
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3'
 const GMAP_PAGE_SIZE = 1000
-const TMDB_CONCURRENCY = 3
+const TMDB_CONCURRENCY = 2
 const FETCH_TIMEOUT_MS = 8000
 const SCHEDULE_THROTTLE_MS = 60 * 60 * 1000
 const NOTIFICATION_CHECK_THROTTLE_MS = 15 * 60 * 1000
+const MAX_INVOCATION_MS = 25_000
 
 interface TVShowRow {
   id: string
@@ -465,6 +466,7 @@ serve(async (req: Request) => {
     }
 
     const now = new Date()
+    const invocationStart = Date.now()
 
     let userIds: string[]
     if (targetUserId) {
@@ -509,6 +511,11 @@ serve(async (req: Request) => {
 
     for (const userId of userIds) {
       try {
+        if (!targetUserId && Date.now() - invocationStart > MAX_INVOCATION_MS) {
+          console.warn(`Time budget exceeded after ${usersProcessed} users, aborting remaining`)
+          break
+        }
+
         const lastCompletedAt = recentRunMap.get(userId) || 0
         if (!testMode && Date.now() - lastCompletedAt < NOTIFICATION_CHECK_THROTTLE_MS) continue
 
@@ -563,6 +570,10 @@ serve(async (req: Request) => {
             tvShows,
             async (show): Promise<{ show: TVShowRow; episodes: TVMazeEpisode[] }> => {
               if (!show.tmdb_id) return { show, episodes: [] }
+
+              if (show.next_air_at && show.next_air_at > tomorrowStr) {
+                return { show, episodes: [] }
+              }
 
               try {
                 const episodes = await fetchTVMazeSchedule(show.tmdb_id)
