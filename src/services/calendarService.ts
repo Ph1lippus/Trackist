@@ -43,7 +43,7 @@ export type CalendarItem = CalendarEpisodeItem | CalendarMovieItem
 
 // v2: orphans pre-TVMaze caches (which could hold stale calendar items) so
 // every user gets a fresh fetch after deploying - no manual clearing needed.
-const CACHE_PREFIX = 'track1st-calendar-v2'
+const CACHE_PREFIX = 'track1st-calendar-v3'
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000
 
 interface CalendarCache {
