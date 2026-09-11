@@ -87,6 +87,7 @@ interface RunStats {
   errors: number
   usersProcessed: number
   itemsScheduled: number
+  totalScheduled: number
   staleSubscriptionsRemoved: number
   skippedThrottled: number
   showsHydrated: number
@@ -560,6 +561,7 @@ serve(async (req: Request) => {
       errors: 0,
       usersProcessed: 0,
       itemsScheduled: 0,
+      totalScheduled: 0,
       staleSubscriptionsRemoved: 0,
       skippedThrottled: 0,
       showsHydrated: 0,
@@ -581,6 +583,7 @@ serve(async (req: Request) => {
         notifications_sent: 0,
         errors: 0,
         items_scheduled: 0,
+        total_scheduled: 0,
         stale_subscriptions_removed: 0,
         shows_hydrated: 0,
       }), {
@@ -962,6 +965,17 @@ serve(async (req: Request) => {
 
     if (targetUserId) {
       await processUserId(targetUserId)
+
+      const profile = profileMap.get(targetUserId) ?? {}
+      const timezone = typeof profile.timezone === 'string' ? profile.timezone : 'UTC'
+      const tomorrowStr = tomorrowInTimezone(timezone, now)
+      const { count } = await supabase
+        .from('watchlist')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', targetUserId)
+        .not('next_air_at', 'is', null)
+        .gt('next_air_at', tomorrowStr)
+      stats.totalScheduled = count ?? 0
     } else {
       await mapWithConcurrency(userIds, processUserId, USER_CONCURRENCY)
     }
@@ -986,6 +1000,7 @@ serve(async (req: Request) => {
         users_processed: stats.usersProcessed,
         notifications_sent: stats.notificationsSent,
         items_scheduled: stats.itemsScheduled,
+        total_scheduled: stats.totalScheduled,
         stale_subscriptions_removed: stats.staleSubscriptionsRemoved,
         shows_hydrated: stats.showsHydrated,
         users_throttled: stats.skippedThrottled,
