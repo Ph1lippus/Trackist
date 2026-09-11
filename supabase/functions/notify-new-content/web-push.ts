@@ -137,6 +137,24 @@ async function encryptPayloadAes128gcm(
   return concatBytes(header, encrypted)
 }
 
+const vapidTokenCache = new Map<string, Promise<string>>()
+
+// VAPID JWT is only valid for 12h but reusable within an invocation, so cache
+// one token per push-service origin instead of EC-signing on every single push.
+function getVapidToken(
+  subject: string,
+  publicKeyB64: string,
+  privateKeyB64: string,
+  audience: string
+): Promise<string> {
+  let tokenPromise = vapidTokenCache.get(audience)
+  if (!tokenPromise) {
+    tokenPromise = createVapidToken(subject, publicKeyB64, privateKeyB64, audience)
+    vapidTokenCache.set(audience, tokenPromise)
+  }
+  return tokenPromise
+}
+
 export async function sendPushNotification(
   subscription: { endpoint: string; p256dh: string; auth: string },
   payload: string | Uint8Array,
@@ -148,7 +166,7 @@ export async function sendPushNotification(
   const body = typeof payload === 'string' ? TE.encode(payload) : payload
   const encrypted = await encryptPayloadAes128gcm(body, subscription.p256dh, subscription.auth)
   const audience = new URL(subscription.endpoint).origin
-  const token = await createVapidToken(vapid.subject, vapid.publicKey, vapid.privateKey, audience)
+  const token = await getVapidToken(vapid.subject, vapid.publicKey, vapid.privateKey, audience)
 
   const res = await fetch(subscription.endpoint, {
     method: 'POST',

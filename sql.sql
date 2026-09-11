@@ -28,6 +28,10 @@ CREATE TABLE public.watchlist (
   next_episode_number integer DEFAULT 1,
   next_air_at text,
   last_notified_ref text,
+  digital_release_date date,
+  last_movie_notified_ref text,
+  watch_providers jsonb DEFAULT '{}'::jsonb,
+  last_provider_sync timestamp with time zone,
   CONSTRAINT watchlist_pkey PRIMARY KEY (id),
   CONSTRAINT watchlist_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
@@ -102,15 +106,19 @@ CREATE TABLE public.profiles (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   role text NOT NULL DEFAULT 'user'::text,
-  approved boolean NOT NULL DEFAULT false,
   show_stremio_button boolean NOT NULL DEFAULT false,
   show_letterbox_button boolean NOT NULL DEFAULT false,
-  show_tmdb_button boolean NOT NULL DEFAULT false,
   show_media_card_icons boolean NOT NULL DEFAULT false,
   notify_new_episode boolean NOT NULL DEFAULT true,
   notify_new_season boolean NOT NULL DEFAULT true,
   notify_release_date boolean NOT NULL DEFAULT true,
   timezone text DEFAULT 'UTC'::text,
+  notify_hour time without time zone DEFAULT '08:00:00'::time without time zone,
+  country_code character DEFAULT 'PT'::bpchar,
+  movie_notify_on_digital boolean DEFAULT true,
+  always_open_detail_sidebar boolean NOT NULL DEFAULT false,
+  show_tmdb_button boolean NOT NULL DEFAULT false,
+  approved boolean NOT NULL DEFAULT false,
   CONSTRAINT profiles_pkey PRIMARY KEY (id),
   CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
 );
@@ -161,13 +169,21 @@ CREATE TABLE public.blocked_ips (
 CREATE TABLE public.push_subscriptions (
   id uuid NOT NULL DEFAULT gen_random_uuid(),
   user_id uuid NOT NULL,
-  endpoint text NOT NULL UNIQUE,
+  endpoint text UNIQUE,
   keys jsonb NOT NULL DEFAULT '{}'::jsonb CHECK (jsonb_typeof(keys) = 'object'::text),
   user_agent text,
   created_at timestamp with time zone DEFAULT now(),
   last_seen timestamp with time zone DEFAULT now(),
+  platform text NOT NULL DEFAULT 'web'::text,
+  token text,
   CONSTRAINT push_subscriptions_pkey PRIMARY KEY (id),
   CONSTRAINT push_subscriptions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
+CREATE TABLE public.notification_check_runs (
+  user_id uuid NOT NULL,
+  last_completed_at timestamp with time zone NOT NULL,
+  CONSTRAINT notification_check_runs_pkey PRIMARY KEY (user_id),
+  CONSTRAINT notification_check_runs_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
 
 

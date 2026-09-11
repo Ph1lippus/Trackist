@@ -1,0 +1,5 @@
+# This function is called by the pg_cron/pg_net job with an `x-cron-secret`
+# header (no user JWT), so JWT verification is disabled at the platform level.
+# Auth is enforced inside index.ts: it accepts either a valid user JWT
+# (Settings -> Check Now / Test Push) or the matching x-cron-secret.
+verify_jwt = false

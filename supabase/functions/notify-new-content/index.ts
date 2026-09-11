@@ -13,11 +13,16 @@ const corsHeaders = {
 const TMDB_API_KEY = Deno.env.get('TMDB_API_KEY')
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3'
 const GMAP_PAGE_SIZE = 1000
-const TMDB_CONCURRENCY = 2
-const FETCH_TIMEOUT_MS = 8000
-const SCHEDULE_THROTTLE_MS = 60 * 60 * 1000
+const USER_CONCURRENCY = 6
+const FETCH_CONCURRENCY = 12
+const PUSH_CONCURRENCY = 4
+const FETCH_TIMEOUT_MS = 4000
+const SCHEDULE_STALE_MS = 6 * 60 * 60 * 1000
 const NOTIFICATION_CHECK_THROTTLE_MS = 15 * 60 * 1000
-const MAX_INVOCATION_MS = 25_000
+const HYDRATE_BUDGET_MS = 70_000
+const MAX_INVOCATION_MS = 98_000
+
+let invocationStart = 0
 
 interface TVShowRow {
   id: string
@@ -25,7 +30,6 @@ interface TVShowRow {
   title: string
   poster_path: string | null
   status: string | null
-  last_season_number?: number | null
   next_air_at?: string | null
   last_notified_ref?: string | null
   last_season_check?: string | null
@@ -71,24 +75,25 @@ interface NotifyItem extends PushPayload {
   write?: PendingWrite
 }
 
-interface TMDBEpisode {
-  id: number
-  episode_number: number
+interface TVMazeEpisode {
+  season: number
+  episode: number
   name?: string
-  air_date?: string | null
-  still_path?: string | null
+  airstamp: string | null
+}
+
+interface RunStats {
+  notificationsSent: number
+  errors: number
+  usersProcessed: number
+  itemsScheduled: number
+  staleSubscriptionsRemoved: number
+  skippedThrottled: number
+  showsHydrated: number
 }
 
 const getUTCDateString = (date: Date): string =>
   `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}-${String(date.getUTCDate()).padStart(2, '0')}`
-
-async function fetchJSON<T>(url: string): Promise<T> {
-  const response = await fetchWithTimeout(url)
-  if (!response.ok) {
-    throw new Error(`Request failed with status ${response.status}`)
-  }
-  return response.json() as Promise<T>
-}
 
 async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
   const controller = new AbortController()
@@ -98,6 +103,14 @@ async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Respon
   } finally {
     clearTimeout(id)
   }
+}
+
+async function fetchJSON<T>(url: string): Promise<T> {
+  const response = await fetchWithTimeout(url)
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}`)
+  }
+  return response.json() as Promise<T>
 }
 
 interface PagedQuery<T> extends PromiseLike<{ data: T[] | null; error: unknown }> {
@@ -146,24 +159,14 @@ async function mapWithConcurrency<T, R>(
 }
 
 const TVMAZE_BASE_URL = 'https://api.tvmaze.com'
-const TVMAZE_CACHE_TTL_MS = 6 * 60 * 60 * 1000
-const TVMAZE_MAX_RETRIES = 3
-const TVMAZE_RETRY_DELAYS_MS = [1000, 2500, 5000]
-const tvmazeMemoryCache = new Map<number, { episodes: TVMazeEpisode[]; expiresAt: number }>()
-
-interface TVMazeEpisode {
-  season: number
-  episode: number
-  name?: string
-  airstamp: string | null
-}
+const TVMAZE_MAX_RETRIES = 2
+const TVMAZE_RETRY_DELAYS_MS = [300, 800]
 
 async function getTMDBExternalIds(tmdbId: number): Promise<{ imdb_id?: string } | null> {
   try {
-    const data = await fetchJSON<{ imdb_id?: string }>(
+    return await fetchJSON<{ imdb_id?: string }>(
       `${TMDB_BASE_URL}/tv/${tmdbId}/external_ids?api_key=${TMDB_API_KEY}`
     )
-    return data
   } catch {
     return null
   }
@@ -194,27 +197,26 @@ async function fetchTVMazeJson(url: string): Promise<Response | null> {
   return null
 }
 
-async function fetchTVMazeSchedule(tmdbId: number): Promise<TVMazeEpisode[]> {
-  const cached = tvmazeMemoryCache.get(tmdbId)
-  if (cached && cached.expiresAt > Date.now()) return cached.episodes
-  if (cached) tvmazeMemoryCache.delete(tmdbId)
-
+/**
+ * Fetch episode data for a show.
+ *
+ * Returns `[]` ONLY when the schedule is *known* to be empty (no IMDb id, or
+ * not present on TVMaze). Source failures (network errors, 404/429 after
+ * retries) THROW so the caller can fall back to a generic "airing today"
+ * notification and the schedule is NOT marked as checked -- it gets retried
+ * next run instead of being silently "done".
+ */
+async function fetchTVMazeScheduleInner(tmdbId: number): Promise<TVMazeEpisode[]> {
   const external = await getTMDBExternalIds(tmdbId)
   if (!external?.imdb_id) return []
 
   const look = await fetchTVMazeJson(`${TVMAZE_BASE_URL}/lookup/shows?imdb=${external.imdb_id}`)
-  if (!look) {
-    console.warn('[TVMaze] lookup failed', tmdbId)
-    return []
-  }
+  if (!look) throw new Error(`[TVMaze] lookup failed for tmdb ${tmdbId}`)
   const show = (await look.json()) as { id?: number }
   if (!show.id) return []
 
   const res = await fetchTVMazeJson(`${TVMAZE_BASE_URL}/shows/${show.id}/episodes`)
-  if (!res) {
-    console.warn('[TVMaze] episodes fetch failed', tmdbId)
-    return []
-  }
+  if (!res) throw new Error(`[TVMaze] episodes fetch failed for tmdb ${tmdbId}`)
   const entries = (await res.json()) as {
     season?: number
     number?: number | null
@@ -223,7 +225,7 @@ async function fetchTVMazeSchedule(tmdbId: number): Promise<TVMazeEpisode[]> {
   }[]
 
   // Skip specials: TVmaze lists them as season 0 with number null.
-  const episodes = entries
+  return entries
     .filter(entry => (entry.season ?? 0) > 0 && (entry.number ?? 0) > 0)
     .map(entry => ({
       season: entry.season ?? 0,
@@ -231,8 +233,99 @@ async function fetchTVMazeSchedule(tmdbId: number): Promise<TVMazeEpisode[]> {
       name: entry.name ?? undefined,
       airstamp: entry.airstamp ?? null,
     }))
+}
 
-  tvmazeMemoryCache.set(tmdbId, { episodes, expiresAt: Date.now() + TVMAZE_CACHE_TTL_MS })
+// Run-scoped, globally deduped schedule cache. One unique show is fetched once
+// per invocation no matter how many users track it -- the old code fetched the
+// same show once per user, which is what caused the multi-user startup to die.
+const tvmazeCache = new Map<number, TVMazeEpisode[]>()
+const tvmazeInFlight = new Map<number, Promise<TVMazeEpisode[]>>()
+const scheduleWrittenSinceHydrate = new Set<number>()
+const hydratedUniqueShows = new Set<number>()
+
+let activeFetches = 0
+const fetchWaiters: (() => void)[] = []
+
+function acquireFetchSlot(): Promise<void> {
+  if (activeFetches < FETCH_CONCURRENCY) {
+    activeFetches++
+    return Promise.resolve()
+  }
+  return new Promise<void>((resolve) => fetchWaiters.push(resolve))
+}
+
+function releaseFetchSlot(): void {
+  const next = fetchWaiters.shift()
+  if (next) next()
+  else activeFetches--
+}
+
+async function fetchTVMazeSchedule(tmdbId: number): Promise<TVMazeEpisode[]> {
+  const cached = tvmazeCache.get(tmdbId)
+  if (cached) return cached
+  const inFlight = tvmazeInFlight.get(tmdbId)
+  if (inFlight) return inFlight
+
+  const promise = (async () => {
+    await acquireFetchSlot()
+    try {
+      const episodes = await fetchTVMazeScheduleInner(tmdbId)
+      tvmazeCache.set(tmdbId, episodes)
+      return episodes
+    } finally {
+      releaseFetchSlot()
+      tvmazeInFlight.delete(tmdbId)
+    }
+  })()
+
+  tvmazeInFlight.set(tmdbId, promise)
+  return promise
+}
+
+function computeNextAirDate(episodes: TVMazeEpisode[], now: Date): string | null {
+  const startOfTodayUTC = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  const sorted = [...episodes]
+    .filter(ep => ep.airstamp)
+    .sort((a, b) => a.airstamp!.localeCompare(b.airstamp!))
+  for (const ep of sorted) {
+    const t = Date.parse(ep.airstamp!)
+    if (!Number.isNaN(t) && t >= startOfTodayUTC) {
+      return getUTCDateString(new Date(t))
+    }
+  }
+  return null
+}
+
+// Fetch the schedule for a show (once, globally deduped) and persist the
+// derived next_air_at/last_season_check back to every watchlist row for that
+// show. Throws on source failures so the caller can fall back to a generic
+// notification and the schedule is retried on the next run.
+async function getTVMazeScheduleWithWrite(
+  supabase: ReturnType<typeof createClient>,
+  tmdbId: number
+): Promise<TVMazeEpisode[]> {
+  if (Date.now() - invocationStart > HYDRATE_BUDGET_MS) return []
+
+  const episodes = await fetchTVMazeSchedule(tmdbId)
+
+  if (!scheduleWrittenSinceHydrate.has(tmdbId)) {
+    scheduleWrittenSinceHydrate.add(tmdbId)
+    const now = new Date()
+    const nextAir = computeNextAirDate(episodes, now)
+    const patch: Record<string, unknown> = { last_season_check: now.toISOString() }
+    if (nextAir !== null) {
+      patch.next_air_at = nextAir
+    } else {
+      // Known-empty schedule (series finished or not on TVMaze): stop treating
+      // it as pending and persist so it is not re-fetched every single run.
+      patch.next_air_at = null
+    }
+    await supabase
+      .from('watchlist')
+      .update(patch)
+      .eq('tmdb_id', tmdbId)
+  }
+
   return episodes
 }
 
@@ -271,28 +364,17 @@ function tomorrowInTimezone(timezone: string, now: Date = new Date()): string {
   return todayInTimezone(timezone, tomorrow)
 }
 
-
-function getNextDateString(dateString: string): string {
-  const [year, month, day] = dateString.split('-').map(Number)
-  const date = new Date(Date.UTC(year, month - 1, day))
-  date.setUTCDate(date.getUTCDate() + 1)
-  return getUTCDateString(date)
-}
-
 /**
  * An episode/movie is due when its local date (profile timezone) is today or
  * tomorrow. Both stages are always due: the dedup refs (`last_notified_ref` /
  * `last_movie_notified_ref`) already guarantee exactly one notification per
- * episode per stage, and this function runs on app opens rather than a server
- * cron - gating "today" on the notify hour made "Airing today" unreliable:
- * any day the user's only app open happened before the notify hour, today's
- * notification was silently skipped while "Coming tomorrow" (which ignored the
- * hour) still went out.
+ * episode per stage, and this function is driven by the hourly cron rather
+ * than app opens - so both "Coming tomorrow" and "Airing today" fire on their
+ * own days regardless of when the user opens the app.
  */
-function isDueForUserDate(dateString: string, timezone: string, now: Date, _notifyHour: string | null | undefined): boolean {
+function isDueForUserDate(dateString: string, timezone: string, now: Date): boolean {
   const localToday = todayInTimezone(timezone, now)
   const localTomorrow = tomorrowInTimezone(timezone, now)
-
   return dateString === localToday || dateString === localTomorrow
 }
 
@@ -470,7 +552,18 @@ serve(async (req: Request) => {
     }
 
     const now = new Date()
-    const invocationStart = Date.now()
+    invocationStart = Date.now()
+    const isManual = !!targetUserId
+
+    const stats: RunStats = {
+      notificationsSent: 0,
+      errors: 0,
+      usersProcessed: 0,
+      itemsScheduled: 0,
+      staleSubscriptionsRemoved: 0,
+      skippedThrottled: 0,
+      showsHydrated: 0,
+    }
 
     let userIds: string[]
     if (targetUserId) {
@@ -483,7 +576,14 @@ serve(async (req: Request) => {
     }
 
     if (userIds.length === 0) {
-      return new Response(JSON.stringify({ users_processed: 0, notifications_sent: 0, errors: 0 }), {
+      return new Response(JSON.stringify({
+        users_processed: 0,
+        notifications_sent: 0,
+        errors: 0,
+        items_scheduled: 0,
+        stale_subscriptions_removed: 0,
+        shows_hydrated: 0,
+      }), {
         status: 200,
         headers: corsHeaders,
       })
@@ -507,21 +607,22 @@ serve(async (req: Request) => {
       (profileRows || []).map((p) => [p.id as string, p as Record<string, unknown>])
     )
 
-    let notificationsSent = 0
-    let errors = 0
-    let usersProcessed = 0
-    let itemsScheduled = 0
-    let staleSubscriptionsRemoved = 0
+    const pendingRunUpserts: { user_id: string; last_completed_at: string }[] = []
 
-    for (const userId of userIds) {
+    const processUserId = async (userId: string): Promise<void> => {
       try {
-        if (!targetUserId && Date.now() - invocationStart > MAX_INVOCATION_MS) {
-          console.warn(`Time budget exceeded after ${usersProcessed} users, aborting remaining`)
-          break
+        if (!isManual && Date.now() - invocationStart > MAX_INVOCATION_MS) {
+          console.warn('Time budget exceeded, stopping before user', userId)
+          return
         }
 
         const lastCompletedAt = recentRunMap.get(userId) || 0
-        if (!testMode && Date.now() - lastCompletedAt < NOTIFICATION_CHECK_THROTTLE_MS) continue
+        // Manual "Check Now" bypasses the throttle so the button always works.
+        // Dedup refs still prevent duplicates.
+        if (!isManual && Date.now() - lastCompletedAt < NOTIFICATION_CHECK_THROTTLE_MS) {
+          stats.skippedThrottled++
+          return
+        }
 
         const profile = profileMap.get(userId) ?? {}
         const timezone = typeof profile.timezone === 'string' ? profile.timezone : 'UTC'
@@ -530,21 +631,22 @@ serve(async (req: Request) => {
         const wantRelease = profile.notify_release_date !== false
         const movieDigitalOnly = profile.movie_notify_on_digital !== false
 
-        if (!wantEpisode && !wantSeason && !wantRelease) continue
+        if (!wantEpisode && !wantSeason && !wantRelease) return
 
-        const notifyHourSetting = typeof profile.notify_hour === 'string' ? profile.notify_hour : '08:00'
         const todayStr = todayInTimezone(timezone, now)
         const tomorrowStr = tomorrowInTimezone(timezone, now)
+        const staleCutoff = new Date(Date.now() - SCHEDULE_STALE_MS).toISOString()
 
         const [tvShows, movies] = await Promise.all([
           (wantEpisode || wantSeason)
             ? fetchAllRows<TVShowRow>(
                 supabase
                   .from('watchlist')
-                  .select('id, tmdb_id, title, poster_path, status, last_season_number, next_air_at, last_notified_ref, last_season_check, watch_providers')
+                  .select('id, tmdb_id, title, poster_path, status, next_air_at, last_notified_ref, last_season_check, watch_providers')
                   .eq('user_id', userId)
                   .eq('media_type', 'tv')
-                  .or(`next_air_at.is.null,next_air_at.lte.${tomorrowStr}`)
+                  .not('tmdb_id', 'is', null)
+                  .or(`next_air_at.lte.${tomorrowStr},last_season_check.is.null,last_season_check.lt.${staleCutoff}`)
               )
             : Promise.resolve([]),
           wantRelease
@@ -569,83 +671,125 @@ serve(async (req: Request) => {
 
         const movieRefUpdates = new Map<string, { refs: string[]; existingRefs: string }>()
 
-        if (tvShows.length > 0) {
-          const scheduleResults = await mapWithConcurrency(
-            tvShows,
-            async (show): Promise<{ show: TVShowRow; episodes: TVMazeEpisode[] }> => {
-              if (!show.tmdb_id) return { show, episodes: [] }
+        for (const show of tvShows) {
+          if (!show.tmdb_id) continue
 
-              if (show.next_air_at && show.next_air_at > tomorrowStr) {
-                return { show, episodes: [] }
-              }
+          let episodes: TVMazeEpisode[] = []
+          try {
+            episodes = await getTVMazeScheduleWithWrite(supabase, show.tmdb_id)
+            if (episodes.length > 0) hydratedUniqueShows.add(show.tmdb_id)
+          } catch (error) {
+            console.error(`Failed to fetch TVMaze schedule for ${show.title}:`, error)
+          }
 
-              try {
-                const episodes = await fetchTVMazeSchedule(show.tmdb_id)
-                return { show, episodes }
-              } catch (error) {
-                console.error(`Failed to fetch TVMaze schedule for ${show.title}:`, error)
-                return { show, episodes: [] }
-              }
-            },
-            TMDB_CONCURRENCY
-          )
-
-          for (const { show, episodes } of scheduleResults) {
-            if (!show.tmdb_id || episodes.length === 0) continue
-
-            const validEpisodes = episodes.filter(ep => ep.airstamp)
-            if (validEpisodes.length === 0) continue
-
-            const sorted = [...validEpisodes].sort((a, b) => {
-              return a.airstamp!.localeCompare(b.airstamp!)
-            })
-
-            const dueEpisodes = sorted.filter((ep) => {
-              if (!ep.airstamp) return false
-              const localDate = getLocalDateFromAirstamp(ep.airstamp, timezone)
-              return isDueForUserDate(localDate, timezone, now, notifyHourSetting)
-            })
-
-            if (dueEpisodes.length === 0) {
-              if (!show.next_air_at) {
-                const lastCheck = show.last_season_check ? new Date(show.last_season_check).getTime() : 0
-                const nextUnreleased = sorted.find((ep) => {
-                  if (!ep.airstamp) return false
-                  const localDate = getLocalDateFromAirstamp(ep.airstamp, timezone)
-                  return localDate === todayStr || localDate === tomorrowStr || localDate > todayStr
-                })
-                if (Date.now() - lastCheck > SCHEDULE_THROTTLE_MS) {
-                  const nextDate = nextUnreleased ? getUTCDateString(new Date(nextUnreleased.airstamp!)) : null
-                  await supabase
-                    .from('watchlist')
-                    .update({ next_air_at: nextDate, last_season_check: now.toISOString() })
-                    .eq('id', show.id)
-                  if (nextUnreleased) itemsScheduled++
+          // Fallback: TVMaze unreachable but the stored next_air_at says this
+          // show is due -- still notify so a source outage never blocks delivery.
+          if (episodes.length === 0) {
+            if (show.next_air_at) {
+              const bucket = show.next_air_at === todayStr
+                ? 'today'
+                : show.next_air_at === tomorrowStr
+                  ? 'tomorrow'
+                  : null
+              if (bucket) {
+                const ref = `air:${show.next_air_at}:${bucket}`
+                if (show.last_notified_ref !== ref) {
+                  const providerStr = formatProviders(show.watch_providers)
+                  const bucketLabel = bucket === 'today' ? 'Airing today' : 'Coming tomorrow'
+                  addNotification({
+                    title: show.title,
+                    body: `${bucketLabel}${providerStr}`,
+                    url: `/tv/${show.tmdb_id}`,
+                    tag: `tv:${show.id}:${ref}`,
+                    icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
+                    image: show.poster_path ? `https://image.tmdb.org/t/p/w500${show.poster_path}` : undefined,
+                    write: { id: show.id, patch: { last_notified_ref: ref } },
+                  })
                 }
               }
-              continue
             }
+            continue
+          }
 
-            const firstDue = dueEpisodes[0]
-            const firstDueLocalDate = getLocalDateFromAirstamp(firstDue.airstamp!, timezone)
-            const firstDueBucket = firstDueLocalDate === todayStr ? 'today' : 'tomorrow'
-            const isPremiere = firstDue.episode === 1 &&
-              (show.status === 'caught_up' || show.status === 'completed') &&
-              wantSeason
+          const validEpisodes = episodes.filter(ep => ep.airstamp)
+          if (validEpisodes.length === 0) continue
 
-            let addedItem: NotifyItem | null = null
+          const sorted = [...validEpisodes].sort((a, b) => {
+            return a.airstamp!.localeCompare(b.airstamp!)
+          })
 
-            if (isPremiere) {
-              const seasonRef = `S${firstDue.season}premiere:${firstDueLocalDate}:${firstDueBucket}`
-              const legacyRef = `S${firstDue.season}premiere:${firstDueLocalDate}`
+          const dueEpisodes = sorted.filter((ep) => {
+            if (!ep.airstamp) return false
+            const localDate = getLocalDateFromAirstamp(ep.airstamp, timezone)
+            return isDueForUserDate(localDate, timezone, now)
+          })
+
+          if (dueEpisodes.length === 0) continue
+
+          const firstDue = dueEpisodes[0]
+          const firstDueLocalDate = getLocalDateFromAirstamp(firstDue.airstamp!, timezone)
+          const firstDueBucket = firstDueLocalDate === todayStr ? 'today' : 'tomorrow'
+          const isPremiere = firstDue.episode === 1 &&
+            (show.status === 'caught_up' || show.status === 'completed') &&
+            wantSeason
+
+          let addedItem: NotifyItem | null = null
+
+          if (isPremiere) {
+            const seasonRef = `S${firstDue.season}premiere:${firstDueLocalDate}:${firstDueBucket}`
+            const legacyRef = `S${firstDue.season}premiere:${firstDueLocalDate}`
+            const alreadyNotified = show.last_notified_ref === seasonRef ||
+              (firstDueBucket === 'tomorrow' && show.last_notified_ref === legacyRef)
+            if (!alreadyNotified) {
+              const providerStr = formatProviders(show.watch_providers)
+              const bucketLabel = firstDueBucket === 'today' ? 'Premieres today' : 'Coming tomorrow'
+              addedItem = addNotification({
+                title: show.title,
+                body: `${bucketLabel}${providerStr} • ${firstDue.name ? firstDue.name : `Season ${firstDue.season} premiere`}`,
+                url: `/tv/${show.tmdb_id}`,
+                tag: `season:${show.id}:${seasonRef}`,
+                icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
+                image: show.poster_path ? `https://image.tmdb.org/t/p/w500${show.poster_path}` : undefined,
+                write: { id: show.id, patch: { last_notified_ref: seasonRef } },
+              })
+            }
+          } else if (wantEpisode) {
+            if (dueEpisodes.length === 1) {
+              const ep = dueEpisodes[0]
+              const epLocalDate = getLocalDateFromAirstamp(ep.airstamp!, timezone)
+              const newRef = `S${ep.season}E${ep.episode}:${epLocalDate}:${firstDueBucket}`
+              const legacyRef = `S${ep.season}E${ep.episode}:${epLocalDate}`
+              const alreadyNotified = show.last_notified_ref === newRef ||
+                (firstDueBucket === 'tomorrow' && show.last_notified_ref === legacyRef)
+              if (!alreadyNotified) {
+                const providerStr = formatProviders(show.watch_providers)
+                const bucketLabel = firstDueBucket === 'today' ? 'Airing today' : 'Coming tomorrow'
+                addedItem = addNotification({
+                  title: show.title,
+                  body: `${bucketLabel}${providerStr} • ${ep.name ? ep.name : `Episode ${ep.episode}`}`,
+                  url: `/tv/${show.tmdb_id}`,
+                  tag: `episode:${show.id}:${newRef}`,
+                  icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
+                  image: show.poster_path ? `https://image.tmdb.org/t/p/w500${show.poster_path}` : undefined,
+                  write: { id: show.id, patch: { last_notified_ref: newRef } },
+                })
+              }
+            } else {
+              const epCount = dueEpisodes.length
+              const seasonRef = `S${firstDue.season}multi:${firstDueBucket}:${firstDueBucket === 'today' ? todayStr : tomorrowStr}`
+              const legacyRef = `S${firstDue.season}multi:${todayStr}`
               const alreadyNotified = show.last_notified_ref === seasonRef ||
                 (firstDueBucket === 'tomorrow' && show.last_notified_ref === legacyRef)
               if (!alreadyNotified) {
                 const providerStr = formatProviders(show.watch_providers)
-                const bucketLabel = firstDueBucket === 'today' ? 'Premieres today' : 'Coming tomorrow'
+                const bucketLabel = dueEpisodes.some((episode) => {
+                  if (!episode.airstamp) return false
+                  const localDate = getLocalDateFromAirstamp(episode.airstamp, timezone)
+                  return localDate === todayStr
+                }) ? 'Airing today' : 'Coming tomorrow'
                 addedItem = addNotification({
                   title: show.title,
-                  body: `${bucketLabel}${providerStr} • ${firstDue.name ? firstDue.name : `Season ${firstDue.season} premiere`}`,
+                  body: `${bucketLabel}${providerStr} • ${epCount} episodes arriving`,
                   url: `/tv/${show.tmdb_id}`,
                   tag: `season:${show.id}:${seasonRef}`,
                   icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
@@ -653,71 +797,17 @@ serve(async (req: Request) => {
                   write: { id: show.id, patch: { last_notified_ref: seasonRef } },
                 })
               }
-            } else if (wantEpisode) {
-              if (dueEpisodes.length === 1) {
-                const ep = dueEpisodes[0]
-                const epLocalDate = getLocalDateFromAirstamp(ep.airstamp!, timezone)
-                const newRef = `S${ep.season}E${ep.episode}:${epLocalDate}:${firstDueBucket}`
-                const legacyRef = `S${ep.season}E${ep.episode}:${epLocalDate}`
-                const alreadyNotified = show.last_notified_ref === newRef ||
-                  (firstDueBucket === 'tomorrow' && show.last_notified_ref === legacyRef)
-                if (!alreadyNotified) {
-                  const providerStr = formatProviders(show.watch_providers)
-                  const bucketLabel = firstDueBucket === 'today' ? 'Airing today' : 'Coming tomorrow'
-                  addedItem = addNotification({
-                    title: show.title,
-                    body: `${bucketLabel}${providerStr} • ${ep.name ? ep.name : `Episode ${ep.episode}`}`,
-                    url: `/tv/${show.tmdb_id}`,
-                    tag: `episode:${show.id}:${newRef}`,
-                    icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
-                    image: show.poster_path ? `https://image.tmdb.org/t/p/w500${show.poster_path}` : undefined,
-                    write: { id: show.id, patch: { last_notified_ref: newRef } },
-                  })
-                }
-              } else {
-                const epCount = dueEpisodes.length
-                const seasonRef = `S${firstDue.season}multi:${firstDueBucket}:${firstDueBucket === 'today' ? todayStr : tomorrowStr}`
-                const legacyRef = `S${firstDue.season}multi:${todayStr}`
-                const alreadyNotified = show.last_notified_ref === seasonRef ||
-                  (firstDueBucket === 'tomorrow' && show.last_notified_ref === legacyRef)
-                if (!alreadyNotified) {
-                  const providerStr = formatProviders(show.watch_providers)
-                  const bucketLabel = dueEpisodes.some((episode) => {
-                    if (!episode.airstamp) return false
-                    const localDate = getLocalDateFromAirstamp(episode.airstamp, timezone)
-                    return localDate === todayStr
-                  }) ? 'Airing today' : 'Coming tomorrow'
-                  addedItem = addNotification({
-                    title: show.title,
-                    body: `${bucketLabel}${providerStr} • ${epCount} episodes arriving`,
-                    url: `/tv/${show.tmdb_id}`,
-                    tag: `season:${show.id}:${seasonRef}`,
-                    icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
-                    image: show.poster_path ? `https://image.tmdb.org/t/p/w500${show.poster_path}` : undefined,
-                    write: { id: show.id, patch: { last_notified_ref: seasonRef } },
-                  })
-                }
-              }
             }
+          }
 
-            const lastCheck = show.last_season_check ? new Date(show.last_season_check).getTime() : 0
-            if (Date.now() - lastCheck > SCHEDULE_THROTTLE_MS) {
-              const nextUnreleased = sorted.find((ep) => {
-                if (!ep.airstamp) return false
-                const localDate = getLocalDateFromAirstamp(ep.airstamp, timezone)
-                return localDate > tomorrowStr
-              })
-              const nextDate = nextUnreleased ? getUTCDateString(new Date(nextUnreleased.airstamp!)) : null
-              const schedulePatch = { next_air_at: nextDate, last_season_check: now.toISOString() }
-              if (addedItem) {
-                addedItem.write.patch = { ...addedItem.write.patch, ...schedulePatch }
-              } else {
-                await supabase
-                  .from('watchlist')
-                  .update(schedulePatch)
-                  .eq('id', show.id)
-              }
-              if (nextUnreleased) itemsScheduled++
+          if (addedItem) {
+            const nextUnreleased = sorted.find((ep) => {
+              if (!ep.airstamp) return false
+              const localDate = getLocalDateFromAirstamp(ep.airstamp, timezone)
+              return localDate > tomorrowStr
+            })
+            if (nextUnreleased) {
+              stats.itemsScheduled++
             }
           }
         }
@@ -730,7 +820,7 @@ serve(async (req: Request) => {
             const theatricalDate = movie.release_date
 
             const releases = [
-              { date: theatricalDate, type: 'theatrical' as const, label: 'In theaters' },
+              { date: theatricalDate, type: 'theatrical' as const, label: 'In cinema' },
               { date: digitalDate, type: 'digital' as const, label: 'Digital' },
             ]
 
@@ -748,10 +838,14 @@ serve(async (req: Request) => {
               const existingRefs = getMovieNotifiedRefs(movie.last_movie_notified_ref)
               const alreadyNotified = existingRefs.includes(newRef) ||
                 (notificationStage === 'tomorrow' && existingRefs.some(ref => ref.startsWith(`${type}:${date}`)))
-              const due = isDueForUserDate(date, timezone, now, notifyHourSetting)
+              const due = isDueForUserDate(date, timezone, now)
 
               if (due && !alreadyNotified) {
-                const providerStr = formatProviders(movie.watch_providers)
+                // Streaming watch providers only make sense for the digital
+                // release - never append them to the cinema line.
+                const providerStr = type === 'digital'
+                  ? formatProviders(movie.watch_providers)
+                  : ''
                 const bucketLabel = date === todayStr ? `${label} today` : `${label} tomorrow`
                 addNotification({
                   title: movie.title,
@@ -782,7 +876,7 @@ serve(async (req: Request) => {
                 .from('watchlist')
                 .update({ next_air_at: futureDates[0] })
                 .eq('id', movie.id)
-              itemsScheduled++
+              stats.itemsScheduled++
             } else if (movie.next_air_at) {
               const existingRefs = getMovieNotifiedRefs(movie.last_movie_notified_ref)
               const notifiedDates = existingRefs
@@ -800,10 +894,8 @@ serve(async (req: Request) => {
         }
 
         if (notifications.length === 0) {
-          await supabase
-            .from('notification_check_runs')
-            .upsert({ user_id: userId, last_completed_at: now.toISOString() })
-          continue
+          pendingRunUpserts.push({ user_id: userId, last_completed_at: now.toISOString() })
+          return
         }
 
         const { data: subscriptions } = await supabase
@@ -812,43 +904,45 @@ serve(async (req: Request) => {
           .eq('user_id', userId)
 
         if (!subscriptions || subscriptions.length === 0) {
-          await supabase
-            .from('notification_check_runs')
-            .upsert({ user_id: userId, last_completed_at: now.toISOString() })
-          continue
+          pendingRunUpserts.push({ user_id: userId, last_completed_at: now.toISOString() })
+          return
         }
 
-        usersProcessed++
+        stats.usersProcessed++
 
-        for (const notification of notifications) {
-          let delivered = false
-          for (const sub of subscriptions as SubscriptionRow[]) {
-            try {
-              await sendToSubscription(sub, { ...notification, write: undefined })
-              notificationsSent++
-              delivered = true
-            } catch (error) {
-              const statusCode = (error as { statusCode?: number }).statusCode
-              if (statusCode === 404 || statusCode === 410) {
-                const { error: deleteError } = await supabase
-                  .from('push_subscriptions')
-                  .delete()
-                  .eq('id', sub.id)
-                if (!deleteError) staleSubscriptionsRemoved++
-              } else {
-                console.error(`Failed to send push to ${sub.platform}/${sub.endpoint || sub.token}:`, error)
-                errors++
+        await mapWithConcurrency(
+          notifications,
+          async (notification) => {
+            let delivered = false
+            for (const sub of subscriptions as SubscriptionRow[]) {
+              try {
+                await sendToSubscription(sub, { ...notification, write: undefined })
+                stats.notificationsSent++
+                delivered = true
+              } catch (error) {
+                const statusCode = (error as { statusCode?: number }).statusCode
+                if (statusCode === 404 || statusCode === 410) {
+                  const { error: deleteError } = await supabase
+                    .from('push_subscriptions')
+                    .delete()
+                    .eq('id', sub.id)
+                  if (!deleteError) stats.staleSubscriptionsRemoved++
+                } else {
+                  console.error(`Failed to send push to ${sub.platform}/${sub.endpoint || sub.token}:`, error)
+                  stats.errors++
+                }
               }
             }
-          }
 
-          if (delivered && notification.write) {
-            await supabase
-              .from('watchlist')
-              .update(notification.write.patch)
-              .eq('id', notification.write.id)
-          }
-        }
+            if (delivered && notification.write) {
+              await supabase
+                .from('watchlist')
+                .update(notification.write.patch)
+                .eq('id', notification.write.id)
+            }
+          },
+          PUSH_CONCURRENCY
+        )
 
         for (const [movieId, { refs, existingRefs }] of movieRefUpdates) {
           const prev = existingRefs.startsWith('[') ? JSON.parse(existingRefs) : (existingRefs ? [existingRefs] : [])
@@ -859,24 +953,43 @@ serve(async (req: Request) => {
             .eq('id', movieId)
         }
 
-        await supabase
-          .from('notification_check_runs')
-          .upsert({ user_id: userId, last_completed_at: now.toISOString() })
-
-        await new Promise((resolve) => setTimeout(resolve, 50))
+        pendingRunUpserts.push({ user_id: userId, last_completed_at: now.toISOString() })
       } catch (error) {
         console.error(`Failed to process user ${userId}:`, error)
-        errors++
+        stats.errors++
       }
     }
 
+    if (targetUserId) {
+      await processUserId(targetUserId)
+    } else {
+      await mapWithConcurrency(userIds, processUserId, USER_CONCURRENCY)
+    }
+
+    // Batch all throttle upserts in one round trip.
+    if (pendingRunUpserts.length > 0) {
+      const { error: upsertError } = await supabase
+        .from('notification_check_runs')
+        .upsert(pendingRunUpserts)
+      if (upsertError) {
+        console.error('Failed to persist notification_check_runs:', upsertError)
+        stats.errors++
+      }
+    }
+
+    stats.showsHydrated = hydratedUniqueShows.size
+
+    console.log(`notify-new-content done in ${Date.now() - invocationStart}ms`, JSON.stringify(stats))
+
     return new Response(
       JSON.stringify({
-        users_processed: usersProcessed,
-        notifications_sent: notificationsSent,
-        items_scheduled: itemsScheduled,
-        stale_subscriptions_removed: staleSubscriptionsRemoved,
-        errors,
+        users_processed: stats.usersProcessed,
+        notifications_sent: stats.notificationsSent,
+        items_scheduled: stats.itemsScheduled,
+        stale_subscriptions_removed: stats.staleSubscriptionsRemoved,
+        shows_hydrated: stats.showsHydrated,
+        users_throttled: stats.skippedThrottled,
+        errors: stats.errors,
       }),
       { status: 200, headers: corsHeaders }
     )
