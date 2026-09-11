@@ -494,6 +494,8 @@ serve(async (req: Request) => {
           body: payload.body,
           url: payload.url,
           tag: payload.tag,
+          icon: payload.icon,
+          image: payload.image,
         })
         return
       }
@@ -698,10 +700,10 @@ serve(async (req: Request) => {
                 const ref = `air:${show.next_air_at}:${bucket}`
                 if (show.last_notified_ref !== ref) {
                   const providerStr = formatProviders(show.watch_providers)
-                  const bucketLabel = bucket === 'today' ? 'Airing today' : 'Coming tomorrow'
+                  const body = bucket === 'today' ? "Today's the day" : 'Almost there'
                   addNotification({
                     title: show.title,
-                    body: `${bucketLabel}${providerStr}`,
+                    body: `${body}${providerStr}`,
                     url: `/tv/${show.tmdb_id}`,
                     tag: `tv:${show.id}:${ref}`,
                     icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
@@ -736,6 +738,11 @@ serve(async (req: Request) => {
             (show.status === 'caught_up' || show.status === 'completed') &&
             wantSeason
 
+          const isFinale = dueEpisodes.length === 1 && !isPremiere && (() => {
+            const sameSeason = sorted.filter(ep => ep.season === firstDue.season)
+            return sameSeason.length > 1 && firstDue.episode === Math.max(...sameSeason.map(ep => ep.episode))
+          })()
+
           let addedItem: NotifyItem | null = null
 
           if (isPremiere) {
@@ -745,10 +752,11 @@ serve(async (req: Request) => {
               (firstDueBucket === 'tomorrow' && show.last_notified_ref === legacyRef)
             if (!alreadyNotified) {
               const providerStr = formatProviders(show.watch_providers)
-              const bucketLabel = firstDueBucket === 'today' ? 'Premieres today' : 'Coming tomorrow'
+              const episodeTag = `S${firstDue.season}E${firstDue.episode}${firstDue.name ? ` "${firstDue.name}"` : ''}`
+              const bucketLabel = firstDueBucket === 'today' ? 'Fresh episodes just dropped' : 'New season loading'
               addedItem = addNotification({
                 title: show.title,
-                body: `${bucketLabel}${providerStr} • ${firstDue.name ? firstDue.name : `Season ${firstDue.season} premiere`}`,
+                body: `${bucketLabel} • ${episodeTag}${providerStr}`,
                 url: `/tv/${show.tmdb_id}`,
                 tag: `season:${show.id}:${seasonRef}`,
                 icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
@@ -766,10 +774,13 @@ serve(async (req: Request) => {
                 (firstDueBucket === 'tomorrow' && show.last_notified_ref === legacyRef)
               if (!alreadyNotified) {
                 const providerStr = formatProviders(show.watch_providers)
-                const bucketLabel = firstDueBucket === 'today' ? 'Airing today' : 'Coming tomorrow'
+                const episodeTag = `S${ep.season}E${ep.episode}${ep.name ? ` "${ep.name}"` : ''}`
+                const bucketLabel = isFinale
+                  ? (firstDueBucket === 'today' ? 'Last one of the season' : 'Brace yourself')
+                  : (firstDueBucket === 'today' ? 'New episode night!' : "Tomorrow's your fix")
                 addedItem = addNotification({
                   title: show.title,
-                  body: `${bucketLabel}${providerStr} • ${ep.name ? ep.name : `Episode ${ep.episode}`}`,
+                  body: `${bucketLabel} • ${episodeTag}${providerStr}`,
                   url: `/tv/${show.tmdb_id}`,
                   tag: `episode:${show.id}:${newRef}`,
                   icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
@@ -789,10 +800,10 @@ serve(async (req: Request) => {
                   if (!episode.airstamp) return false
                   const localDate = getLocalDateFromAirstamp(episode.airstamp, timezone)
                   return localDate === todayStr
-                }) ? 'Airing today' : 'Coming tomorrow'
+                }) ? 'Binge day!' : 'Packed day tomorrow'
                 addedItem = addNotification({
                   title: show.title,
-                  body: `${bucketLabel}${providerStr} • ${epCount} episodes arriving`,
+                  body: `${bucketLabel} • ${epCount} episodes${providerStr}`,
                   url: `/tv/${show.tmdb_id}`,
                   tag: `season:${show.id}:${seasonRef}`,
                   icon: show.poster_path ? `https://image.tmdb.org/t/p/w92${show.poster_path}` : undefined,
@@ -823,8 +834,8 @@ serve(async (req: Request) => {
             const theatricalDate = movie.release_date
 
             const releases = [
-              { date: theatricalDate, type: 'theatrical' as const, label: 'In cinema' },
-              { date: digitalDate, type: 'digital' as const, label: 'Digital' },
+              { date: theatricalDate, type: 'theatrical' as const },
+              { date: digitalDate, type: 'digital' as const },
             ]
 
             if (!movieDigitalOnly) {
@@ -833,7 +844,7 @@ serve(async (req: Request) => {
 
             const pendingRefs: string[] = []
 
-            for (const { date, type, label } of releases) {
+            for (const { date, type } of releases) {
               if (!date) continue
 
               const notificationStage = date === todayStr ? 'today' : 'tomorrow'
@@ -849,10 +860,12 @@ serve(async (req: Request) => {
                 const providerStr = type === 'digital'
                   ? formatProviders(movie.watch_providers)
                   : ''
-                const bucketLabel = date === todayStr ? `${label} today` : `${label} tomorrow`
+                const body = type === 'theatrical'
+                  ? (date === todayStr ? 'In cinemas now' : 'Hitting the big screen tomorrow')
+                  : (date === todayStr ? `Now streaming${providerStr}` : `Available tomorrow${providerStr}`)
                 addNotification({
                   title: movie.title,
-                  body: `${bucketLabel}${providerStr}`,
+                  body,
                   url: `/movie/${movie.tmdb_id}`,
                   tag: `movie:${movie.id}:${newRef}`,
                   icon: movie.poster_path ? `https://image.tmdb.org/t/p/w92${movie.poster_path}` : undefined,

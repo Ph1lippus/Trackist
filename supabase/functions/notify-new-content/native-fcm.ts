@@ -6,6 +6,7 @@ interface NativeNotification {
   url: string
   tag: string
   icon?: string
+  image?: string
 }
 
 function bufToB64url(buf: Uint8Array): string {
@@ -114,7 +115,7 @@ export async function sendNativeNotification(
     notification: {
       title: notification.title,
       body: notification.body,
-      image: notification.icon || undefined,
+      image: notification.image || notification.icon || undefined,
     },
     data: {
       url: notification.url,
@@ -125,7 +126,7 @@ export async function sendNativeNotification(
       notification: {
         tag: notification.tag,
         channel_id: 'push_notifications',
-        image: notification.icon || undefined,
+        image: notification.image || notification.icon || undefined,
       },
     },
   }
