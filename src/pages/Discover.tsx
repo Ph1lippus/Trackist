@@ -86,9 +86,9 @@ const Discover: React.FC = () => {
     useEffect(() => {
         // Clear session added IDs when media type changes
         actions.setSessionAddedIds(new Set())
-        // Load initial pages (3 pages = 60 items) to ensure sufficient content after watchlist filtering
-        // This ensures both Movies and TV shows have enough content since filtering removes many items
-        actions.loadInitialPages(3)
+        // Load only the first page on mount so results appear fast; the rest is
+        // fetched lazily as the user scrolls (rangeChanged fetches more pages).
+        actions.loadInitialPages(1)
     }, [filters.mediaType, filters.sortBy, filters.selectedGenres, filters.yearFrom, filters.yearTo, actions])
     
     // Sync global search with discover store

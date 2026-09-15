@@ -5,7 +5,7 @@ import { loadCalendar, type CalendarItem } from '../services/calendarService'
 import { getShowAirSchedule } from '../services/tvmazeService'
 import type { WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
-import { formatDateString, isTodayLocal, formatAirstampTime } from '../utils/dateUtils'
+import { formatDateString, isTodayLocal, isPastLocal, formatAirstampTime } from '../utils/dateUtils'
 import useDetailModalStore from '../stores/detailModalStore'
 
 interface UpcomingItem {
@@ -208,28 +208,31 @@ const UpcomingNew: React.FC = () => {
         })
     }, [])
 
-    const getLocalDate = (item: UpcomingItem): string | null => {
-        if (item.type === 'episode' && item.item.tmdb_id && item.episode) {
-            const key = `${item.item.tmdb_id}-${item.episode.season_number}-${item.episode.episode_number}`
-            const stamp = airstamps[key]
-            if (stamp) {
-                const d = new Date(stamp)
-                if (!Number.isNaN(d.getTime())) {
-                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const groupedItems = useMemo(() => {
+        const localDateOf = (item: UpcomingItem): string | null => {
+            if (item.type === 'episode' && item.item.tmdb_id && item.episode) {
+                const key = `${item.item.tmdb_id}-${item.episode.season_number}-${item.episode.episode_number}`
+                const stamp = airstamps[key]
+                if (stamp) {
+                    const d = new Date(stamp)
+                    if (!Number.isNaN(d.getTime())) {
+                        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+                    }
                 }
             }
+            // No client-side airstamp (TVMaze unavailable/blocked): fall back to
+            // the edge function air_date so episodes still appear on the calendar
+            // instead of being silently dropped.
+            return item.date || null
         }
-        // No client-side airstamp (TVMaze unavailable/blocked): fall back to
-        // the edge function air_date so episodes still appear on the calendar
-        // instead of being silently dropped.
-        return item.date || null
-    }
 
-    const groupedItems = useMemo(() => {
         return upcomingItems.reduce((groups, upcoming) => {
             if (!upcoming.date) return groups
-            const localDate = getLocalDate(upcoming)
+            const localDate = localDateOf(upcoming)
             if (!localDate) return groups
+            // Guard against stale calendar cache: drop anything that already
+            // aired locally so yesterday's shows never linger.
+            if (isPastLocal(localDate)) return groups
             if (!groups[localDate]) {
                 groups[localDate] = []
             }

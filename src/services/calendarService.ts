@@ -41,9 +41,9 @@ export interface CalendarMovieItem {
 
 export type CalendarItem = CalendarEpisodeItem | CalendarMovieItem
 
-// v2: orphans pre-TVMaze caches (which could hold stale calendar items) so
-// every user gets a fresh fetch after deploying - no manual clearing needed.
-const CACHE_PREFIX = 'track1st-calendar-v3'
+// v4: also drops already-aired TV episodes from stale caches, so yesterday's
+// shows stop lingering on the Upcoming page. v3 ran off older cache shapes.
+const CACHE_PREFIX = 'track1st-calendar-v4'
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000
 
 interface CalendarCache {
@@ -105,10 +105,21 @@ const isCacheStale = (cache: CalendarCache | null): boolean => {
     return isOlderThanTTL || isDifferentDay
 }
 
+const getLocalDateFromISO = (iso: string): string => {
+    const d = new Date(iso)
+    if (Number.isNaN(d.getTime())) return ''
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 const filterPastItems = (items: CalendarItem[]): CalendarItem[] => {
     const today = getLocalTodayString()
     return items.filter(item => {
-        if (item.media_type === 'tv') return true
+        if (item.media_type === 'tv') {
+            // Drop episodes whose airing instant has already passed locally,
+            // otherwise stale-while-revalidate shows yesterday's episodes.
+            const date = item.airstamp ? getLocalDateFromISO(item.airstamp) : item.air_date
+            return !!date && date >= today
+        }
         const date = item.release_date
         return date && date >= today
     })
