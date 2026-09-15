@@ -1213,7 +1213,8 @@ const Settings: React.FC = () => {
 
             const result = await res.json()
             const upcoming = typeof result.total_scheduled === 'number' ? result.total_scheduled : 0
-            setPushMessage(`Check complete: ${result.notifications_sent} notifications sent, ${upcoming} upcoming across your watchlist`)
+            const deliveries = typeof result.deliveries === 'number' ? result.deliveries : 0
+            setPushMessage(`Check complete: ${result.notifications_sent} notifications sent (${deliveries} device deliveries), ${upcoming} upcoming across your watchlist`)
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Check failed'
             setPushMessage(message)
