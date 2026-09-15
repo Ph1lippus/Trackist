@@ -12966,7 +12966,6 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
     }
     .detail-page__title-section {
         flex-shrink: 0;
-        padding-top: var(--navbar-height);
     }
     .detail-page__overview-section {
         flex: 1;
