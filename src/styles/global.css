@@ -6807,6 +6807,7 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
     }
     .detail-overlay__content {
         height: 100%;
+        padding-bottom: 20rem;
     }
 
     /* Person overlay: let the overlay container itself scroll so the mouse
