@@ -179,6 +179,19 @@ const SecondaryNavbar: React.FC = () => {
                 accumulatedDeltaRef.current = 0;
                 el.classList.remove('secondary-navbar--hidden');
             }
+
+            // A bare net counter lets the *disarmed* direction bank unbounded
+            // credit that the toggle must then drain first: scrolling far down
+            // after the bar already hid pushes the accumulator very positive, so
+            // on the way back up the reveal only fires after re-paying all of it
+            // — which in practice means the bar reappears only at the very top.
+            // Clamp against the current direction so upward motion always gets a
+            // fresh countdown (jitter still damps it, but never blocks it).
+            if (state.isHidden) {
+                if (accumulatedDeltaRef.current > 0) accumulatedDeltaRef.current = 0;
+            } else {
+                if (accumulatedDeltaRef.current < 0) accumulatedDeltaRef.current = 0;
+            }
         };
 
         const onScroll = () => {
