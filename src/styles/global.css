@@ -2818,8 +2818,8 @@ html.native-app *::-webkit-scrollbar {
     padding-left: 1rem;
 }
 .detail-page__logo {
-    max-width: 550px;
-    max-height: 225px;
+    max-width: 500px;
+    max-height: 250px;
     width: auto;
     height: auto;
     object-fit: contain;
@@ -3112,7 +3112,7 @@ html.native-app *::-webkit-scrollbar {
 }
 .detail-page__main--tv {
     display: grid;
-    grid-template-columns: 1fr 34%;
+    grid-template-columns: 1fr 45%;
     gap: 2.5rem;
     align-items: stretch;
     height: 100%;
