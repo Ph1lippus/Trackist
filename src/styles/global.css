@@ -3147,7 +3147,7 @@ html.native-app *::-webkit-scrollbar {
 .detail-page__overview {
     font-size: 1rem;
     line-height: 1.7;
-    margin: 0 0 1.5rem 0;
+    margin: 0 0 15rem 0;
     padding: 0rem 1rem;
     color: rgba(255, 255, 255, 0.9);
 }
@@ -6807,7 +6807,6 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
     }
     .detail-overlay__content {
         height: 100%;
-        padding-bottom: 20rem;
     }
 
     /* Person overlay: let the overlay container itself scroll so the mouse
