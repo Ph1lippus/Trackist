@@ -1258,11 +1258,20 @@ export const checkForNewSeasons = async (userId: string): Promise<{ updated: num
 
             try {
                 const details = await getTVDetails(show.tmdb_id)
-                const currentTotalSeasons = details.number_of_seasons || 1
                 const storedLastSeason = show.last_season_number || 1
                 const releaseIndex = getReleaseIndex(await getShowAirSchedule(show.tmdb_id))
 
-                if (currentTotalSeasons > storedLastSeason) {
+                // TMDB occasionally bumps number_of_seasons with a season that has
+                // no episodes yet (announced/placeholder seasons). Only a season
+                // that actually has episodes counts as new, so a completed or
+                // caught_up show never flips back to watching for an empty one.
+                const realSeasons = (details.seasons || [])
+                    .filter((s: { season_number: number; episode_count?: number }) => s.season_number > 0 && (s.episode_count == null || s.episode_count > 0))
+                const latestRealSeason = realSeasons.reduce((max, s) => Math.max(max, s.season_number), 0) || 1
+                const hasNewSeason = latestRealSeason > storedLastSeason
+                const seasonNeedsRepair = storedLastSeason > latestRealSeason
+
+                if (hasNewSeason || seasonNeedsRepair) {
                     // Count released episodes across all seasons
                     let totalReleasedEpisodes = 0
                     const seasonNums = (details.seasons || [])
@@ -1280,8 +1289,8 @@ export const checkForNewSeasons = async (userId: string): Promise<{ updated: num
                     const { error: updateError } = await supabase
                         .from('watchlist')
                         .update({
-                            last_season_number: currentTotalSeasons,
-                            total_seasons: currentTotalSeasons,
+                            last_season_number: latestRealSeason,
+                            total_seasons: latestRealSeason,
                             total_episodes: totalReleasedEpisodes > 0 ? totalReleasedEpisodes : undefined,
                             updated_at: new Date().toISOString()
                         })
@@ -1294,8 +1303,9 @@ export const checkForNewSeasons = async (userId: string): Promise<{ updated: num
 
                     updated++
 
-                    // If the show was completed or caught_up, move it back to watching
-                    if (show.status === 'completed' || show.status === 'caught_up') {
+                    // If a genuinely new season arrived and the show was
+                    // completed or caught_up, move it back to watching
+                    if (hasNewSeason && (show.status === 'completed' || show.status === 'caught_up')) {
                         await supabase
                             .from('watchlist')
                             .update({ status: 'watching', updated_at: new Date().toISOString() })

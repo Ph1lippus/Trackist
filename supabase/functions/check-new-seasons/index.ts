@@ -11,9 +11,14 @@ const corsHeaders = {
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3'
 const TMDB_CONCURRENCY = 5
 
+interface TMDBTVSeason {
+  season_number: number
+  episode_count?: number
+}
+
 interface TMDBTVDetails {
   number_of_seasons: number
-  seasons: { season_number: number }[]
+  seasons: TMDBTVSeason[]
 }
 
 interface TMDBWatchProvidersResponse {
@@ -176,16 +181,27 @@ serve(async (req: Request) => {
               }
 
               const details: TMDBTVDetails = await tmdbResponse.json()
-              const currentTotalSeasons = details.number_of_seasons || 1
               const storedLastSeason = (show.last_season_number as number) || 1
 
-              const hasNewSeason = currentTotalSeasons > storedLastSeason
+              // TMDB sometimes bumps number_of_seasons for a season that has no
+              // episodes yet (announced/placeholder seasons). Only treat a season
+              // as real once it actually has episodes, so completed/caught_up
+              // shows never flip back to watching for an empty season.
+              const realSeasons = (details.seasons || [])
+                .filter((s) => s.season_number > 0 && (s.episode_count == null || s.episode_count > 0))
+              const latestRealSeason = realSeasons.reduce((max, s) => Math.max(max, s.season_number), 0) || 1
+
+              const hasNewSeason = latestRealSeason > storedLastSeason
+              // Heal rows corrupted by the old empty-season bump: if the stored
+              // value points to a season with no episodes, roll it back so the
+              // real season is still detected (instead of being masked) later.
+              const seasonNeedsRepair = storedLastSeason > latestRealSeason
               let providersSynced = false
 
-              if (hasNewSeason) {
+              if (hasNewSeason || seasonNeedsRepair) {
                 const updates: Record<string, unknown> = {
-                  last_season_number: currentTotalSeasons,
-                  total_seasons: currentTotalSeasons,
+                  last_season_number: latestRealSeason,
+                  total_seasons: latestRealSeason,
                   last_season_check: new Date().toISOString(),
                   updated_at: new Date().toISOString(),
                   next_air_at: null,
@@ -193,7 +209,7 @@ serve(async (req: Request) => {
                 }
 
                 const showStatus = show.status as string | undefined
-                if (showStatus === 'completed' || showStatus === 'caught_up') {
+                if (hasNewSeason && (showStatus === 'completed' || showStatus === 'caught_up')) {
                   updates.status = 'watching'
                 }
 
@@ -231,7 +247,7 @@ serve(async (req: Request) => {
                 if (updateError) throw updateError
               }
 
-              return { updated: hasNewSeason, providersSynced }
+              return { updated: hasNewSeason || seasonNeedsRepair, providersSynced }
             } catch (err) {
               console.error(`Failed to process show ${tmdbId}:`, err)
               throw err
