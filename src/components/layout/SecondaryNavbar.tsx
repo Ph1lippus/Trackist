@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import useDetailModalStore from '../../stores/detailModalStore';
 
 const THRESHOLD = 5;
+const HIDE_THRESHOLD = 12;
 
 const SecondaryNavbar: React.FC = () => {
     const pillRef = useRef<HTMLSpanElement>(null);
@@ -125,10 +126,18 @@ const SecondaryNavbar: React.FC = () => {
 
     // Hyper-responsive scroll hide/show for the secondary navbar (desktop only)
     const scrollStateRef = useRef({ lastScrollY: window.scrollY, isHidden: false });
+    // Accumulate net scroll since the last toggle so tiny up/down jitter
+    // (e.g. scroll anchoring or live list appends) can't flip the bar.
+    const accumulatedDeltaRef = useRef(0);
     const rafRef = useRef<number | null>(null);
 
-    useEffect(() => {
+    const resetScrollState = useCallback(() => {
         scrollStateRef.current.lastScrollY = window.scrollY;
+        accumulatedDeltaRef.current = 0;
+    }, []);
+
+    useEffect(() => {
+        resetScrollState();
 
         const updateVisibility = () => {
             rafRef.current = null;
@@ -137,17 +146,22 @@ const SecondaryNavbar: React.FC = () => {
             const state = scrollStateRef.current;
             const currentY = window.scrollY;
             const delta = currentY - state.lastScrollY;
+            state.lastScrollY = currentY;
 
-            if (delta > 0 && !state.isHidden) {
-                state.isHidden = true;
-                el.classList.add('secondary-navbar--hidden');
-            } else if (delta < -THRESHOLD && state.isHidden) {
+            const accumulatedDelta = accumulatedDeltaRef.current + delta;
+            accumulatedDeltaRef.current = accumulatedDelta;
+
+            if (!state.isHidden) {
+                if (accumulatedDelta >= HIDE_THRESHOLD) {
+                    state.isHidden = true;
+                    accumulatedDeltaRef.current = 0;
+                    el.classList.add('secondary-navbar--hidden');
+                }
+            } else if (accumulatedDelta <= -THRESHOLD) {
                 state.isHidden = false;
+                accumulatedDeltaRef.current = 0;
                 el.classList.remove('secondary-navbar--hidden');
             }
-            // On scroll pause (delta === 0) or tiny upward nudge (< THRESHOLD): do nothing
-
-            state.lastScrollY = currentY;
         };
 
         const onScroll = () => {
@@ -160,7 +174,7 @@ const SecondaryNavbar: React.FC = () => {
             if (window.innerWidth <= 768) {
                 el?.classList.remove('secondary-navbar--hidden');
                 scrollStateRef.current.isHidden = false;
-                scrollStateRef.current.lastScrollY = window.scrollY;
+                resetScrollState();
             }
         };
 
@@ -175,7 +189,7 @@ const SecondaryNavbar: React.FC = () => {
             navRef.current?.classList.remove('secondary-navbar--hidden');
             scrollStateRef.current.isHidden = false;
         };
-    }, [user]);
+    }, [user, resetScrollState]);
 
     // When the detail modal opens, always reveal the secondary navbar even if
     // it was scrolled-hidden beforehand. The modal locks body scroll (so no
@@ -189,8 +203,8 @@ const SecondaryNavbar: React.FC = () => {
         if (!el) return
         el.classList.remove('secondary-navbar--hidden')
         scrollStateRef.current.isHidden = false
-        scrollStateRef.current.lastScrollY = window.scrollY
-    }, [modalIsOpen])
+        resetScrollState()
+    }, [modalIsOpen, resetScrollState])
 
     // Reset scroll tracking on route change so the navbar is never seen moving
     // when switching pages.
@@ -203,9 +217,9 @@ const SecondaryNavbar: React.FC = () => {
         // Reset the baseline to the new page's scroll position so the navbar
         // doesn't animate out/in merely because the scroll position jumped.
         requestAnimationFrame(() => {
-            scrollStateRef.current.lastScrollY = window.scrollY;
+            resetScrollState();
         });
-    }, [location.pathname]);
+    }, [location.pathname, resetScrollState]);
 
     if (!user) return null;
 

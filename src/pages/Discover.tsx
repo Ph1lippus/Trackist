@@ -86,9 +86,10 @@ const Discover: React.FC = () => {
     useEffect(() => {
         // Clear session added IDs when media type changes
         actions.setSessionAddedIds(new Set())
-        // Load only the first page on mount so results appear fast; the rest is
+        // Load the first few pages on mount so results appear fast and the
+        // early screens are free of scroll-triggered appends; the rest is
         // fetched lazily as the user scrolls (rangeChanged fetches more pages).
-        actions.loadInitialPages(1)
+        actions.loadInitialPages(3)
     }, [filters.mediaType, filters.sortBy, filters.selectedGenres, filters.yearFrom, filters.yearTo, actions])
     
     // Sync global search with discover store
@@ -175,6 +176,7 @@ const Discover: React.FC = () => {
                 ) : (
                         <div style={{ flex: 1, minHeight: 0, width: '100%' }}>
                                 <VirtuosoGrid
+                                    key={`${filters.mediaType}-${filters.sortBy}-${filters.selectedGenres?.join(',') ?? 'all'}-${filters.yearFrom ?? 'all'}-${filters.yearTo ?? 'all'}-${filters.query}`}
                                     increaseViewportBy={{
                                             top: isMobile ? 200 : 400,
                                             bottom: isMobile ? 400 : 800,
@@ -192,7 +194,7 @@ const Discover: React.FC = () => {
                                         actions.fetchData(store.page + 1)
                                     }
                                 }}
-                                overscan={50}
+                                overscan={isMobile ? 50 : 100}
                                 listClassName="discover-grid"
                                 itemContent={(index) => {
                                     const item = visibleResults[index];
