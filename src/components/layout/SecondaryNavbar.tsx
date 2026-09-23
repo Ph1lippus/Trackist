@@ -145,6 +145,23 @@ const SecondaryNavbar: React.FC = () => {
             if (!el) return;
             const state = scrollStateRef.current;
             const currentY = window.scrollY;
+
+            // At the very top of the page the navbar is always visible: once
+            // scrollY reaches 0 there is no upward scroll headroom left, so the
+            // user's scroll-up gesture can never fire a negative delta to
+            // re-show a hidden bar — from here the only movement is further
+            // down. Without this, a bar that hid just before the page hit the
+            // top stays stuck hidden forever.
+            if (currentY <= 0) {
+                state.lastScrollY = currentY;
+                if (state.isHidden) {
+                    state.isHidden = false;
+                    accumulatedDeltaRef.current = 0;
+                    el.classList.remove('secondary-navbar--hidden');
+                }
+                return;
+            }
+
             const delta = currentY - state.lastScrollY;
             state.lastScrollY = currentY;
 
