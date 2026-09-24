@@ -348,8 +348,6 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
         fetchUpcoming()
     }, [])
 
-    const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-
     return (
         <section className="dashboard-page" style={{ height: '100vh', overflow: 'visible' }}>
             <div className="dashboard-shell" style={{ height: '100%', overflow: 'hidden' }}>
@@ -362,13 +360,11 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                         <p>Loading your calendar...</p>
                                     </div>
                                 )}
-                                {!loading && weekDays.map(day => (
-                                    <div key={day} className="calendar-weekday">{day}</div>
-                            ))}
-                            {!loading && calendarDays.map((day, index) => {
+                                {!loading && calendarDays.map((day, index) => {
                             if (!day) return <div key={`empty-${index}`} className="calendar-day calendar-day--empty" />
 
                             const dateKey = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`
+                            const weekdayLabel = day.toLocaleDateString('en-US', { weekday: 'short' })
 
                             const dayItems = groupedItems[dateKey] || []
                             const isTodayDate = isTodayLocal(dateKey)
@@ -396,7 +392,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                     className={`calendar-day ${isTodayDate ? 'calendar-day--today' : ''} ${dayItems.length > 0 ? 'calendar-day--has-episodes' : ''}`}
                                     style={{ position: 'relative' }}
                                 >
-                                    <span className="calendar-day-number" style={{ position: 'absolute', top: '0.4rem', left: '0.4rem' }}>{day.getDate()}</span>
+                                    <span className="calendar-day-number" style={{ position: 'absolute', top: '0.4rem', left: '0.4rem' }}><span className="calendar-day-weekday">{weekdayLabel}</span> <span style={{ fontWeight: 800 }}>{day.getDate()}</span></span>
                                     <div className="calendar-episodes" style={{ display: 'flex', flexDirection: 'row', gap: '0', paddingTop: '1.2rem', position: 'relative', flexWrap: 'nowrap', overflow: 'visible' }}>
                                         {displayItems.map((item, idx) => (
                                             <div
