@@ -4825,18 +4825,28 @@ html.native-app *::-webkit-scrollbar {
     z-index: 9999 !important;
 }
 
-/* Calendar episode tooltip on hover */
+/* Calendar episode tooltip on hover.
+   The tooltip itself is rendered as a React portal (.upcoming-tooltip) appended
+   to <body>, so it escapes the calendar's stacking context and always paints
+   above the fixed navbar. These pseudo-element rules are kept but disabled so
+   the old CSS-only tooltip does not double-render. */
 .calendar-episode[data-tooltip] {
     overflow: visible !important;
     z-index: 9999;
 }
 
-.calendar-episode[data-tooltip]::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    bottom: calc(100% + 10px);
-    left: 50%;
-    transform: translateX(-50%);
+.calendar-episode[data-tooltip]::after,
+.calendar-episode[data-tooltip]::before {
+    display: none !important;
+}
+
+/* Portal-rendered calendar tooltip. position: fixed + a very high z-index keeps
+   it above the navbar (z-index 100) and other page content, and because it is
+   appended to <body> it is never trapped by any ancestor stacking context. */
+.upcoming-tooltip {
+    position: fixed;
+    z-index: 5000;
+    transform: translate(-50%, calc(-100% - 12px));
     width: max-content;
     max-width: min(280px, 80vw);
     background: rgba(15, 15, 20, 0.98);
@@ -4848,34 +4858,19 @@ html.native-app *::-webkit-scrollbar {
     font-weight: 500;
     white-space: pre-line;
     text-align: center;
-    opacity: 0;
-    visibility: hidden;
     pointer-events: none;
-    z-index: 9999;
     box-shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
-    transition: all 0.2s ease;
     line-height: 1.45;
 }
 
-.calendar-episode[data-tooltip]::before {
-    content: "";
+/* Little arrow under the calendar tooltip body */
+.upcoming-tooltip__arrow {
     position: absolute;
-    bottom: calc(100% + 4px);
+    top: 100%;
     left: 50%;
     transform: translateX(-50%);
     border: 6px solid transparent;
     border-top-color: rgba(15, 15, 20, 0.98);
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    z-index: 10000;
-    transition: all 0.2s ease;
-}
-
-.calendar-episode[data-tooltip]:hover::after,
-.calendar-episode[data-tooltip]:hover::before {
-    opacity: 1;
-    visibility: visible;
 }
 
 /* Keep internal image compliance tight */

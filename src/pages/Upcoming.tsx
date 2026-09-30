@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useState, useRef, useMemo, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { supabase } from '../services/supabaseClient'
 import { imageUrl } from '../services/tmdbService'
 import { loadCalendar, type CalendarItem } from '../services/calendarService'
@@ -133,6 +134,7 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
     const [loading, setLoading] = useState(true)
     const [airstampTimes, setAirstampTimes] = useState<Record<string, string>>({})
     const [airstamps, setAirstamps] = useState<Record<string, string>>({})
+    const [hoverTooltip, setHoverTooltip] = useState<{ text: string; x: number; y: number } | null>(null)
     const calendarGridRef = useRef<HTMLDivElement>(null)
     const upcomingVersionRef = useRef(0)
 
@@ -399,7 +401,20 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                                                 key={item.id}
                                                 className="calendar-episode"
                                                 data-tooltip={getEpisodeTooltip(item)}
+                                                onMouseEnter={(e) => {
+                                                    const text = getEpisodeTooltip(item)
+                                                    if (!text) return
+                                                    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                                                    // Center the tooltip above the episode; -50% is applied in CSS via translateX.
+                                                    setHoverTooltip({
+                                                        text,
+                                                        x: rect.left + rect.width / 2,
+                                                        y: rect.top
+                                                    })
+                                                }}
+                                                onMouseLeave={() => setHoverTooltip(null)}
                                                 onClick={() => {
+                                                    setHoverTooltip(null)
                                                     if (item.type === 'movie' && item.item.tmdb_id) {
                                                         useDetailModalStore.getState().open('movie', item.item.tmdb_id)
                                                     } else if (item.item.tmdb_id) {
@@ -445,6 +460,21 @@ const Upcoming: React.FC<UpcomingProps> = ({ currentMonth }) => {
                         </div>
                     </main>
                 </div>
+
+                {hoverTooltip && createPortal(
+                    <div
+                        className="upcoming-tooltip"
+                        style={{
+                            left: hoverTooltip.x,
+                            top: hoverTooltip.y
+                        }}
+                        role="tooltip"
+                    >
+                        {hoverTooltip.text}
+                        <span className="upcoming-tooltip__arrow" />
+                    </div>,
+                    document.body
+                )}
 
                 {selectedDate && (
                     <div className="upcoming-side-panel">
