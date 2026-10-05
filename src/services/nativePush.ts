@@ -14,7 +14,7 @@ const mapPermission = (state: string): NativePermissionState => {
     return 'prompt'
 }
 
-const report = (status: string, detail?: string): void => {
+export const report = (status: string, detail?: string): void => {
     void fetch(LOG_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

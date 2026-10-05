@@ -677,6 +677,7 @@ serve(async (req: Request) => {
         // Dedup refs still prevent duplicates.
         if (!isManual && Date.now() - lastCompletedAt < NOTIFICATION_CHECK_THROTTLE_MS) {
           stats.skippedThrottled++
+          console.log(`skip:user=${userId} reason=throttled last_completed_at=${new Date(lastCompletedAt).toISOString()}`)
           return
         }
 
@@ -687,7 +688,10 @@ serve(async (req: Request) => {
         const wantRelease = profile.notify_release_date !== false
         const movieDigitalOnly = profile.movie_notify_on_digital !== false
 
-        if (!wantEpisode && !wantSeason && !wantRelease) return
+        if (!wantEpisode && !wantSeason && !wantRelease) {
+          console.log(`skip:user=${userId} reason=all_prefs_disabled`)
+          return
+        }
 
         // The user picked a preferred notification hour; the automatic hourly
         // cron should only push inside that window so nobody gets pinged at
@@ -695,6 +699,10 @@ serve(async (req: Request) => {
         // at any time of day.
         if (!isManual && !isWithinNotifyHourWindow(currentHourInTimezone(timezone, now), parseNotifyHour(profile.notify_hour))) {
           stats.skippedOutsideHour++
+          console.log(
+            `skip:user=${userId} reason=outside_hour current_hour=${currentHourInTimezone(timezone, now)} ` +
+            `tz=${timezone} notify_hour_raw=${String(profile.notify_hour)} parsed_hour=${parseNotifyHour(profile.notify_hour)}`
+          )
           return
         }
 
@@ -985,6 +993,7 @@ serve(async (req: Request) => {
         }
 
         if (notifications.length === 0) {
+          console.log(`skip:user=${userId} reason=nothing_new`)
           pendingRunUpserts.push({ user_id: userId, last_completed_at: now.toISOString() })
           return
         }
@@ -995,9 +1004,12 @@ serve(async (req: Request) => {
           .eq('user_id', userId)
 
         if (!subscriptions || subscriptions.length === 0) {
+          console.log(`skip:user=${userId} reason=no_subscriptions`)
           pendingRunUpserts.push({ user_id: userId, last_completed_at: now.toISOString() })
           return
         }
+
+        console.log(`notify:user=${userId} items=${notifications.length} subs=${subscriptions.length}`)
 
         stats.usersProcessed++
 

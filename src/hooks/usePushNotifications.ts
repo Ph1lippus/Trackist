@@ -6,6 +6,7 @@ import {
     requestNativePermission,
     getNativeToken,
     unregisterNative,
+    report,
 } from '../services/nativePush'
 
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_PUSH_VAPID_PUBLIC_KEY?.trim()
@@ -169,12 +170,39 @@ export const usePushNotifications = () => {
                 if (!user) return null
                 return supabase
                     .from('push_subscriptions')
-                    .select('id')
+                    .select('id, token')
                     .eq('user_id', user.id)
                     .eq('platform', 'native')
                     .maybeSingle()
-            }).then((result) => {
-                if (!cancelled && result?.data) setSubscribed(true)
+            }).then(async (result) => {
+                const row = result?.data as { id: string; token: string | null } | null
+                if (!row) return
+                if (!cancelled) setSubscribed(true)
+
+                // FCM tokens rotate (app updates, reinstalls, Google-side expiry).
+                // A rotated token silently kills all cron-mode notifications while
+                // the stored row keeps looking valid, so refresh it on every launch.
+                try {
+                    const perm = await getNativePermission()
+                    if (cancelled || perm !== 'granted') return
+                    const token = await getNativeToken()
+                    if (cancelled || !token || token === row.token) return
+                    const { error: refreshError } = await supabase
+                        .from('push_subscriptions')
+                        .update({
+                            token,
+                            endpoint: token,
+                            user_agent: navigator.userAgent,
+                            last_seen: new Date().toISOString(),
+                        })
+                        .eq('id', row.id)
+                    if (refreshError) {
+                        throw new Error(`Failed to refresh the push token: ${refreshError.message}`)
+                    }
+                    report('native_token_refreshed', token.slice(-20))
+                } catch (err) {
+                    report('native_token_refresh_error', err instanceof Error ? err.message : String(err))
+                }
             }).catch(() => {})
 
             return () => {
