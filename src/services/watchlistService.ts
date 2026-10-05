@@ -142,7 +142,7 @@ export const getNextEpisodeToWatch = async (watchlistId: string, skipCache: bool
                 if (watchedSet.has(`${cachedNextSeason}-${ep.episode_number}`)) continue
 
                 // Skip if not aired yet
-                if (!isEpisodeAired(releaseIndex, cachedNextSeason, ep.episode_number)) continue
+                if (!isEpisodeAired(releaseIndex, cachedNextSeason, ep.episode_number, ep.air_date)) continue
 
                 return {
                     season_number: cachedNextSeason,
@@ -174,7 +174,7 @@ export const getNextEpisodeToWatch = async (watchlistId: string, skipCache: bool
                 if (watchedSet.has(`${seasonNum}-${ep.episode_number}`)) continue
 
                 // Skip if not aired yet
-                if (!isEpisodeAired(releaseIndex, seasonNum, ep.episode_number)) continue
+                if (!isEpisodeAired(releaseIndex, seasonNum, ep.episode_number, ep.air_date)) continue
 
                 return {
                     season_number: seasonNum,
@@ -842,8 +842,8 @@ export const checkAndUpdateCaughtUp = async (watchlistId: string, tmdbId: number
 
         // Check if there are any episodes that haven't aired yet (TMDB only knows
         // their calendar date, so TVmaze air times refine "today" episodes).
-        const unreleasedEpisodes = seasonData.episodes?.filter((ep: { episode_number: number }) => {
-            return !isEpisodeAired(releaseIndex, latestSeasonNumber, ep.episode_number)
+        const unreleasedEpisodes = seasonData.episodes?.filter((ep: { episode_number: number; air_date?: string }) => {
+            return !isEpisodeAired(releaseIndex, latestSeasonNumber, ep.episode_number, ep.air_date)
         }) || []
 
         const releasedEpisodesCount = totalEpisodesInLatestSeason - unreleasedEpisodes.length
@@ -916,8 +916,8 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
         const releasedPerSeason = await Promise.all(
             seasonNumbers.map(async (seasonNum) => {
                 const seasonData = await getTVSeasonDetails(tmdbId, seasonNum)
-                const unreleasedInSeason = seasonData.episodes?.filter((ep: { episode_number: number }) => {
-                    return !isEpisodeAired(releaseIndex, seasonNum, ep.episode_number)
+                const unreleasedInSeason = seasonData.episodes?.filter((ep: { episode_number: number; air_date?: string }) => {
+                    return !isEpisodeAired(releaseIndex, seasonNum, ep.episode_number, ep.air_date)
                 }).length || 0
                 return (seasonData.episodes?.length || 0) - unreleasedInSeason
             })
@@ -1097,8 +1097,8 @@ export const recalculateProgress = async (showId: string): Promise<{ fixed: bool
 
         for (const seasonNum of seasonNumbers) {
             const seasonData = await getTVSeasonDetails(show.tmdb_id, seasonNum)
-            const unreleasedInSeason = seasonData.episodes?.filter((ep: { episode_number: number }) => {
-                return !isEpisodeAired(releaseIndex, seasonNum, ep.episode_number)
+            const unreleasedInSeason = seasonData.episodes?.filter((ep: { episode_number: number; air_date?: string }) => {
+                return !isEpisodeAired(releaseIndex, seasonNum, ep.episode_number, ep.air_date)
             }).length || 0
             
             totalReleasedEpisodes += (seasonData.episodes?.length || 0) - unreleasedInSeason
@@ -1280,8 +1280,8 @@ export const checkForNewSeasons = async (userId: string): Promise<{ updated: num
                     for (const sn of seasonNums) {
                         try {
                             const sd = await getTVSeasonDetails(show.tmdb_id, sn)
-                            totalReleasedEpisodes += sd.episodes?.filter((ep: { episode_number: number }) => {
-                                return isEpisodeAired(releaseIndex, sn, ep.episode_number)
+                            totalReleasedEpisodes += sd.episodes?.filter((ep: { episode_number: number; air_date?: string }) => {
+                                return isEpisodeAired(releaseIndex, sn, ep.episode_number, ep.air_date)
                             }).length || 0
                         } catch { /* skip */ }
                     }
@@ -1310,6 +1310,29 @@ export const checkForNewSeasons = async (userId: string): Promise<{ updated: num
                             .from('watchlist')
                             .update({ status: 'watching', updated_at: new Date().toISOString() })
                             .eq('id', show.id)
+                    }
+                } else if (!hasNewSeason && !seasonNeedsRepair) {
+                    // Self-heal: for shows TMDB marks as Ended/Canceled every episode
+                    // has aired, so the released-episode total must equal TMDB's
+                    // number_of_episodes. The old released-episode logic undercounted
+                    // shows whose episodes exist on TMDB but not on TVmaze (bonus /
+                    // special episodes), leaving a stale total_episodes behind.
+                    const tmdbEnded = details.status === 'Ended' || details.status === 'Canceled'
+                    const storedTotal = show.total_episodes as number | undefined
+                    if (tmdbEnded && storedTotal != null && details.number_of_episodes != null && storedTotal !== details.number_of_episodes) {
+                        const { error: totalError } = await supabase
+                            .from('watchlist')
+                            .update({
+                                total_episodes: details.number_of_episodes,
+                                updated_at: new Date().toISOString()
+                            })
+                            .eq('id', show.id)
+
+                        if (totalError) {
+                            console.error(`Failed to heal total_episodes for ${show.title}:`, totalError)
+                        } else {
+                            updated++
+                        }
                     }
                 }
 
