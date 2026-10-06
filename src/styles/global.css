@@ -6760,20 +6760,22 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
 }
 
 /* Person overlay (page + modal must look identical): the navbar is fixed and
-   truly transparent, and content starts below it � exactly like the routed
+   truly transparent, and content starts below it - exactly like the routed
    person page. A person has no full-bleed backdrop, so the scroll area spans
-   the full viewport (top: 0) and the detail content is padded down to
-   --navbar-height: at rest the profile sits below the bar, and on scroll the
-   content moves up under the transparent bar where it stays fully visible
-   (see-through), matching the page. Mobile/native otherwise span top:0 for the
-   full-bleed backdrop movie/TV overlays; person is pinned to the same model. */
+   the full viewport (top: 0). The --navbar-height offset is applied exactly
+   once: on desktop the scroll area (page) pads for it (see
+   `.detail-overlay__scroll`); on mobile the scroll area pads 0, so the
+   container supplies the offset below. Padding the container on desktop too
+   doubled the space above the profile. */
 .detail-overlay__scroll--person,
 html.native-app .detail-overlay__scroll--person {
     top: 0;
 }
-.detail-overlay .detail-page--person.detail-page--no-scroll,
-html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
-    padding-top: var(--navbar-height);
+@media (max-width: 768px) {
+    .detail-overlay .detail-page--person.detail-page--no-scroll,
+    html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
+        padding-top: var(--navbar-height);
+    }
 }
 
 /* A person layer has no backdrop image, so the loading curtain's flat dark
@@ -9403,11 +9405,14 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
     );
 }
 
+/* Side padding scales with the viewport (14vw) so the avatar + name row never
+   squishes on narrower desktop widths; 16rem is kept as the cap on wide
+   screens and 2rem as the floor. Mobile (<=768px) zeroes it below. */
 .profile-hero__content {
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    padding: 0 16rem;
+    padding: 0 clamp(2rem, 14vw, 16rem);
     margin: 0 auto;
     margin-bottom: 2rem;
 }
@@ -9653,18 +9658,19 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
 }
 
 /* Profile Tabs */
+/* Profile Tabs.
+   Important: this strip must NOT be a scroll container. `overflow-x: auto`
+   also forces the computed `overflow-y` to `auto`, which makes the browser
+   treat the strip as a vertical scroll trap — wheel events over the tabs are
+   swallowed and never reach the page scroller. Let the row wrap instead. */
 .profile-tabs {
     display: flex;
     gap: 0.5rem;
-    overflow-x: auto;
+    row-gap: 0.5rem;
     scrollbar-width: none;
-    display: flex;
     justify-content: space-evenly;
+    flex-wrap: wrap;
     padding: 0rem 16rem;
-}
-
-.profile-tabs::-webkit-scrollbar {
-    display: none;
 }
 
 .profile-tab {
@@ -9719,6 +9725,27 @@ html.native-app .detail-overlay .detail-page--person.detail-page--no-scroll {
 .profile-tab-content {
     min-height: 300px;
     padding-top: 0.5rem;
+}
+
+/* User profile page mirrors the person page geometry: on the person page the
+   shared .dashboard-shell sits inside .detail-page__content (pad-left 4rem)
+   and .detail-page__left (pad-right 1rem), which reset at <=768px / <=480px.
+   Apply the exact same insets here so the .discover-grid on both pages gets
+   identical width, padding and cards per row. */
+.profile-page > .dashboard-shell {
+    padding: 0 1rem 0 4rem;
+}
+
+@media (max-width: 768px) {
+    .profile-page > .dashboard-shell {
+        padding: 0 0 0 4rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .profile-page > .dashboard-shell {
+        padding: 0;
+    }
 }
 
 /* Profile Filters */
