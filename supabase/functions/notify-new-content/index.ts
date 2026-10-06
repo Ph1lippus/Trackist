@@ -28,6 +28,12 @@ const NOTIFICATION_CHECK_THROTTLE_MS = 15 * 60 * 1000
 const HYDRATE_BUDGET_MS = 70_000
 const MAX_INVOCATION_MS = 98_000
 
+// Per-invocation hydration budget (mutable). Manual "Check Now" runs process a
+// single user, so they can afford a much larger share of the time budget; cron
+// sweeps must leave room to serve many users and still push notifications
+// before the edge runtime's wall-clock limit kills the invocation.
+let hydrateBudgetMs = HYDRATE_BUDGET_MS
+
 let invocationStart = 0
 
 interface TVShowRow {
@@ -93,6 +99,7 @@ interface RunStats {
   deliveries: number
   errors: number
   usersProcessed: number
+  usersPending: number
   itemsScheduled: number
   totalScheduled: number
   staleSubscriptionsRemoved: number
@@ -313,7 +320,7 @@ async function getTVMazeScheduleWithWrite(
   supabase: ReturnType<typeof createClient>,
   tmdbId: number
 ): Promise<TVMazeEpisode[]> {
-  if (Date.now() - invocationStart > HYDRATE_BUDGET_MS) return []
+  if (Date.now() - invocationStart > hydrateBudgetMs) return []
 
   const episodes = await fetchTVMazeSchedule(tmdbId)
 
@@ -606,11 +613,17 @@ serve(async (req: Request) => {
     invocationStart = Date.now()
     const isManual = !!targetUserId
 
+    // Manual runs hydrate a single user's watchlist and may legitimately need
+    // nearly the whole invocation; cron sweeps share the budget across many
+    // users and must also leave time to actually push afterwards.
+    hydrateBudgetMs = isManual ? MAX_INVOCATION_MS - 20_000 : HYDRATE_BUDGET_MS
+
     const stats: RunStats = {
       notificationsSent: 0,
       deliveries: 0,
       errors: 0,
       usersProcessed: 0,
+      usersPending: 0,
       itemsScheduled: 0,
       totalScheduled: 0,
       staleSubscriptionsRemoved: 0,
@@ -632,6 +645,7 @@ serve(async (req: Request) => {
     if (userIds.length === 0) {
       return new Response(JSON.stringify({
         users_processed: 0,
+        users_pending: 0,
         notifications_sent: 0,
         deliveries: 0,
         errors: 0,
@@ -659,15 +673,42 @@ serve(async (req: Request) => {
       (recentRuns || []).map((run) => [run.user_id as string, new Date(run.last_completed_at as string).getTime()])
     )
 
+    // Serve the least-recently-completed users first. Combined with the
+    // immediate per-user completion stamps, this guarantees that when a sweep
+    // runs out of time the users who have waited longest are served first on
+    // the next run — no user can be repeatedly starved by its position in the
+    // list (users not yet in the table sort first).
+    userIds.sort((a, b) => (recentRunMap.get(a) || 0) - (recentRunMap.get(b) || 0))
+
     const profileMap = new Map<string, Record<string, unknown>>(
       (profileRows || []).map((p) => [p.id as string, p as Record<string, unknown>])
     )
 
-    const pendingRunUpserts: { user_id: string; last_completed_at: string }[] = []
+    // Completion stamps are persisted immediately per user (not batched at the
+    // end): if the edge runtime's wall-clock limit kills this invocation
+    // mid-sweep, users that were fully processed keep their stamp and the next
+    // cron run skips straight past them (throttled) instead of redoing the same
+    // expensive TMDB/TVMaze work — which is what used to make every cron run
+    // time out without ever sending anything.
+    const completeRunForUser = async (userId: string): Promise<void> => {
+      const { error } = await supabase
+        .from('notification_check_runs')
+        .upsert({ user_id: userId, last_completed_at: now.toISOString() })
+      if (error) {
+        console.error('Failed to persist notification_check_runs:', error)
+        stats.errors++
+      }
+    }
 
     const processUserId = async (userId: string): Promise<void> => {
       try {
-        if (!isManual && Date.now() - invocationStart > MAX_INVOCATION_MS) {
+        // Applies to manual runs too: a first "Check Now" with a large stale
+        // watchlist used to run past the platform wall-clock limit and get
+        // killed, which looked like a failed check. The budget makes it return
+        // cleanly instead — schedules hydrated so far are already persisted,
+        // so the next check/cron run only has the remaining shows left.
+        if (Date.now() - invocationStart > MAX_INVOCATION_MS) {
+          stats.usersPending++
           console.warn('Time budget exceeded, stopping before user', userId)
           return
         }
@@ -705,6 +746,23 @@ serve(async (req: Request) => {
           )
           return
         }
+
+        // Check subscriptions BEFORE hydrating: users with no registered
+        // devices would otherwise burn the shared TVMaze/TMDB hydration budget
+        // on schedule lookups that can never result in a delivery — one of the
+        // main reasons the cron sweep used to run out of time.
+        const { data: subscriptions } = await supabase
+          .from('push_subscriptions')
+          .select('id, endpoint, keys, platform, token')
+          .eq('user_id', userId)
+
+        if (!subscriptions || subscriptions.length === 0) {
+          console.log(`skip:user=${userId} reason=no_subscriptions`)
+          await completeRunForUser(userId)
+          return
+        }
+
+        stats.usersProcessed++
 
         const todayStr = todayInTimezone(timezone, now)
         const tomorrowStr = tomorrowInTimezone(timezone, now)
@@ -994,24 +1052,11 @@ serve(async (req: Request) => {
 
         if (notifications.length === 0) {
           console.log(`skip:user=${userId} reason=nothing_new`)
-          pendingRunUpserts.push({ user_id: userId, last_completed_at: now.toISOString() })
-          return
-        }
-
-        const { data: subscriptions } = await supabase
-          .from('push_subscriptions')
-          .select('id, endpoint, keys, platform, token')
-          .eq('user_id', userId)
-
-        if (!subscriptions || subscriptions.length === 0) {
-          console.log(`skip:user=${userId} reason=no_subscriptions`)
-          pendingRunUpserts.push({ user_id: userId, last_completed_at: now.toISOString() })
+          await completeRunForUser(userId)
           return
         }
 
         console.log(`notify:user=${userId} items=${notifications.length} subs=${subscriptions.length}`)
-
-        stats.usersProcessed++
 
         await mapWithConcurrency(
           notifications,
@@ -1063,7 +1108,7 @@ serve(async (req: Request) => {
             .eq('id', movieId)
         }
 
-        pendingRunUpserts.push({ user_id: userId, last_completed_at: now.toISOString() })
+        await completeRunForUser(userId)
       } catch (error) {
         console.error(`Failed to process user ${userId}:`, error)
         stats.errors++
@@ -1087,17 +1132,6 @@ serve(async (req: Request) => {
       await mapWithConcurrency(userIds, processUserId, USER_CONCURRENCY)
     }
 
-    // Batch all throttle upserts in one round trip.
-    if (pendingRunUpserts.length > 0) {
-      const { error: upsertError } = await supabase
-        .from('notification_check_runs')
-        .upsert(pendingRunUpserts)
-      if (upsertError) {
-        console.error('Failed to persist notification_check_runs:', upsertError)
-        stats.errors++
-      }
-    }
-
     stats.showsHydrated = hydratedUniqueShows.size
 
     console.log(`notify-new-content done in ${Date.now() - invocationStart}ms`, JSON.stringify(stats))
@@ -1105,6 +1139,7 @@ serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         users_processed: stats.usersProcessed,
+        users_pending: stats.usersPending,
         notifications_sent: stats.notificationsSent,
         deliveries: stats.deliveries,
         items_scheduled: stats.itemsScheduled,

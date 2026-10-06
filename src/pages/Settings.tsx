@@ -486,7 +486,7 @@ const NotificationsSection: React.FC<Pick<SettingsProps, 'notificationsProps'>> 
                 <div className="settings-data-card__icon"><Clock size={20} strokeWidth={2} /></div>
                 <div className="settings-data-card__info">
                     <span className="settings-data-card__label">Preferred Notification Hour</span>
-                    <span className="settings-data-card__sub">Hour of day (your local time) when daily checks run</span>
+                    <span className="settings-data-card__sub">Earliest time (your local time) you want alerts — new content is looked for starting at this hour</span>
                 </div>
                 <input
                     type="time"
@@ -556,7 +556,7 @@ const NotificationsSection: React.FC<Pick<SettingsProps, 'notificationsProps'>> 
                 <Info size={20} strokeWidth={2} />
                 <div>
                     <h4>About Notifications</h4>
-                    <p>What's new is checked automatically every hour, so you'll be alerted shortly after episodes air or movies hit streaming services. Alerts are delivered straight to this device by your browser â€” nothing is stored on our servers beyond your saved preferences and device subscription.</p>
+                    <p>What's new is checked automatically every 15 minutes, so you'll be alerted shortly after episodes air or movies hit streaming services. Alerts start at your preferred hour and can arrive any time in the hours after it, so a slightly delayed push is normal. Alerts are delivered straight to this device by your browser — nothing is stored on our servers beyond your saved preferences and device subscription.</p>
                 </div>
             </div>
         </div>
@@ -1190,31 +1190,47 @@ const Settings: React.FC = () => {
         setNotifMessage(prev => ({ ...prev, movie_notify_on_digital: { text: 'Preference updated successfully', isError: false } }))
     }
 
+    const runNotifyCheck = async (userId: string): Promise<Record<string, unknown>> => {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.access_token) throw new Error('No session')
+
+        const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-new-content`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ userId })
+        })
+
+        if (!res.ok) {
+            const data = await res.json()
+            throw new Error(data.error || 'Check failed')
+        }
+
+        return res.json()
+    }
+
     const handleCheckNow = async () => {
         if (!currentUser) return
         setPushMessage('Checking for new episodes...')
         try {
-            const { data: { session } } = await supabase.auth.getSession()
-            if (!session?.access_token) throw new Error('No session')
-
-            const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/notify-new-content`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${session.access_token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ userId: currentUser.id })
-            })
-
-            if (!res.ok) {
-                const data = await res.json()
-                throw new Error(data.error || 'Check failed')
+            let result: Record<string, unknown>
+            try {
+                result = await runNotifyCheck(currentUser.id)
+            } catch {
+                // A very first check can fail when a large stale watchlist has
+                // to be hydrated at once (TVMaze/TMDB lookups for every show).
+                // Those lookups are persisted, so an immediate retry only has
+                // the remaining shows left and completes quickly.
+                setPushMessage('First check took too long — schedules are now cached, retrying...')
+                result = await runNotifyCheck(currentUser.id)
             }
-
-            const result = await res.json()
             const upcoming = typeof result.total_scheduled === 'number' ? result.total_scheduled : 0
             const deliveries = typeof result.deliveries === 'number' ? result.deliveries : 0
-            setPushMessage(`Check complete: ${result.notifications_sent} notifications sent (${deliveries} device deliveries), ${upcoming} upcoming across your watchlist`)
+            const pending = typeof result.users_pending === 'number' ? result.users_pending : 0
+            const pendingNote = pending > 0 ? ' — some shows still need checking; run again shortly' : ''
+            setPushMessage(`Check complete: ${result.notifications_sent} notifications sent (${deliveries} device deliveries), ${upcoming} upcoming across your watchlist${pendingNote}`)
         } catch (err) {
             const message = err instanceof Error ? err.message : 'Check failed'
             setPushMessage(message)

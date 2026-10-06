@@ -142,15 +142,17 @@ supabase secrets set VAPID_PRIVATE_KEY=<your-vapid-private-key> --project-ref <y
 
 The following scheduled jobs keep data fresh and send notifications. Each uses `pg_cron` to call the corresponding edge function via `pg_net`.
 
-**1. Notification sweep (hourly)**
+**1. Notification sweep (every 15 minutes)**
+
+The sweep self-throttles per user (15 minutes between checks) and processes users least-recently-checked first within a per-invocation time budget, so running it every 15 minutes is safe and guarantees every due user gets served even when one sweep cannot check everyone:
 
 ```sql
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 
 select cron.schedule(
-  'notify-new-content-hourly',
-  '5 * * * *',
+  'notify-new-content-sweep',
+  '*/15 * * * *',
   $job$
     select net.http_post(
       url := 'https://<your-project-ref>.supabase.co/functions/v1/notify-new-content',
@@ -167,6 +169,13 @@ select cron.schedule(
     );
   $job$
 );
+```
+
+If you previously created the hourly job (`notify-new-content-hourly` at `5 * * * *`), replace it with the 15-minute schedule above:
+
+```sql
+select cron.unschedule('notify-new-content-hourly');
+-- then run the cron.schedule(...) block above
 ```
 
 **2. Movie release sync (every 6 hours)**
