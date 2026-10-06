@@ -5,6 +5,53 @@ import { getReleaseIndex, getShowAirSchedule, isEpisodeAired } from './tvmazeSer
 
 import type { WatchlistItem } from '../types'
 
+/** Map with bounded concurrency so a large watchlist can't burst the TMDB proxy. */
+
+const mapWithConcurrency = async <T, R>(
+    values: T[],
+    worker: (value: T) => Promise<R>,
+    concurrency: number = 4,
+): Promise<R[]> => {
+    const results: R[] = new Array(values.length)
+    let workers: Promise<void>[] = []
+
+    const runWorker = async (index: number, value: T): Promise<void> => {
+        results[index] = await worker(value)
+    }
+
+    for (let i = 0; i < values.length; i++) {
+        workers.push(runWorker(i, values[i]))
+        if (workers.length >= concurrency) {
+            await Promise.all(workers)
+            workers = []
+        }
+    }
+    if (workers.length > 0) {
+        await Promise.all(workers)
+    }
+
+    return results
+}
+
+/** Retry a TMDB-fetching call with a small backoff so transient proxy failures don't silently drop progress updates. */
+
+const withRetry = async <T>(
+    fn: () => Promise<T>,
+    retries = 2,
+    backoffMs = 800,
+): Promise<T> => {
+    let lastError: unknown
+    for (let attempt = 0; attempt < retries; attempt++) {
+        try {
+            return await fn()
+        } catch (error) {
+            lastError = error
+            await new Promise(resolve => setTimeout(resolve, backoffMs * (attempt + 1)))
+        }
+    }
+    throw lastError
+}
+
 export interface FixProgress {
     total: number
     processed: number
@@ -903,29 +950,30 @@ export const checkAndUpdateCaughtUp = async (watchlistId: string, tmdbId: number
  * If the show is still airing, mark as 'caught_up'.
  * If no episodes are watched, reset to 'planning'.
  */
-export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: number): Promise<void> => {
+export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: number): Promise<boolean> => {
     try {
-        const details = await getTVDetails(tmdbId)
-        const releaseIndex = getReleaseIndex(await getShowAirSchedule(tmdbId))
-        
+        const details = await withRetry(() => getTVDetails(tmdbId))
+        const releaseIndex = getReleaseIndex(await withRetry(() => getShowAirSchedule(tmdbId)))
+
         // Count only released episodes across all seasons
         const seasonNumbers = (details.seasons || [])
             .filter((s: { season_number: number }) => s.season_number > 0)
             .map((s: { season_number: number }) => s.season_number)
 
-        const releasedPerSeason = await Promise.all(
-            seasonNumbers.map(async (seasonNum) => {
+        const releasedPerSeason = await mapWithConcurrency(
+            seasonNumbers,
+            async (seasonNum) => {
                 const seasonData = await getTVSeasonDetails(tmdbId, seasonNum)
                 const unreleasedInSeason = seasonData.episodes?.filter((ep: { episode_number: number; air_date?: string }) => {
                     return !isEpisodeAired(releaseIndex, seasonNum, ep.episode_number, ep.air_date)
                 }).length || 0
                 return (seasonData.episodes?.length || 0) - unreleasedInSeason
-            })
+            }
         )
 
         const totalReleasedEpisodes = releasedPerSeason.reduce((sum, count) => sum + count, 0)
 
-        if (totalReleasedEpisodes === 0) return
+        if (totalReleasedEpisodes === 0) return false
 
         const watchedCount = await getWatchedEpisodeCount(watchlistId)
 
@@ -1000,7 +1048,10 @@ export const checkAndUpdateCompleted = async (watchlistId: string, tmdbId: numbe
         }
     } catch (err) {
         console.error('Failed to check completed status:', err)
+        return false
     }
+
+    return true
 }
 
 /**

@@ -19,6 +19,9 @@ interface MovieRow {
   tmdb_id: number
   country_code: string | null
   release_date?: string | null
+  digital_release_date?: string | null
+  /** Dedicated marker; may be absent until the migration is applied. */
+  last_release_sync?: string | null
 }
 
 interface TMDBReleaseDate {
@@ -147,15 +150,41 @@ serve(async (req: Request) => {
       const countryCode = (user.country_code || 'PT').toUpperCase()
 
       try {
-        const movies: MovieRow[] = await fetchAllRows<MovieRow>(
-          supabase
-            .from('watchlist')
-            .select('id, tmdb_id, release_date')
-            .eq('user_id', userId)
-            .eq('media_type', 'movie')
-            .not('tmdb_id', 'is', null)
-            .or(`digital_release_date.is.null,release_date.is.null,last_provider_sync.is.null,last_provider_sync.lt.${new Date(Date.now() - STALE_AFTER_MS).toISOString()}`)
-        )
+        const staleCutoff = new Date(Date.now() - STALE_AFTER_MS).toISOString()
+
+        // Prefer the dedicated `last_release_sync` marker. `last_provider_sync` is
+        // shared with sync-watch-providers, which keeps refreshing it — a row that
+        // already has a digital date could therefore look permanently "fresh" and
+        // never get its theatrical date localized again (e.g. after a country
+        // change). Falls back to the legacy shared marker until the column has
+        // been added.
+        let useReleaseMarker = true
+        let movies: MovieRow[] = []
+        try {
+          movies = await fetchAllRows<MovieRow>(
+            supabase
+              .from('watchlist')
+              .select('id, tmdb_id, release_date, digital_release_date, last_release_sync')
+              .eq('user_id', userId)
+              .eq('media_type', 'movie')
+              .not('tmdb_id', 'is', null)
+              .or(`digital_release_date.is.null,release_date.is.null,last_release_sync.is.null,last_release_sync.lt.${staleCutoff}`)
+          )
+        } catch (error) {
+          // Most likely the column doesn't exist yet (migration not applied) —
+          // retry with the legacy gate instead of failing this user's sync.
+          useReleaseMarker = false
+          console.warn('sync-movie-releases: last_release_sync unavailable, falling back to legacy gate:', error)
+          movies = await fetchAllRows<MovieRow>(
+            supabase
+              .from('watchlist')
+              .select('id, tmdb_id, release_date')
+              .eq('user_id', userId)
+              .eq('media_type', 'movie')
+              .not('tmdb_id', 'is', null)
+              .or(`digital_release_date.is.null,release_date.is.null,last_provider_sync.is.null,last_provider_sync.lt.${staleCutoff}`)
+          )
+        }
 
         if (movies.length === 0) continue
 

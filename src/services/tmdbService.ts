@@ -186,6 +186,75 @@ export const getMovieDetails = async (id: number): Promise<{
     return sanitizeMovieDetails(await res.json())
 }
 
+/** A single release entry inside TMDB's `release_dates` payload. */
+export interface TMDBReleaseDateEntry {
+    certification?: string
+    /** ISO timestamp or YYYY-MM-DD — the date part is what we store. */
+    release_date?: string
+    /** 1=Premiere, 2=Theatrical (limited), 3=Theatrical (wide), 4=Digital, 5=TV, 6=DVD */
+    type?: number
+}
+
+export interface TMDBReleaseDateCountry {
+    iso_3166_1: string
+    release_dates?: TMDBReleaseDateEntry[]
+}
+
+/**
+ * Resolve the country-specific theatrical and digital release dates from
+ * TMDB's `release_dates` payload (appended by getMovieDetails, or fetched via
+ * fetchMovieReleaseDates).
+ *
+ * Mirrors the sync-movie-releases edge function exactly — types 1/2/3 are
+ * theatrical (premiere / limited / wide), type 4 is digital, and the earliest
+ * entry of each kind wins — so the date written when a movie is added always
+ * matches what the cron would compute later.
+ *
+ * Returns undefined fields when the country has no usable entries; callers
+ * fall back to TMDB's primary `release_date`.
+ */
+export const getCountryReleaseDates = (
+    results: TMDBReleaseDateCountry[] | undefined | null,
+    countryCode: string
+): { theatrical?: string; digital?: string } => {
+    if (!results || results.length === 0 || !countryCode) return {}
+
+    const country = results.find(r => r.iso_3166_1 === countryCode.toUpperCase())
+    const entries = country?.release_dates || []
+
+    const dayOf = (entry: TMDBReleaseDateEntry): string =>
+        entry.release_date ? entry.release_date.split('T')[0] : ''
+
+    const isReleasedDay = (entry: TMDBReleaseDateEntry): boolean => /^\d{4}-\d{2}-\d{2}$/.test(dayOf(entry))
+
+    const theatrical = entries
+        .filter(e => (e.type === 1 || e.type === 2 || e.type === 3) && isReleasedDay(e))
+        .map(dayOf)
+        .sort()[0]
+
+    const digital = entries
+        .filter(e => e.type === 4 && isReleasedDay(e))
+        .map(dayOf)
+        .sort()[0]
+
+    return { theatrical: theatrical || undefined, digital: digital || undefined }
+}
+
+/**
+ * Fetch TMDB's per-country release dates for a movie. Used when the movie
+ * details payload wasn't fetched with `release_dates` appended (adds from
+ * search/discover results) and when re-localizing a user's watchlist after a
+ * country change.
+ */
+export const fetchMovieReleaseDates = async (tmdbId: number): Promise<TMDBReleaseDateCountry[]> => {
+    const res = await tmdbProxy(`/movie/${tmdbId}/release_dates`)
+    if (!res.ok) {
+        throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
+    }
+    const data = await res.json() as { results?: TMDBReleaseDateCountry[] }
+    return Array.isArray(data.results) ? data.results : []
+}
+
 export const getTVShowDetails = async (id: number): Promise<{
     id: number
     name: string

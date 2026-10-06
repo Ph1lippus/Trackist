@@ -4,8 +4,12 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import type { User } from '@supabase/supabase-js'
 import { requestPasswordReset, updateUserEmail, getProfile, updateProfile } from '../services/profileService'
-import { useCache } from '../hooks/useCache'
-import { getCachedOrFetch } from '../services/cacheService'
+    import { useCache } from '../hooks/useCache'
+import { getCachedOrFetch, invalidateUserCache } from '../services/cacheService'
+import { relocalizeUserMovieDates } from '../services/movieReleaseService'
+import { clearCalendarCache } from '../services/calendarService'
+import { useLibraryStore } from '../stores/useLibraryStore'
+import type { WatchlistItem } from '../types'
 import { usePWAInstall } from '../hooks/usePWAInstall'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
@@ -1153,6 +1157,40 @@ const Settings: React.FC = () => {
         }
     }
 
+    /**
+     * Re-resolve every watchlist movie's theatrical/digital date for the newly
+     * selected country, patch the in-memory library so the Movies page is
+     * correct immediately, and drop the cached Upcoming calendar.
+     */
+    const relocalizeMovieDates = async (userId: string) => {
+        try {
+            const changed = await relocalizeUserMovieDates(userId)
+            if (changed.length === 0) return
+
+            const byId = new Map(changed.map(row => [row.id, row]))
+            useLibraryStore.setState(state => {
+                const applyPatch = (item: WatchlistItem): WatchlistItem => {
+                    const row = byId.get(item.id)
+                    if (!row) return item
+                    const patch: Partial<WatchlistItem> = {}
+                    if (row.release_date) patch.release_date = row.release_date
+                    if (row.digital_release_date) patch.digital_release_date = row.digital_release_date
+                    return { ...item, ...patch }
+                }
+                return {
+                    allItems: state.allItems.map(applyPatch),
+                    movies: state.movies.map(applyPatch),
+                    finished: state.finished.map(applyPatch),
+                }
+            })
+
+            await invalidateUserCache()
+            clearCalendarCache(userId)
+        } catch (err) {
+            console.error('Failed to re-localize movie release dates:', err)
+        }
+    }
+
     const handleCountryUpdate = async (newCountryCode: string) => {
         if (!currentUser) return
         setCountryLoading(true)
@@ -1162,6 +1200,9 @@ const Settings: React.FC = () => {
             setNotifMessage(prev => ({ ...prev, notify_new_episode: { text: error.message, isError: true } }))
         } else {
             setCountryCode(newCountryCode)
+            // Existing movies still carry the previous country's theatrical day —
+            // fix them now instead of waiting for the next cron run.
+            void relocalizeMovieDates(currentUser.id)
         }
     }
 

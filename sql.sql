@@ -32,6 +32,7 @@ CREATE TABLE public.watchlist (
   last_movie_notified_ref text,
   watch_providers jsonb DEFAULT '{}'::jsonb,
   last_provider_sync timestamp with time zone,
+  last_release_sync timestamp with time zone,
   CONSTRAINT watchlist_pkey PRIMARY KEY (id),
   CONSTRAINT watchlist_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );

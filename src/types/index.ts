@@ -63,7 +63,16 @@ export interface TMDBResult {
         }>
     }
     release_dates?: {
-        results?: Array<{ iso_3166_1: string; release_dates: Array<{ certification: string }> }>
+        results?: Array<{
+            iso_3166_1: string
+            release_dates: Array<{
+                certification: string
+                /** ISO timestamp or YYYY-MM-DD */
+                release_date?: string
+                /** 1/2/3 = theatrical, 4 = digital (TMDB release type) */
+                type?: number
+            }>
+        }>
     }
     videos?: {
         results?: Array<{ type: string; site: string; key: string }>
@@ -93,6 +102,8 @@ export interface WatchlistItem {
     poster_path?: string
     overview?: string
     release_date?: string
+    /** Country-localized digital release (kept in sync by sync-movie-releases). */
+    digital_release_date?: string
     vote_average?: number
     total_seasons?: number
     total_episodes?: number

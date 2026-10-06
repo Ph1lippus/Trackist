@@ -616,6 +616,22 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
             } catch (error) {
                 console.error('Failed to fetch TV details for episode count:', error)
             }
+        } else if (item.media_type === 'movie' && item.tmdb_id) {
+            // Store the release dates for the user's country instead of TMDB's
+            // primary-market date, so the Upcoming calendar, the "Not Released"
+            // section and Release Day alerts all use the local release day.
+            try {
+                const { resolveMovieReleaseDates } = await import('../services/movieReleaseService')
+                const localized = await resolveMovieReleaseDates(item.user_id, item.tmdb_id, item.release_date)
+                const patch: Partial<WatchlistItem> = {}
+                if (localized.release_date) patch.release_date = localized.release_date
+                if (localized.digital_release_date) patch.digital_release_date = localized.digital_release_date
+                if (Object.keys(patch).length > 0) {
+                    enhancedItem = { ...enhancedItem, ...patch }
+                }
+            } catch (error) {
+                console.error('Failed to localize movie release dates:', error)
+            }
         }
 
         // Set completed_at when adding with completed status

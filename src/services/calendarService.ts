@@ -74,6 +74,21 @@ const fetchFromEdgeFunction = async (userId: string): Promise<CalendarItem[]> =>
 
 const getCacheKey = (userId: string) => `${CACHE_PREFIX}:${userId}`
 
+/**
+ * Drop the cached calendar for a user so the next load fetches fresh data.
+ * Used when something invalidates the stored dates themselves (e.g. the user
+ * changes country and every movie's release date is re-localized) rather than
+ * just the passage of time.
+ */
+export const clearCalendarCache = (userId: string): void => {
+    if (!userId) return
+    try {
+        localStorage.removeItem(getCacheKey(userId))
+    } catch {
+        // Storage unavailable — nothing to clear
+    }
+}
+
 const readCache = (userId: string): CalendarCache | null => {
     try {
         const raw = localStorage.getItem(getCacheKey(userId))

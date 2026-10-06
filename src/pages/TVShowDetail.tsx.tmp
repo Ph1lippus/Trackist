@@ -772,8 +772,40 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
         return max
     }
 
+    /**
+     * Fire Cosmic Confetti the moment local data proves this mutation finishes
+     * the show, without waiting for the full status-persist chain (fresh TMDB
+     * details + every season + store refresh) that must finish before the
+     * end-of-chain `checkMilestoneAndCelebrate` can see the new status.
+     *
+     * `nextEp` is the already-computed next-episode hint: `null` proves no
+     * released unwatched episode follows the marked one in any season we could
+     * verify locally; `undefined` means a required season wasn't cached, so
+     * completion can't be proven here and the slow fallback check decides.
+     * `projectedWatchedCount` guards against gaps BEFORE the marked episode
+     * (jumping straight to the end of the show).
+     *
+     * Returns true when it celebrated so the caller can skip the fallback
+     * check and avoid replaying the animation.
+     */
+    const celebrateCompletionLocally = (
+        nextEp: { season_number: number; episode_number: number } | null | undefined,
+        projectedWatchedCount: number
+    ): boolean => {
+        if (nextEp !== null) return false
+        if (watchlistStatus === 'completed' || watchlistStatus === 'caught_up') return false
+        const totalReleased = watchlistItem?.total_episodes ?? 0
+        if (totalReleased <= 0 || projectedWatchedCount < totalReleased) return false
+        launchCosmicConfetti()
+        return true
+    }
+
     const markEpisodeAsWatched = async (episode: LocalEpisode, markAll: boolean) => {
         if (!watchlistId || !details) return
+
+        // Flipped when the local check below already fired the confetti, so the
+        // end-of-chain fallback check doesn't replay it.
+        let celebratedEarly = false
 
         if (markAll) {
             const episodesToMark: LocalEpisode[] = []
@@ -826,6 +858,13 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                     episode.episode_number,
                     extraWatched
                 )
+                // Celebrate right away when this completes the show instead of
+                // waiting for the status persist + background sync below.
+                celebratedEarly = celebrateCompletionLocally(
+                    nextEp,
+                    watchedKeysCache.current.size +
+                        episodesToMark.filter(ep => !watchedKeysCache.current.has(`${ep.season_number}-${ep.episode_number}`)).length
+                )
                 const success = await markEpisodesWatched(watchlistId, episodesToMark, nextEp)
                 if (!success) throw new Error('Failed to mark episodes as watched')
 
@@ -868,9 +907,15 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
 
                 void (async () => {
                     try {
-                        await checkAndUpdateCompleted(watchlistId, details.id)
+                        let succeeded = await checkAndUpdateCompleted(watchlistId, details.id)
+                        if (!succeeded) {
+                            succeeded = await checkAndUpdateCompleted(watchlistId, details.id)
+                        }
                         await useLibraryStore.getState().refreshItem(watchlistId)
-                        await checkMilestoneAndCelebrate(watchlistStatus)
+                        // Skip when the local check already celebrated right after the click
+                        if (!celebratedEarly) {
+                            await checkMilestoneAndCelebrate(watchlistStatus)
+                        }
                     } catch (syncError) {
                         console.error('Failed to synchronize progress after marking episodes:', syncError)
                     }
@@ -904,11 +949,20 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
             try {
                 if (newWatchedState) {
                     // INSERT into watchlist_episodes
-                    const extraWatched = new Set([`${episode.season_number}-${episode.episode_number}`])
+                    const key = `${episode.season_number}-${episode.episode_number}`
+                    const extraWatched = new Set([key])
                     const nextEp = await computeNextEpisodeForMutation(
                         episode.season_number,
                         episode.episode_number,
                         extraWatched
+                    )
+                    // Celebrate right away when this click finishes the show:
+                    // waiting for markEpisodeWatched + checkAndUpdateCompleted +
+                    // refreshItem (the end-of-chain check) made the confetti feel
+                    // arbitrarily late after the click.
+                    celebratedEarly = celebrateCompletionLocally(
+                        nextEp,
+                        watchedKeysCache.current.size + (watchedKeysCache.current.has(key) ? 0 : 1)
                     )
                     const success = await markEpisodeWatched(watchlistId, episode.season_number, episode.episode_number, {
                         tmdb_episode_id: episode.tmdb_episode_id,
@@ -924,6 +978,17 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                             ep.id === episode.id ? { ...ep, watched: false } : ep
                         ))
                         return
+                    }
+                    // Keep the local caches in sync (mirrors the mark-all path) so
+                    // the next-episode hint and the local completion check see this
+                    // episode as watched for the rest of the session.
+                    watchedKeysCache.current.add(key)
+                    const cached = seasonCache.current.get(episode.season_number)
+                    if (cached) {
+                        const idx = cached.findIndex(c => c.season_number === episode.season_number && c.episode_number === episode.episode_number)
+                        if (idx !== -1) {
+                            cached[idx] = { ...cached[idx], watched: true }
+                        }
                     }
                     // Check if all episodes are watched and update status to completed/caught_up
                     await checkAndUpdateCompleted(watchlistId, details.id)
@@ -948,8 +1013,11 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                 // Recalculate progress to ensure current_episode and status are in sync
                 await useLibraryStore.getState().refreshItem(watchlistId)
                 
-                // Check for milestone and celebrate
-                await checkMilestoneAndCelebrate(watchlistStatus)
+                // Check for milestone and celebrate (skipped when the local check
+                // already fired the confetti right after the click)
+                if (!celebratedEarly) {
+                    await checkMilestoneAndCelebrate(watchlistStatus)
+                }
             } catch (err) {
                 setEpisodes(prev => prev.map(ep => 
                     ep.id === episode.id ? { ...ep, watched: !newWatchedState } : ep
@@ -962,7 +1030,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
     /**
      * Mark the entire show as fully watched and reflect it in local state.
      * Awaits the full episode save (awaitPersist) so every episode row exists
-     * in watchlist_episodes before we read them back ΓÇö otherwise the read
+     * in watchlist_episodes before we read them back — otherwise the read
      * races the background save and episodes can transiently show as unwatched
      * (and earlier seasons can be left un-marked).
      */
@@ -1043,6 +1111,17 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                     ep.id === episode.id ? { ...ep, watched: true } : ep
                 ))
                 return
+            }
+
+            // Drop the key from the local cache so later next-episode hints and
+            // the local completion check don't count a removed episode as watched.
+            watchedKeysCache.current.delete(key)
+            const cachedSeason = seasonCache.current.get(episode.season_number)
+            if (cachedSeason) {
+                const idx = cachedSeason.findIndex(c => c.season_number === episode.season_number && c.episode_number === episode.episode_number)
+                if (idx !== -1) {
+                    cachedSeason[idx] = { ...cachedSeason[idx], watched: false }
+                }
             }
 
             void (async () => {
@@ -1217,7 +1296,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                             {displaySeasonCount > 0 && <span className="detail-page__seasons">{displaySeasonCount} Seasons</span>}
                             {rating && (
                                 <span className="detail-page__rating" aria-label={`Rating: ${rating} out of 10`}>
-                                    <span aria-hidden="true">Γÿà</span> {rating}
+                                    <span aria-hidden="true">★</span> {rating}
                                 </span>
                             )}
 
@@ -1272,7 +1351,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                                 const newWatchlistId = await handleAddToWatchlist()
                                                 if (newWatchlistId && details) {
                                                     // The show was just added (planning), so this explicit mark-as-watched
-                                                    // action always completes it ΓÇö celebrate right away instead of waiting
+                                                    // action always completes it — celebrate right away instead of waiting
                                                     // on the status persist + background episode-saving.
                                                     launchCosmicConfetti()
                                                     // Gold standard: just set the status directly - no need to insert every episode
@@ -1438,7 +1517,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                                 const newWatchlistId = await handleAddToWatchlist()
                                                 if (newWatchlistId && details) {
                                                     // The show was just added (planning), so this explicit mark-as-watched
-                                                    // action always completes it ΓÇö celebrate right away instead of waiting
+                                                    // action always completes it — celebrate right away instead of waiting
                                                     // on the status persist + background episode-saving.
                                                     launchCosmicConfetti()
                                                     // Gold standard: just set the status directly - no need to insert every episode
@@ -1637,7 +1716,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                                         <div className="detail-page__episode-meta">
                                                             {getEpisodeLocalAirDate(ep) && <span>{getEpisodeLocalAirDate(ep)}</span>}
                                                             {ep.runtime && <span>{ep.runtime} min</span>}
-                                                            {!isMobile && isEpisodeReleased(ep) && typeof ep.vote_average === 'number' && ep.vote_average > 0 && <span>Γÿà {ep.vote_average.toFixed(1)}</span>}
+                                                            {!isMobile && isEpisodeReleased(ep) && typeof ep.vote_average === 'number' && ep.vote_average > 0 && <span>★ {ep.vote_average.toFixed(1)}</span>}
                                                         </div>
                                                     </div>
                                             </div>
@@ -1765,7 +1844,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                                         <div className="detail-page__episode-meta">
                                                             {getEpisodeLocalAirDate(ep) && <span>{getEpisodeLocalAirDate(ep)}</span>}
                                                             {ep.runtime && <span>{ep.runtime} min</span>}
-                                                            {!isMobile && isEpisodeReleased(ep) && typeof ep.vote_average === 'number' && ep.vote_average > 0 && <span>Γÿà {ep.vote_average.toFixed(1)}</span>}
+                                                            {!isMobile && isEpisodeReleased(ep) && typeof ep.vote_average === 'number' && ep.vote_average > 0 && <span>★ {ep.vote_average.toFixed(1)}</span>}
                                                         </div>
                                                     </div>
                                                 </div>
