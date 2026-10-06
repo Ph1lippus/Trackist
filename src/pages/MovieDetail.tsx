@@ -22,7 +22,7 @@ import ShareButton from '../components/media/ShareButton'
 import CastList from '../components/CastList'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
 import { useIsActiveDetail } from '../hooks/useActiveDetail'
-import useDetailModalStore from '../stores/detailModalStore'
+import useDetailModalStore, { detailEntryKey } from '../stores/detailModalStore'
 import { AlignLeft, Bookmark, Clapperboard, Eye, EyeOff, Users, X } from 'lucide-react'
 
 interface MovieDetailProps {
@@ -42,7 +42,7 @@ const MovieDetail: React.FC<MovieDetailProps> = ({ itemId: propId, onLoaded }) =
     const isActiveDetail = useIsActiveDetail('movie', id)
     const [details, setDetails] = useState<TMDBResult | null>(null)
     const movieTitle = details?.title || details?.name
-    usePageTitle(movieTitle ? `${movieTitle} - Track1st` : 'Track1st - Movie Detail')
+    usePageTitle(movieTitle ? `${movieTitle} - Track1st` : 'Track1st - Movie Detail', propId != null ? detailEntryKey('movie', propId) : undefined)
     const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)

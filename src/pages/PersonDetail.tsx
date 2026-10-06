@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import { getPersonDetails, getPersonMovies, getPersonTV, imageUrl } from '../services/tmdbService'
 import type { TMDBResult, WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
+import { detailEntryKey } from '../stores/detailModalStore'
 import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
 import MediaCard from '../components/media/MediaCard'
@@ -36,7 +37,7 @@ const PersonDetail: React.FC<PersonDetailProps> = ({ itemId: propId, onLoaded })
     const { id: paramId } = useParams<{ id: string }>()
     const id = propId?.toString() ?? paramId
     const [details, setDetails] = useState<PersonDetails | null>(null)
-    usePageTitle(details?.name ? `${details.name} - Track1st` : 'Track1st - Person Detail')
+    usePageTitle(details?.name ? `${details.name} - Track1st` : 'Track1st - Person Detail', propId != null ? detailEntryKey('person', propId) : undefined)
     const [detailsLoading, setDetailsLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [reloadKey, setReloadKey] = useState(0)

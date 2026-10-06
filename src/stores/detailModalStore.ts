@@ -101,6 +101,19 @@ export const setDetailBaseTitle = (title: string): void => {
     baseTitle = title
 }
 
+// The router pathname the modal was opened over (captured on the first open).
+// DetailOverlay's close-time title restore is skipped when the router has since
+// navigated elsewhere, so closing the modal after a real navigation can never
+// clobber the new page's title with the stale base title.
+let baseTitlePathname = ''
+
+export const getDetailBasePathname = (): string => baseTitlePathname
+
+// Stable key for a detail stack entry, shared by the overlay and the detail
+// pages (used to remember each layer's document title across layer changes).
+export const detailEntryKey = (type: string, id: number, season?: number, episode?: number): string =>
+  `${type}:${id}:${season ?? ''}:${episode ?? ''}`
+
 // Re-open the last-open modal from sessionStorage, if any. Called once after
 // auth init so a user hitting refresh on a page (the pinned URL) returns with
 // the exact same modal stack on top. Mirrors open(): pins one keep-alive
@@ -125,6 +138,7 @@ export const restoreDetailModal = (): void => {
   if (!stack) return
 
   const top = stack[stack.length - 1]
+  baseTitlePathname = window.location.pathname
   try {
     const href = window.location.href
     window.history.pushState(OPEN_PIN_STATE, '', href)
@@ -187,6 +201,7 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
     const current = get()
     if (!current.isOpen) {
       baseTitle = document.title
+      baseTitlePathname = window.location.pathname
       const href = window.location.href
       // Pin one synthetic history entry (same URL) so browser/device Back
       // produces a popstate we can handle in DetailOverlay. The URL itself

@@ -16,7 +16,7 @@ import { useMobile } from '../contexts/useMobile'
 import ShareButton from '../components/media/ShareButton'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
 import { useIsActiveDetail } from '../hooks/useActiveDetail'
-import useDetailModalStore from '../stores/detailModalStore'
+import useDetailModalStore, { detailEntryKey } from '../stores/detailModalStore'
 import { Eye, EyeOff } from 'lucide-react'
 
 interface EpisodeData {
@@ -55,7 +55,7 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
     const [episodeData, setEpisodeData] = useState<EpisodeData | null>(null)
     const episodeSlug = season && episode ? `S${String(season).padStart(2, '0')}E${String(episode).padStart(2, '0')}` : ''
     const pageTitleEpisode = tvDetails?.name ? `${episodeSlug}${episodeData?.name ? ` - ${episodeData.name}` : ''}` : ''
-    usePageTitle(tvDetails?.name ? `${tvDetails.name} - ${pageTitleEpisode} - Track1st` : 'Track1st - Episode Detail')
+    usePageTitle(tvDetails?.name ? `${tvDetails.name} - ${pageTitleEpisode} - Track1st` : 'Track1st - Episode Detail', itemId != null && seasonNumber != null && episodeNumber != null ? detailEntryKey('episode', itemId, seasonNumber, episodeNumber) : undefined)
     const [loading, setLoading] = useState(true)
     const [isInWatchlist, setIsInWatchlist] = useState(false)
     const [watchlistId, setWatchlistId] = useState<string | null>(null)

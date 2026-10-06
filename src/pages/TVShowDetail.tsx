@@ -27,7 +27,7 @@ import ShareButton from '../components/media/ShareButton'
 import CastList, { type CastMember } from '../components/CastList'
 import { useDetailSidebar } from '../hooks/useDetailSidebar'
 import { useIsActiveDetail } from '../hooks/useActiveDetail'
-import useDetailModalStore from '../stores/detailModalStore'
+import useDetailModalStore, { detailEntryKey } from '../stores/detailModalStore'
 
 interface LocalEpisode {
     id: string
@@ -64,7 +64,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
     const { isOpen: isSidebarOpen } = useDetailSidebar()
     const isActiveDetail = useIsActiveDetail('tv', id)
     const [details, setDetails] = useState<TMDBResult | null>(null)
-    usePageTitle(details?.name ? `${details.name} - Track1st` : 'Track1st - TV Show Detail')
+    usePageTitle(details?.name ? `${details.name} - Track1st` : 'Track1st - TV Show Detail', propId != null ? detailEntryKey('tv', propId) : undefined)
     const [loading, setLoading] = useState(true)
     const [adding, setAdding] = useState(false)
     const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)

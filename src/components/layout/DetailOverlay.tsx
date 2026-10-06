@@ -1,9 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import useDetailModalStore, {
+  detailEntryKey as entryKey,
+  getDetailBasePathname,
   getDetailBaseTitle,
   setDetailBaseTitle,
 } from '../../stores/detailModalStore'
+import { getLayerTitle, getPageTitleForPath } from '../../hooks/usePageTitle'
 import MovieDetail from '../../pages/MovieDetail'
 import TVShowDetail from '../../pages/TVShowDetail'
 import PersonDetail from '../../pages/PersonDetail'
@@ -13,9 +16,6 @@ import EpisodeDetail from '../../pages/EpisodeDetail'
 // animation so the overlay stays mounted for exactly the fade-out length
 // before being removed from the DOM. Kept short for a snappy feel.
 const EXIT_MS = 200
-
-const entryKey = (type: string, id: number, season?: number, episode?: number): string =>
-  `${type}:${id}:${season ?? ''}:${episode ?? ''}`
 
 const renderDetail = (
   type: string,
@@ -137,9 +137,14 @@ const DetailOverlay: React.FC = () => {
     if (location.pathname === lastRouterPath.current) return
     lastRouterPath.current = location.pathname
     if (isOpen) {
-      // The new page has already rendered and set its own document title, so
-      // capture it as the new base so the close cleanup restores the right one.
-      setDetailBaseTitle(document.title)
+      // The new page has already rendered and set its own document title (the
+      // routed page's effects run before this overlay's — the overlay is a
+      // later sibling in App). Capture the NEW page's title from the registry
+      // as the new base; reading document.title here would return the outgoing
+      // modal layer's title and the close-time restore would then pin the tab
+      // to the modal instead of the page that was navigated to.
+      const newTitle = getPageTitleForPath(location.pathname)
+      if (newTitle) setDetailBaseTitle(newTitle)
       useDetailModalStore.getState().close()
     }
   }, [location.pathname, isOpen])
@@ -219,10 +224,27 @@ const DetailOverlay: React.FC = () => {
   // base title is captured in open(); if the modal was closed by a real
   // navigation, the route-change effect above already re-set the base to the
   // new page's title, so this becomes a no-op instead of clobbering it.
+  // Skipped entirely when the router is no longer on the pathname the modal was
+  // opened over (e.g. the secondary navbar closed the modal and navigated in
+  // the same tick) — the newly-mounted page owns the title then, and restoring
+  // the stale base would overwrite it.
   useEffect(() => {
     if (isOpen) return
+    const pinnedPath = getDetailBasePathname()
+    if (pinnedPath && pinnedPath !== location.pathname) return
     document.title = getDetailBaseTitle() || document.title
-  }, [isOpen])
+  }, [isOpen, location.pathname])
+
+  // When the stack's top layer changes (e.g. popping back from an episode to
+  // its show), re-apply that layer's registered title. The outgoing layer stays
+  // mounted (hidden) and the revealed layer's title effect does not re-run, so
+  // nothing else would reset the tab title.
+  useEffect(() => {
+    if (!isOpen || stack.length === 0) return
+    const top = stack[stack.length - 1]
+    const title = getLayerTitle(entryKey(top.type, top.id, top.season, top.episode))
+    if (title) document.title = title
+  }, [isOpen, stack])
 
   // Keep the current top entry's saved backdrop in sync with the global
   // backdropUrl so that if the user later pops back to this layer, the
