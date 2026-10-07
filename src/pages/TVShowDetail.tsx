@@ -866,15 +866,11 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                     return shouldMark ? { ...ep, watched: true } : ep
                 }))
 
-                void (async () => {
-                    try {
-                        await checkAndUpdateCompleted(watchlistId, details.id)
-                        await useLibraryStore.getState().refreshItem(watchlistId)
-                        await checkMilestoneAndCelebrate(watchlistStatus)
-                    } catch (syncError) {
-                        console.error('Failed to synchronize progress after marking episodes:', syncError)
-                    }
-                })()
+                // Complete the status check before returning so navigating to
+                // TV Shows cannot observe the optimistic "watching" state.
+                await checkAndUpdateCompleted(watchlistId, details.id)
+                await useLibraryStore.getState().refreshItem(watchlistId)
+                await checkMilestoneAndCelebrate(watchlistStatus)
             } catch (err) {
                 console.error('Failed to mark episodes:', err)
                 setEpisodes(prev => prev.map(ep => {
@@ -2058,7 +2054,6 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
 }
 
 export default React.memo(TVShowDetail)
-
 
 
 

@@ -292,6 +292,7 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
 
             // Update watchlist status
             await checkAndUpdateCompleted(watchlistId, Number(id))
+            await useLibraryStore.getState().refreshItem(watchlistId)
         } catch (err) {
             setWatched(false)
             console.error('Failed to mark episode as watched:', err)
@@ -314,6 +315,7 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
 
             // Check if we need to reset status to planning (no episodes watched)
             await checkAndUpdateCompleted(watchlistId, Number(id))
+            await useLibraryStore.getState().refreshItem(watchlistId)
         } catch (err) {
             setWatched(true)
             console.error('Failed to unwatch episode:', err)
