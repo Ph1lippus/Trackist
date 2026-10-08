@@ -2760,7 +2760,7 @@ html.native-app *::-webkit-scrollbar {
 .detail-page__backdrop-overlay {
     position: absolute;
     inset: 0;
-    background-color: rgba(15, 16, 27, 0.4);
+    background-color: rgba(15, 16, 27, 0.5);
 }
 .detail-page__content {
     position: relative;
