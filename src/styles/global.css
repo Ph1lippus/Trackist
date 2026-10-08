@@ -3549,7 +3549,7 @@ html.native-app *::-webkit-scrollbar {
 .detail-page__episode-card {
     display: flex;
     gap: 1rem;
-    backdrop-filter: blur(0px);
+    backdrop-filter: blur(4px);
     padding: 0.75rem;
     background: rgba(17, 20, 25, 0.22);
     border: none;

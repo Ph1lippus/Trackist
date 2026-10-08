@@ -1217,7 +1217,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                             {displaySeasonCount > 0 && <span className="detail-page__seasons">{displaySeasonCount} Seasons</span>}
                             {rating && (
                                 <span className="detail-page__rating" aria-label={`Rating: ${rating} out of 10`}>
-                                    <span aria-hidden="true">Γÿà</span> {rating}
+                                    <span aria-hidden="true">★</span> {rating}
                                 </span>
                             )}
 
@@ -1637,7 +1637,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                                         <div className="detail-page__episode-meta">
                                                             {getEpisodeLocalAirDate(ep) && <span>{getEpisodeLocalAirDate(ep)}</span>}
                                                             {ep.runtime && <span>{ep.runtime} min</span>}
-                                                            {!isMobile && isEpisodeReleased(ep) && typeof ep.vote_average === 'number' && ep.vote_average > 0 && <span>Γÿà {ep.vote_average.toFixed(1)}</span>}
+                                                            {!isMobile && isEpisodeReleased(ep) && typeof ep.vote_average === 'number' && ep.vote_average > 0 && <span>★ {ep.vote_average.toFixed(1)}</span>}
                                                         </div>
                                                     </div>
                                             </div>
@@ -1765,7 +1765,7 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                                         <div className="detail-page__episode-meta">
                                                             {getEpisodeLocalAirDate(ep) && <span>{getEpisodeLocalAirDate(ep)}</span>}
                                                             {ep.runtime && <span>{ep.runtime} min</span>}
-                                                            {!isMobile && isEpisodeReleased(ep) && typeof ep.vote_average === 'number' && ep.vote_average > 0 && <span>Γÿà {ep.vote_average.toFixed(1)}</span>}
+                                                            {!isMobile && isEpisodeReleased(ep) && typeof ep.vote_average === 'number' && ep.vote_average > 0 && <span>★ {ep.vote_average.toFixed(1)}</span>}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -2058,7 +2058,6 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
 }
 
 export default React.memo(TVShowDetail)
-
 
 
 
