@@ -196,7 +196,7 @@ const MobileTVShows: React.FC = () => {
         const nextEpisodeNumber = nextEp.episode_number + 1
 
         // Optimistic update first for instant UI feedback
-        void useLibraryStore.getState().updateItem(show.id, {
+        await useLibraryStore.getState().updateItem(show.id, {
             current_season: nextEp.season_number,
             current_episode: nextEp.episode_number,
             watched_episodes_count: (show.watched_episodes_count ?? 0) + 1,
@@ -222,13 +222,10 @@ const MobileTVShows: React.FC = () => {
             })
             setCompletedEpisode(null)
         } else {
-            setTimeout(async () => {
-                // Update data behind the sweep
-                if (show.tmdb_id) {
-                    await checkAndUpdateCompleted(show.id, show.tmdb_id)
-                }
-                await useLibraryStore.getState().refreshItem(show.id)
-            }, 200)
+            if (show.tmdb_id) {
+                await checkAndUpdateCompleted(show.id, show.tmdb_id)
+            }
+            await useLibraryStore.getState().refreshItem(show.id)
         }
     }
 
@@ -288,7 +285,7 @@ const MobileTVShows: React.FC = () => {
             const nextEpisodeNumber = nextEp.episode_number + 1
 
             // Optimistic update first for instant UI feedback
-            void useLibraryStore.getState().updateItem(show.id, {
+            await useLibraryStore.getState().updateItem(show.id, {
                 current_season: nextEp.season_number,
                 current_episode: nextEp.episode_number,
                 watched_episodes_count: (show.watched_episodes_count ?? 0) + 1,
@@ -315,13 +312,10 @@ const MobileTVShows: React.FC = () => {
                 setCompletedEpisode(null)
             }
 
-            setTimeout(async () => {
-                // Update data behind the sweep
-                if (show.tmdb_id) {
-                    await checkAndUpdateCompleted(show.id, show.tmdb_id)
-                }
-                await useLibraryStore.getState().refreshItem(show.id)
-            }, 200)
+            if (show.tmdb_id) {
+                await checkAndUpdateCompleted(show.id, show.tmdb_id)
+            }
+            await useLibraryStore.getState().refreshItem(show.id)
         } catch (err) {
             console.error('Failed to resume show:', err)
         } finally {
@@ -459,7 +453,6 @@ const MobileTVShows: React.FC = () => {
 }
 
 export default MobileTVShows
-
 
 
 
