@@ -1,11 +1,14 @@
 import React, { useState, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { signInWithEmail } from '../services/profileService'
+import { signInWithEmail, signInWithGoogle, signInWithMagicLink } from '../services/profileService'
+import { supabase } from '../services/supabaseClient'
+import mfaService from '../services/mfaService'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useAuthRateLimit } from '../hooks/useAuthRateLimit'
 import { useCaptcha, isCaptchaEnabled } from '../hooks/useCaptcha'
 import Captcha from '../components/auth/Captcha'
 import type { CaptchaHandle } from '../components/auth/Captcha'
+import GoogleIcon from '../components/auth/GoogleIcon'
 
 const Login: React.FC = () => {
     usePageTitle('Track1st - Login')
@@ -13,7 +16,10 @@ const Login: React.FC = () => {
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
-    const [error, setError] = useState('')
+    const [error, setError] = useState(() => {
+        const authError = new URLSearchParams(window.location.search).get('error_description')
+        return authError ? authError.replace(/\+/g, ' ') : ''
+    })
     const [message, setMessage] = useState('')
     const [loading, setLoading] = useState(false)
     
@@ -48,29 +54,45 @@ const Login: React.FC = () => {
         setLoading(false)
         pendingSubmitRef.current = false
 
-        // A user with 2FA enabled returns no session yet — instead we get an
-        // MFA-required signal and the list of factors to verify. Route them to
-        // the challenge screen (which verifies the TOTP code and completes login).
-        const mfaRequired = !!data && (
-            (data as { factors?: unknown[] }).factors ||
-            ['mfa_verification_required', 'mfa_enrollment_required'].includes(signInError?.code || '')
-        )
-
-        if (mfaRequired) {
-            const factors = (data as { factors?: Array<{ id?: string }> }).factors
-            const factorId = factors?.[0]?.id
-            if (factorId) {
-                navigate(`/MFA?challenge=${encodeURIComponent(factorId)}`)
-                return
-            }
-            // No factor id resolvable — fall through to error.
-        }
-
         if (signInError) {
             recordAttempt()
             setCaptchaToken(null) // Reset captcha on failure
-            setError('Invalid email or password')
+            if (signInError.code === 'email_not_confirmed') {
+                setError('Please confirm your email address before signing in.')
+            } else if (signInError.code === 'invalid_credentials' || signInError.status === 400) {
+                setError('The email or password is incorrect.')
+            } else {
+                console.error('Supabase sign-in error:', signInError)
+                setError('Unable to sign in right now. Please try again.')
+            }
             return
+        }
+
+        const { data: assurance, error: assuranceError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+        if (assuranceError) {
+            console.error('Unable to determine authentication assurance level:', assuranceError)
+            await supabase.auth.signOut()
+            setError('Unable to complete sign in. Please try again.')
+            return
+        }
+
+        if (assurance.currentLevel === 'aal1' && assurance.nextLevel === 'aal2') {
+            try {
+                const factors = await mfaService.listFactors()
+                const factor = factors.find(candidate => candidate.status === 'verified')
+                if (!factor) {
+                    await supabase.auth.signOut()
+                    setError('Two-factor authentication is enabled but no verified method is available.')
+                    return
+                }
+                navigate(`/MFA?challenge=${encodeURIComponent(factor.id)}`)
+                return
+            } catch (error) {
+                console.error('Unable to start two-factor authentication:', error)
+                await supabase.auth.signOut()
+                setError('Unable to start two-factor authentication. Please try again.')
+                return
+            }
         }
 
         if (data?.session) {
@@ -107,6 +129,40 @@ const Login: React.FC = () => {
         }
 
         await performLogin()
+    }
+
+    const handleGoogleLogin = async () => {
+        setError('')
+        setLoading(true)
+        const { error: googleError } = await signInWithGoogle()
+        if (googleError) {
+            setLoading(false)
+            setError(googleError.message)
+        }
+    }
+
+    const handleMagicLink = async () => {
+        if (!email.trim()) {
+            setError('Enter your email address first.')
+            return
+        }
+
+        setError('')
+        setMessage('')
+        setLoading(true)
+        const { error: magicLinkError } = await signInWithMagicLink(email.trim().toLowerCase())
+        setLoading(false)
+        if (magicLinkError) {
+            recordAttempt()
+            console.error('Supabase magic-link error:', magicLinkError)
+            if (magicLinkError.message.toLowerCase().includes('not authorized')) {
+                setError('Supabase’s default email service only sends to authorized project-team addresses. Add this email to your Supabase organization or configure custom SMTP.')
+            } else {
+                setError('Unable to send a sign-in link. Please check your email and try again.')
+            }
+        } else {
+            setMessage('Check your email for a secure sign-in link. It may take a minute to arrive.')
+        }
     }
 
     return (
@@ -166,6 +222,15 @@ const Login: React.FC = () => {
                                 {loading || verifying ? 'Logging in...' : 'Login'}
                             </button>
                         </form>
+                        <div className="auth-divider"><span>or</span></div>
+                        <button type="button" className="auth-submit-btn auth-google-btn" onClick={handleGoogleLogin} disabled={loading || rateLimited}>
+                            <GoogleIcon />
+                            Continue with Google
+                        </button>
+                        <button type="button" className="auth-magic-btn" onClick={handleMagicLink} disabled={loading || rateLimited}>
+                            <span className="auth-magic-btn__title">Prefer not to use a password?</span>
+                            <span className="auth-magic-btn__action">Email me a sign-in link <span aria-hidden="true">→</span></span>
+                        </button>
                         <div className="auth-extra-links">
                             <Link to="/forgot-password" className="auth-link">Forgot password?</Link>
                         </div>

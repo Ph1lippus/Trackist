@@ -5935,6 +5935,84 @@ button:focus-visible {
     transition: all 0.3s ease;
 }
 
+.auth-google-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    margin-top: 1.25rem;
+    background: #ffffff;
+    border-color: #ffffff;
+    color: #1f1f1f;
+}
+
+.auth-google-btn:hover {
+    background: #f1f1f1;
+    filter: none;
+}
+
+.auth-google-icon {
+    width: 1.1rem;
+    height: 1.1rem;
+    flex: 0 0 auto;
+}
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin: 1.5rem 0 0;
+    color: rgba(231, 232, 236, 0.5);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    height: 1px;
+    flex: 1;
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.auth-magic-btn {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    width: 100%;
+    margin-top: 1rem;
+    padding: 0.85rem 1rem;
+    border: 1px solid rgba(104, 255, 174, 0.3);
+    border-radius: 14px;
+    background: rgba(104, 255, 174, 0.06);
+    color: var(--color-platinum);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+.auth-magic-btn:hover {
+    border-color: rgba(104, 255, 174, 0.65);
+    background: rgba(104, 255, 174, 0.1);
+}
+
+.auth-magic-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.auth-magic-btn__title {
+    color: rgba(231, 232, 236, 0.7);
+    font-size: 0.78rem;
+}
+
+.auth-magic-btn__action {
+    color: var(--color-mint);
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
 .auth-submit-btn:hover {
     filter: brightness(0.9);
 }
@@ -13120,11 +13198,38 @@ html.native-app .detail-overlay__scroll--person {
 /* ===== MFA STYLES ===== */
 .mfa-page {
     max-width: 760px;
+    width: min(100%, 760px);
+    margin: 0 auto;
+    text-align: center;
+}
+
+.mfa-page .settings-panel__header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.mfa-page .settings-panel__title-row {
+    justify-content: center;
+}
+
+.mfa-page .settings-panel__header p {
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.mfa-page > .settings-inline-feedback {
+    justify-content: center;
+    width: fit-content;
+    max-width: 100%;
+    margin: 0 auto 1rem;
 }
 
 .mfa-status {
     display: flex;
     flex-direction: column;
+    align-items: center;
     gap: 0.85rem;
     padding: 1.1rem 0 0.25rem;
     margin-bottom: 1.25rem;
@@ -13163,7 +13268,9 @@ html.native-app .detail-overlay__scroll--person {
 }
 
 .mfa-enable-btn {
-    width: 100%;
+    width: min(100%, 360px);
+    margin-left: auto;
+    margin-right: auto;
     padding: 1rem;
     font-size: 1rem;
     margin-bottom: 1.5rem;
@@ -13175,12 +13282,14 @@ html.native-app .detail-overlay__scroll--person {
 
 .mfa-factors {
     margin-top: 1.5rem;
+    text-align: left;
 }
 
 .mfa-factors h3 {
     font-size: 1rem;
     margin-bottom: 1rem;
     color: var(--color-platinum);
+    text-align: center;
 }
 
 .mfa-factors ul {
@@ -13292,12 +13401,14 @@ html.native-app .detail-overlay__scroll--person {
     margin-top: 2rem;
     padding-top: 1.5rem;
     border-top: 1px solid rgba(255, 255, 255, 0.06);
+    text-align: left;
 }
 
 .mfa-info h4 {
     font-size: 0.9rem;
     margin-bottom: 0.75rem;
     color: var(--color-platinum);
+    text-align: center;
 }
 
 .mfa-info ul {
@@ -13543,6 +13654,7 @@ html.native-app .detail-overlay__scroll--person {
     animation: fadeIn 250ms cubic-bezier(0.22, 1, 0.36, 1);
     max-width: 360px;
     margin: 0 auto;
+    text-align: center;
 }
 
 .mfa-challenge .mfa-instruction {
@@ -13573,6 +13685,7 @@ html.native-app .detail-overlay__scroll--person {
     font-size: 0.85rem;
     color: rgba(255, 255, 255, 0.7);
     cursor: pointer;
+    justify-content: center;
 }
 
 .mfa-remember-device input {
@@ -13599,6 +13712,21 @@ html.native-app .detail-overlay__scroll--person {
 .mfa-resend {
     width: 100%;
     margin-top: 1rem;
+}
+
+@media (max-width: 768px) {
+    .mfa-page {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    .mfa-factor {
+        align-items: flex-start;
+    }
+
+    .mfa-factor .settings-btn {
+        flex-shrink: 0;
+    }
 }
 
 .sessions-page {
@@ -13898,4 +14026,3 @@ html.native-app .detail-overlay__scroll--person {
         scroll-behavior: auto !important;
     }
 }
-

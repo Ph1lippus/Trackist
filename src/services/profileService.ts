@@ -1,7 +1,58 @@
 import { supabase } from './supabaseClient'
 
+const allowedAuthOrigins = [
+    'https://track1st.vercel.app',
+    'http://localhost:5173',
+    'http://localhost:3000'
+]
+
+export const getAuthRedirectUrl = (path = '/login') => {
+    const origin = window.location.origin
+    const safeOrigin = allowedAuthOrigins.includes(origin) ? origin : 'https://track1st.vercel.app'
+    return `${safeOrigin}${path}`
+}
+
 export const signInWithEmail = async (email: string, password: string) => {
     return supabase.auth.signInWithPassword({ email, password })
+}
+
+export const signInWithMagicLink = async (email: string) => {
+    return supabase.auth.signInWithOtp({
+        email,
+        options: {
+            emailRedirectTo: getAuthRedirectUrl('/login')
+        }
+    })
+}
+
+export const signInWithGoogle = async () => {
+    return supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            redirectTo: getAuthRedirectUrl('/login')
+        }
+    })
+}
+
+export const linkGoogleIdentity = async () => {
+    return supabase.auth.linkIdentity({
+        provider: 'google',
+        options: {
+            redirectTo: getAuthRedirectUrl('/Settings/security')
+        }
+    })
+}
+
+export const unlinkIdentity = async (identityId: string) => {
+    const { data: identities, error: identitiesError } = await supabase.auth.getUserIdentities()
+    if (identitiesError) return { data: null, error: identitiesError }
+
+    const identity = identities.identities.find(candidate => candidate.identity_id === identityId)
+    if (!identity) {
+        return { data: null, error: new Error('The selected sign-in method is no longer linked.') }
+    }
+
+    return supabase.auth.unlinkIdentity(identity)
 }
 
 export const signOutUser = async () => {
@@ -9,18 +60,7 @@ export const signOutUser = async () => {
 }
 
 export const requestPasswordReset = async (email: string) => {
-    const allowedOrigins = [
-        'https://track1st.vercel.app',
-        'http://localhost:5173',
-        'http://localhost:3000'
-    ]
-    
-    const currentOrigin = window.location.origin
-    const redirectTo = allowedOrigins.includes(currentOrigin) 
-        ? `${currentOrigin}/reset-password` 
-        : 'https://track1st.vercel.app/reset-password'
-
-    console.log('Password reset request:', { email, currentOrigin, redirectTo })
+    const redirectTo = getAuthRedirectUrl('/reset-password')
 
     const result = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo

@@ -6,7 +6,7 @@ Track your movies and TV shows — all in one place. A modern, privacy-focused w
 
 ## Features
 
-- **User Authentication** — Secure sign-up, login, and password recovery via Supabase Auth.
+- **User Authentication** — Secure sign-up, password and Google login, email magic links, password recovery, manual Google account linking, and optional TOTP two-factor authentication via Supabase Auth.
 - **Search** — Discover movies and TV shows by title, plus browse cast and crew details.
 - **Watchlists** — Personal lists with public/private sharing. Mark shows/movies as planning, watching, completed, or caught up.
 - **Episode Tracking** — For TV shows, mark individual episodes as watched, unwatch them, and see your progress at a glance.
@@ -102,6 +102,22 @@ VITE_TMDB_API_KEY=your_tmdb_api_key
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 ```
+
+### Supabase Auth Configuration
+
+In **Authentication → URL Configuration**, add these redirect URLs:
+
+- `https://track1st.vercel.app/login`
+- `http://localhost:5173/login`
+- `http://localhost:3000/login`
+- `https://track1st.vercel.app/reset-password`
+- `http://localhost:5173/reset-password`
+- `http://localhost:3000/reset-password`
+- `https://track1st.vercel.app/Settings/security`
+- `http://localhost:5173/Settings/security`
+- `http://localhost:3000/Settings/security`
+
+Enable the **Google** provider in **Authentication → Providers** and configure its Google OAuth client ID and secret. Email magic links use Supabase’s configured email provider and redirect users back to `/login`. Users can link or unlink Google manually from **Settings → Security** while signed in.
 
 ### Edge Functions Setup
 

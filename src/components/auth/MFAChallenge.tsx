@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useMFA } from '../../hooks/useMFA'
+import { useAuthStore } from '../../stores/useAuthStore'
 
 interface MFAChallengeProps {
     factorId: string
@@ -31,7 +32,8 @@ const MFAChallenge: React.FC<MFAChallengeProps> = ({
                 if (data) {
                     setChallengeId(data.id)
                 }
-            } catch {
+            } catch (error) {
+                console.error('Unable to create MFA challenge:', error)
             }
         }
         createChallenge()
@@ -47,9 +49,11 @@ const MFAChallenge: React.FC<MFAChallengeProps> = ({
         try {
             const result = await verify(factorId, challengeId, codeToVerify)
             if (result) {
+                useAuthStore.getState().setAal('aal2')
                 onSuccess()
             }
-        } catch {
+        } catch (error) {
+            console.error('Unable to verify MFA challenge:', error)
         } finally {
             setVerifying(false)
         }
@@ -64,7 +68,8 @@ const MFAChallenge: React.FC<MFAChallengeProps> = ({
             if (data) {
                 setChallengeId(data.id)
             }
-        } catch {
+        } catch (error) {
+            console.error('Unable to resend MFA challenge:', error)
         }
     }
 

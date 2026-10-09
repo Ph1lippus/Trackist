@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
-import { checkDisplayNameExists } from '../services/profileService'
+import { checkDisplayNameExists, signInWithGoogle } from '../services/profileService'
 import { validateUsername, validateEmail, validatePassword } from '../utils/validation'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useAuthRateLimit } from '../hooks/useAuthRateLimit'
@@ -10,6 +10,7 @@ import { checkPasswordBreach, isHIBPEnabled } from '../services/hibpService'
 import Captcha from '../components/auth/Captcha'
 import type { CaptchaHandle } from '../components/auth/Captcha'
 import PasswordStrengthMeter from '../components/auth/PasswordStrengthMeter'
+import GoogleIcon from '../components/auth/GoogleIcon'
 
 const Register: React.FC = () => {
     usePageTitle('Track1st - Register')
@@ -29,6 +30,16 @@ const Register: React.FC = () => {
     const [captchaToken, setCaptchaToken] = useState<string | null>(null)
     const captchaRef = useRef<CaptchaHandle>(null)
     const pendingSubmitRef = useRef(false)
+
+    const handleGoogleRegister = async () => {
+        setError('')
+        setLoading(true)
+        const { error: googleError } = await signInWithGoogle()
+        if (googleError) {
+            setLoading(false)
+            setError(googleError.message)
+        }
+    }
 
     const performRegister = useCallback(async (token?: string) => {
         if (loading) return
@@ -257,6 +268,11 @@ const Register: React.FC = () => {
                                 {loading || verifying ? 'Creating...' : 'Create Account'}
                             </button>
                         </form>
+                        <div className="auth-divider">or</div>
+                        <button type="button" className="auth-submit-btn auth-google-btn" onClick={handleGoogleRegister} disabled={loading || rateLimited}>
+                            <GoogleIcon />
+                            Create account with Google
+                        </button>
                         <p className="auth-text">
                             Already have an account? <Link to="/login" className="auth-link">Login</Link>
                         </p>
@@ -268,4 +284,3 @@ const Register: React.FC = () => {
 }
 
 export default Register
-

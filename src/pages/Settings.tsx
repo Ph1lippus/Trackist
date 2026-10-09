@@ -3,7 +3,7 @@ import type { Dispatch, SetStateAction } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../services/supabaseClient'
 import type { User } from '@supabase/supabase-js'
-import { requestPasswordReset, updateUserEmail, getProfile, updateProfile } from '../services/profileService'
+import { requestPasswordReset, updateUserEmail, getProfile, updateProfile, linkGoogleIdentity, unlinkIdentity } from '../services/profileService'
     import { useCache } from '../hooks/useCache'
 import { getCachedOrFetch, invalidateUserCache } from '../services/cacheService'
 import { relocalizeUserMovieDates } from '../services/movieReleaseService'
@@ -162,7 +162,7 @@ interface SettingsProps {
         onAvatarChange: (url: string | null) => void
         user: User | null
     }
-    securityProps: { navigate: (to: string) => void }
+    securityProps: { navigate: (to: string) => void; user: User | null }
     notificationsProps: {
         push: ReturnType<typeof usePushNotifications>
         notifPrefs: Record<NotificationPrefField, boolean>
@@ -351,9 +351,59 @@ const profilePropsOnBioChange = (e: React.ChangeEvent<HTMLTextAreaElement>, p: P
 }
 
 const SecuritySection: React.FC<Pick<SettingsProps, 'securityProps'>> = ({ securityProps }) => {
-    const { navigate } = securityProps
+    const { navigate, user } = securityProps
+    const [identityLoading, setIdentityLoading] = useState(false)
+    const [identityMessage, setIdentityMessage] = useState<{ text: string; isError: boolean } | null>(null)
+    const googleIdentity = user?.identities?.find(identity => identity.provider === 'google')
+
+    const handleLinkGoogle = async () => {
+        setIdentityLoading(true)
+        setIdentityMessage(null)
+        const { error } = await linkGoogleIdentity()
+        if (error) {
+            setIdentityLoading(false)
+            setIdentityMessage({ text: error.message, isError: true })
+        }
+    }
+
+    const handleUnlinkGoogle = async () => {
+        if (!googleIdentity) return
+        setIdentityLoading(true)
+        setIdentityMessage(null)
+        const { error } = await unlinkIdentity(googleIdentity.identity_id)
+        setIdentityLoading(false)
+        if (error) {
+            setIdentityMessage({ text: error.message, isError: true })
+        } else {
+            setIdentityMessage({ text: 'Google sign-in has been unlinked.', isError: false })
+            const { data } = await supabase.auth.getUser()
+            if (data.user) useAuthStore.getState().setUser(data.user)
+        }
+    }
+
     return (
         <div className="settings-panel">
+            <div className="settings-link-card">
+                <div className="settings-link-card__icon"><Globe size={20} strokeWidth={2} /></div>
+                <div className="settings-link-card__info">
+                    <span className="settings-link-card__label">Google Sign-In</span>
+                    <span className="settings-link-card__value">
+                        {googleIdentity ? 'Google is linked to this account.' : 'Link Google so you can sign in without your password.'}
+                    </span>
+                    {identityMessage && <InlineFeedback text={identityMessage.text} isError={identityMessage.isError} />}
+                </div>
+                {googleIdentity ? (
+                    <button className="settings-btn settings-btn--secondary" type="button" onClick={handleUnlinkGoogle} disabled={identityLoading}>
+                        {identityLoading ? 'Working...' : 'Unlink'}
+                    </button>
+                ) : (
+                    <button className="settings-btn settings-btn--primary" type="button" onClick={handleLinkGoogle} disabled={identityLoading}>
+                        {identityLoading ? 'Connecting...' : 'Link Google'}
+                    </button>
+                )}
+            </div>
+
+            <div className="settings-divider"></div>
             <div className="settings-link-card settings-link-card--clickable" onClick={() => navigate('/MFA')}>
                 <div className="settings-link-card__icon"><Fingerprint size={20} strokeWidth={2} /></div>
                 <div className="settings-link-card__info">
@@ -866,7 +916,7 @@ const renderSection = (section: SettingsSection | undefined, p: SettingsProps, n
         case 'profile':
             return <ProfileSection profileProps={p.profileProps} />
         case 'security':
-            return <SecuritySection securityProps={{ navigate }} />
+            return <SecuritySection securityProps={{ navigate, user: p.user }} />
         case 'notifications':
             return <NotificationsSection notificationsProps={p.notificationsProps} />
         case 'app':
@@ -1609,7 +1659,7 @@ const Settings: React.FC = () => {
         email, setEmail,
         emailLoading, resetLoading, accountMessage, accountError,
         handleEmailUpdate, handlePasswordReset,
-        securityProps: { navigate },
+        securityProps: { navigate, user: currentUser },
         profileProps,
         notificationsProps,
         appProps,
@@ -1679,4 +1729,3 @@ const Settings: React.FC = () => {
 }
 
 export default Settings
-

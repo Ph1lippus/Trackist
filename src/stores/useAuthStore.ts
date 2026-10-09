@@ -45,7 +45,7 @@ export const initializeAuth = async () => {
   useAuthStore.getState().setUser(session?.user ?? null)
   useAuthStore.getState().setSession(session ?? null)
   useAuthStore.getState().setAccessToken(session?.access_token ?? null)
-  useAuthStore.getState().setAal(session?.user?.app_metadata?.aal as 'aal1' | 'aal2' | null ?? null)
+  await refreshAal()
   await refreshApproval(session?.user?.id ?? null)
   useAuthStore.getState().setLoading(false)
 
@@ -63,7 +63,7 @@ export const initializeAuth = async () => {
     useAuthStore.getState().setUser(session?.user ?? null)
     useAuthStore.getState().setSession(session ?? null)
     useAuthStore.getState().setAccessToken(session?.access_token ?? null)
-    useAuthStore.getState().setAal(session?.user?.app_metadata?.aal as 'aal1' | 'aal2' | null ?? null)
+    void refreshAal()
 
     const identityChanged =
       event === 'SIGNED_OUT' ||
@@ -74,7 +74,27 @@ export const initializeAuth = async () => {
       useAuthStore.getState().setApproved(null)
       void refreshApproval(nextUserId)
     }
+
   })
+}
+
+const refreshAal = async () => {
+  if (!useAuthStore.getState().user) {
+    useAuthStore.getState().setAal(null)
+    return
+  }
+
+  const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel()
+  if (error) {
+    console.error('Unable to determine authentication assurance level:', error)
+    useAuthStore.getState().setAal(null)
+    return
+  }
+  const currentLevel = data.currentLevel
+  let normalizedLevel: 'aal1' | 'aal2' | null = null
+  if (currentLevel === 'aal1') normalizedLevel = 'aal1'
+  if (currentLevel === 'aal2') normalizedLevel = 'aal2'
+  useAuthStore.getState().setAal(normalizedLevel)
 }
 
 const refreshApproval = async (userId: string | null) => {
