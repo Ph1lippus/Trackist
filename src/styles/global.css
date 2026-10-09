@@ -5912,6 +5912,31 @@ button:focus-visible {
     }
 }
 
+@media (max-width: 768px) {
+    .auth-layout {
+        max-width: none;
+        padding: 0;
+    }
+
+    .auth-hero {
+        display: none;
+    }
+
+    .auth-form-wrapper,
+    .auth-card {
+        max-width: none;
+    }
+
+    .auth-card {
+        border-radius: 0;
+        padding: 1.5rem 1rem;
+    }
+
+    .footer--auth {
+        display: none;
+    }
+}
+
 .auth-card form {
     text-align: left;
 }

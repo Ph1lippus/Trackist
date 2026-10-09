@@ -3,17 +3,22 @@ import { Link } from 'react-router-dom';
 
 interface FooterProps {
     loggedIn?: boolean;
+    authPage?: boolean;
 }
 
-const Footer: React.FC<FooterProps> = ({ loggedIn = false }) => {
+const Footer: React.FC<FooterProps> = ({ loggedIn = false, authPage = false }) => {
     const scrollToTop = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const footerPaddingClass = loggedIn ? 'footer--logged-in' : '';
+    const footerClasses = [
+        'footer',
+        loggedIn ? 'footer--logged-in' : '',
+        authPage ? 'footer--auth' : '',
+    ].filter(Boolean).join(' ');
 
     return (
-        <footer className={`footer ${footerPaddingClass}`}>
+        <footer className={footerClasses}>
             <div className="container footer-inner">
                 <div className="footer__top">
                     <Link to="/" className="footer__brand">Track1st</Link>

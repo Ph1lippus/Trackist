@@ -437,6 +437,7 @@ const AppContent: React.FC = () => {
         path.startsWith('/Following')
     )
     const hideFooter = Boolean(user) && (mediaPages.includes(location.pathname) || settingsPages.includes(location.pathname) || isSubpage(location.pathname))
+    const isAuthPage = location.pathname === '/' || location.pathname === '/login' || location.pathname === '/register'
     const isMfaPage = location.pathname === '/MFA'
     
     const navigateMonth = (direction: number) => {
@@ -557,7 +558,7 @@ const AppContent: React.FC = () => {
             <ErrorBoundary resetKey={modalResetKey}>
                 <DetailOverlay />
             </ErrorBoundary>
-            {!isMfaPage && !hideFooter && !isDetailPage && <Footer loggedIn={Boolean(user)} />}
+            {!isMfaPage && !hideFooter && !isDetailPage && <Footer loggedIn={Boolean(user)} authPage={isAuthPage} />}
             <PWAUpdateModal
                 isOpen={showUpdateModal}
                 onUpdate={handleUpdate}
