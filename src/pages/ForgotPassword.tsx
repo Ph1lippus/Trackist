@@ -114,18 +114,22 @@ const ForgotPassword: React.FC = () => {
                                     required
                                 />
                             </div>
-                            {error && <div className="auth-alert auth-alert--error">{error}</div>}
-                            {rateLimited && (
-                                <div className="auth-alert auth-alert--error rate-limit-message">
-                                    <i className="fa-solid fa-clock"></i>
-                                    Too many reset attempts. Please try again in {retryAfterFormatted}.
+                            {(error || rateLimited || captchaError || message) && (
+                                <div className="auth-alert-stack" role="region" aria-label="Password reset messages">
+                                    {error && <div className="auth-alert auth-alert--error">{error}</div>}
+                                    {rateLimited && (
+                                        <div className="auth-alert auth-alert--error rate-limit-message">
+                                            <i className="fa-solid fa-clock"></i>
+                                            Too many reset attempts. Please try again in {retryAfterFormatted}.
+                                        </div>
+                                    )}
+                                    {captchaError && (
+                                        <div className="auth-alert auth-alert--error">{captchaError}</div>
+                                    )}
+                                    {message && <div className="auth-alert auth-alert--info">{message}</div>}
                                 </div>
                             )}
-                            {captchaError && (
-                                <div className="auth-alert auth-alert--error">{captchaError}</div>
-                            )}
                             <Captcha ref={captchaRef} onVerify={handleCaptchaVerify} onError={(err: string) => setError(err)} action="passwordReset" autoExecute={isCaptchaEnabled()} />
-                            {message && <div className="auth-alert auth-alert--info">{message}</div>}
                             <button type="submit" className="auth-submit-btn" disabled={loading || rateLimited || verifying}>
                                 {loading || verifying ? 'Sending...' : 'Send reset link'}
                             </button>

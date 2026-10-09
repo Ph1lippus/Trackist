@@ -437,6 +437,7 @@ const AppContent: React.FC = () => {
         path.startsWith('/Following')
     )
     const hideFooter = Boolean(user) && (mediaPages.includes(location.pathname) || settingsPages.includes(location.pathname) || isSubpage(location.pathname))
+    const isMfaPage = location.pathname === '/MFA'
     
     const navigateMonth = (direction: number) => {
         setCurrentMonth(prev => {
@@ -489,12 +490,12 @@ const AppContent: React.FC = () => {
 
     return (
         <div className="d-flex flex-column min-vh-100">
-            <Navbar 
+            {!isMfaPage && <Navbar
                 currentMonth={currentMonth}
                 navigateMonth={navigateMonth}
                 canGoBack={canGoBack}
                 goToToday={goToToday}
-            />
+            />}
             {isBackdropDetailPage && !isModalVisible && (
                 <div className={`detail-page-cover${detailCoverRevealed ? ' detail-page-cover--hidden' : ''}`} aria-hidden="true" />
             )}
@@ -550,13 +551,13 @@ const AppContent: React.FC = () => {
                 </ErrorBoundary>
                 <ScrollToTop />
             </main>
-            <SecondaryNavbar />
-            <MobileBottomNavbar />
-            <DetailSidebarToggle />
+            {!isMfaPage && <SecondaryNavbar />}
+            {!isMfaPage && <MobileBottomNavbar />}
+            {!isMfaPage && <DetailSidebarToggle />}
             <ErrorBoundary resetKey={modalResetKey}>
                 <DetailOverlay />
             </ErrorBoundary>
-            {!hideFooter && !isDetailPage && <Footer loggedIn={Boolean(user)} />}
+            {!isMfaPage && !hideFooter && !isDetailPage && <Footer loggedIn={Boolean(user)} />}
             <PWAUpdateModal
                 isOpen={showUpdateModal}
                 onUpdate={handleUpdate}

@@ -179,6 +179,16 @@ const Register: React.FC = () => {
     return (
         <main className="main">
             <div className="auth-layout">
+                <section className="auth-hero" aria-labelledby="auth-hero-title">
+                    <span className="auth-hero__eyebrow">A BETTER WAY TO KEEP TRACK</span>
+                    <h1 id="auth-hero-title">Your next favourite is waiting.</h1>
+                    <p>Build a watchlist that feels like yours, follow your progress, and make every “what should we watch?” easier.</p>
+                    <div className="auth-hero__highlights">
+                        <span>Simple to use</span>
+                        <span>Made for movie nights</span>
+                        <span>Private by design</span>
+                    </div>
+                </section>
                 <div className="auth-form-wrapper">
                     <div className="auth-card">
                         <h2 className="auth-title">Create Account</h2>
@@ -253,15 +263,19 @@ const Register: React.FC = () => {
                                     </button>
                                 </div>
                             </div>
-                            {error && <div className="auth-alert auth-alert--error">{error}</div>}
-                            {rateLimited && (
-                                <div className="auth-alert auth-alert--error rate-limit-message">
-                                    <i className="fa-solid fa-clock"></i>
-                                    Too many registration attempts. Please try again in {retryAfterFormatted}.
+                            {(error || rateLimited || captchaError) && (
+                                <div className="auth-alert-stack" role="region" aria-label="Registration messages">
+                                    {error && <div className="auth-alert auth-alert--error">{error}</div>}
+                                    {rateLimited && (
+                                        <div className="auth-alert auth-alert--error rate-limit-message">
+                                            <i className="fa-solid fa-clock"></i>
+                                            Too many registration attempts. Please try again in {retryAfterFormatted}.
+                                        </div>
+                                    )}
+                                    {captchaError && (
+                                        <div className="auth-alert auth-alert--error">{captchaError}</div>
+                                    )}
                                 </div>
-                            )}
-                            {captchaError && (
-                                <div className="auth-alert auth-alert--error">{captchaError}</div>
                             )}
                             <Captcha ref={captchaRef} onVerify={handleCaptchaVerify} onError={(err: string) => setError(err)} action="register" autoExecute={isCaptchaEnabled()} />
                             <button type="submit" className="auth-submit-btn" disabled={loading || rateLimited || verifying}>

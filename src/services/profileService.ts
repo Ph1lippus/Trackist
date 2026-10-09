@@ -16,15 +16,6 @@ export const signInWithEmail = async (email: string, password: string) => {
     return supabase.auth.signInWithPassword({ email, password })
 }
 
-export const signInWithMagicLink = async (email: string) => {
-    return supabase.auth.signInWithOtp({
-        email,
-        options: {
-            emailRedirectTo: getAuthRedirectUrl('/login')
-        }
-    })
-}
-
 export const signInWithGoogle = async () => {
     return supabase.auth.signInWithOAuth({
         provider: 'google',

@@ -179,8 +179,12 @@ const ResetPassword: React.FC = () => {
                                 </button>
                             </div>
                         </div>
-                        {error && <div className="auth-alert auth-alert--error">{error}</div>}
-                        {message && <div className="auth-alert auth-alert--info">{message}</div>}
+                        {(error || message) && (
+                            <div className="auth-alert-stack" role="region" aria-label="Password update messages">
+                                {error && <div className="auth-alert auth-alert--error">{error}</div>}
+                                {message && <div className="auth-alert auth-alert--info">{message}</div>}
+                            </div>
+                        )}
                         <button
                             type="submit"
                             className="auth-submit-btn"

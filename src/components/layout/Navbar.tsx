@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Check, ChevronLeft, ChevronRight, Loader2, RotateCcw, SlidersHorizontal, X } from 'lucide-react';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import type { User } from '@supabase/supabase-js';
@@ -834,7 +834,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                 )}
                 
                 <div className="navbar-actions">
-                    {user ? (
+                    {user && (
                         <>
                             <div className="t-dropdown-wrap">
                                 <button
@@ -887,25 +887,6 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                                   </button>
                                  </div>
                             </div>
-                        </>
-                    ) : (
-                        <>
-                            <NavLink
-                                className={({ isActive }) =>
-                                    `navbar-action-link navbar-auth-link${isActive ? ' active' : ''}`
-                                }
-                                to="/login"
-                            >
-                                Login
-                            </NavLink>
-                            <NavLink
-                                className={({ isActive }) =>
-                                    `navbar-action-link navbar-auth-link${isActive ? ' active' : ''}`
-                                }
-                                to="/register"
-                            >
-                                Register
-                            </NavLink>
                         </>
                     )}
                 </div>

@@ -6,7 +6,7 @@ Track your movies and TV shows — all in one place. A modern, privacy-focused w
 
 ## Features
 
-- **User Authentication** — Secure sign-up, password and Google login, email magic links, password recovery, manual Google account linking, and optional TOTP two-factor authentication via Supabase Auth.
+- **User Authentication** — Secure sign-up, password and Google login, password recovery, manual Google account linking, and optional TOTP two-factor authentication via Supabase Auth.
 - **Search** — Discover movies and TV shows by title, plus browse cast and crew details.
 - **Watchlists** — Personal lists with public/private sharing. Mark shows/movies as planning, watching, completed, or caught up.
 - **Episode Tracking** — For TV shows, mark individual episodes as watched, unwatch them, and see your progress at a glance.
@@ -117,7 +117,7 @@ In **Authentication → URL Configuration**, add these redirect URLs:
 - `http://localhost:5173/Settings/security`
 - `http://localhost:3000/Settings/security`
 
-Enable the **Google** provider in **Authentication → Providers** and configure its Google OAuth client ID and secret. Email magic links use Supabase’s configured email provider and redirect users back to `/login`. Users can link or unlink Google manually from **Settings → Security** while signed in.
+Enable the **Google** provider in **Authentication → Providers** and configure its Google OAuth client ID and secret. Users can link or unlink Google manually from **Settings → Security** while signed in.
 
 ### Edge Functions Setup
 

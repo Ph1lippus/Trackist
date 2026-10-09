@@ -1,6 +1,6 @@
 import React, { useState, useRef, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { signInWithEmail, signInWithGoogle, signInWithMagicLink } from '../services/profileService'
+import { signInWithEmail, signInWithGoogle } from '../services/profileService'
 import { supabase } from '../services/supabaseClient'
 import mfaService from '../services/mfaService'
 import { usePageTitle } from '../hooks/usePageTitle'
@@ -20,7 +20,6 @@ const Login: React.FC = () => {
         const authError = new URLSearchParams(window.location.search).get('error_description')
         return authError ? authError.replace(/\+/g, ' ') : ''
     })
-    const [message, setMessage] = useState('')
     const [loading, setLoading] = useState(false)
     
     const { allowed, recordAttempt, retryAfterFormatted, isChecking } = useAuthRateLimit('login')
@@ -33,7 +32,6 @@ const Login: React.FC = () => {
     const performLogin = useCallback(async (token?: string) => {
         if (loading) return
         setError('')
-        setMessage('')
         setLoading(true)
 
         if (isCaptchaEnabled() && token) {
@@ -141,33 +139,19 @@ const Login: React.FC = () => {
         }
     }
 
-    const handleMagicLink = async () => {
-        if (!email.trim()) {
-            setError('Enter your email address first.')
-            return
-        }
-
-        setError('')
-        setMessage('')
-        setLoading(true)
-        const { error: magicLinkError } = await signInWithMagicLink(email.trim().toLowerCase())
-        setLoading(false)
-        if (magicLinkError) {
-            recordAttempt()
-            console.error('Supabase magic-link error:', magicLinkError)
-            if (magicLinkError.message.toLowerCase().includes('not authorized')) {
-                setError('Supabase’s default email service only sends to authorized project-team addresses. Add this email to your Supabase organization or configure custom SMTP.')
-            } else {
-                setError('Unable to send a sign-in link. Please check your email and try again.')
-            }
-        } else {
-            setMessage('Check your email for a secure sign-in link. It may take a minute to arrive.')
-        }
-    }
-
     return (
         <main className="main">
             <div className="auth-layout">
+                <section className="auth-hero" aria-labelledby="auth-hero-title">
+                    <span className="auth-hero__eyebrow">YOUR WATCHLIST, ELEVATED</span>
+                    <h1 id="auth-hero-title">Keep every story worth watching close.</h1>
+                    <p>Track the movies and shows you love, discover what is next, and never lose your place again.</p>
+                    <div className="auth-hero__highlights">
+                        <span>Movies and TV shows</span>
+                        <span>Release reminders</span>
+                        <span>Private by design</span>
+                    </div>
+                </section>
                 <div className="auth-form-wrapper">
                     <div className="auth-card">
                         <h2 className="auth-title">Welcome Back</h2>
@@ -206,16 +190,19 @@ const Login: React.FC = () => {
                                     </button>
                                 </div>
                             </div>
-                            {error && <div className="auth-alert auth-alert--error">{error}</div>}
-                            {message && <div className="auth-alert auth-alert--info">{message}</div>}
-                            {rateLimited && (
-                                <div className="auth-alert auth-alert--error rate-limit-message">
-                                    <i className="fa-solid fa-clock"></i>
-                                    Too many login attempts. Please try again in {retryAfterFormatted}.
+                            {(error || rateLimited || captchaError) && (
+                                <div className="auth-alert-stack" role="region" aria-label="Sign-in messages">
+                                    {error && <div className="auth-alert auth-alert--error">{error}</div>}
+                                    {rateLimited && (
+                                        <div className="auth-alert auth-alert--error rate-limit-message">
+                                            <i className="fa-solid fa-clock"></i>
+                                            Too many login attempts. Please try again in {retryAfterFormatted}.
+                                        </div>
+                                    )}
+                                    {captchaError && (
+                                        <div className="auth-alert auth-alert--error">{captchaError}</div>
+                                    )}
                                 </div>
-                            )}
-                            {captchaError && (
-                                <div className="auth-alert auth-alert--error">{captchaError}</div>
                             )}
                             <Captcha ref={captchaRef} onVerify={handleCaptchaVerify} onError={(err: string) => setError(err)} action="login" autoExecute={isCaptchaEnabled()} />
                             <button type="submit" className="auth-submit-btn" disabled={loading || rateLimited || verifying}>
@@ -226,10 +213,6 @@ const Login: React.FC = () => {
                         <button type="button" className="auth-submit-btn auth-google-btn" onClick={handleGoogleLogin} disabled={loading || rateLimited}>
                             <GoogleIcon />
                             Continue with Google
-                        </button>
-                        <button type="button" className="auth-magic-btn" onClick={handleMagicLink} disabled={loading || rateLimited}>
-                            <span className="auth-magic-btn__title">Prefer not to use a password?</span>
-                            <span className="auth-magic-btn__action">Email me a sign-in link <span aria-hidden="true">→</span></span>
                         </button>
                         <div className="auth-extra-links">
                             <Link to="/forgot-password" className="auth-link">Forgot password?</Link>
