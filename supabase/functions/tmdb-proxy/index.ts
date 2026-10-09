@@ -76,7 +76,16 @@ serve(async (req) => {
 
     const resp = await fetch(up)
     if (!resp.ok) {
-        return Response.json({ error: `upstream_${resp.status}` }, { status: resp.status < 500 ? 404 : 502, headers: corsHeaders })
+        // Pass the upstream status through for client errors (notably 429 rate
+        // limiting) so the app can tell them apart; only an upstream 5xx is
+        // surfaced as a gateway error. Previously every non-OK (including 429)
+        // was collapsed to 404, which hid rate limits behind a generic
+        // "failed to load" message.
+        const status = resp.status < 500 ? resp.status : 502
+        const headers: Record<string, string> = { ...corsHeaders }
+        const retryAfter = resp.headers.get('retry-after')
+        if (retryAfter) headers['retry-after'] = retryAfter
+        return Response.json({ error: `upstream_${resp.status}` }, { status, headers })
     }
 
     let body: Record<string, unknown>

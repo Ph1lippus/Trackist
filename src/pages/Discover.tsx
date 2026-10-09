@@ -8,7 +8,7 @@ import { useLocation } from 'react-router-dom'
 import { useSearch } from '../hooks/useSearch'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useMediaCardIcons } from '../hooks/useMediaCardIcons'
-import useDiscoverStore, { useDiscoverFilters, useDiscoverLoading, useDiscoverActions, useDiscoverWatchlistIds, useDiscoverShowAdded, useDiscoverResults } from '../stores/discoverStore'
+import useDiscoverStore, { useDiscoverFilters, useDiscoverLoading, useDiscoverActions, useDiscoverWatchlistIds, useDiscoverShowAdded, useDiscoverResults, mediaKey } from '../stores/discoverStore'
 import MediaCard from '../components/media/MediaCard'
 import ConfirmModal from '../components/modals/ConfirmModal'
 import type { TMDBResult } from '../types'
@@ -44,13 +44,12 @@ const Discover: React.FC = () => {
     const actions = useDiscoverActions()
     const watchlistIds = useDiscoverWatchlistIds()
     const showAdded = useDiscoverShowAdded()
-    const store = useDiscoverStore()
 
     // Compute visible results locally to ensure it is always in sync with results and filters
     const visibleResults = React.useMemo(() => {
         const base = showAdded || filters.mediaType === 'person'
             ? [...results]
-            : results.filter(item => !watchlistIds.has(item.id))
+            : results.filter(item => !watchlistIds.has(mediaKey(item.media_type, item.id)))
         // During search, keep titles without a poster (or profile image for
         // people) at the end so the grid looks intentional instead of showing
         // no-poster placeholders scattered among real posters.
@@ -78,9 +77,8 @@ const Discover: React.FC = () => {
     
     // Fetch genres and watchlist IDs on mount
     useEffect(() => {
-        store.fetchGenres()
-        store.fetchWatchlistIds()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+        useDiscoverStore.getState().fetchGenres()
+        useDiscoverStore.getState().fetchWatchlistIds()
     }, [])
 
     useEffect(() => {
@@ -102,7 +100,7 @@ const Discover: React.FC = () => {
 
     const handleAddToWatchlist = useCallback(
     (item: TMDBResult) => {
-        if (watchlistIds.has(item.id)) {
+        if (watchlistIds.has(mediaKey(item.media_type, item.id))) {
             setRemoveConfirmItem(item);
         } else {
             actions.addToWatchlist(item.id, item);
@@ -117,7 +115,7 @@ const Discover: React.FC = () => {
     const handleConfirmRemove = useCallback(() => {
     if (!removeConfirmItem) return;
 
-    actions.removeFromWatchlist(removeConfirmItem.id);
+    actions.removeFromWatchlist(removeConfirmItem.id, removeConfirmItem.media_type);
     setRemoveConfirmItem(null);
 }, [actions, removeConfirmItem]);
 
@@ -181,17 +179,25 @@ const Discover: React.FC = () => {
                                             top: isMobile ? 200 : 400,
                                             bottom: isMobile ? 400 : 800,
                                         }}
-                                    computeItemKey={(index) => visibleResults[index]?.id ?? index}
+                                    computeItemKey={(index) => {
+                                            const item = visibleResults[index]
+                                            return item ? mediaKey(item.media_type, item.id) : `idx-${index}`
+                                        }}
                                     style={{ width: '100%' }}
                                     useWindowScroll={true}
                                     data={visibleResults}
                                 rangeChanged={(range) => {
                                     const { endIndex } = range
-                                    const totalItems = visibleResults.length
                                     const threshold = isMobile ? 15 : 20
-                                    
-                                    if (endIndex >= totalItems - threshold && loading.hasMore && !loading.isLoadingMore) {
-                                        actions.fetchData(store.page + 1)
+                                    const state = useDiscoverStore.getState()
+
+                                    if (
+                                        endIndex >= visibleResults.length - threshold &&
+                                        state.hasMore &&
+                                        !state.isLoadingMore &&
+                                        !state.isLoading
+                                    ) {
+                                        void state.fetchData(state.page + 1)
                                     }
                                 }}
                                 overscan={isMobile ? 50 : 100}
@@ -204,7 +210,7 @@ const Discover: React.FC = () => {
                                         <DiscoverCard
                                             item={item}
                                             onAdd={handleAddToWatchlist}
-                                            isInWatchlist={watchlistIds.has(item.id)}
+                                            isInWatchlist={watchlistIds.has(mediaKey(item.media_type, item.id))}
                                             showIcons={showIcons}
                                         />
                                     );

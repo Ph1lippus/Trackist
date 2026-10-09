@@ -38,7 +38,7 @@ interface DetailModalState {
   // stack empties, at which point the browser settles back on the pinned URL.
   pinHref: string | null
   setIsExiting: (value: boolean) => void
-  open: (type: DetailType, id: number, season?: number, episode?: number) => void
+  open: (type: DetailType, id: number, season?: number, episode?: number, options?: { replace?: boolean }) => void
   back: () => void
   goBack: () => void
   setBackdropUrl: (url: string | null) => void
@@ -197,8 +197,9 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
     return { backdropClassName: className, stack }
   }),
 
-  open: (type, id, season, episode) => {
+  open: (type, id, season, episode, options) => {
     const current = get()
+    const replace = options?.replace === true
     if (!current.isOpen) {
       baseTitle = document.title
       baseTitlePathname = window.location.pathname
@@ -210,6 +211,12 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
       window.history.pushState(OPEN_PIN_STATE, '', href)
       set({ pinHref: window.location.pathname + window.location.search + window.location.hash })
       dbg('open first:', type, id, 'pinHref=', window.location.pathname + window.location.search + window.location.hash, 'histIdx=', (window.history.state as { idx?: number | null } | null)?.idx ?? null)
+    } else if (replace) {
+      // Replace the whole stack with just this entry (used by the random
+      // picker). The existing keep-alive history pin is reused, so Back/Escape
+      // closes the modal instead of walking back through previous picks, and
+      // no extra layers stay mounted/fetching.
+      dbg('open replace:', type, id, 'prevStackLen=', current.stack.length)
     } else if (sameEntry(current.stack[current.stack.length - 1], type, id, season, episode)) {
       dbg('open ignored (same top):', type, id)
       return
@@ -226,9 +233,11 @@ const useDetailModalStore = create<DetailModalState>((set, get) => ({
     // Re-opening a detail already somewhere in the stack rewinds to it (avoids
     // duplicate layers that share the same scroll container key).
     const existing = stackWithBackdrop.findIndex((e) => sameEntry(e, type, id, season, episode))
-    const nextStack = existing !== -1
-      ? stackWithBackdrop.slice(0, existing + 1)
-      : [...stackWithBackdrop, { type, id, season, episode }]
+    const nextStack: DetailEntry[] = replace
+      ? [{ type, id, season, episode }]
+      : existing !== -1
+        ? stackWithBackdrop.slice(0, existing + 1)
+        : [...stackWithBackdrop, { type, id, season, episode }]
     const top = nextStack[nextStack.length - 1]
 
     set({

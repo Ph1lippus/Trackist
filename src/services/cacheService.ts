@@ -188,9 +188,11 @@ class CacheService {
     }
 
     private setMemoryCache<T>(key: string, entry: CacheEntry<T>): void {
-        if (!this.accessOrder.includes(key)) {
-            this.memoryCache.set(key, entry)
-        }
+        // Always overwrite so revalidated/fresher entries actually replace the
+        // stale value. (Previously this skipped writes for keys already in
+        // accessOrder, leaving the memory cache permanently stale after the
+        // first access and forcing every subsequent read to hit IndexedDB.)
+        this.memoryCache.set(key, entry as CacheEntry<unknown>)
     }
 
     private isValid<T>(entry: CacheEntry<T>): boolean {

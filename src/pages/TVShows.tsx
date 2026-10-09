@@ -163,7 +163,8 @@ const TVShows: React.FC = () => {
     return (
         <div className="discover-page">
             <div className="discover-container" style={{ width: '85%' }}>
-                {/* Container A (Top): Currently Watching - header always shown so the view toggle stays visible */}
+                {/* Container A (Top): Currently Watching - header always shown (when not searching) so the view toggle stays visible */}
+                {(currentlyWatching.length > 0 || !committedQuery) && (
                 <div className="watchlist-section">
                     <div className="watchlist-section__header">
                         <h3 className="watchlist-section__title">Currently Watching</h3>
@@ -197,6 +198,7 @@ const TVShows: React.FC = () => {
                         </div>
                     )}
                 </div>
+                )}
 
                 {/* Container C: Paused */}
                 {paused.length > 0 && (
@@ -262,7 +264,7 @@ const TVShows: React.FC = () => {
                     </div>
                 )}
 
-                {isInitialized && currentlyWatching.length === 0 && notStarted.length === 0 && paused.length === 0 && (
+                {isInitialized && !committedQuery && currentlyWatching.length === 0 && notStarted.length === 0 && paused.length === 0 && (
                     <p style={{ textAlign: 'center', padding: '2rem', opacity: 0.6 }}>
                         No TV shows in your watchlist. Discover some!
                     </p>

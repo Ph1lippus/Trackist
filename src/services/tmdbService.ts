@@ -31,9 +31,11 @@ function isAllowedPath(path: string): boolean {
     return allowed
 }
 
-// Simple in-memory cache for TMDB API responses
+// Simple in-memory cache for TMDB API responses (bounded to avoid unbounded
+// growth over a long session — e.g. repeated random picks of distinct titles).
 const tmdbCache = new Map<string, { data: any; expiry: number }>()
 const TMDB_CACHE_TTL = 5 * 60 * 1000 // 5 minutes
+const TMDB_CACHE_MAX_ENTRIES = 200
 
 async function tmdbProxy(path: string): Promise<Response> {
     if (!path.startsWith('/')) {
@@ -49,6 +51,9 @@ async function tmdbProxy(path: string): Promise<Response> {
     const now = Date.now()
     
     if (cached && now < cached.expiry) {
+        // Refresh recency so the LRU eviction below drops cold entries first.
+        tmdbCache.delete(cacheKey)
+        tmdbCache.set(cacheKey, cached)
         return new Response(JSON.stringify(cached.data), {
             status: 200,
             headers: { 'Content-Type': 'application/json' }
@@ -62,6 +67,10 @@ async function tmdbProxy(path: string): Promise<Response> {
     if (res.ok) {
         try {
             const data = await res.clone().json()
+            if (tmdbCache.size >= TMDB_CACHE_MAX_ENTRIES) {
+                const oldest = tmdbCache.keys().next().value
+                if (oldest !== undefined) tmdbCache.delete(oldest)
+            }
             tmdbCache.set(cacheKey, { data, expiry: now + TMDB_CACHE_TTL })
         } catch (e) {
             // Ignore cache errors

@@ -369,7 +369,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                 const randomIndex = Math.floor(Math.random() * pool.length)
                 const randomMovie = pool[randomIndex]
                 if (randomMovie.tmdb_id) {
-                    useDetailModalStore.getState().open('movie', randomMovie.tmdb_id)
+                    useDetailModalStore.getState().open('movie', randomMovie.tmdb_id, undefined, undefined, { replace: true })
                 }
             }
         } else if (isTVShowsPage) {
@@ -382,7 +382,7 @@ const Navbar: React.FC<NavbarProps> = ({ currentMonth, navigateMonth, canGoBack,
                 const randomIndex = Math.floor(Math.random() * pool.length)
                 const randomShow = pool[randomIndex]
                 if (randomShow.tmdb_id) {
-                    useDetailModalStore.getState().open('tv', randomShow.tmdb_id)
+                    useDetailModalStore.getState().open('tv', randomShow.tmdb_id, undefined, undefined, { replace: true })
                 }
             }
         }

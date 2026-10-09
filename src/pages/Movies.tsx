@@ -114,6 +114,7 @@ const Movies: React.FC = () => {
     return (
         <div className="discover-page">
             <div className="discover-container" style={{ width: '85%' }}>
+                {(watchlistItems.length > 0 || !committedQuery) && (
                 <div className="watchlist-section">
                     <div className="watchlist-section__header">
                         <h3 className="watchlist-section__title">To Watch</h3>
@@ -158,8 +159,10 @@ const Movies: React.FC = () => {
                         </p>
                     ) : null}
                 </div>
+                )}
 
                 {/* Not Released Movies */}
+                {(notReleasedItems.length > 0 || !committedQuery) && (
                 <div className="watchlist-section">
                     <div className="watchlist-section__header">
                         <h3 className="watchlist-section__title">Not Released</h3>
@@ -191,6 +194,7 @@ const Movies: React.FC = () => {
                         </p>
                     ) : null}
                 </div>
+                )}
             </div>
 
             {confirmModal && (

@@ -25,6 +25,11 @@ type SortBy =
 
 type MediaType = 'all' | 'movie' | 'tv' | 'person'
 
+// Composite identity for a media item. TMDB movie and TV ids live in separate
+// namespaces, so a movie and a show can share the same numeric id — keying by
+// id alone causes duplicate React/virtuoso keys and wrong watchlist matches.
+export const mediaKey = (mediaType: string | null | undefined, id: number): string => `${mediaType}:${id}`
+
 interface DiscoverState {
     // State
     results: TMDBResult[]
@@ -36,7 +41,7 @@ interface DiscoverState {
     query: string
     page: number
     hasMore: boolean
-    watchlistIds: Set<number>
+    watchlistIds: Set<string>
     isLoading: boolean
     isLoadingMore: boolean
     genres: { id: number; name: string }[]
@@ -53,11 +58,11 @@ interface DiscoverState {
     setSortBy: (sortBy: SortBy) => void
     setSelectedGenres: (genres: number[]) => void
     setYearRange: (from: number | null, to: number | null) => void
-    setWatchlistIds: (ids: Set<number>) => void
+    setWatchlistIds: (ids: Set<string>) => void
     setShowAdded: (show: boolean) => void
     setSessionAddedIds: (ids: Set<number>) => void
     addToWatchlist: (id: number, item?: TMDBResult) => Promise<void>
-    removeFromWatchlist: (id: number) => Promise<void>
+    removeFromWatchlist: (id: number, mediaType?: string) => Promise<void>
     resetFilters: () => void
     reset: () => void
     fetchData: (pageNum?: number) => Promise<void>
@@ -81,7 +86,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     query: '',
     page: 1,
     hasMore: true,
-    watchlistIds: new Set<number>(),
+    watchlistIds: new Set<string>(),
     isLoading: false,
     isLoadingMore: false,
     genres: [],
@@ -96,7 +101,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     setMediaType: (mediaType) => set((state) => {
         const visibleResults = state.showAdded || mediaType === 'person'
             ? state.results 
-            : state.results.filter(item => !state.watchlistIds.has(item.id))
+            : state.results.filter(item => !state.watchlistIds.has(mediaKey(item.media_type, item.id)))
         return { 
             mediaType,
             sessionAddedIds: new Set(), // Clear session overrides on tab switch
@@ -137,28 +142,33 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
 
         await useLibraryStore.getState().addItem(newItem)
         
-        // Manually update discover store's watchlistIds
-        set((state) => {
-            const newSet = new Set(state.watchlistIds)
-            newSet.add(id)
-            return { watchlistIds: newSet }
-        })
+        // Manually update discover store's watchlistIds for immediate feedback
+        if (item?.media_type) {
+            const key = mediaKey(item.media_type, id)
+            set((state) => {
+                const newSet = new Set(state.watchlistIds)
+                newSet.add(key)
+                return { watchlistIds: newSet }
+            })
+        }
     },
 
-    removeFromWatchlist: async (id) => {
+    removeFromWatchlist: async (id, mediaType?) => {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) return
 
         const libraryItem = useLibraryStore.getState().allItems.find(
-            (item) => item.tmdb_id === id
+            (item) => item.tmdb_id === id && (!mediaType || item.media_type === mediaType)
         )
+
+        const key = mediaKey(mediaType, id)
 
         if (libraryItem) {
             await useLibraryStore.getState().removeItem(libraryItem.id)
             // Manually update discover store's watchlistIds
             set((state) => {
                 const newSet = new Set(state.watchlistIds)
-                newSet.delete(id)
+                newSet.delete(key)
                 return { watchlistIds: newSet }
             })
         } else {
@@ -169,7 +179,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 .eq('tmdb_id', id)
             set((state) => {
                 const newSet = new Set(state.watchlistIds)
-                newSet.delete(id)
+                newSet.delete(key)
                 return { watchlistIds: newSet }
             })
         }
@@ -201,7 +211,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         query: '',
         page: 1,
         hasMore: true,
-        watchlistIds: new Set<number>(),
+        watchlistIds: new Set<string>(),
         sessionAddedIds: new Set<number>(),
         isLoading: true,
         isLoadingMore: false,
@@ -220,8 +230,8 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         if (libraryState.allItems.length > 0) {
             const ids = new Set(
                 libraryState.allItems
-                    .map(item => item.tmdb_id)
-                    .filter((id): id is number => id != null)
+                    .filter(item => item.tmdb_id != null)
+                    .map(item => mediaKey(item.media_type, item.tmdb_id as number))
             )
             set({ watchlistIds: ids })
             return
@@ -230,10 +240,14 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
         // Fall back to database query if library store has not loaded yet
         const { data } = await supabase
             .from('watchlist')
-            .select('tmdb_id')
+            .select('tmdb_id, media_type')
             .eq('user_id', user.id)
         if (data) {
-            const ids = new Set(data.map(item => item.tmdb_id).filter((id): id is number => id != null))
+            const ids = new Set(
+                data
+                    .filter(item => item.tmdb_id != null)
+                    .map(item => mediaKey(item.media_type, item.tmdb_id as number))
+            )
             set({ watchlistIds: ids })
         }
     },
@@ -270,6 +284,12 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
     },
 
     fetchData: async (pageNum = 1) => {
+        // Ignore redundant "load more" requests while a fetch is already running.
+        // rangeChanged can fire several times before the store re-renders and the
+        // loading flag reaches the closure; without this the same next page would
+        // be fetched concurrently (duplicate requests + churn).
+        if (pageNum > 1 && (get().isLoading || get().isLoadingMore)) return
+
         // Page 1 requests (tab/filter changes) bump the generation,
         // invalidating any in-flight requests from older generations.
         const isNewSearch = pageNum === 1
@@ -370,19 +390,20 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                     (personData as { total_pages?: number }).total_pages || 1
                 )
 
-                const seen = new Set<number>()
-                combined = combined.filter(item => {
-                    if (seen.has(item.id)) return false
-                    seen.add(item.id)
-                    return true
-                })
-
                 combined = combined.map(r => {
                     if (r.profile_path && !r.title && !r.media_type) {
                         return { ...r, media_type: 'person' as const }
                     }
                     if (r.media_type) return r
                     return { ...r, media_type: r.title ? 'movie' as const : 'tv' as const }
+                })
+
+                const seen = new Set<string>()
+                combined = combined.filter(item => {
+                    const key = mediaKey(item.media_type, item.id)
+                    if (seen.has(key)) return false
+                    seen.add(key)
+                    return true
                 })
 
                 if (mediaType === 'movie') {
@@ -395,10 +416,11 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                         if (r.media_type === 'person') return r
                         return { ...r, media_type: 'person' as const }
                     })
-                    const seen2 = new Set<number>()
+                    const seen2 = new Set<string>()
                     newResults = raw.filter(item => {
-                        if (seen2.has(item.id)) return false
-                        seen2.add(item.id)
+                        const key = mediaKey(item.media_type, item.id)
+                        if (seen2.has(key)) return false
+                        seen2.add(key)
                         return true
                     })
                     totalPages = (data as { total_pages?: number }).total_pages || 1
@@ -420,10 +442,11 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                             return { ...r, media_type: 'tv' as const }
                         })),
                     ]
-                    const filmSeen = new Set<number>()
+                    const filmSeen = new Set<string>()
                     const uniqueFilms = films.filter(f => {
-                        if (filmSeen.has(f.id)) return false
-                        filmSeen.add(f.id)
+                        const key = mediaKey(f.media_type, f.id)
+                        if (filmSeen.has(key)) return false
+                        filmSeen.add(key)
                         return true
                     })
                     combined = [...combined, ...uniqueFilms]
@@ -480,6 +503,17 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 })
 
                 let combined: TMDBResult[] = [...movies, ...tv]
+
+                // Guard against true duplicates (same media type + id) before
+                // they reach virtuoso: duplicate item keys make it mis-associate
+                // measurements and jump the scroll.
+                const mergedSeen = new Set<string>()
+                combined = combined.filter(item => {
+                    const key = mediaKey(item.media_type, item.id)
+                    if (mergedSeen.has(key)) return false
+                    mergedSeen.add(key)
+                    return true
+                })
 
                 const shouldFilterGenres = !query.trim() && selectedGenres.length === 0
                 if (shouldFilterGenres) {
@@ -584,8 +618,12 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 if (pageNum === 1) {
                     updatedResults = finalResults
                 } else {
-                    const existingIds = new Set(state.results.map(item => item.id))
-                    const newUniqueItems = finalResults.filter(item => !existingIds.has(item.id))
+                    const existingKeys = new Set(
+                        state.results.map(item => mediaKey(item.media_type, item.id))
+                    )
+                    const newUniqueItems = finalResults.filter(
+                        item => !existingKeys.has(mediaKey(item.media_type, item.id))
+                    )
                     updatedResults = [...state.results, ...newUniqueItems]
                 }
 
@@ -617,8 +655,8 @@ useLibraryStore.subscribe((state) => {
         lastAllItems = state.allItems
         const ids = new Set(
             state.allItems
-                .map((item) => item.tmdb_id)
-                .filter((id): id is number => id != null)
+                .filter((item) => item.tmdb_id != null)
+                .map((item) => mediaKey(item.media_type, item.tmdb_id as number))
         )
         useDiscoverStore.getState().setWatchlistIds(ids)
     }
