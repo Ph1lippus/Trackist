@@ -5913,8 +5913,19 @@ button:focus-visible {
 }
 
 @media (max-width: 768px) {
+    .page-main.auth-page {
+        min-height: 100dvh;
+        padding: 0 !important;
+    }
+
+    .auth-page .main {
+        min-height: 100dvh !important;
+        padding: max(1rem, env(safe-area-inset-top, 0px)) 0 max(1rem, env(safe-area-inset-bottom, 0px)) !important;
+    }
+
     .auth-layout {
         max-width: none;
+        min-height: 100%;
         padding: 0;
     }
 
@@ -5927,9 +5938,18 @@ button:focus-visible {
         max-width: none;
     }
 
+    .auth-form-wrapper {
+        width: 100%;
+        padding: 0 1rem;
+    }
+
     .auth-card {
-        border-radius: 0;
+        width: 100%;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 1.5rem;
         padding: 1.5rem 1rem;
+        background: rgba(255, 255, 255, 0.035) !important;
+        box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.2);
     }
 
     .footer--auth {

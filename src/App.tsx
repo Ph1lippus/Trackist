@@ -439,6 +439,7 @@ const AppContent: React.FC = () => {
     const hideFooter = Boolean(user) && (mediaPages.includes(location.pathname) || settingsPages.includes(location.pathname) || isSubpage(location.pathname))
     const isAuthPage = location.pathname === '/' || location.pathname === '/login' || location.pathname === '/register'
     const isMfaPage = location.pathname === '/MFA'
+    const showAppChrome = !isMfaPage && !(isAuthPage && isMobile)
     
     const navigateMonth = (direction: number) => {
         setCurrentMonth(prev => {
@@ -491,7 +492,7 @@ const AppContent: React.FC = () => {
 
     return (
         <div className="d-flex flex-column min-vh-100">
-            {!isMfaPage && <Navbar
+            {showAppChrome && <Navbar
                 currentMonth={currentMonth}
                 navigateMonth={navigateMonth}
                 canGoBack={canGoBack}
@@ -500,7 +501,7 @@ const AppContent: React.FC = () => {
             {isBackdropDetailPage && !isModalVisible && (
                 <div className={`detail-page-cover${detailCoverRevealed ? ' detail-page-cover--hidden' : ''}`} aria-hidden="true" />
             )}
-            <main className={`page-main flex-grow-1 ${hideFooter ? 'page-main--no-footer' : ''}${isPersonPage ? ' person-page' : ''}${isModalVisible ? ' is-modal-backdrop-hidden' : ''}`} inert={isModalVisible || undefined}>
+            <main className={`page-main flex-grow-1 ${isAuthPage ? 'auth-page' : ''} ${hideFooter ? 'page-main--no-footer' : ''}${isPersonPage ? ' person-page' : ''}${isModalVisible ? ' is-modal-backdrop-hidden' : ''}`} inert={isModalVisible || undefined}>
                 <ErrorBoundary resetKey={location.pathname}>
                     <div key={location.pathname} className={`page-transition-wrapper${isBackdropDetailPage ? ' page-transition-wrapper--no-anim' : ''}`}>
                     <Routes>
@@ -552,9 +553,9 @@ const AppContent: React.FC = () => {
                 </ErrorBoundary>
                 <ScrollToTop />
             </main>
-            {!isMfaPage && <SecondaryNavbar />}
-            {!isMfaPage && <MobileBottomNavbar />}
-            {!isMfaPage && <DetailSidebarToggle />}
+            {showAppChrome && <SecondaryNavbar />}
+            {showAppChrome && <MobileBottomNavbar />}
+            {showAppChrome && <DetailSidebarToggle />}
             <ErrorBoundary resetKey={modalResetKey}>
                 <DetailOverlay />
             </ErrorBoundary>
