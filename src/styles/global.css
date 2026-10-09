@@ -11062,6 +11062,18 @@ html.native-app .detail-overlay__scroll--person {
         align-self: stretch;
     }
 
+    .settings-link-card--identity {
+        align-items: flex-start;
+    }
+
+    .settings-link-card--identity .settings-btn {
+        width: auto;
+        min-height: 40px;
+        padding: 0.55rem 1rem;
+        align-self: flex-start;
+        flex-shrink: 0;
+    }
+
     .settings-form .settings-btn {
         align-self: stretch;
     }

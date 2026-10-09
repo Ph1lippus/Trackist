@@ -355,6 +355,9 @@ const SecuritySection: React.FC<Pick<SettingsProps, 'securityProps'>> = ({ secur
     const [identityLoading, setIdentityLoading] = useState(false)
     const [identityMessage, setIdentityMessage] = useState<{ text: string; isError: boolean } | null>(null)
     const googleIdentity = user?.identities?.find(identity => identity.provider === 'google')
+    const googleAccountEmail = typeof googleIdentity?.identity_data?.email === 'string'
+        ? googleIdentity.identity_data.email
+        : null
 
     const handleLinkGoogle = async () => {
         setIdentityLoading(true)
@@ -383,12 +386,16 @@ const SecuritySection: React.FC<Pick<SettingsProps, 'securityProps'>> = ({ secur
 
     return (
         <div className="settings-panel">
-            <div className="settings-link-card">
+            <div className="settings-link-card settings-link-card--identity">
                 <div className="settings-link-card__icon"><Globe size={20} strokeWidth={2} /></div>
                 <div className="settings-link-card__info">
                     <span className="settings-link-card__label">Google Sign-In</span>
                     <span className="settings-link-card__value">
-                        {googleIdentity ? 'Google is linked to this account.' : 'Link Google so you can sign in without your password.'}
+                        {googleIdentity
+                            ? googleAccountEmail
+                                ? `Linked Google account: ${googleAccountEmail}`
+                                : 'Google is linked to this account.'
+                            : 'Link Google so you can sign in without your password.'}
                     </span>
                     {identityMessage && <InlineFeedback text={identityMessage.text} isError={identityMessage.isError} />}
                 </div>

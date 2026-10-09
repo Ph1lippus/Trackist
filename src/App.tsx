@@ -7,7 +7,9 @@ import { MobileProvider } from './contexts/MobileProvider'
 import { useLibraryStore } from './stores/useLibraryStore'
 import { registerSW } from 'virtual:pwa-register'
 import { App as CapacitorApp } from '@capacitor/app'
+import { Browser } from '@capacitor/browser'
 import { initNativePush, isNativePlatform } from './services/nativePush'
+import { nativeAuthCallbackUrl } from './services/profileService'
 import {
     getInstalledVersionCode,
     getLatestVersionManifest,
@@ -231,6 +233,36 @@ const AppContent: React.FC = () => {
             if (!urlData?.url) return
             try {
                 const target = new URL(urlData.url)
+                const callbackUrl = new URL(nativeAuthCallbackUrl)
+                if (
+                    target.protocol === callbackUrl.protocol &&
+                    target.host === callbackUrl.host &&
+                    target.pathname === callbackUrl.pathname
+                ) {
+                    const code = target.searchParams.get('code')
+                    const authError = target.searchParams.get('error_description')
+                    const requestedNext = target.searchParams.get('next')
+                    const next = requestedNext?.startsWith('/') && !requestedNext.startsWith('//')
+                        ? requestedNext
+                        : '/login'
+
+                    void Browser.close()
+                    if (code) {
+                        void supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+                            if (error) {
+                                navigate(`/login?error_description=${encodeURIComponent(error.message)}`)
+                                return
+                            }
+                            navigate(next)
+                        })
+                    } else if (authError) {
+                        navigate(`/login?error_description=${encodeURIComponent(authError)}`)
+                    } else {
+                        navigate('/login?error_description=Google%20sign-in%20was%20cancelled.')
+                    }
+                    return
+                }
+
                 navigate(target.pathname + target.search)
             } catch {
                 // Ignore malformed urls

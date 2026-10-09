@@ -1,4 +1,8 @@
 import { supabase } from './supabaseClient'
+import { Browser } from '@capacitor/browser'
+import { isNativePlatform } from './nativePush'
+
+export const nativeAuthCallbackUrl = 'com.track1st.app://auth/callback'
 
 const allowedAuthOrigins = [
     'https://track1st.vercel.app',
@@ -17,21 +21,55 @@ export const signInWithEmail = async (email: string, password: string) => {
 }
 
 export const signInWithGoogle = async () => {
-    return supabase.auth.signInWithOAuth({
+    const isNative = isNativePlatform()
+    const result = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-            redirectTo: getAuthRedirectUrl('/login')
+            redirectTo: isNative ? `${nativeAuthCallbackUrl}?next=%2Flogin` : getAuthRedirectUrl('/login'),
+            queryParams: { prompt: 'select_account' },
+            ...(isNative ? { skipBrowserRedirect: true } : {}),
         }
     })
+
+    if (!isNative || result.error || !result.data.url) return result
+
+    try {
+        await Browser.open({ url: result.data.url })
+    } catch (error) {
+        return {
+            data: result.data,
+            error: error instanceof Error ? error : new Error('Unable to open Google sign-in.')
+        }
+    }
+
+    return result
 }
 
 export const linkGoogleIdentity = async () => {
-    return supabase.auth.linkIdentity({
+    const isNative = isNativePlatform()
+    const result = await supabase.auth.linkIdentity({
         provider: 'google',
         options: {
-            redirectTo: getAuthRedirectUrl('/Settings/security')
+            redirectTo: isNative
+                ? `${nativeAuthCallbackUrl}?next=%2FSettings%2Fsecurity`
+                : getAuthRedirectUrl('/Settings/security'),
+            queryParams: { prompt: 'select_account' },
+            ...(isNative ? { skipBrowserRedirect: true } : {}),
         }
     })
+
+    if (!isNative || result.error || !result.data.url) return result
+
+    try {
+        await Browser.open({ url: result.data.url })
+    } catch (error) {
+        return {
+            data: result.data,
+            error: error instanceof Error ? error : new Error('Unable to open Google sign-in.')
+        }
+    }
+
+    return result
 }
 
 export const unlinkIdentity = async (identityId: string) => {
