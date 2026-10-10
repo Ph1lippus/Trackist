@@ -1323,19 +1323,32 @@ export const checkForNewSeasons = async (userId: string): Promise<{ updated: num
                 const seasonNeedsRepair = storedLastSeason > latestRealSeason
 
                 if (hasNewSeason || seasonNeedsRepair) {
-                    // Count released episodes across all seasons
+                    // Count released episodes across all seasons, keeping the
+                    // per-season breakdown so an announced season can be told
+                    // apart from one that is genuinely new.
                     let totalReleasedEpisodes = 0
+                    const releasedCountBySeason = new Map<number, number>()
                     const seasonNums = (details.seasons || [])
                         .filter((s: { season_number: number }) => s.season_number > 0)
                         .map((s: { season_number: number }) => s.season_number)
                     for (const sn of seasonNums) {
                         try {
                             const sd = await getTVSeasonDetails(show.tmdb_id, sn)
-                            totalReleasedEpisodes += sd.episodes?.filter((ep: { episode_number: number; air_date?: string }) => {
+                            const released = sd.episodes?.filter((ep: { episode_number: number; air_date?: string }) => {
                                 return isEpisodeAired(releaseIndex, sn, ep.episode_number, ep.air_date)
                             }).length || 0
+                            totalReleasedEpisodes += released
+                            releasedCountBySeason.set(sn, released)
                         } catch { /* skip */ }
                     }
+
+                    // A season TMDB has already listed but that hasn't aired yet
+                    // (announced, often with a placeholder episode) does not put
+                    // the show back into watching. Only an actual new episode
+                    // does — otherwise a 2027 premiere would strand a finished
+                    // show on "watching" with nothing to watch.
+                    const newSeasonHasReleasedEps = [...releasedCountBySeason.entries()]
+                        .some(([sn, released]) => sn > storedLastSeason && released > 0)
 
                     const { error: updateError } = await supabase
                         .from('watchlist')
@@ -1356,7 +1369,7 @@ export const checkForNewSeasons = async (userId: string): Promise<{ updated: num
 
                     // If a genuinely new season arrived and the show was
                     // completed or caught_up, move it back to watching
-                    if (hasNewSeason && (show.status === 'completed' || show.status === 'caught_up')) {
+                    if (hasNewSeason && newSeasonHasReleasedEps && (show.status === 'completed' || show.status === 'caught_up')) {
                         await supabase
                             .from('watchlist')
                             .update({ status: 'watching', updated_at: new Date().toISOString() })

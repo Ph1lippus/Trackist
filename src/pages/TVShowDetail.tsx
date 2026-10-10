@@ -385,32 +385,31 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
             const hasReleased = releaseIndex && releaseIndex.size > 0
                 ? seasonEpisodes.some(ep => isEpisodeAired(releaseIndex, seasonNumber, ep.episode_number, ep.air_date))
                 : seasonEpisodes.some(ep => !!ep.air_date && ep.air_date <= getUTCTodayString())
-            if (!hasReleased && seasonEpisodes.length > 0) {
-                // Hide not-yet-started seasons (resume UX), but never leave the
-                // page empty: a brand-new show whose first episode airs soon must
-                // keep its season so the unreleased episode list is visible.
-                let keepSeason = false
-                setSeasons(prev => {
-                    if (prev.length <= 1) {
-                        keepSeason = true
-                        return prev
-                    }
-                    const updated = prev.filter(s => s !== seasonNumber)
-                    // Auto-select another season if the removed one was selected
-                    if (updated.length > 0 && selectedSeason === seasonNumber) {
-                        const idx = prev.indexOf(seasonNumber)
-                        const fallback = updated[Math.min(idx, updated.length - 1)]
-                        setSelectedSeason(fallback)
-                        // Load the fallback season
-                        loadSeason(fallback)
-                    }
-                    return updated
-                })
-                if (!keepSeason) return
-            }
-            
+
+            // Always publish the episodes first. They are the only thing this season
+            // has to show, and returning before this point is what used to leave the
+            // panel blank while selectedSeason still pointed here.
             seasonCache.current.set(seasonNumber, seasonEpisodes)
             setEpisodes(seasonEpisodes)
+
+            // Hide not-yet-started seasons (resume UX), but never leave the page
+            // empty: a brand-new show whose first episode airs soon must keep its
+            // season so the unreleased episode list stays visible. Pruning only ever
+            // narrows the season selector - the decision is made here rather than
+            // inside a setSeasons updater, which React does not run synchronously.
+            if (!hasReleased && seasonEpisodes.length > 0) {
+                const remaining = seasons.filter(s => s !== seasonNumber)
+                if (remaining.length > 0) {
+                    setSeasons(remaining)
+                    // Dropping the selected season would filter the list down to
+                    // nothing and hide the selector, so fall back to a season that
+                    // still has episodes. Served from cache when already loaded.
+                    if (selectedSeason === seasonNumber) {
+                        setSelectedSeason(remaining[0])
+                        void loadSeason(remaining[0])
+                    }
+                }
+            }
         } catch (err) {
             console.error('Failed to load season:', err)
         }
@@ -448,13 +447,19 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
             if (!details || !id || !isLibraryInitialized) return
             
             try {
-                // Filter out seasons with 0 episodes.
-                const seasonList = (details.seasons || [])
-                    .filter((s: { season_number: number; episode_count?: number }) => 
+                // Filter out seasons with 0 episodes, and seasons that haven't started yet.
+                // TMDB lists announced seasons up front (often with a single
+                // placeholder episode carrying a future air_date), so a released-
+                // season check has to happen here too. A missing air_date is kept
+                // and left for loadSeason, which refines "today" with TVmaze.
+                const seasonMeta: { season_number: number; episode_count?: number; air_date?: string }[] = details.seasons || []
+                const seasonList = seasonMeta
+                    .filter(s =>
                         s.season_number > 0 &&
                         (s.episode_count === undefined || s.episode_count > 0)
                     )
-                    .map((s: { season_number: number }) => s.season_number)
+                    .filter(s => !s.air_date || s.air_date <= getUTCTodayString())
+                    .map(s => s.season_number)
                 setSeasons(seasonList)
 
                 // Get watched episodes from DB (these are episodes in watchlist_episodes table).
@@ -533,19 +538,21 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                     const seasonEps = seasonCache.current.get(targetSeason) || []
                     const allReleasedInSeasonWatched = seasonEps.filter(ep => isEpisodeReleased(ep)).every(ep => ep.watched)
 
-                    // If all released episodes in the season are watched, go to next season
+                    // If all released episodes in the season are watched, go to next season -
+                    // but only when it actually has something released to watch.
+                    // An announced season must not steal focus from the season
+                    // the user just finished.
                     if (allReleasedInSeasonWatched) {
                         const nextSeasonIndex = seasonList.indexOf(targetSeason) + 1
                         if (nextSeasonIndex < seasonList.length) {
-                            targetSeason = seasonList[nextSeasonIndex]
-                            await loadSeason(targetSeason)
-                            const nextSeasonEps = seasonCache.current.get(targetSeason) || []
+                            const nextSeason = seasonList[nextSeasonIndex]
+                            const nextSeasonEps = await ensureSeasonLoaded(nextSeason)
                             const firstReleasedEp = nextSeasonEps.find(ep => isEpisodeReleased(ep))
                             if (firstReleasedEp) {
+                                targetSeason = nextSeason
+                                await loadSeason(targetSeason)
                                 targetEpisode = firstReleasedEp.episode_number
                                 scrollTarget = `${id}-${targetSeason}-${targetEpisode}`
-                            } else {
-                                scrollTarget = null
                             }
                         }
                     }
