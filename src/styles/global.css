@@ -6136,7 +6136,7 @@ button:focus-visible {
     align-items: stretch;
     transform: translateX(-50%);
     pointer-events: none;
-}
+} 
 
 .auth-alert-stack .auth-alert {
     width: 100%;
