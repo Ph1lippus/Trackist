@@ -171,6 +171,24 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
+          set -euo pipefail
+          # Same pre-flight as the other credential steps. Without it a missing
+          # secret surfaces as a bare HTTP error from the upload, which tells you
+          # nothing about what to fix.
+          #
+          # Note these are deliberately NOT the VITE_ names: SUPABASE_URL and
+          # SUPABASE_SERVICE_ROLE_KEY are separate secrets, and the service role
+          # key bypasses Row Level Security so it must never be exposed to the
+          # client bundle.
+          missing=0
+          for pair in "SUPABASE_URL=$SUPABASE_URL" "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY"; do
+            if [ -z "${pair#*=}" ]; then
+              echo "::error::Secret ${pair%%=*} is missing. Add it under Settings > Secrets and variables > Actions. SUPABASE_URL is your project URL; SUPABASE_SERVICE_ROLE_KEY is under Project Settings > API Keys > service_role."
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ] || exit 1
+
           echo "Uploading version.json to $SUPABASE_URL ..."
           RESPONSE=$(curl -sS -X POST \
             "$SUPABASE_URL/storage/v1/object/app-manifests/version.json" \
@@ -182,7 +200,7 @@ jobs:
           echo "$RESPONSE"
           STATUS=$(echo "$RESPONSE" | grep -o 'HTTP_STATUS:[0-9]*' | tail -1 | cut -d: -f2)
           if [ "$STATUS" != "200" ]; then
-            echo "::error::Supabase upload failed with HTTP $STATUS"
+            echo "::error::Supabase upload failed with HTTP $STATUS. The APK and GitHub release were published, but the in-app update prompt will not see this build until this manifest is uploaded."
             exit 1
           fi
           echo "version.json published to Supabase Storage"
