@@ -200,7 +200,23 @@ jobs:
           echo "$RESPONSE"
           STATUS=$(echo "$RESPONSE" | grep -o 'HTTP_STATUS:[0-9]*' | tail -1 | cut -d: -f2)
           if [ "$STATUS" != "200" ]; then
-            echo "::error::Supabase upload failed with HTTP $STATUS. The APK and GitHub release were published, but the in-app update prompt will not see this build until this manifest is uploaded."
+            # These two failures look identical in the logs but have completely
+            # different causes, and both are easy to fix by picking a different
+            # key in Supabase. Distinguish them.
+            case "$RESPONSE" in
+              *"row-level security policy"*|*"AccessDenied"*)
+                echo "::error::Supabase rejected the upload with a Row Level Security error."
+                echo "::error::The key parsed correctly, so it is a valid JWT - but it is NOT the service_role key. An anon key was used."
+                echo "::error::Fix: Supabase > Project Settings > API Keys > use the 'Secret key' (sb_secret_...), or the legacy 'service_role' key. Do not use the publishable/anon key."
+                ;;
+              *"Invalid Compact JWS"*|*"JWT"*)
+                echo "::error::Supabase could not read the key at all."
+                echo "::error::Fix: Supabase > Project Settings > API Keys > use the 'Secret key' (sb_secret_...), not the publishable key. Copy it with no leading or trailing whitespace."
+                ;;
+              *)
+                echo "::error::Supabase upload failed with HTTP $STATUS. The APK and GitHub release were published, but the in-app update prompt will not see this build until this manifest is uploaded."
+                ;;
+            esac
             exit 1
           fi
           echo "version.json published to Supabase Storage"
