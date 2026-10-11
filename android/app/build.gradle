@@ -35,6 +35,10 @@ android {
                     )
                 }
                 storeFile keystoreFile
+                // PKCS12 rather than JKS: JKS is a legacy proprietary format and
+                // keytool warns on every generation. Stated explicitly instead of
+                // relying on KeyStore.getDefaultType(), which differs across JDKs.
+                storeType 'pkcs12'
                 storePassword keystorePassword
                 keyAlias 'track1st'
                 keyPassword keystorePassword
