@@ -270,6 +270,38 @@ SELECT vault.create_secret('cron_secret', '<same-random-secret>');
 SELECT name FROM vault.secrets WHERE name = 'cron_secret';
 ```
 
+### CI Secrets
+
+The Android workflow builds on every push to `main`. Credentials are read from
+GitHub Secrets and restored at build time, so none of them live in this
+repository.
+
+Add these under **Settings → Secrets and variables → Actions → New repository secret**:
+
+| Secret | How to obtain it |
+| --- | --- |
+| `VITE_SUPABASE_URL` | Supabase → Project Settings → Data API |
+| `VITE_SUPABASE_ANON_KEY` | Supabase → Project Settings → API Keys (the anon/publishable key) |
+| `VITE_HCAPTCHA_SITE_KEY` | hCaptcha dashboard |
+| `VITE_PUSH_VAPID_PUBLIC_KEY` | Supabase → Project Settings → API Keys → Web Push |
+| `ANDROID_KEYSTORE_BASE64` | `base64 -w0 android/app/upload.keystore` |
+| `ANDROID_KEYSTORE_PASSWORD` | The password protecting that keystore |
+| `GOOGLE_SERVICES_JSON_B64` | `base64 -w0 android/app/google-services.json` |
+
+Notes:
+
+- `VITE_TMDB_API_KEY` is deliberately **not** a CI secret. The browser never
+  talks to TMDB directly — all requests are proxied through the `tmdb-proxy`
+  edge function, which reads its key from the server-side `TMDB_API_KEY`
+  environment variable. A `VITE_` key would be inlined into the public client
+  bundle for nothing.
+- `android/app/upload.keystore` and `android/app/google-services.json` are
+  gitignored. The signing key is the credential that matters most here: anyone
+  holding it can sign an APK that Android accepts as an update to an already
+  installed copy of the app.
+- The build fails immediately, with a `::error::` naming the missing secret,
+  rather than producing an APK with blank configuration.
+
 ### Local Development
 
 ```bash

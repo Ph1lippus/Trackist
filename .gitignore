@@ -26,6 +26,16 @@ dist-ssr
 .aider*
 .kilo/plans
 
+# Android signing material and Firebase config.
+# These are credentials: CI restores them from GitHub Secrets
+# (ANDROID_KEYSTORE_BASE64 / GOOGLE_SERVICES_JSON_B64) and they must never be
+# committed, or anyone with repository access can sign an "official" APK.
+android/app/upload.keystore
+android/app/google-services.json
+*.keystore
+*.jks
+*.p12
+
 # Supabase deployment-specific files
 supabase/migrations/
 supabase/config.toml

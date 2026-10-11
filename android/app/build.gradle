@@ -19,11 +19,25 @@ android {
     signingConfigs {
         releaseConfig {
             def keystoreFile = file('upload.keystore')
+            // Signing material never lives in the repo. CI restores the keystore
+            // from the ANDROID_KEYSTORE_BASE64 secret; a local build supplies the
+            // password via TRACK1ST_KEYSTORE_PASSWORD (or -PTRACK1ST_KEYSTORE_PASSWORD).
+            //
+            // Failing loudly matters here: silently falling back to a shared
+            // default password would produce an APK signed with a key anyone
+            // holding this repository can also produce.
+            def keystorePassword = project.findProperty('TRACK1ST_KEYSTORE_PASSWORD') ?: System.getenv('TRACK1ST_KEYSTORE_PASSWORD')
             if (keystoreFile.exists()) {
+                if (!keystorePassword) {
+                    throw new GradleException(
+                        'upload.keystore is present but TRACK1ST_KEYSTORE_PASSWORD is not set. ' +
+                        'Export it before building a release.'
+                    )
+                }
                 storeFile keystoreFile
-                storePassword project.findProperty('TRACK1ST_KEYSTORE_PASSWORD') ?: System.getenv('TRACK1ST_KEYSTORE_PASSWORD') ?: 'track1st-2026'
+                storePassword keystorePassword
                 keyAlias 'track1st'
-                keyPassword project.findProperty('TRACK1ST_KEYSTORE_PASSWORD') ?: System.getenv('TRACK1ST_KEYSTORE_PASSWORD') ?: 'track1st-2026'
+                keyPassword keystorePassword
             }
         }
     }
