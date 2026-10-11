@@ -92,6 +92,60 @@ export interface TMDBResult {
     }
 }
 
+/**
+ * One of the alternative episode orderings TMDB keeps for a TV series
+ * (`GET /tv/{id}/episode_groups`). The default `seasons` array never exposes a
+ * group id, so these are only reachable through the dedicated endpoints.
+ *
+ * A show can have many (Dragon Ball Z Kai has 17) and most of them cover only
+ * part of the series, so consumers must check `episode_count` against the sum of
+ * `seasons[].episode_count` before trusting a group.
+ */
+export interface TVEpisodeGroupSummary {
+    id: string
+    name: string
+    description?: string
+    /** 1 = Original aired, 2 = DVD, 3 = Absolute, 4 = Modified, 5 = TV, 6 = TV, 7 = Final cut. */
+    type?: number
+    /** Number of sub-groups; each one behaves as a "season" in this ordering. */
+    group_count?: number
+    /** Total episodes across every sub-group. */
+    episode_count?: number
+    network?: {
+        id?: number
+        name?: string
+        logo_path?: string | null
+    }
+}
+
+/** A single episode inside an episode group, carrying its ORIGINAL TMDB coordinates. */
+export interface TVEpisodeGroupEntry {
+    id: number
+    /** Season this episode belongs to in the show's default (aired) ordering. */
+    season_number: number
+    /** Episode number within that default season (NOT its number in the group). */
+    episode_number: number
+    /** Zero-based position within the sub-group, i.e. the group's episode number is `order + 1`. */
+    order: number
+    name?: string
+    air_date?: string | null
+    runtime?: number | null
+    still_path?: string | null
+    vote_average?: number
+    overview?: string
+}
+
+export interface TVEpisodeGroupDetail extends TVEpisodeGroupSummary {
+    groups: Array<{
+        id: string
+        name: string
+        description?: string
+        /** Season number this sub-group maps to; starts at 1. */
+        order: number
+        episodes: TVEpisodeGroupEntry[]
+    }>
+}
+
 export interface WatchlistItem {
     id: string
     user_id: string

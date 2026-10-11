@@ -1,4 +1,4 @@
-import type { TMDBResult } from '../types'
+import type { TMDBResult, TVEpisodeGroupDetail, TVEpisodeGroupSummary } from '../types'
 
 
 const IMAGE_BASE = 'https://image.tmdb.org/t/p'
@@ -349,6 +349,38 @@ export const getTVEpisodeDetails = async (tvId: number, seasonNumber: number, ep
     runtime?: number
 }> => {
     const res = await tmdbProxy(`/tv/${tvId}/season/${seasonNumber}/episode/${episodeNumber}`)
+    if (!res.ok) {
+        throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
+    }
+    return res.json()
+}
+
+/**
+ * Lists the alternative episode orderings ("episode groups") TMDB keeps for a
+ * series. This is the ONLY way to discover them - the default `seasons` array
+ * on `/tv/{id}` carries no group reference at all.
+ *
+ * Most groups cover only part of a series, so callers must compare
+ * `episode_count` against the sum of `seasons[].episode_count` before using one.
+ */
+export const getTVEpisodeGroups = async (tvId: number): Promise<TVEpisodeGroupSummary[]> => {
+    const res = await tmdbProxy(`/tv/${tvId}/episode_groups`)
+    if (!res.ok) {
+        if (res.status === 404) return []
+        throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
+    }
+    const data = await res.json()
+    const results = Array.isArray(data?.results) ? data.results : []
+    return results.filter((g: unknown): g is TVEpisodeGroupSummary => !!g && typeof g === 'object' && typeof (g as TVEpisodeGroupSummary).id === 'string')
+}
+
+/**
+ * Fetches one episode group's full contents. Every entry carries the episode's
+ * ORIGINAL (aired-order) season/episode alongside the position it occupies in
+ * this group, which is what makes remapping between the two orderings possible.
+ */
+export const getTVEpisodeGroup = async (groupId: string): Promise<TVEpisodeGroupDetail> => {
+    const res = await tmdbProxy(`/tv/episode_group/${groupId}?language=en-US`)
     if (!res.ok) {
         throw new Error(`TMDB API error: ${res.status} ${res.statusText}`)
     }

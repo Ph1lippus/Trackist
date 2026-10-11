@@ -15,6 +15,7 @@ import type { TMDBResult, WatchlistItem } from '../types'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { launchCosmicConfetti } from '../utils/cosmicConfetti'
 import { createEpisodeDeepLink, openInStremio, createTVDeepLink  } from '../utils/stremioUtils'
+import { resolveStremioTarget } from '../services/stremioMappingService'
 import { curateCast } from '../utils/castUtils'
 import { useShowStremioButton } from '../hooks/useShowStremioButton'
 import { useShowTmdbButton } from '../hooks/useShowTmdbButton'
@@ -71,6 +72,10 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
     
     const [seasons, setSeasons] = useState<number[]>([])
     const [episodes, setEpisodes] = useState<LocalEpisode[]>([])
+    // True only while the Stremio button is remapping an episode into Stremio's
+    // season grouping, so the button can show a brief disabled state instead of
+    // firing several times (the mapping may need a few network round trips).
+    const [resolvingStremio, setResolvingStremio] = useState(false)
     // Seed synchronously so the very first render already lands correctly: the
     // remembered season when returning from an episode modal, otherwise the
     // watchlist's stored current_season ("where we are") instead of a season-1
@@ -226,6 +231,54 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
             if (firstReleased) return { season: seasons[i], episode: firstReleased.episode_number }
         }
         return null
+    }
+
+    /**
+     * Builds and opens the Stremio deep link for the next episode to watch.
+     *
+     * TMDB's aired-order season numbering does not always match the grouping
+     * Stremio (Cinemeta) uses - Lupin, for example, is one 10-episode "Season 1"
+     * on TMDB but two 5-episode seasons on Stremio - so the raw coordinate can
+     * open the wrong episode or nothing at all. `resolveStremioTarget` looks up
+     * a TMDB episode group that Cinemeta actually agrees with and remaps the
+     * coordinate; anything it cannot verify keeps today's behaviour.
+     */
+    const openStremioLink = async () => {
+        if (!details || resolvingStremio) return
+
+        const imdbId = details.external_ids?.imdb_id
+        const nextEp = await getResumeEpisodeToWatch()
+        const seriesLink = createTVDeepLink(details.id, imdbId)
+
+        // No progress recorded (or nothing released to resume) - just open the show.
+        if (!nextEp) {
+            openInStremio(seriesLink)
+            return
+        }
+
+        setResolvingStremio(true)
+        try {
+            const baseEpisodeTotal = (details.seasons ?? []).reduce(
+                (total, season) => total + (season?.episode_count ?? 0),
+                0
+            )
+            const target = await resolveStremioTarget(details.id, imdbId, nextEp.season, nextEp.episode, baseEpisodeTotal)
+
+            if (target?.kind === 'episode') {
+                openInStremio(createEpisodeDeepLink(details.id, target.season, target.episode, imdbId))
+                return
+            }
+            if (target?.kind === 'series') {
+                openInStremio(seriesLink)
+                return
+            }
+            openInStremio(createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, imdbId))
+        } catch (error) {
+            console.error('Failed to build Stremio link:', error)
+            openInStremio(createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, imdbId))
+        } finally {
+            setResolvingStremio(false)
+        }
     }
 
     
@@ -1355,15 +1408,9 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                 {showStremioButton && !stremioLoading && (
                                      <button
                                          className="detail-page__icon-btn"
-                                         onClick={async () => {
-                                            if (!details) return
-                                            const nextEp = await getResumeEpisodeToWatch()
-                                            const sharingLink = nextEp
-                                                ? createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids?.imdb_id)
-                                                : createTVDeepLink(details.id, details.external_ids?.imdb_id)
-                                            openInStremio(sharingLink)
-                                        }}
-                                         title="Open in Stremio"
+                                         onClick={openStremioLink}
+                                         disabled={resolvingStremio}
+                                         title={resolvingStremio ? 'Preparing Stremio link…' : 'Open in Stremio'}
                                      >
                                          <img src={stremioIcon} alt="Stremio" className="detail-page__stremio-logo" />
                                      </button>
@@ -1395,15 +1442,9 @@ const TVShowDetail: React.FC<TVShowDetailProps> = ({ itemId: propId, onLoaded })
                                 {showStremioButton && !stremioLoading && (
                                      <button
                                          className="detail-page__icon-btn"
-                                         onClick={async () => {
-                                            if (!details) return
-                                            const nextEp = await getResumeEpisodeToWatch()
-                                            const sharingLink = nextEp
-                                                ? createEpisodeDeepLink(details.id, nextEp.season, nextEp.episode, details.external_ids?.imdb_id)
-                                                : createTVDeepLink(details.id, details.external_ids?.imdb_id)
-                                            openInStremio(sharingLink)
-                                        }}
-                                         title="Open in Stremio"
+                                         onClick={openStremioLink}
+                                         disabled={resolvingStremio}
+                                         title={resolvingStremio ? 'Preparing Stremio link…' : 'Open in Stremio'}
                                      >
                                          <img src={stremioIcon} alt="Stremio" className="detail-page__stremio-logo" />
                                      </button>

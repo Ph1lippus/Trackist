@@ -1,6 +1,6 @@
 import { precacheAndRoute, createHandlerBoundToURL, cleanupOutdatedCaches } from 'workbox-precaching'
 import { registerRoute, NavigationRoute } from 'workbox-routing'
-import { NetworkFirst, CacheFirst, NetworkOnly } from 'workbox-strategies'
+import { NetworkFirst, CacheFirst, NetworkOnly, StaleWhileRevalidate } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 import { clientsClaim } from 'workbox-core'
 
@@ -63,6 +63,21 @@ registerRoute(
     networkTimeoutSeconds: 10,
     plugins: [
       new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 60 * 30 }),
+    ],
+  })
+)
+
+// Cinemeta (Stremio's metadata source) - serve from cache instantly and refresh
+// in the background. Used to map an episode onto Stremio's season grouping, so
+// a stale copy must never block opening the app; payloads can also be large for
+// long-running series, which is what makes serving them from cache worthwhile.
+registerRoute(
+  ({ url }) => url.hostname === 'v3-cinemeta.strem.io',
+  new StaleWhileRevalidate({
+    cacheName: 'stremio-cinemeta-cache',
+    networkTimeoutSeconds: 8,
+    plugins: [
+      new ExpirationPlugin({ maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 7 }),
     ],
   })
 )
