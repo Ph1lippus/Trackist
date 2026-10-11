@@ -169,36 +169,40 @@ jobs:
       - name: Publish version.json to Supabase Storage
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUPABASE_JWT_SECRET: ${{ secrets.SUPABASE_JWT_SECRET }}
         run: |
           set -euo pipefail
           # Same pre-flight as the other credential steps. Without it a missing
-          # secret surfaces as a bare HTTP error from the upload, which tells you
-          # nothing about what to fix.
+          # secret surfaces as a bare HTTP error from the upload, which tells
+          # you nothing about what to fix.
           #
           # Note these are deliberately NOT the VITE_ names: SUPABASE_URL and
-          # SUPABASE_SERVICE_ROLE_KEY are separate secrets, and the service role
-          # key bypasses Row Level Security so it must never be exposed to the
+          # SUPABASE_JWT_SECRET are separate secrets, and the JWT secret can
+          # mint service_role tokens, so it must never be exposed to the
           # client bundle.
           missing=0
-          for pair in "SUPABASE_URL=$SUPABASE_URL" "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY"; do
+          for pair in "SUPABASE_URL=$SUPABASE_URL" "SUPABASE_JWT_SECRET=$SUPABASE_JWT_SECRET"; do
             if [ -z "${pair#*=}" ]; then
-              echo "::error::Secret ${pair%%=*} is missing. Add it under Settings > Secrets and variables > Actions. SUPABASE_URL is your project URL; SUPABASE_SERVICE_ROLE_KEY is under Project Settings > API Keys > Secret key (sb_secret_...)."
+              echo "::error::Secret ${pair%%=*} is missing. Add it under Settings > Secrets and variables > Actions. SUPABASE_URL is your project URL; SUPABASE_JWT_SECRET is under Project Settings > API > JWT secret."
               missing=1
             fi
           done
           [ "$missing" -eq 0 ] || exit 1
 
-          # Secrets copied via the web UI often carry a trailing newline,
-          # which makes the Authorization header an invalid JWS. Keys never
-          # contain internal whitespace, so stripping it is always safe.
           SUPABASE_URL=$(printf '%s' "$SUPABASE_URL" | tr -d '[:space:]')
-          SUPABASE_SERVICE_ROLE_KEY=$(printf '%s' "$SUPABASE_SERVICE_ROLE_KEY" | tr -d '[:space:]')
+          SUPABASE_JWT_SECRET=$(printf '%s' "$SUPABASE_JWT_SECRET" | tr -d '[:space:]')
+
+          # The new-format API keys (sb_secret_...) are opaque tokens that the
+          # Storage API cannot parse - it only accepts JWTs. Mint a short-lived
+          # service_role JWT from the project's JWT secret instead: it is
+          # signed with HS256 and carries role=service_role, which is exactly
+          # what the legacy service_role key was.
+          SERVICE_TOKEN=$(node scripts/mint-service-token.cjs "$SUPABASE_JWT_SECRET")
 
           echo "Uploading version.json to $SUPABASE_URL ..."
           RESPONSE=$(curl -sS -X POST \
             "$SUPABASE_URL/storage/v1/object/app-manifests/version.json" \
-            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SERVICE_TOKEN" \
             -H "Content-Type: application/json" \
             -H "x-upsert: true" \
             --data-binary @version.json \
@@ -206,18 +210,14 @@ jobs:
           echo "$RESPONSE"
           STATUS=$(echo "$RESPONSE" | grep -o 'HTTP_STATUS:[0-9]*' | tail -1 | cut -d: -f2)
           if [ "$STATUS" != "200" ]; then
-            # These two failures look identical in the logs but have completely
-            # different causes, and both are easy to fix by picking a different
-            # key in Supabase. Distinguish them.
             case "$RESPONSE" in
-              *"Invalid Compact JWS"*|*"JWT"*)
-                echo "::error::Supabase could not read the key at all."
-                echo "::error::Fix: Supabase > Project Settings > API Keys > use the 'Secret key' (sb_secret_...), not the publishable key. Copy it with no leading or trailing whitespace."
+              *"Invalid Compact JWS"*|*"JWT"*|*"signature"*)
+                echo "::error::Supabase rejected the minted token. The JWT secret does not match this project."
+                echo "::error::Fix: Supabase > Project Settings > API > JWT secret. Copy the JWT secret for THIS project into the SUPABASE_JWT_SECRET GitHub secret."
                 ;;
               *"row-level security policy"*|*"AccessDenied"*)
                 echo "::error::Supabase rejected the upload with a Row Level Security error."
-                echo "::error::The key parsed correctly, so it is a valid JWT - but it is NOT the service_role key. An anon key was used."
-                echo "::error::Fix: Supabase > Project Settings > API Keys > use the 'Secret key' (sb_secret_...), or the legacy 'service_role' key. Do not use the publishable/anon key."
+                echo "::error::Fix: the app-manifests bucket or its service_role policy is missing. Recreate the bucket and its policies in the Supabase dashboard."
                 ;;
               *)
                 echo "::error::Supabase upload failed with HTTP $STATUS. The APK and GitHub release were published, but the in-app update prompt will not see this build until this manifest is uploaded."

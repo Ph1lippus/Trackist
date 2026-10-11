@@ -281,12 +281,19 @@ Add these under **Settings → Secrets and variables → Actions → New reposit
 | Secret | How to obtain it |
 | --- | --- |
 | `VITE_SUPABASE_URL` | Supabase → Project Settings → Data API |
-| `VITE_SUPABASE_ANON_KEY` | Supabase → Project Settings → API Keys (the anon/publishable key) |
+| `VITE_SUPABASE_ANON_KEY` | Supabase → Project Settings → API Keys (the publishable key, `sb_publishable_...`) |
+| `SUPABASE_URL` | Same URL as `VITE_SUPABASE_URL` (used by the Storage upload step) |
+| `SUPABASE_JWT_SECRET` | Supabase → Project Settings → API → JWT secret. The upload step signs a short-lived `service_role` JWT with it (`scripts/mint-service-token.cjs`), because the Storage API only accepts JWTs — the new-format `sb_secret_...` key is an opaque token it cannot parse. |
 | `VITE_HCAPTCHA_SITE_KEY` | hCaptcha dashboard |
 | `VITE_PUSH_VAPID_PUBLIC_KEY` | Supabase → Project Settings → API Keys → Web Push |
 | `ANDROID_KEYSTORE_BASE64` | `base64 -w0 android/app/upload.keystore` |
 | `ANDROID_KEYSTORE_PASSWORD` | The password protecting that keystore |
 | `GOOGLE_SERVICES_JSON_B64` | `base64 -w0 android/app/google-services.json` |
+
+Notes:
+
+- The legacy `SUPABASE_SERVICE_ROLE_KEY` secret is no longer used by CI. The legacy keys cannot be rotated, so once they are disabled the JWT-secret minting above replaces them permanently.
+- The JWT secret can mint service_role tokens — treat it with the same care as the old service_role key and never expose it to the client bundle.
 
 Notes:
 
