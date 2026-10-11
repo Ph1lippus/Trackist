@@ -183,11 +183,17 @@ jobs:
           missing=0
           for pair in "SUPABASE_URL=$SUPABASE_URL" "SUPABASE_SERVICE_ROLE_KEY=$SUPABASE_SERVICE_ROLE_KEY"; do
             if [ -z "${pair#*=}" ]; then
-              echo "::error::Secret ${pair%%=*} is missing. Add it under Settings > Secrets and variables > Actions. SUPABASE_URL is your project URL; SUPABASE_SERVICE_ROLE_KEY is under Project Settings > API Keys > service_role."
+              echo "::error::Secret ${pair%%=*} is missing. Add it under Settings > Secrets and variables > Actions. SUPABASE_URL is your project URL; SUPABASE_SERVICE_ROLE_KEY is under Project Settings > API Keys > Secret key (sb_secret_...)."
               missing=1
             fi
           done
           [ "$missing" -eq 0 ] || exit 1
+
+          # Secrets copied via the web UI often carry a trailing newline,
+          # which makes the Authorization header an invalid JWS. Keys never
+          # contain internal whitespace, so stripping it is always safe.
+          SUPABASE_URL=$(printf '%s' "$SUPABASE_URL" | tr -d '[:space:]')
+          SUPABASE_SERVICE_ROLE_KEY=$(printf '%s' "$SUPABASE_SERVICE_ROLE_KEY" | tr -d '[:space:]')
 
           echo "Uploading version.json to $SUPABASE_URL ..."
           RESPONSE=$(curl -sS -X POST \
@@ -204,14 +210,14 @@ jobs:
             # different causes, and both are easy to fix by picking a different
             # key in Supabase. Distinguish them.
             case "$RESPONSE" in
+              *"Invalid Compact JWS"*|*"JWT"*)
+                echo "::error::Supabase could not read the key at all."
+                echo "::error::Fix: Supabase > Project Settings > API Keys > use the 'Secret key' (sb_secret_...), not the publishable key. Copy it with no leading or trailing whitespace."
+                ;;
               *"row-level security policy"*|*"AccessDenied"*)
                 echo "::error::Supabase rejected the upload with a Row Level Security error."
                 echo "::error::The key parsed correctly, so it is a valid JWT - but it is NOT the service_role key. An anon key was used."
                 echo "::error::Fix: Supabase > Project Settings > API Keys > use the 'Secret key' (sb_secret_...), or the legacy 'service_role' key. Do not use the publishable/anon key."
-                ;;
-              *"Invalid Compact JWS"*|*"JWT"*)
-                echo "::error::Supabase could not read the key at all."
-                echo "::error::Fix: Supabase > Project Settings > API Keys > use the 'Secret key' (sb_secret_...), not the publishable key. Copy it with no leading or trailing whitespace."
                 ;;
               *)
                 echo "::error::Supabase upload failed with HTTP $STATUS. The APK and GitHub release were published, but the in-app update prompt will not see this build until this manifest is uploaded."
