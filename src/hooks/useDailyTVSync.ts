@@ -11,6 +11,8 @@ interface SyncShow {
     tmdb_id: number
     status: string
     last_season_check?: string | null
+    /** Stored released-episode count, used to skip unchanged writes. */
+    total_episodes?: number | null
 }
 
 // Lightweight result of a single show's sync — the fields the sweep computed
@@ -18,14 +20,38 @@ interface SyncShow {
 // `applySyncUpdates` in one batched call at the end of the sweep.
 interface SyncResult {
     id: string
-    status: 'watching' | 'caught_up' | 'completed' | 'dropped' | 'planning'
+    status: 'watching' | 'caught_up' | 'completed' | 'dropped' | 'planning' | 'paused'
     total_episodes?: number
     last_season_check?: string
     updated_at?: string
 }
 
+const WATCH_STATUSES = ['watching', 'caught_up', 'completed', 'dropped', 'planning', 'paused'] as const
+
+/**
+ * Echo the show's real status back to the store.
+ *
+ * `syncWatchingShow` hardcoded 'watching' because it only ever ran against
+ * `watching` rows, and `applySyncUpdates` writes `status` unconditionally.
+ * Reusing it for the count refresh across every TV show would therefore have
+ * dragged Paused / Finished / Dropped entries into "Currently Watching".
+ * Unrecognised values fall back to 'watching' so a status added to the database
+ * later can never blank the field.
+ */
+const statusOf = (status: string): SyncResult['status'] =>
+    (WATCH_STATUSES as readonly string[]).includes(status) ? (status as SyncResult['status']) : 'watching'
+
 const SYNC_BATCH_SIZE = 5
 const SYNC_BATCH_DELAY_MS = 150
+
+/**
+ * User id whose badge counts have already been recomputed this session.
+ *
+ * Module scope rather than component state because `useDailyTVSync` is mounted
+ * at the app root but its effect re-runs on identity changes; this keeps the
+ * mount refresh to once per session per user instead of once per mount.
+ */
+let countsRefreshedFor: string | null = null
 
 const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
 
@@ -46,12 +72,15 @@ const isDueForSync = (lastCheck?: string | null): boolean => {
 
 /**
  * Refresh the released-episode count (and thus the "episodes left" badge) for a
- * single `watching` show. Also serves as the daily status check. Returns the
+ * single show. Also serves as the daily status check. Returns the
  * lightweight in-memory update (or null for ended shows) rather than going
  * through the full store refresh pipeline.
  *
+ * `show.status` is echoed back unchanged - see `statusOf`. Only `watching` rows
+ * are persisted, via the `.eq('status', 'watching')` guard on each update.
+ *
  * When `refreshOnly` is true, only the in-memory episode count is updated —
- * no DB writes are made, keeping the operation cheap for tab-focus refreshes.
+ * no DB writes are made, keeping the operation cheap for count refreshes.
  */
 const syncWatchingShow = async (show: SyncShow, refreshOnly = false): Promise<SyncResult | null> => {
     const details = await getTVDetails(show.tmdb_id)
@@ -60,7 +89,7 @@ const syncWatchingShow = async (show: SyncShow, refreshOnly = false): Promise<Sy
         if (refreshOnly) {
             return {
                 id: show.id,
-                status: 'watching',
+                status: statusOf(show.status),
             }
         }
 
@@ -76,7 +105,7 @@ const syncWatchingShow = async (show: SyncShow, refreshOnly = false): Promise<Sy
         }
         return {
             id: show.id,
-            status: 'watching',
+            status: statusOf(show.status),
             last_season_check: new Date().toISOString(),
         }
     }
@@ -102,10 +131,53 @@ const syncWatchingShow = async (show: SyncShow, refreshOnly = false): Promise<Sy
 
     return {
         id: show.id,
-        status: 'watching',
+        status: statusOf(show.status),
         total_episodes: totalReleasedEpisodes,
         last_season_check: lastSeasonCheck,
     }
+}
+
+/**
+ * Recompute the released-episode count backing the "+N episodes left" badge.
+ *
+ * Deliberately separate from `syncWatchingShow` rather than reusing it with a
+ * flag: that function carries daily-sweep semantics (watching-only persistence,
+ * status transitions), while this one is a pure, idempotent count refresh that
+ * may run for any show and must never change a show's status.
+ *
+ * Two properties keep this cheap enough to run on every page load:
+ *
+ *  - **Finished shows short-circuit.** A series TMDB reports as Ended/Canceled
+ *    can never gain another released episode, so its stored count is already
+ *    final and the season-by-season fan-out is skipped entirely. This removes
+ *    the long tail of completed shows from every load.
+ *  - **Only genuine changes are persisted.** The stored column converges to the
+ *    correct value and then stays quiet, so steady state costs zero writes.
+ *    `updated_at` has no database trigger, so this cannot reshuffle the library.
+ */
+const refreshShowCount = async (show: SyncShow): Promise<SyncResult | null> => {
+    const details = await getTVDetails(show.tmdb_id)
+    const hasStoredCount = typeof show.total_episodes === 'number' && show.total_episodes > 0
+
+    if ((details.status === 'Ended' || details.status === 'Canceled') && hasStoredCount) {
+        return { id: show.id, status: statusOf(show.status) }
+    }
+
+    const totalReleasedEpisodes = await countReleasedEpisodesAcrossSeasons(show.tmdb_id)
+
+    if (totalReleasedEpisodes !== show.total_episodes) {
+        const { error } = await supabase
+            .from('watchlist')
+            .update({ total_episodes: totalReleasedEpisodes })
+            .eq('id', show.id)
+
+        if (error) {
+            // Not fatal: the in-memory badge still gets corrected below.
+            console.error(`Failed to persist episode count for ${show.id}:`, error)
+        }
+    }
+
+    return { id: show.id, status: statusOf(show.status), total_episodes: totalReleasedEpisodes }
 }
 
 /**
@@ -184,7 +256,7 @@ const fetchUserTVShows = async (userId: string): Promise<SyncShow[]> => {
     while (hasMore) {
         const { data, error } = await supabase
             .from('watchlist')
-            .select('id, tmdb_id, status, last_season_check')
+            .select('id, tmdb_id, status, last_season_check, total_episodes')
             .eq('user_id', userId)
             .in('media_type', ['tv'])
             .range(page * pageSize, (page + 1) * pageSize - 1)
@@ -207,18 +279,28 @@ const fetchUserTVShows = async (userId: string): Promise<SyncShow[]> => {
 /**
  * Process a group of shows in batches, calling the appropriate sync function
  * for each. Returns collected results after all batches complete.
+ *
+ * `onBatch` is invoked with each batch's results as soon as that batch settles,
+ * so callers can surface progress incrementally instead of blocking on the whole
+ * library.
  */
 const processSyncShows = async (
     shows: SyncShow[],
     syncFn: (show: SyncShow) => Promise<SyncResult | null>,
+    onBatch?: (results: SyncResult[]) => void,
 ): Promise<SyncResult[]> => {
     const collected: (SyncResult | null)[] = []
     for (let i = 0; i < shows.length; i += SYNC_BATCH_SIZE) {
         const batch = shows.slice(i, i + SYNC_BATCH_SIZE)
         const results = await Promise.allSettled(batch.map(syncFn))
+        const settled: SyncResult[] = []
         for (const r of results) {
-            if (r.status === 'fulfilled') collected.push(r.value)
+            if (r.status === 'fulfilled' && r.value != null) {
+                collected.push(r.value)
+                settled.push(r.value)
+            }
         }
+        if (onBatch && settled.length > 0) onBatch(settled)
         if (i + SYNC_BATCH_SIZE < shows.length) {
             await delay(SYNC_BATCH_DELAY_MS)
         }
@@ -244,37 +326,59 @@ const applyResults = (results: SyncResult[]) => {
 /**
  * Background TV sync hook.
  *
- * Performs two complementary syncs:
+ * Performs three complementary syncs:
  *
  * 1. **Daily sweep** (once per UTC day on mount): Full sync that refreshes
  *    episode counts for `watching` shows and moves `caught_up` shows back to
  *    `watching` when new episodes air. Bounded by the `last_season_check`
  *    UTC-date gate to avoid re-processing shows already checked today.
  *
- * 2. **Tab-focus refresh** (on `visibilitychange`): Lightweight sync that only
- *    recalculates `total_episodes` for `watching` shows. No DB writes, no status
- *    transitions. Ensures the "episodes left" badge stays accurate when the user
- *    switches back to the app after an episode airs during the day.
+ * 2. **Count refresh on mount** (once per session): Ungated, in-memory-only
+ *    recomputation of the "+N episodes left" badge for every TV show. This is
+ *    what keeps the badge honest on a page load, because the server-side
+ *    `check-new-seasons` cron writes the same `last_season_check` field the
+ *    daily sweep gates on - without ever recomputing counts - so the sweep
+ *    alone can legitimately skip every show for the rest of the day.
+ *
+ * 3. **Tab-focus refresh** (on `visibilitychange`): Same lightweight
+ *    `watching`/`caught_up` sync as the daily sweep but ungated, so a newly
+ *    aired episode is picked up while the app is already open.
  */
 export const useDailyTVSync = (userId: string | null) => {
     const isInitialized = useLibraryStore((state) => state.isInitialized)
 
-    // Lightweight episode-count refresh for watching shows only.
-    // Runs on tab focus — no DB writes, no status transitions, just updates the
-    // in-memory badge count so the TVShows page shows accurate episode counts.
+    /**
+     * Lightweight, in-memory episode-count refresh for every TV show.
+     *
+     * No status transitions - this only recomputes `total_episodes`, so it can
+     * run freely and is safe to apply to shows in any state.
+     *
+     * Covers every show, not just `watching` ones: the "+N episodes left" badge
+     * is rendered in the Paused / Not started / Finished / Dropped sections too,
+     * and refreshing only `watching` leaves those permanently stale.
+     */
     const refreshCounts = useCallback(async () => {
         if (!userId || !isInitialized) return
 
         const allShows = await fetchUserTVShows(userId)
         if (allShows.length === 0) return
 
-        const watching = allShows.filter(s => s.status === 'watching')
-        if (watching.length === 0) return
+        // Actively-watched shows first. They are the ones most likely to change
+        // (new episodes airing) and the ones the user is looking at, so they
+        // should not sit on a stale badge behind a long tail of finished series.
+        const order = (s: SyncShow): number => (s.status === 'watching' ? 0 : s.status === 'caught_up' ? 1 : 2)
+        const prioritised = [...allShows].sort((a, b) => order(a) - order(b))
 
-        const results = await processSyncShows(watching, (show) =>
-            syncWatchingShow(show, true)
+        // Apply each batch as it settles rather than once at the very end. Each show
+        // costs a details lookup, a TVmaze schedule and one request per season, so
+        // a full-library pass takes long enough that applying only at the end
+        // would leave every badge on its stale stored count until the whole
+        // library had finished.
+        await processSyncShows(
+            prioritised,
+            refreshShowCount,
+            (batch) => applyResults(batch)
         )
-        applyResults(results)
     }, [userId, isInitialized])
 
     useEffect(() => {
@@ -313,6 +417,27 @@ export const useDailyTVSync = (userId: string | null) => {
         void sweep('daily').catch(err => {
             console.error('useDailyTVSync: sweep failed:', err)
         })
+
+        /**
+         * Recompute badge counts on mount, once per session.
+         *
+         * The daily sweep cannot be relied on for this: its `last_season_check`
+         * gate is also written by the server-side `check-new-seasons` cron, which
+         * stamps the field without recomputing counts. Once the cron has run for
+         * the day the gate reports "already checked", so the sweep skips every
+         * show and `total_episodes` in the database stays frozen at whatever it
+         * was last written as - which is why a page refresh could show a stale
+         * count even though the client had just computed the right one.
+         *
+         * This path is deliberately ungated and in-memory only, so the cron
+         * cannot suppress it and a page load is always self-correcting.
+         */
+        if (countsRefreshedFor !== userId) {
+            countsRefreshedFor = userId
+            void refreshCounts().catch(err => {
+                console.error('useDailyTVSync: count refresh failed:', err)
+            })
+        }
 
         // Lightweight episode-count refresh when the user returns to the tab.
         // Only recalculates total_episodes for watching shows — no DB writes,

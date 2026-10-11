@@ -188,10 +188,60 @@ export function getReleaseIndex(schedule: ShowAirSchedule | null | undefined): M
     return index
 }
 
+/** Whole days between two YYYY-MM-DD strings (positive when `a` is later). */
+const dayGap = (a: string, b: string): number => {
+    const toUtcMs = (value: string): number => {
+        const [y, m, d] = value.split('-').map(Number)
+        return Date.UTC(y, (m || 1) - 1, d || 1)
+    }
+    const gap = toUtcMs(a) - toUtcMs(b)
+    return Number.isFinite(gap) ? Math.round(gap / 86_400_000) : 0
+}
+
 /**
- * True when the episode is available to watch. When the exact airstamp is
- * known the release requires the instant to have passed; otherwise it falls
- * back to TMDB's date-only rule (air_date today or past).
+ * Airstamps carry a timezone while TMDB's `air_date` is a bare calendar date, so
+ * an episode broadcast late in the evening can legitimately land on an adjacent
+ * UTC day. Anything further apart than that is not a timezone artifact.
+ */
+const SAME_EPISODE_MAX_DAY_GAP = 1
+
+/**
+ * True when a TVmaze airstamp genuinely refers to the episode identified by
+ * `fallbackAirDate`, i.e. the two sources agree on *which* episode this is.
+ *
+ * Both schedules are keyed "season-episode", but the two sites do not always
+ * agree on what those numbers mean. TMDB follows the original broadcast order
+ * and may merge or split whole story arcs, while TVmaze follows its own
+ * editorial split. Lupin (TMDB 96677) is the clearest case:
+ *
+ *   TMDB    Season 1 = Part 1 + Part 2 merged (10 eps)
+ *           Season 2 = Part 3 (7 eps), Season 3 = Part 4 (8 eps, unaired)
+ *   TVmaze  Season 1 = Part 1 (5), Season 2 = Part 2 (5),
+ *           Season 3 = Part 3 (7), Season 4 = Part 4
+ *
+ * So a lookup of "3-1" returns Part 3 Chapter 1's 2023 airstamp while TMDB means
+ * the first episode of Part 4, unreleased until 2026-10-23. Without this check
+ * the airstamp marks an unaired episode as long released, which inflates the
+ * "episodes left" count and can revive an unaired season as newly available.
+ *
+ * Air dates are the stronger evidence here precisely because they stay
+ * self-consistent within TMDB's own numbering; the airstamp is only the more
+ * precise refinement *within* a confirmed episode.
+ */
+function airstampMatchesEpisode(airstampMs: number, airDate: string | undefined): boolean {
+    if (!airDate) return true
+    const airstampDay = new Date(airstampMs).toISOString().slice(0, 10)
+    return Math.abs(dayGap(airstampDay, airDate)) <= SAME_EPISODE_MAX_DAY_GAP
+}
+
+/**
+ * True when the episode is available to watch.
+ *
+ * The airstamp refines the release to the minute, but only once it is confirmed
+ * to describe the same episode (see `airstampMatchesEpisode`). When it does
+ * not - or when TVmaze has no time for it - this falls back to TMDB's date-only
+ * rule, which is correct for any show whose season numbering lines up and for
+ * every show TVmaze doesn't cover at all.
  */
 export function isEpisodeAired(
     releaseIndex: Map<string, number>,
@@ -200,9 +250,10 @@ export function isEpisodeAired(
     fallbackAirDate?: string
 ): boolean {
     const ts = releaseIndex.get(`${season}-${episode}`)
-    if (ts !== undefined) return Date.now() >= ts
-    // No airstamp for this episode (or the show has no TVmaze data at all):
-    // fall back to TMDB's date-only rule when the caller supplied air_date.
+    if (ts !== undefined && airstampMatchesEpisode(ts, fallbackAirDate)) return Date.now() >= ts
+    // Either TVmaze has no airstamp for this coordinate, or the one it has
+    // belongs to a differently-numbered episode. Both cases fall through to
+    // TMDB's date-only rule, when the caller supplied an air_date.
     if (fallbackAirDate) return fallbackAirDate <= getUTCTodayString()
     return false
 }
@@ -210,13 +261,21 @@ export function isEpisodeAired(
 /**
  * Exact release instant for a single episode, or null when TVmaze has no time
  * for it (caller should fall back to the date-only rule).
+ *
+ * Applies the same same-episode check as `isEpisodeAired`: pass TMDB's `airDate`
+ * for the episode so a coordinate belonging to a differently-numbered episode
+ * is reported as unknown rather than as a wrong release time. Omitting it keeps
+ * the previous, unguarded behaviour.
  */
 export async function getEpisodeReleaseTimestamp(
     tmdbId: number,
     season: number,
-    episode: number
+    episode: number,
+    airDate?: string
 ): Promise<Date | null> {
     const schedule = await getShowAirSchedule(tmdbId)
     const ts = getReleaseIndex(schedule).get(`${season}-${episode}`)
-    return ts === undefined ? null : new Date(ts)
+    if (ts === undefined) return null
+    if (!airstampMatchesEpisode(ts, airDate)) return null
+    return new Date(ts)
 }

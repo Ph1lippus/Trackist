@@ -71,11 +71,19 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
 
     // Resolve the real air time so a user can't mark today's episode watched
     // before it actually airs. Falls back to the date-only rule while resolving.
+    // Re-runs once TMDB's air_date lands so a TVmaze airstamp belonging to a
+    // differently-numbered episode can't unlock an unaired one (see
+    // airstampMatchesEpisode in tvmazeService).
     useEffect(() => {
         if (!id || !season || !episode) return
         let cancelled = false
         void (async () => {
-            const ts = await getEpisodeReleaseTimestamp(Number(id), Number(season), Number(episode))
+            const ts = await getEpisodeReleaseTimestamp(
+                Number(id),
+                Number(season),
+                Number(episode),
+                episodeData?.air_date
+            )
             if (cancelled) return
             if (ts) {
                 setReleaseTimestamp(ts.getTime())
@@ -86,7 +94,7 @@ const EpisodeDetail = React.memo<EpisodeDetailProps>(({ itemId, seasonNumber, ep
             }
         })()
         return () => { cancelled = true }
-    }, [id, season, episode])
+    }, [id, season, episode, episodeData?.air_date])
 
     // Unlock the watched button automatically once the airstamp passes while
     // the modal/page is still open (episode releases mid-viewing).

@@ -58,6 +58,26 @@ const EPISODE_GROUP_TTL = 24 * 60 * 60 * 1000
 /** How many candidate groups we are willing to download and score. */
 const MAX_CANDIDATES = 5
 
+/**
+ * The Stremio button awaits this resolution, so it must always terminate. The
+ * work is several dependent round trips (Cinemeta, then TMDB's episode-group
+ * list, then up to MAX_CANDIDATES group bodies), and any of them could stall.
+ *
+ * Exceeding the budget falls back to the raw coordinate, which is exactly what
+ * the button did before this module existed - so the worst case is the old
+ * behaviour, never a wrong episode.
+ */
+const RESOLVE_BUDGET_MS = 6000
+
+/**
+ * Deadline for the single Cinemeta request. It is aborted rather than merely
+ * raced, so a stalled connection is cancelled instead of left running.
+ *
+ * Kept a little under RESOLVE_BUDGET_MS so this is normally what ends the work;
+ * the outer budget is the backstop for anything slower or unexpected.
+ */
+const CINEMETA_TIMEOUT_MS = 4000
+
 /** A group must clear one of these to be used instead of the aired order. */
 const EXACT_ID_THRESHOLD = 0.9
 const TITLE_THRESHOLD = 0.9
@@ -126,7 +146,9 @@ const getCinemetaMeta = async (imdbId: string): Promise<CinemetaMeta | null> => 
             'stremio-cinemeta',
             id,
             async () => {
-                const res = await fetch(`${CINEMETA_BASE}/${id}.json`)
+                const res = await fetch(`${CINEMETA_BASE}/${id}.json`, {
+                    signal: AbortSignal.timeout(CINEMETA_TIMEOUT_MS),
+                })
                 if (!res.ok) throw new Error(`Cinemeta error: ${res.status} ${res.statusText}`)
                 return await res.json()
             },
@@ -278,7 +300,9 @@ const isBetter = (candidate: GroupMapping, incumbent: GroupMapping | null): bool
  * `baseEpisodeTotal` is the sum of `episode_count` across the show's default
  * `seasons` array, which the caller already has on hand from `/tv/{id}`.
  *
- * Never throws, and never returns a coordinate Stremio does not have.
+ * Never throws, never returns a coordinate Stremio does not have, and always
+ * settles within RESOLVE_BUDGET_MS so the button can never sit disabled waiting
+ * on the network.
  */
 export const resolveStremioTarget = async (
     tmdbId: number,
@@ -295,6 +319,30 @@ export const resolveStremioTarget = async (
     // on season 0.
     if (airedSeason === 0) return null
 
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const budget = new Promise<null>((resolve) => {
+        timer = setTimeout(() => {
+            console.warn('[stremioMapping] Resolution exceeded budget; using the aired-order coordinate')
+            resolve(null)
+        }, RESOLVE_BUDGET_MS)
+    })
+
+    try {
+        return await Promise.race([resolveTarget(tmdbId, imdbId, airedSeason, airedEpisode, baseEpisodeTotal), budget])
+    } finally {
+        // Clear the timer on every path, including the losing race, so a fast
+        // resolution doesn't leave a pending timer holding the event loop.
+        if (timer !== undefined) clearTimeout(timer)
+    }
+}
+
+const resolveTarget = async (
+    tmdbId: number,
+    imdbId: string,
+    airedSeason: number,
+    airedEpisode: number,
+    baseEpisodeTotal: number
+): Promise<StremioLinkTarget> => {
     const meta = await getCinemetaMeta(imdbId)
     if (!meta) return null
 
