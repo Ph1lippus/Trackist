@@ -6122,6 +6122,9 @@ button:focus-visible {
     font-size: 0.8rem;
     line-height: 1.45;
     text-align: left;
+    /* Auth errors can carry a multi-line raw provider error underneath the
+       advice. Without this the newlines collapse and the detail is unreadable. */
+    white-space: pre-line;
 }
 
 .auth-alert-stack {

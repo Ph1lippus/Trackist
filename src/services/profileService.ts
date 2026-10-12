@@ -72,6 +72,14 @@ const isUserCancellation = (error: unknown): boolean =>
  * error worth showing. Everything else is surfaced with the Credential
  * Manager codes mapped to their causes, because the raw ones are opaque.
  */
+// Google and Credential Manager errors are short codes ("[16]", "[28444]") with
+// almost no explanation attached. Replacing them with friendly advice meant the
+// actual cause never reached the screen, so there was nothing to report from a
+// device with no way to attach a debugger. Keep the advice, but always append
+// the original text so the real failure is visible and reportable.
+const withRawDetail = (advice: string, detail: string): string =>
+    `${advice}\n\n(Google error: ${detail})`
+
 const getNativeGoogleIdToken = async (): Promise<string | null> => {
     try {
         await initNativeGoogle()
@@ -98,18 +106,23 @@ const getNativeGoogleIdToken = async (): Promise<string | null> => {
         // the message shown to the user names the actual fix.
         if (detail.includes('28444')) {
             throw new Error(
-                'Google rejected this app. Check that the Web client ID is correct and that ' +
-                'com.track1st.app with this build\'s signing SHA-1 is registered as an Android ' +
-                'OAuth client in Google Cloud Console.',
+                withRawDetail(
+                    'Google rejected this app. Check that the Web client ID is correct and that ' +
+                    'com.track1st.app with this build\'s signing SHA-1 is registered as an Android ' +
+                    'OAuth client in Google Cloud Console.',
+                    detail,
+                ),
                 { cause: error },
             )
         }
         if (detail.includes('[16]')) {
             throw new Error(
-                'Google could not re-authenticate this account. If Track1st is listed under ' +
-                'Google Account > Security > Your connections to third-party apps, remove it, then ' +
-                'uninstall and reinstall the app to clear the stored credential. To diagnose further, ' +
-                'run: adb logcat -s GoogleProvider CapgoSocialLogin',
+                withRawDetail(
+                    'Google could not re-authenticate this account. Check Google Account > ' +
+                    'Security > Your connections to third-party apps and remove Track1st, then ' +
+                    'uninstall and reinstall the app to clear the stored credential.',
+                    detail,
+                ),
                 { cause: error },
             )
         }
