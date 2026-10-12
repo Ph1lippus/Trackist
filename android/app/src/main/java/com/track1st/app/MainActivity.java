@@ -6,7 +6,13 @@ import android.webkit.WebView;
 
 import com.getcapacitor.BridgeActivity;
 
-public class MainActivity extends BridgeActivity {
+// The plugin rejects any Google login that passes explicit scopes unless the
+// activity implements this marker interface, because it needs the activity
+// result to complete the scope grant. The body is intentionally empty: the
+// interface exists purely so the plugin can detect the modification.
+import ee.forgr.capacitor.social.login.ModifiedMainActivityForSocialLoginPlugin;
+
+public class MainActivity extends BridgeActivity implements ModifiedMainActivityForSocialLoginPlugin {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		registerPlugin(InstallAppUpdatePlugin.class);
@@ -21,4 +27,7 @@ public class MainActivity extends BridgeActivity {
 			webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
 		}
 	}
+
+	@Override
+	public void IHaveModifiedTheMainActivityForTheUseWithSocialLoginPlugin() {}
 }

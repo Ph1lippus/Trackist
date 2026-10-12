@@ -129,6 +129,8 @@ Enable the **Google** provider in **Authentication → Providers** and configure
 
 Android does not use a browser round-trip. `@capgo/capacitor-social-login` calls **Google Credential Manager**, which shows the account picker already built into the phone, and hands Supabase the resulting ID token via `signInWithIdToken`. There is no redirect to lose, so nothing depends on a deep link returning to the app. The web build keeps the normal OAuth redirect.
 
+`MainActivity` must implement `ModifiedMainActivityForSocialLoginPlugin`. The plugin rejects any call that passes explicit `scopes` unless the activity implements this marker interface, because it needs the activity result to complete the scope grant. Without it, sign-in fails with *"You CANNOT use scopes without modifying the main activity"*. The interface method has an empty body by design; `npx cap sync` does not overwrite `MainActivity.java`, so the change survives rebuilds.
+
 This needs **two** OAuth clients in the **same** Google Cloud project:
 
 | Client type | Where it goes |
