@@ -143,6 +143,29 @@ jobs:
           ./gradlew assembleRelease --no-daemon
           cp app/build/outputs/apk/release/app-release.apk ../track1st.apk
 
+      - name: Guard the App Links association
+        env:
+          TRACK1ST_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          # Shared links only open in the app when Android can verify
+          # track1st.vercel.app against the certificate this APK is signed
+          # with. That check runs at install time and fails silently, so a
+          # rotated signing key used to leave the published fingerprint stale
+          # and send every shared link to the browser. Fail the build instead.
+          FINGERPRINT=$(keytool -list -v \
+            -keystore android/app/upload.keystore \
+            -storetype pkcs12 \
+            -alias track1st \
+            -storepass "$TRACK1ST_KEYSTORE_PASSWORD" \
+            | sed -n 's/^[[:space:]]*SHA256:[[:space:]]*//p')
+          if [ -z "$FINGERPRINT" ]; then
+            echo "::error::Could not read a SHA-256 fingerprint from android/app/upload.keystore for alias 'track1st'."
+            exit 1
+          fi
+          echo "Release signing fingerprint: $FINGERPRINT"
+          node scripts/verify-assetlinks-fingerprint.cjs "$FINGERPRINT"
+
       - name: Publish rolling release
         env:
           GH_TOKEN: ${{ github.token }}

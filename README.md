@@ -117,7 +117,28 @@ In **Authentication → URL Configuration**, add these redirect URLs:
 - `http://localhost:5173/Settings/security`
 - `http://localhost:3000/Settings/security`
 
+Also add the Android app's callback. Without it, Google sign-in on Android does not error — Supabase quietly falls back to the Site URL and signs the user into the web app in their browser instead of the app:
+
+- `com.track1st.app://auth/callback`
+
+This must stay in sync with `nativeAuthCallbackUrl` in `src/services/profileService.ts` and the `com.track1st.app://auth` intent filter in `android/app/src/main/AndroidManifest.xml`.
+
 Enable the **Google** provider in **Authentication → Providers** and configure its Google OAuth client ID and secret. Users can link or unlink Google manually from **Settings → Security** while signed in.
+
+### Android App Links (shared links opening the app)
+
+Shared `https://track1st.vercel.app/...` links only open inside the APK when Android can verify that domain against the certificate the app is signed with, using `public/.well-known/assetlinks.json`. The check runs once, at install time, and fails silently: a stale fingerprint does not break the build, it just sends every shared link to the browser.
+
+Read the fingerprint of the release signing key:
+
+```bash
+keytool -list -v -keystore android/app/upload.keystore -storetype pkcs12 \
+  -alias track1st -storepass "$TRACK1ST_KEYSTORE_PASSWORD" | grep SHA256
+```
+
+Add the result to `sha256_cert_fingerprints` in `public/.well-known/assetlinks.json` and redeploy. Keep the previous fingerprint in the list too, so installs signed with an earlier key keep working. Whenever the keystore is replaced, users must uninstall and reinstall the app, because Android only re-checks the association on install.
+
+The Android workflow enforces this: `scripts/verify-assetlinks-fingerprint.cjs` fails the build if the APK's signing fingerprint is not in `assetlinks.json`.
 
 ### Edge Functions Setup
 

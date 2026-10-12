@@ -2,6 +2,20 @@ import { supabase } from './supabaseClient'
 import { Browser } from '@capacitor/browser'
 import { isNativePlatform } from './nativePush'
 
+/**
+ * Where Supabase hands the OAuth code back on Android.
+ *
+ * Two things have to line up or sign-in silently lands in the browser:
+ *
+ * 1. This URL must be listed in Supabase → Authentication → URL Configuration
+ *    → Redirect URLs. GoTrue does not reject an unlisted redirect, it quietly
+ *    falls back to the Site URL, which signs the user into the web app in the
+ *    browser instead of the app. `?next=` is appended by the caller below;
+ *    GoTrue validates the URL with the query stripped, so the bare scheme,
+ *    host and path above is what needs to be allow-listed.
+ * 2. `com.track1st.app://auth` must stay in android/app/src/main/AndroidManifest.xml,
+ *    or Android has nothing to hand the redirect to.
+ */
 export const nativeAuthCallbackUrl = 'com.track1st.app://auth/callback'
 
 const allowedAuthOrigins = [

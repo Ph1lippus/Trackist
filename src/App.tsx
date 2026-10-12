@@ -246,7 +246,10 @@ const AppContent: React.FC = () => {
                         ? requestedNext
                         : '/login'
 
-                    void Browser.close()
+                    void Browser.close().catch(() => {
+                        // The Custom Tab may already be gone (user dismissed
+                        // it, or the OS reclaimed it). Nothing to clean up.
+                    })
                     if (code) {
                         void supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
                             if (error) {

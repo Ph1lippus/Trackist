@@ -6,6 +6,7 @@ import { validateUsername, validateEmail, validatePassword } from '../utils/vali
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useAuthRateLimit } from '../hooks/useAuthRateLimit'
 import { useCaptcha, isCaptchaEnabled } from '../hooks/useCaptcha'
+import { useNativeAuthCancel } from '../hooks/useNativeAuthCancel'
 import { checkPasswordBreach, isHIBPEnabled } from '../services/hibpService'
 import Captcha from '../components/auth/Captcha'
 import type { CaptchaHandle } from '../components/auth/Captcha'
@@ -30,12 +31,19 @@ const Register: React.FC = () => {
     const [captchaToken, setCaptchaToken] = useState<string | null>(null)
     const captchaRef = useRef<CaptchaHandle>(null)
     const pendingSubmitRef = useRef(false)
+    const googlePendingRef = useRef(false)
+
+    // Only armed by the Google button, so dismissing a Custom Tab re-enables
+    // that button without touching the password registration state.
+    useNativeAuthCancel(googlePendingRef, useCallback(() => setLoading(false), []))
 
     const handleGoogleRegister = async () => {
         setError('')
         setLoading(true)
+        googlePendingRef.current = true
         const { error: googleError } = await signInWithGoogle()
         if (googleError) {
+            googlePendingRef.current = false
             setLoading(false)
             setError(googleError.message)
         }

@@ -40,5 +40,10 @@ android/app/google-services.json
 supabase/migrations/
 supabase/config.toml
 
-# Local setup scripts
-scripts/
+# Local setup scripts.
+# Ad-hoc helpers live here and stay untracked, but the ones the CI workflow
+# invokes are part of the build and must be committed:
+#   mint-service-token.cjs, verify-assetlinks-fingerprint.cjs
+scripts/*
+!scripts/mint-service-token.cjs
+!scripts/verify-assetlinks-fingerprint.cjs

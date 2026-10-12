@@ -6,6 +6,7 @@ import mfaService from '../services/mfaService'
 import { usePageTitle } from '../hooks/usePageTitle'
 import { useAuthRateLimit } from '../hooks/useAuthRateLimit'
 import { useCaptcha, isCaptchaEnabled } from '../hooks/useCaptcha'
+import { useNativeAuthCancel } from '../hooks/useNativeAuthCancel'
 import Captcha from '../components/auth/Captcha'
 import type { CaptchaHandle } from '../components/auth/Captcha'
 import GoogleIcon from '../components/auth/GoogleIcon'
@@ -28,6 +29,11 @@ const Login: React.FC = () => {
     const [captchaToken, setCaptchaToken] = useState<string | null>(null)
     const captchaRef = useRef<CaptchaHandle>(null)
     const pendingSubmitRef = useRef(false)
+    const googlePendingRef = useRef(false)
+
+    // Only armed by the Google button, so dismissing a Custom Tab re-enables
+    // that button without touching the password sign-in state.
+    useNativeAuthCancel(googlePendingRef, useCallback(() => setLoading(false), []))
 
     const performLogin = useCallback(async (token?: string) => {
         if (loading) return
@@ -132,8 +138,10 @@ const Login: React.FC = () => {
     const handleGoogleLogin = async () => {
         setError('')
         setLoading(true)
+        googlePendingRef.current = true
         const { error: googleError } = await signInWithGoogle()
         if (googleError) {
+            googlePendingRef.current = false
             setLoading(false)
             setError(googleError.message)
         }
