@@ -359,7 +359,23 @@ const SecuritySection: React.FC<Pick<SettingsProps, 'securityProps'>> = ({ secur
         ? googleIdentity.identity_data.email
         : null
 
-    const handleLinkGoogle = async () => {
+    // Supabase carries the linked-identity list inside the access token's JWT, so
+// it stays stale after a link or unlink until that token is refreshed.
+// Re-fetching the user alone is not enough: onAuthStateChange writes the old
+// token's identities back into the store straight afterwards, which left the
+// card showing "linked" while the server had already unlinked it.
+//
+// A failed refresh resolves to a null session, so the result is checked before
+// it is adopted: acting on a null session here would sign the user out.
+const syncIdentities = async (): Promise<void> => {
+    const { data, error } = await supabase.auth.refreshSession()
+    if (error || !data.session) return
+
+    const { data: fresh } = await supabase.auth.getUser()
+    if (fresh.user) useAuthStore.getState().setUser(fresh.user)
+}
+
+const handleLinkGoogle = async () => {
         setIdentityLoading(true)
         setIdentityMessage(null)
         try {
@@ -371,9 +387,9 @@ const SecuritySection: React.FC<Pick<SettingsProps, 'securityProps'>> = ({ secur
             }
             // No error and no session change means the account picker was
             // dismissed, so the button has to become tappable again.
-            const { data } = await supabase.auth.getUser()
-            if (data.user) {
-                useAuthStore.getState().setUser(data.user)
+            const { data } = await supabase.auth.getSession()
+            if (data.session) {
+                await syncIdentities()
                 setIdentityLoading(false)
             }
         } catch (error) {
@@ -389,14 +405,24 @@ const SecuritySection: React.FC<Pick<SettingsProps, 'securityProps'>> = ({ secur
         if (!googleIdentity) return
         setIdentityLoading(true)
         setIdentityMessage(null)
-        const { error } = await unlinkIdentity(googleIdentity.identity_id)
-        setIdentityLoading(false)
-        if (error) {
-            setIdentityMessage({ text: error.message, isError: true })
-        } else {
-            setIdentityMessage({ text: 'Google sign-in has been unlinked.', isError: false })
-            const { data } = await supabase.auth.getUser()
-            if (data.user) useAuthStore.getState().setUser(data.user)
+        try {
+            const { error } = await unlinkIdentity(googleIdentity.identity_id)
+            if (error) {
+                setIdentityMessage({ text: error.message, isError: true })
+            } else {
+                setIdentityMessage({ text: 'Google sign-in has been unlinked.', isError: false })
+            }
+            // Refresh regardless of the outcome: a stale card is what makes
+            // "linked" and "already unlinked" contradict each other.
+            await syncIdentities()
+        } catch (error) {
+            setIdentityMessage({
+                text: error instanceof Error ? error.message : 'Unable to unlink Google.',
+                isError: true,
+            })
+            await syncIdentities()
+        } finally {
+            setIdentityLoading(false)
         }
     }
 
