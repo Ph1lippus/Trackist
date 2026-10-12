@@ -45,12 +45,14 @@ const PrivacyPolicy: React.FC = () => {
                                     Google name, email address, and profile picture.
                                 </li>
                                 <li>
-                                    <strong>Profile</strong> — the display name and avatar you choose. You
-                                    are not asked for a real name, address, or phone number.
+                                    <strong>Profile</strong> — the display name and avatar you choose,
+                                    plus an optional bio. We also store the timezone and country you
+                                    select, which are used to time notifications correctly. You are
+                                    not asked for your legal name, street address, or phone number.
                                 </li>
                                 <li>
                                     <strong>Watchlist and progress</strong> — the movies and shows you add,
-                                    your watch status, episode progress, ratings, and custom lists.
+                                    your watch status, episode progress, and custom lists.
                                 </li>
                                 <li>
                                     <strong>Preferences</strong> — notification settings, display
