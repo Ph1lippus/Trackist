@@ -106,10 +106,10 @@ const getNativeGoogleIdToken = async (): Promise<string | null> => {
         }
         if (detail.includes('[16]')) {
             throw new Error(
-                'Google could not re-authenticate this account. In Google Cloud Console set the ' +
-                'consent screen audience to External and click "Publish app", so any Google account ' +
-                'can sign in. If it still fails, check Google Account > Sign in with Google and make ' +
-                'sure this app is not turned off there.',
+                'Google could not re-authenticate this account. If Track1st is listed under ' +
+                'Google Account > Security > Your connections to third-party apps, remove it, then ' +
+                'uninstall and reinstall the app to clear the stored credential. To diagnose further, ' +
+                'run: adb logcat -s GoogleProvider CapgoSocialLogin',
                 { cause: error },
             )
         }
