@@ -106,8 +106,10 @@ const getNativeGoogleIdToken = async (): Promise<string | null> => {
         }
         if (detail.includes('[16]')) {
             throw new Error(
-                'Google could not re-authenticate this account. Check the OAuth consent screen ' +
-                'is set to External and that this account is listed as a test user.',
+                'Google could not re-authenticate this account. In Google Cloud Console set the ' +
+                'consent screen audience to External and click "Publish app", so any Google account ' +
+                'can sign in. If it still fails, check Google Account > Sign in with Google and make ' +
+                'sure this app is not turned off there.',
                 { cause: error },
             )
         }

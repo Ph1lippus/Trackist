@@ -147,7 +147,9 @@ keytool -list -v -keystore android/app/upload.keystore -storetype pkcs12 \
 
 Use the SHA-1 of the build you actually install — the release keystore, not the debug one, and Play App Signing's key if you ever ship through Play. Google rejects the combination with `[28444] Developer console is not set up correctly`, which the app translates into a message naming the cause. Console changes can take a few hours to propagate. `assetlinks.json` is **not** needed for this flow.
 
-If the OAuth consent screen is in **Testing**, add every account you test with under **Audience → Test users**. It must be **External** for consumer `@gmail.com` accounts.
+If the OAuth consent screen is in **Testing**, only accounts under **Audience → Test users** can sign in. Click **Publish app** to move it to **In production**, which is what a publicly distributed app needs. Set the audience to **External** first, or consumer `@gmail.com` accounts are blocked.
+
+This app requests only the basic identity scopes (`openid`, `email`, `profile`), so publishing needs **no verification review** and imposes **no 100-user cap** — both of those only apply to sensitive or restricted scopes. Until branding is verified, Google hides the app name and logo on the consent screen; sign-in still works. Until brand verification is submitted, the app can still be used, only the cosmetic branding differs.
 
 ### Android App Links (shared links opening the app)
 
