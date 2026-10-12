@@ -41,11 +41,22 @@ const Register: React.FC = () => {
         setError('')
         setLoading(true)
         googlePendingRef.current = true
-        const { error: googleError } = await signInWithGoogle()
-        if (googleError) {
+        try {
+            const { error: googleError } = await signInWithGoogle()
+            googlePendingRef.current = false
+            if (googleError) {
+                setLoading(false)
+                setError(googleError.message)
+                return
+            }
+            // Either a session was created (the app redirects away) or the
+            // account picker was dismissed; only the latter stays on screen.
+            const { data } = await supabase.auth.getSession()
+            if (!data.session) setLoading(false)
+        } catch (error) {
             googlePendingRef.current = false
             setLoading(false)
-            setError(googleError.message)
+            setError(error instanceof Error ? error.message : 'Unable to sign in with Google.')
         }
     }
 

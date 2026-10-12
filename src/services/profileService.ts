@@ -1,22 +1,119 @@
 import { supabase } from './supabaseClient'
-import { Browser } from '@capacitor/browser'
+import { SocialLogin } from '@capgo/capacitor-social-login'
 import { isNativePlatform } from './nativePush'
 
 /**
- * Where Supabase hands the OAuth code back on Android.
+ * The app's own OAuth callback on Android, kept for the Custom Tab flow that
+ * predates native sign-in.
  *
- * Two things have to line up or sign-in silently lands in the browser:
+ * Two things have to line up or a redirect-based sign-in silently lands in the
+ * browser instead of the app:
  *
  * 1. This URL must be listed in Supabase → Authentication → URL Configuration
  *    → Redirect URLs. GoTrue does not reject an unlisted redirect, it quietly
  *    falls back to the Site URL, which signs the user into the web app in the
- *    browser instead of the app. `?next=` is appended by the caller below;
- *    GoTrue validates the URL with the query stripped, so the bare scheme,
- *    host and path above is what needs to be allow-listed.
- * 2. `com.track1st.app://auth` must stay in android/app/src/main/AndroidManifest.xml,
- *    or Android has nothing to hand the redirect to.
+ *    browser instead of the app.
+ * 2. `com.track1st.app://auth` must stay in
+ *    android/app/src/main/AndroidManifest.xml, or Android has nothing to hand
+ *    the redirect to.
+ *
+ * Native Google sign-in no longer routes through here: it uses the system
+ * account picker and hands Supabase an ID token directly, so neither step
+ * above is needed for the app to sign a user in. `App.tsx` still handles this
+ * URL for builds that were mid-round-trip when they were updated.
  */
 export const nativeAuthCallbackUrl = 'com.track1st.app://auth/callback'
+
+const googleWebClientId = import.meta.env.VITE_GOOGLE_WEB_CLIENT_ID?.trim()
+
+// Google rejects Credential Manager requests whose client ID is missing, and
+// the error surfaces as a generic "developer console is not set up correctly".
+// Checking here gives a message that actually names the cause.
+if (isNativePlatform() && !googleWebClientId) {
+    console.error(
+        'VITE_GOOGLE_WEB_CLIENT_ID is not set. Google sign-in on Android needs the ' +
+        'Web application client ID from Google Cloud Console.'
+    )
+}
+
+let socialLoginInit: Promise<void> | null = null
+
+const initNativeGoogle = async (): Promise<void> => {
+    if (!googleWebClientId) {
+        throw new Error(
+            'Google sign-in is not configured for Android: VITE_GOOGLE_WEB_CLIENT_ID is missing.'
+        )
+    }
+
+    socialLoginInit ??= SocialLogin.initialize({
+        // 'online' is what returns the ID token; 'offline' hands back a
+        // serverAuthCode for a backend to exchange, which this app has no use for.
+        google: { webClientId: googleWebClientId, mode: 'online' },
+    }).catch((error) => {
+        // Don't cache a failed init: the user should be able to retry rather
+        // than be stuck until the app restarts.
+        socialLoginInit = null
+        throw error
+    })
+
+    return socialLoginInit
+}
+
+const errorText = (error: unknown): string =>
+    error instanceof Error ? error.message : String(error)
+
+const isUserCancellation = (error: unknown): boolean =>
+    /USER_CANCELLED|canceled|cancelled/i.test(errorText(error))
+
+/**
+ * Shows the system Google account picker and returns the ID token it issues.
+ *
+ * Resolving to `null` means the user dismissed the picker, which is not an
+ * error worth showing. Everything else is surfaced with the Credential
+ * Manager codes mapped to their causes, because the raw ones are opaque.
+ */
+const getNativeGoogleIdToken = async (): Promise<string | null> => {
+    try {
+        await initNativeGoogle()
+
+        const { result } = await SocialLogin.login({
+            provider: 'google',
+            options: { scopes: ['email', 'profile'] },
+        })
+
+        // The response is a union: offline mode carries only a serverAuthCode.
+        // initialize() above pins online mode, so the idToken branch is the
+        // only one that can occur, but the narrowing keeps the compiler honest.
+        const idToken = result && 'idToken' in result ? result.idToken : null
+        if (!idToken) {
+            throw new Error('Google did not return an ID token.')
+        }
+
+        return idToken
+    } catch (error) {
+        if (isUserCancellation(error)) return null
+
+        const detail = errorText(error)
+        // `cause` keeps the original Credential Manager error for Logcat while
+        // the message shown to the user names the actual fix.
+        if (detail.includes('28444')) {
+            throw new Error(
+                'Google rejected this app. Check that the Web client ID is correct and that ' +
+                'com.track1st.app with this build\'s signing SHA-1 is registered as an Android ' +
+                'OAuth client in Google Cloud Console.',
+                { cause: error },
+            )
+        }
+        if (detail.includes('[16]')) {
+            throw new Error(
+                'Google could not re-authenticate this account. Check the OAuth consent screen ' +
+                'is set to External and that this account is listed as a test user.',
+                { cause: error },
+            )
+        }
+        throw error instanceof Error ? error : new Error(detail, { cause: error })
+    }
+}
 
 const allowedAuthOrigins = [
     'https://track1st.vercel.app',
@@ -35,55 +132,35 @@ export const signInWithEmail = async (email: string, password: string) => {
 }
 
 export const signInWithGoogle = async () => {
-    const isNative = isNativePlatform()
-    const result = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-            redirectTo: isNative ? `${nativeAuthCallbackUrl}?next=%2Flogin` : getAuthRedirectUrl('/login'),
-            queryParams: { prompt: 'select_account' },
-            ...(isNative ? { skipBrowserRedirect: true } : {}),
-        }
-    })
-
-    if (!isNative || result.error || !result.data.url) return result
-
-    try {
-        await Browser.open({ url: result.data.url })
-    } catch (error) {
-        return {
-            data: result.data,
-            error: error instanceof Error ? error : new Error('Unable to open Google sign-in.')
-        }
+    if (isNativePlatform()) {
+        const idToken = await getNativeGoogleIdToken()
+        if (!idToken) return { data: null, error: null }
+        return supabase.auth.signInWithIdToken({ provider: 'google', token: idToken })
     }
 
-    return result
+    return supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+            redirectTo: getAuthRedirectUrl('/login'),
+            queryParams: { prompt: 'select_account' },
+        }
+    })
 }
 
 export const linkGoogleIdentity = async () => {
-    const isNative = isNativePlatform()
-    const result = await supabase.auth.linkIdentity({
-        provider: 'google',
-        options: {
-            redirectTo: isNative
-                ? `${nativeAuthCallbackUrl}?next=%2FSettings%2Fsecurity`
-                : getAuthRedirectUrl('/Settings/security'),
-            queryParams: { prompt: 'select_account' },
-            ...(isNative ? { skipBrowserRedirect: true } : {}),
-        }
-    })
-
-    if (!isNative || result.error || !result.data.url) return result
-
-    try {
-        await Browser.open({ url: result.data.url })
-    } catch (error) {
-        return {
-            data: result.data,
-            error: error instanceof Error ? error : new Error('Unable to open Google sign-in.')
-        }
+    if (isNativePlatform()) {
+        const idToken = await getNativeGoogleIdToken()
+        if (!idToken) return { data: null, error: null }
+        return supabase.auth.linkIdentity({ provider: 'google', token: idToken })
     }
 
-    return result
+    return supabase.auth.linkIdentity({
+        provider: 'google',
+        options: {
+            redirectTo: getAuthRedirectUrl('/Settings/security'),
+            queryParams: { prompt: 'select_account' },
+        }
+    })
 }
 
 export const unlinkIdentity = async (identityId: string) => {

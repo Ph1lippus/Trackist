@@ -117,13 +117,35 @@ In **Authentication → URL Configuration**, add these redirect URLs:
 - `http://localhost:5173/Settings/security`
 - `http://localhost:3000/Settings/security`
 
-Also add the Android app's callback. Without it, Google sign-in on Android does not error — Supabase quietly falls back to the Site URL and signs the user into the web app in their browser instead of the app:
+Also add the Android app's callback. It is only needed by the web-hosted build and by builds updated mid-round-trip, but harmless to keep:
 
 - `com.track1st.app://auth/callback`
 
 This must stay in sync with `nativeAuthCallbackUrl` in `src/services/profileService.ts` and the `com.track1st.app://auth` intent filter in `android/app/src/main/AndroidManifest.xml`.
 
 Enable the **Google** provider in **Authentication → Providers** and configure its Google OAuth client ID and secret. Users can link or unlink Google manually from **Settings → Security** while signed in.
+
+### Google sign-in on Android
+
+Android does not use a browser round-trip. `@capgo/capacitor-social-login` calls **Google Credential Manager**, which shows the account picker already built into the phone, and hands Supabase the resulting ID token via `signInWithIdToken`. There is no redirect to lose, so nothing depends on a deep link returning to the app. The web build keeps the normal OAuth redirect.
+
+This needs **two** OAuth clients in the **same** Google Cloud project:
+
+| Client type | Where it goes |
+| --- | --- |
+| **Web application** | `VITE_GOOGLE_WEB_CLIENT_ID`. Credential Manager uses this as the ID token audience, and Supabase validates against it. |
+| **Android** | Google Cloud Console only — proves the APK may call Google. Never passed to `VITE_GOOGLE_WEB_CLIENT_ID`. |
+
+The Android client must list `com.track1st.app` and the **SHA-1 of the certificate the installed APK is signed with**:
+
+```bash
+keytool -list -v -keystore android/app/upload.keystore -storetype pkcs12 \
+  -alias track1st -storepass "$TRACK1ST_KEYSTORE_PASSWORD" | grep SHA1
+```
+
+Use the SHA-1 of the build you actually install — the release keystore, not the debug one, and Play App Signing's key if you ever ship through Play. Google rejects the combination with `[28444] Developer console is not set up correctly`, which the app translates into a message naming the cause. Console changes can take a few hours to propagate. `assetlinks.json` is **not** needed for this flow.
+
+If the OAuth consent screen is in **Testing**, add every account you test with under **Audience → Test users**. It must be **External** for consumer `@gmail.com` accounts.
 
 ### Android App Links (shared links opening the app)
 
@@ -136,7 +158,26 @@ keytool -list -v -keystore android/app/upload.keystore -storetype pkcs12 \
   -alias track1st -storepass "$TRACK1ST_KEYSTORE_PASSWORD" | grep SHA256
 ```
 
-Add the result to `sha256_cert_fingerprints` in `public/.well-known/assetlinks.json` and redeploy. Keep the previous fingerprint in the list too, so installs signed with an earlier key keep working. Whenever the keystore is replaced, users must uninstall and reinstall the app, because Android only re-checks the association on install.
+Add the result to `sha256_cert_fingerprints` in `public/.well-known/assetlinks.json` and redeploy. Keep the previous fingerprint in the list too, so installs signed with an earlier key keep working.
+
+How quickly a fix reaches users depends on their Android version:
+
+- **Installing or updating the app** re-runs verification, so pushing a new build is enough to pick up the corrected file.
+- **Android 15 (API 35) and higher** also re-verify domains periodically in the background. The app targets SDK 36, so most devices recover on their own within days, though propagation can take up to seven days.
+- **Android 14 and lower** do not re-verify in the background; they pick up the corrected file on the next install or update.
+
+To check or force it immediately over ADB instead of waiting:
+
+```bash
+# Per-domain verification state; anything other than "verified" is the answer
+adb shell pm get-app-links com.track1st.app
+
+# Reset the cached state, then force re-verification (asynchronous)
+adb shell pm set-app-links --package com.track1st.app 0 all
+adb shell pm verify-app-links --re-verify com.track1st.app
+```
+
+Verification runs asynchronously, so allow a minute before re-reading the state. A `1024` state means verification ran and failed, typically a fingerprint mismatch.
 
 The Android workflow enforces this: `scripts/verify-assetlinks-fingerprint.cjs` fails the build if the APK's signing fingerprint is not in `assetlinks.json`.
 
@@ -307,6 +348,7 @@ Add these under **Settings → Secrets and variables → Actions → New reposit
 | `SUPABASE_JWT_SECRET` | Supabase → Project Settings → API → JWT secret. The upload step signs a short-lived `service_role` JWT with it (`scripts/mint-service-token.cjs`), because the Storage API only accepts JWTs — the new-format `sb_secret_...` key is an opaque token it cannot parse. |
 | `VITE_HCAPTCHA_SITE_KEY` | hCaptcha dashboard |
 | `VITE_PUSH_VAPID_PUBLIC_KEY` | Supabase → Project Settings → API Keys → Web Push |
+| `VITE_GOOGLE_WEB_CLIENT_ID` | Google Cloud Console → Credentials → the **Web application** client ID (ends in `.apps.googleusercontent.com`). Public by design: it ships in the bundle and is the ID token audience for Android sign-in. |
 | `ANDROID_KEYSTORE_BASE64` | `base64 -w0 android/app/upload.keystore` |
 | `ANDROID_KEYSTORE_PASSWORD` | The password protecting that keystore |
 | `GOOGLE_SERVICES_JSON_B64` | `base64 -w0 android/app/google-services.json` |

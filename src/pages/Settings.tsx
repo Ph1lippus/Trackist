@@ -362,10 +362,26 @@ const SecuritySection: React.FC<Pick<SettingsProps, 'securityProps'>> = ({ secur
     const handleLinkGoogle = async () => {
         setIdentityLoading(true)
         setIdentityMessage(null)
-        const { error } = await linkGoogleIdentity()
-        if (error) {
+        try {
+            const { error } = await linkGoogleIdentity()
+            if (error) {
+                setIdentityLoading(false)
+                setIdentityMessage({ text: error.message, isError: true })
+                return
+            }
+            // No error and no session change means the account picker was
+            // dismissed, so the button has to become tappable again.
+            const { data } = await supabase.auth.getUser()
+            if (data.user) {
+                useAuthStore.getState().setUser(data.user)
+                setIdentityLoading(false)
+            }
+        } catch (error) {
             setIdentityLoading(false)
-            setIdentityMessage({ text: error.message, isError: true })
+            setIdentityMessage({
+                text: error instanceof Error ? error.message : 'Unable to link Google.',
+                isError: true,
+            })
         }
     }
 

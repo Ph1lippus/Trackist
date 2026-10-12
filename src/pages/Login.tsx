@@ -139,11 +139,23 @@ const Login: React.FC = () => {
         setError('')
         setLoading(true)
         googlePendingRef.current = true
-        const { error: googleError } = await signInWithGoogle()
-        if (googleError) {
+        try {
+            const { error: googleError } = await signInWithGoogle()
+            googlePendingRef.current = false
+            if (googleError) {
+                setLoading(false)
+                setError(googleError.message)
+                return
+            }
+            // No error means either a session was created (the app redirects
+            // away on its own) or the account picker was dismissed. Only the
+            // second case leaves this screen mounted, so re-enable the button.
+            const { data } = await supabase.auth.getSession()
+            if (!data.session) setLoading(false)
+        } catch (error) {
             googlePendingRef.current = false
             setLoading(false)
-            setError(googleError.message)
+            setError(error instanceof Error ? error.message : 'Unable to sign in with Google.')
         }
     }
 

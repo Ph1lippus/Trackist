@@ -64,11 +64,16 @@ jobs:
           SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           HCAPTCHA_SITE_KEY: ${{ secrets.VITE_HCAPTCHA_SITE_KEY }}
           VAPID_PUBLIC_KEY: ${{ secrets.VITE_PUSH_VAPID_PUBLIC_KEY }}
+          GOOGLE_WEB_CLIENT_ID: ${{ secrets.VITE_GOOGLE_WEB_CLIENT_ID }}
         run: |
           set -euo pipefail
           # TMDB is deliberately absent: the browser talks to the tmdb-proxy edge
           # function, which reads its key from the server-side environment. A
           # VITE_ key would be inlined into the public client bundle for nothing.
+          #
+          # GOOGLE_WEB_CLIENT_ID is the Google "Web application" client ID, not the
+          # Android one. It is public by design: it ships in the bundle and is the
+          # audience of the ID token Android sign-in hands to Supabase.
           #
           # Every value is validated before anything is written, so a missing
           # secret fails the job loudly instead of producing a .env with holes
@@ -79,7 +84,8 @@ jobs:
             "VITE_SUPABASE_URL=$SUPABASE_URL" \
             "VITE_SUPABASE_ANON_KEY=$SUPABASE_ANON_KEY" \
             "VITE_HCAPTCHA_SITE_KEY=$HCAPTCHA_SITE_KEY" \
-            "VITE_PUSH_VAPID_PUBLIC_KEY=$VAPID_PUBLIC_KEY"
+            "VITE_PUSH_VAPID_PUBLIC_KEY=$VAPID_PUBLIC_KEY" \
+            "VITE_GOOGLE_WEB_CLIENT_ID=$GOOGLE_WEB_CLIENT_ID"
           do
             if [ -z "${pair#*=}" ]; then
               echo "::error::Secret ${pair%%=*} is missing. Add it under Settings > Secrets and variables > Actions (see README 'CI secrets')."

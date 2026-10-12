@@ -79,8 +79,9 @@ const main = () => {
     console.error('::error::Shared links will keep opening in the browser until this is fixed.')
     console.error('::error::Add this fingerprint to public/.well-known/assetlinks.json, then redeploy:')
     missing.forEach((fingerprint) => console.error(`::error::    "${fingerprint}"`))
-    console.error('::error::Users also have to reinstall the app: Android only re-checks the')
-    console.error('::error::association at install time.')
+    console.error('::error::Users pick this up on the next install or update; Android 15+ also')
+    console.error('::error::re-verifies in the background. Use `adb shell pm verify-app-links')
+    console.error('::error::--re-verify com.track1st.app` to check a device immediately.')
     process.exit(1)
 }
 
