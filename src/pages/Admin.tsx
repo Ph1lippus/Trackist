@@ -433,51 +433,33 @@ const Admin: React.FC = () => {
         try {
             const userId = deleteUserConfirm.userId
 
-            const { data: watchlists } = await supabase
-                .from('watchlist')
-                .select('id')
-                .eq('user_id', userId)
+            // Deleting another user's rows through this browser session was
+            // blocked by Row Level Security, and none of those calls checked
+            // for errors, so the account survived while the UI dropped it from
+            // the list. The edge function runs with the service role, so RLS
+            // does not stand between us and the rows.
+            const { data: { session } } = await supabase.auth.getSession()
+            if (!session?.access_token) throw new Error('Not authenticated')
 
-            if (watchlists && watchlists.length > 0) {
-                const watchlistIds = watchlists.map(w => w.id)
-                await supabase
-                    .from('watchlist_episodes')
-                    .delete()
-                    .in('watchlist_id', watchlistIds)
+            const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-account`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ userId }),
+            })
+
+            const payload = await res.json().catch(() => ({}))
+            if (!res.ok) {
+                const details = Array.isArray(payload.details) ? `: ${payload.details.join('; ')}` : ''
+                throw new Error((payload.error || `Failed to delete user (${res.status})`) + details)
             }
-
-            await supabase
-                .from('watchlist')
-                .delete()
-                .eq('user_id', userId)
-
-            const { data: userLists } = await supabase
-                .from('lists')
-                .select('id')
-                .eq('user_id', userId)
-
-            if (userLists && userLists.length > 0) {
-                const listIds = userLists.map(l => l.id)
-                await supabase
-                    .from('list_items')
-                    .delete()
-                    .in('list_id', listIds)
-            }
-
-            await supabase
-                .from('lists')
-                .delete()
-                .eq('user_id', userId)
-
-            await supabase
-                .from('profiles')
-                .delete()
-                .eq('id', userId)
 
             setProfiles(prev => prev.filter(p => p.id !== userId))
         } catch (err) {
             console.error('Delete user error:', err)
-            alert('An unexpected error occurred while deleting the user.')
+            alert(err instanceof Error ? err.message : 'An unexpected error occurred while deleting the user.')
         } finally {
             setDeleteUserLoading(false)
             setDeleteUserConfirm(null)

@@ -203,6 +203,7 @@ supabase functions deploy hibp-check --project-ref <your-project-ref>
 supabase functions deploy mfa-backup-codes --project-ref <your-project-ref>
 supabase functions deploy push-log --project-ref <your-project-ref>
 supabase functions deploy revoke-session --project-ref <your-project-ref>
+supabase functions deploy delete-account --project-ref <your-project-ref>
 supabase functions deploy verify-admin --project-ref <your-project-ref>
 supabase functions deploy delete-account --project-ref <your-project-ref>
 ```
