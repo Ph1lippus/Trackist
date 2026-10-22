@@ -400,7 +400,9 @@ export const useListsLogic = (): UseListsLogicResult => {
                     page,
                     sort_by: sortBy,
                     with_genres: selectedGenre ? String(selectedGenre) : undefined,
-                    vote_count_gte: browseMediaType === 'tv' ? 200 : 100,
+                    vote_count_gte: sortBy.includes('release_date')
+                        ? undefined
+                        : (browseMediaType === 'tv' ? 500 : 250),
                 }
 
                 if (browseMediaType === 'movie') {

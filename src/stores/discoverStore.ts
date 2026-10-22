@@ -30,6 +30,12 @@ type MediaType = 'all' | 'movie' | 'tv' | 'person'
 // id alone causes duplicate React/virtuoso keys and wrong watchlist matches.
 export const mediaKey = (mediaType: string | null | undefined, id: number): string => `${mediaType}:${id}`
 
+// Minimum TMDB vote counts for an item to appear in Discover/browse lists.
+// Raised to keep results focused on broadly-rated titles. Release-date sorts
+// bypass these (see fetchData) so newly released titles aren't hidden.
+const MIN_VOTES_MOVIE = 250
+const MIN_VOTES_TV = 500
+
 interface DiscoverState {
     // State
     results: TMDBResult[]
@@ -324,7 +330,9 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                    (item.genre_ids?.some(id => excludedGenres.includes(id)) ?? false)
         }
 
-        const MIN_VOTES = mediaType === 'tv' ? 200 : 100
+        // Newest-first browsing should surface brand-new titles, which often
+        // haven't accumulated enough votes yet — so skip the vote floor there.
+        const applyVoteFilter = !sortBy.includes('release_date')
 
         const mapSortParamForTV = (sortValue: string): string => {
             if (sortValue.includes('release_date')) {
@@ -461,8 +469,8 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 })
                 totalPages = (data as { total_pages?: number }).total_pages || 1
             } else if (mediaType === 'all') {
-                const movieCacheKey = `${query}-${pageNum}-${sortBy}-${yearFrom}-${yearTo}-${selectedGenres.join(',')}-min-100`
-                const tvCacheKey = `${query}-${pageNum}-${mapSortParamForTV(sortBy)}-${yearFrom}-${yearTo}-${selectedGenres.join(',')}-min-200`
+                const movieCacheKey = `${query}-${pageNum}-${sortBy}-${yearFrom}-${yearTo}-${selectedGenres.join(',')}-min-${applyVoteFilter ? MIN_VOTES_MOVIE : 0}`
+                const tvCacheKey = `${query}-${pageNum}-${mapSortParamForTV(sortBy)}-${yearFrom}-${yearTo}-${selectedGenres.join(',')}-min-${applyVoteFilter ? MIN_VOTES_TV : 0}`
 
                 const [moviesData, tvData] = await Promise.all([
                     getCachedOrFetch(
@@ -474,7 +482,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                             primary_release_date_gte: yearFrom ? `${yearFrom}-01-01` : undefined,
                             primary_release_date_lte: yearTo ? `${yearTo}-12-31` : undefined,
                             with_genres: selectedGenres.length ? selectedGenres.join(',') : undefined,
-                            vote_count_gte: 100,
+                            vote_count_gte: applyVoteFilter ? MIN_VOTES_MOVIE : undefined,
                         }),
                         { ttl: 6 * 60 * 60 * 1000, staleWhileRevalidate: true }
                     ),
@@ -487,7 +495,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                             first_air_date_gte: yearFrom ? `${yearFrom}-01-01` : undefined,
                             first_air_date_lte: yearTo ? `${yearTo}-12-31` : undefined,
                             with_genres: selectedGenres.length ? selectedGenres.join(',') : undefined,
-                            vote_count_gte: 200,
+                            vote_count_gte: applyVoteFilter ? MIN_VOTES_TV : undefined,
                         }),
                         { ttl: 6 * 60 * 60 * 1000, staleWhileRevalidate: true }
                     ),
@@ -519,7 +527,10 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 if (shouldFilterGenres) {
                     combined = combined.filter(item => {
                         if (hasExcludedGenre(item)) return false
-                        if ((item.vote_count || 0) < MIN_VOTES) return false
+                        if (applyVoteFilter) {
+                            const minVotes = item.media_type === 'tv' ? MIN_VOTES_TV : MIN_VOTES_MOVIE
+                            if ((item.vote_count || 0) < minVotes) return false
+                        }
                         return true
                     })
                 }
@@ -531,7 +542,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 const tvTotal = (tvData as { total_pages?: number }).total_pages || 1
                 totalPages = Math.max(moviesTotal, tvTotal)
             } else if (mediaType === 'movie') {
-                const movieCacheKey = `${query}-${pageNum}-${sortBy}-${yearFrom}-${yearTo}-${selectedGenres.join(',')}-min-100`
+                const movieCacheKey = `${query}-${pageNum}-${sortBy}-${yearFrom}-${yearTo}-${selectedGenres.join(',')}-min-${applyVoteFilter ? MIN_VOTES_MOVIE : 0}`
                 const data = await getCachedOrFetch(
                     'discover-movie',
                     movieCacheKey,
@@ -541,7 +552,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                         primary_release_date_gte: yearFrom ? `${yearFrom}-01-01` : undefined,
                         primary_release_date_lte: yearTo ? `${yearTo}-12-31` : undefined,
                         with_genres: selectedGenres.length ? selectedGenres.join(',') : undefined,
-                        vote_count_gte: 100,
+                        vote_count_gte: applyVoteFilter ? MIN_VOTES_MOVIE : undefined,
                     }),
                     { ttl: 6 * 60 * 60 * 1000, staleWhileRevalidate: true }
                 )
@@ -554,7 +565,10 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 if (shouldFilterGenres) {
                     newResults = movieResults.filter(item => {
                         if (hasExcludedGenre(item)) return false
-                        if ((item.vote_count || 0) < MIN_VOTES) return false
+                        if (applyVoteFilter) {
+                            const minVotes = item.media_type === 'tv' ? MIN_VOTES_TV : MIN_VOTES_MOVIE
+                            if ((item.vote_count || 0) < minVotes) return false
+                        }
                         return true
                     })
                 } else {
@@ -563,7 +577,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
 
                 totalPages = (data as { total_pages?: number }).total_pages || 1
             } else if (mediaType === 'tv') {
-                const tvCacheKey = `${query}-${pageNum}-${mapSortParamForTV(sortBy)}-${yearFrom}-${yearTo}-${selectedGenres.join(',')}-min-200`
+                const tvCacheKey = `${query}-${pageNum}-${mapSortParamForTV(sortBy)}-${yearFrom}-${yearTo}-${selectedGenres.join(',')}-min-${applyVoteFilter ? MIN_VOTES_TV : 0}`
                 const data = await getCachedOrFetch(
                     'discover-tv',
                     tvCacheKey,
@@ -573,7 +587,7 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                         first_air_date_gte: yearFrom ? `${yearFrom}-01-01` : undefined,
                         first_air_date_lte: yearTo ? `${yearTo}-12-31` : undefined,
                         with_genres: selectedGenres.length ? selectedGenres.join(',') : undefined,
-                        vote_count_gte: 200,
+                        vote_count_gte: applyVoteFilter ? MIN_VOTES_TV : undefined,
                     }),
                     { ttl: 6 * 60 * 60 * 1000, staleWhileRevalidate: true }
                 )
@@ -586,7 +600,10 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 if (shouldFilterGenres) {
                     newResults = tvResults.filter(item => {
                         if (hasExcludedGenre(item)) return false
-                        if ((item.vote_count || 0) < MIN_VOTES) return false
+                        if (applyVoteFilter) {
+                            const minVotes = item.media_type === 'tv' ? MIN_VOTES_TV : MIN_VOTES_MOVIE
+                            if ((item.vote_count || 0) < minVotes) return false
+                        }
                         return true
                     })
                 } else {
@@ -609,7 +626,10 @@ const useDiscoverStore = create<DiscoverState>((set, get) => ({
                 if (shouldFilterGenres) {
                     finalResults = newResults.filter(item => {
                         if (hasExcludedGenre(item)) return false
-                        if ((item.vote_count || 0) < MIN_VOTES) return false
+                        if (applyVoteFilter) {
+                            const minVotes = item.media_type === 'tv' ? MIN_VOTES_TV : MIN_VOTES_MOVIE
+                            if ((item.vote_count || 0) < minVotes) return false
+                        }
                         return true
                     })
                 }
