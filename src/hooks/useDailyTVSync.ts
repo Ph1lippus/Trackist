@@ -51,7 +51,7 @@ const SYNC_BATCH_DELAY_MS = 150
  * at the app root but its effect re-runs on identity changes; this keeps the
  * mount refresh to once per session per user instead of once per mount.
  */
-let countsRefreshedFor: string | null = null
+// let countsRefreshedFor: string | null = null
 
 const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms))
 
@@ -357,29 +357,29 @@ export const useDailyTVSync = (userId: string | null) => {
      * is rendered in the Paused / Not started / Finished / Dropped sections too,
      * and refreshing only `watching` leaves those permanently stale.
      */
-    const refreshCounts = useCallback(async () => {
-        if (!userId || !isInitialized) return
+    // const refreshCounts = useCallback(async (    ) => {
+    //     if (!userId || !isInitialized) return
 
-        const allShows = await fetchUserTVShows(userId)
-        if (allShows.length === 0) return
+    //     const allShows = await fetchUserTVShows(userId)
+    //     if (allShows.length === 0) return
 
-        // Actively-watched shows first. They are the ones most likely to change
-        // (new episodes airing) and the ones the user is looking at, so they
-        // should not sit on a stale badge behind a long tail of finished series.
-        const order = (s: SyncShow): number => (s.status === 'watching' ? 0 : s.status === 'caught_up' ? 1 : 2)
-        const prioritised = [...allShows].sort((a, b) => order(a) - order(b))
+    //     // Actively-watched shows first. They are the ones most likely to change
+    //     // (new episodes airing) and the ones the user is looking at, so they
+    //     // should not sit on a stale badge behind a long tail of finished series.
+    //     const order = (s: SyncShow): number => (s.status === 'watching' ? 0 : s.status === 'caught_up' ? 1 : 2)
+    //     const prioritised = [...allShows].sort((a, b) => order(a) - order(b))
 
-        // Apply each batch as it settles rather than once at the very end. Each show
-        // costs a details lookup, a TVmaze schedule and one request per season, so
-        // a full-library pass takes long enough that applying only at the end
-        // would leave every badge on its stale stored count until the whole
-        // library had finished.
-        await processSyncShows(
-            prioritised,
-            refreshShowCount,
-            (batch) => applyResults(batch)
-        )
-    }, [userId, isInitialized])
+    //     // Apply each batch as it settles rather than once at the very end. Each show
+    //     // costs a details lookup, a TVmaze schedule and one request per season, so
+    //     // a full-library pass takes long enough that applying only at the end
+    //     // would leave every badge on its stale stored count until the whole
+    //     // library had finished.
+    //     await processSyncShows(
+    //         prioritised,
+    //         refreshShowCount,
+    //         (batch) => applyResults(batch)
+    //     )
+    // }, [userId, isInitialized])
 
     useEffect(() => {
         if (!userId || !isInitialized) return
