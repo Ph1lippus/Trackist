@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect } from 'react'
 import { supabase } from '../services/supabaseClient'
 import { getTVDetails, getTVSeasonDetails } from '../services/tmdbService'
 import { getReleaseIndex, getShowAirSchedule, isEpisodeAired } from '../services/tvmazeService'
@@ -155,30 +155,30 @@ const syncWatchingShow = async (show: SyncShow, refreshOnly = false): Promise<Sy
  *    correct value and then stays quiet, so steady state costs zero writes.
  *    `updated_at` has no database trigger, so this cannot reshuffle the library.
  */
-const refreshShowCount = async (show: SyncShow): Promise<SyncResult | null> => {
-    const details = await getTVDetails(show.tmdb_id)
-    const hasStoredCount = typeof show.total_episodes === 'number' && show.total_episodes > 0
+// const refreshShowCount = async (show: SyncShow): Promise<SyncResult | null> => {
+//     const details = await getTVDetails(show.tmdb_id)
+//     const hasStoredCount = typeof show.total_episodes === 'number' && show.total_episodes > 0
 
-    if ((details.status === 'Ended' || details.status === 'Canceled') && hasStoredCount) {
-        return { id: show.id, status: statusOf(show.status) }
-    }
+//     if ((details.status === 'Ended' || details.status === 'Canceled') && hasStoredCount) {
+//         return { id: show.id, status: statusOf(show.status) }
+//     }
 
-    const totalReleasedEpisodes = await countReleasedEpisodesAcrossSeasons(show.tmdb_id)
+//     const totalReleasedEpisodes = await countReleasedEpisodesAcrossSeasons(show.tmdb_id)
 
-    if (totalReleasedEpisodes !== show.total_episodes) {
-        const { error } = await supabase
-            .from('watchlist')
-            .update({ total_episodes: totalReleasedEpisodes })
-            .eq('id', show.id)
+//     if (totalReleasedEpisodes !== show.total_episodes) {
+//         const { error } = await supabase
+//             .from('watchlist')
+//             .update({ total_episodes: totalReleasedEpisodes })
+//             .eq('id', show.id)
 
-        if (error) {
-            // Not fatal: the in-memory badge still gets corrected below.
-            console.error(`Failed to persist episode count for ${show.id}:`, error)
-        }
-    }
+//         if (error) {
+//             // Not fatal: the in-memory badge still gets corrected below.
+//             console.error(`Failed to persist episode count for ${show.id}:`, error)
+//         }
+//     }
 
-    return { id: show.id, status: statusOf(show.status), total_episodes: totalReleasedEpisodes }
-}
+//     return { id: show.id, status: statusOf(show.status), total_episodes: totalReleasedEpisodes }
+// }
 
 /**
  * Check whether a caught_up/completed show now has a newly released episode in
