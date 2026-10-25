@@ -390,7 +390,6 @@ export const useDailyTVSync = (userId: string | null) => {
             const allShows = await fetchUserTVShows(userId)
             if (allShows.length === 0 || cancelled) return
 
-            // Daily: process watching + caught_up, gated by last_season_check.
             // Focus: watching (no gate) + caught_up (no gate) — always refresh
             // episode counts and move newly-available caught_up shows back to watching.
             const watching = allShows.filter(s =>
@@ -413,35 +412,13 @@ export const useDailyTVSync = (userId: string | null) => {
             applyResults([...watchingResults, ...caughtUpResults])
         }
 
-        // Full daily sweep on mount
-        void sweep('daily').catch(err => {
-            console.error('useDailyTVSync: sweep failed:', err)
-        })
-
-        /**
-         * Recompute badge counts on mount, once per session.
-         *
-         * The daily sweep cannot be relied on for this: its `last_season_check`
-         * gate is also written by the server-side `check-new-seasons` cron, which
-         * stamps the field without recomputing counts. Once the cron has run for
-         * the day the gate reports "already checked", so the sweep skips every
-         * show and `total_episodes` in the database stays frozen at whatever it
-         * was last written as - which is why a page refresh could show a stale
-         * count even though the client had just computed the right one.
-         *
-         * This path is deliberately ungated and in-memory only, so the cron
-         * cannot suppress it and a page load is always self-correcting.
-         */
-        if (countsRefreshedFor !== userId) {
-            countsRefreshedFor = userId
-            void refreshCounts().catch(err => {
-                console.error('useDailyTVSync: count refresh failed:', err)
-            })
-        }
-
         // Lightweight episode-count refresh when the user returns to the tab.
         // Only recalculates total_episodes for watching shows — no DB writes,
         // no status transitions, just in-memory badge updates.
+        // The heavy daily sweep and full count refresh are intentionally NOT run
+        // on mount so that opening/refreshing the page isn't blocked by hundreds
+        // of TMDB/TVmaze API calls. Server-side cron jobs (check-new-seasons,
+        // notify-new-content) already keep the data fresh while you're away.
         const handleVisibility = () => {
             if (document.visibilityState === 'visible') {
                 void sweep('focus').catch(err => {
@@ -455,5 +432,5 @@ export const useDailyTVSync = (userId: string | null) => {
             cancelled = true
             document.removeEventListener('visibilitychange', handleVisibility)
         }
-    }, [userId, isInitialized, refreshCounts])
+    }, [userId, isInitialized])
 }
